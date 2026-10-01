@@ -350,7 +350,7 @@ export class Game {
       q.allyRequests.delete(p.id);
     }
     this.emit({ k: 'eliminated', player: p.id, by });
-    this.notify(-1, 'event.eliminated', 'info', { player: p.id, by });
+    if (p.kind !== 'tribe') this.notify(-1, 'event.eliminated', 'info', { player: p.id, by });
   }
 
   // ------------------------------------------------------ combat modifiers

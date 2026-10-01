@@ -58,7 +58,16 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       const troops = p.troops * c.ratio;
       if (troops < 1) return;
       p.troops -= troops;
-      if (!launchAttack(game, p.id, target, troops)) game.notify(p.id, 'error.noFrontier', 'warn');
+      if (!launchAttack(game, p.id, target, troops)) {
+        // No land frontier: the click was across water → send a transport instead.
+        const res = launchBoat(game, p, c.tile, c.ratio);
+        if (res !== 'ok')
+          game.notify(
+            p.id,
+            res === 'noPath' || res === 'noCoast' ? 'error.noFrontier' : `error.boat.${res}`,
+            'warn',
+          );
+      }
       return;
     }
 

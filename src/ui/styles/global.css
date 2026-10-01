@@ -1,0 +1,229 @@
+@import '@fontsource/fraunces/400.css';
+@import '@fontsource/fraunces/600.css';
+@import '@fontsource/fraunces/700.css';
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+
+:root {
+  --abyss: #0b1220;
+  --slate: #16233a;
+  --aurora: #4fe3c1;
+  --brass: #f2b84b;
+  --signal: #ff5a5f;
+  --verdant: #7bd88f;
+  --parchment: #eae6da;
+  --muted: rgba(234, 230, 218, 0.62);
+  --faint: rgba(234, 230, 218, 0.38);
+  --glass: rgba(18, 29, 48, 0.72);
+  --glass-strong: rgba(14, 23, 39, 0.9);
+  --line: rgba(79, 227, 193, 0.22);
+  --line-strong: rgba(79, 227, 193, 0.5);
+  --radius: 14px;
+  --ui-scale: 1;
+  --font-scale: 1;
+  --title: 'Fraunces', Georgia, serif;
+  --text: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--abyss);
+  color: var(--parchment);
+  font-family: var(--text);
+  font-size: calc(15px * var(--font-scale));
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+#app {
+  height: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--title);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  background: rgba(79, 227, 193, 0.08);
+  color: var(--parchment);
+  padding: 0.62em 1.1em;
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.12s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.btn:hover,
+.btn:focus-visible {
+  background: rgba(79, 227, 193, 0.18);
+  border-color: var(--aurora);
+  box-shadow: 0 0 0 3px rgba(79, 227, 193, 0.12);
+  outline: none;
+}
+.btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+.btn.primary {
+  background: var(--aurora);
+  color: #062a22;
+  border-color: var(--aurora);
+  font-weight: 600;
+}
+.btn.primary:hover {
+  background: #74ecd0;
+}
+.btn.danger {
+  border-color: rgba(255, 90, 95, 0.6);
+  background: rgba(255, 90, 95, 0.12);
+}
+.btn.ghost {
+  background: transparent;
+  border-color: transparent;
+}
+.btn.ghost:hover {
+  border-color: var(--line);
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.18em 0.6em;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 0.82em;
+  color: var(--muted);
+}
+
+.label {
+  font-size: 0.72em;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--faint);
+}
+
+input[type='text'],
+input[type='number'],
+select {
+  background: rgba(8, 14, 26, 0.75);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0.5em 0.7em;
+  outline: none;
+}
+input[type='text']:focus,
+select:focus {
+  border-color: var(--aurora);
+}
+
+input[type='range'] {
+  accent-color: var(--aurora);
+  width: 100%;
+}
+
+input[type='checkbox'] {
+  accent-color: var(--aurora);
+  width: 1.05em;
+  height: 1.05em;
+}
+
+.scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79, 227, 193, 0.3) transparent;
+}
+
+.fade-in {
+  animation: fadeIn 0.28s ease-out both;
+}
+.rise-in {
+  animation: riseIn 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.001s !important;
+  transition-duration: 0.001s !important;
+}
+
+.high-contrast {
+  --glass: rgba(4, 8, 14, 0.96);
+  --line: rgba(255, 255, 255, 0.55);
+  --muted: rgba(255, 255, 255, 0.85);
+  --faint: rgba(255, 255, 255, 0.7);
+}
+
+:focus-visible {
+  outline: 2px solid var(--aurora);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}

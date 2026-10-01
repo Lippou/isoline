@@ -1,5 +1,10 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { readFileSync } from 'node:fs';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
+  version: string;
+};
 
 // Renderer build. The Electron main process serves `dist-renderer/` through the
 // custom `isoline://` protocol; in dev it loads the Vite dev server instead.
@@ -7,6 +12,7 @@ export default defineConfig({
   root: '.',
   base: './',
   plugins: [svelte()],
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   publicDir: false,
   build: {
     outDir: 'dist-renderer',

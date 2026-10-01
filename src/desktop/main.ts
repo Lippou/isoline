@@ -84,7 +84,10 @@ function createWindow(): void {
     appendErrorLog(`render-process-gone: ${details.reason}`);
     if (SMOKE) app.exit(3);
   });
-  const query = SMOKE ? '?smoke=1' : '';
+  const argQuery =
+    process.argv.find((a) => a.startsWith('--isoline-query='))?.slice('--isoline-query='.length) ?? '';
+  const parts = [SMOKE ? 'smoke=1' : '', process.env.ISOLINE_QUERY ?? argQuery].filter(Boolean);
+  const query = parts.length ? `?${parts.join('&')}` : '';
   if (DEV_URL) void mainWindow.loadURL(DEV_URL + query);
   else void mainWindow.loadURL('isoline://app/index.html' + query);
 }
