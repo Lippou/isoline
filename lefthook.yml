@@ -1,0 +1,9 @@
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: '*.{ts,svelte,js,mjs}'
+      run: npx eslint --max-warnings=0 --no-warn-ignored {staged_files}
+    format:
+      glob: '*.{ts,svelte,js,mjs,json,css}'
+      run: npx prettier --check {staged_files}

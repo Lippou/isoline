@@ -1,0 +1,7 @@
+dist
+dist-electron
+dist-renderer
+coverage
+node_modules
+assets/maps
+*.md

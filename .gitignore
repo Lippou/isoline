@@ -1,0 +1,11 @@
+node_modules/
+.cache/
+.tools/
+dist/
+dist-electron/
+dist-renderer/
+coverage/
+test-results/
+playwright-report/
+.DS_Store
+*.log

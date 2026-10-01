@@ -1,0 +1,80 @@
+appId: io.isoline.game
+productName: Isoline
+copyright: Copyright © 2026 Isoline Team
+directories:
+  output: dist
+  buildResources: build-resources
+files:
+  - package.json
+  - dist-electron/**/*
+  - dist-renderer/**/*
+  - '!**/*.map'
+extraResources:
+  - from: assets/maps
+    to: maps
+    filter: ['**/*']
+asar: true
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+npmRebuild: false
+nodeGypRebuild: false
+buildDependenciesFromSource: false
+electronLanguages: [en, en-US, en-GB, fr, fr-FR]
+mac:
+  category: public.app-category.strategy-games
+  icon: build-resources/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  identity: '-'
+  entitlements: build-resources/entitlements.mac.plist
+  entitlementsInherit: build-resources/entitlements.mac.plist
+  target:
+    - target: dmg
+      arch: [universal]
+    - target: zip
+      arch: [universal]
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+  minimumSystemVersion: '12.0'
+  extendInfo:
+    LSApplicationCategoryType: public.app-category.strategy-games
+    NSHumanReadableCopyright: Copyright © 2026 Isoline Team
+    LSMinimumSystemVersion: '12.0'
+    NSHighResolutionCapable: true
+dmg:
+  title: ${productName} ${version}
+  background: build-resources/dmg-background.png
+  icon: build-resources/icon.icns
+  iconSize: 112
+  window:
+    width: 660
+    height: 420
+  contents:
+    - x: 170
+      y: 210
+      type: file
+    - x: 490
+      y: 210
+      type: link
+      path: /Applications
+win:
+  icon: build-resources/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  legalTrademarks: Isoline
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Isoline
+  uninstallDisplayName: ${productName}
+  installerIcon: build-resources/icon.ico
+  uninstallerIcon: build-resources/icon.ico
+  artifactName: ${productName}-${version}-win-x64-setup.${ext}
+portable:
+  artifactName: ${productName}-${version}-win-x64-portable.${ext}
+toolsets:
+  nsis: '1.2.1'
