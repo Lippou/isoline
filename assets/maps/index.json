@@ -1,0 +1,156 @@
+[
+ {
+  "id": "africa",
+  "name": {
+   "fr": "Afrique",
+   "en": "Africa"
+  },
+  "category": "continents",
+  "width": 1350,
+  "height": 1368,
+  "nations": 60
+ },
+ {
+  "id": "archipelago",
+  "name": {
+   "fr": "Archipel",
+   "en": "Archipelago"
+  },
+  "category": "fictional",
+  "width": 1400,
+  "height": 1000,
+  "nations": 40
+ },
+ {
+  "id": "asia",
+  "name": {
+   "fr": "Asie",
+   "en": "Asia"
+  },
+  "category": "continents",
+  "width": 1700,
+  "height": 1459,
+  "nations": 60
+ },
+ {
+  "id": "black-sea",
+  "name": {
+   "fr": "Mer Noire",
+   "en": "Black Sea"
+  },
+  "category": "regions",
+  "width": 1200,
+  "height": 789,
+  "nations": 15
+ },
+ {
+  "id": "europe",
+  "name": {
+   "fr": "Europe",
+   "en": "Europe"
+  },
+  "category": "continents",
+  "width": 1500,
+  "height": 1328,
+  "nations": 57
+ },
+ {
+  "id": "labyrinth",
+  "name": {
+   "fr": "Labyrinthe",
+   "en": "Labyrinth"
+  },
+  "category": "arcade",
+  "width": 960,
+  "height": 640,
+  "nations": 24
+ },
+ {
+  "id": "mediterranean",
+  "name": {
+   "fr": "Méditerranée",
+   "en": "Mediterranean"
+  },
+  "category": "regions",
+  "width": 1800,
+  "height": 791,
+  "nations": 39
+ },
+ {
+  "id": "north-america",
+  "name": {
+   "fr": "Amérique du Nord",
+   "en": "North America"
+  },
+  "category": "continents",
+  "width": 1600,
+  "height": 1201,
+  "nations": 36
+ },
+ {
+  "id": "oceania",
+  "name": {
+   "fr": "Océanie",
+   "en": "Oceania"
+  },
+  "category": "continents",
+  "width": 1600,
+  "height": 1191,
+  "nations": 17
+ },
+ {
+  "id": "pangaea",
+  "name": {
+   "fr": "Pangée",
+   "en": "Pangaea"
+  },
+  "category": "fictional",
+  "width": 1600,
+  "height": 1000,
+  "nations": 50
+ },
+ {
+  "id": "south-america",
+  "name": {
+   "fr": "Amérique du Sud",
+   "en": "South America"
+  },
+  "category": "continents",
+  "width": 1100,
+  "height": 1332,
+  "nations": 24
+ },
+ {
+  "id": "two-lakes",
+  "name": {
+   "fr": "Deux lacs",
+   "en": "Two Lakes"
+  },
+  "category": "fictional",
+  "width": 1100,
+  "height": 700,
+  "nations": 24
+ },
+ {
+  "id": "world-giant",
+  "name": {
+   "fr": "Monde géant",
+   "en": "Giant World"
+  },
+  "category": "continents",
+  "width": 3200,
+  "height": 1612,
+  "nations": 100
+ },
+ {
+  "id": "world",
+  "name": {
+   "fr": "Monde",
+   "en": "World"
+  },
+  "category": "continents",
+  "width": 2000,
+  "height": 1007,
+  "nations": 100
+ }
+]
