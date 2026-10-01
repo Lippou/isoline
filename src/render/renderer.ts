@@ -77,6 +77,7 @@ export class GameRenderer {
   private railsVersion = -1;
   private buildingsVersion = -1;
   private fogVersion = -1;
+  private loyaltyVersion = -1;
   private paletteKey = '';
   private frame = 0;
   private flashAlpha = 0;
@@ -158,6 +159,7 @@ export class GameRenderer {
     old.destroy();
     this.paletteKey = '';
     this.fogVersion = -1;
+    this.loyaltyVersion = -1;
     this.railsVersion = -1;
     this.buildingsVersion = -1;
   }
@@ -231,6 +233,10 @@ export class GameRenderer {
       this.fogVersion = s.fogVersion;
       this.map.setFog(s.fog);
     }
+    if (s.loyaltyVersion !== this.loyaltyVersion) {
+      this.loyaltyVersion = s.loyaltyVersion;
+      this.map.setLoyalty(s.loyalty);
+    }
     const t = (performance.now() - this.startTime) / 1000;
     const alpha = s.alpha();
     const tickF = s.tick - 1 + alpha;
@@ -258,6 +264,7 @@ export class GameRenderer {
       quality: q === 'performance' ? 0 : 1,
       pattern: this.settings.vision !== 'none',
       contrast: this.settings.highContrast,
+      loyaltyView: this.overlay.loyaltyView,
       weather,
       ring: ring ? [ring.cx, ring.cy, ring.r, 1] : [0, 0, 0, 0],
     });
@@ -447,13 +454,22 @@ export class GameRenderer {
       sp.position.set(x, y);
       // LOD: ships visible from medium zoom, trains at close zoom.
       const minZoom = type === U.Train ? 2.2 : type === U.Merchant ? 1.2 : 0.4;
-      sp.visible = inView && z >= minZoom;
+      sp.visible = inView && z >= minZoom && !(type === U.Transport && this.hiddenInFogBank(owner, x, y));
       if (!sp.visible) continue;
-      const base = type === U.Warship ? 20 : type === U.Train ? 11 : type >= U.Fighter ? 14 : 15;
+      const base =
+        type === U.Warship
+          ? 20
+          : type === U.Train
+            ? 11
+            : type >= U.Fighter
+              ? 14
+              : type === U.Merchant
+                ? 10
+                : 15;
       const px = Math.max(base * 0.6, Math.min(base * 1.4, base * (0.6 + z * 0.08)));
       sp.scale.set((px / sp.texture.width / z) * 3);
       sp.tint = type === U.Merchant ? 0xffffff : this.inkOf(owner);
-      sp.alpha = type === U.Merchant ? 0.85 : 1;
+      sp.alpha = type === U.Merchant ? 0.7 : 1;
       // Wakes behind ships; contrails behind planes.
       us.wakeT += dt;
       const moving = Math.abs(dx) + Math.abs(dy) > 0.001;
@@ -500,6 +516,19 @@ export class GameRenderer {
         this.unitSprites.delete(id);
       }
     }
+  }
+
+  /** Enemy transports are hidden inside weather fog banks (original weather feature). */
+  private hiddenInFogBank(owner: number, x: number, y: number): boolean {
+    const s = this.state;
+    const me = s.viewer;
+    if (me <= 0 || owner === me) return false;
+    const mine = s.players.get(me);
+    if (mine && mine.allies.includes(owner)) return false;
+    for (const c of s.world?.weather ?? []) {
+      if (c.kind === 1 && (c.x - x) ** 2 + (c.y - y) ** 2 < c.r * c.r) return true;
+    }
+    return false;
   }
 
   private unitTexture(type: U): Texture {

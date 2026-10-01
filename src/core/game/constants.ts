@@ -124,8 +124,8 @@ export const TRANSPORT_HP = 300;
 export const MERCHANT_HP = 200;
 export const MERCHANT_SPEED = 1.0;
 /** Base spawn interval of merchant ships per port (ticks) at level 1. */
-export const MERCHANT_INTERVAL = 420;
-export const MERCHANT_DAMPING = 150; // global merchant count halving the frequency
+export const MERCHANT_INTERVAL = 600;
+export const MERCHANT_DAMPING = 80; // global merchant count halving the frequency
 export const TRADE_BASE = 3_000;
 export const TRADE_PER_TILE = 55;
 export const TRADE_LEVEL_BONUS = 0.25;

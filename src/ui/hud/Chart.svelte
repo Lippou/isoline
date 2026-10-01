@@ -1,14 +1,16 @@
 <script lang="ts">
-  // Small multi-series line chart (SVG), each series normalised to its own max.
+  // Small multi-series line chart (SVG) on a shared vertical scale.
   import { short } from '../i18n/i18n.svelte';
   let {
     series,
     height = 90,
   }: { series: { label: string; color: string; values: number[] }[]; height?: number } = $props();
   const W = 340;
+  // One shared scale for every series (comparable curves).
+  const sharedMax = $derived(Math.max(1, ...series.flatMap((x) => x.values)));
   function path(values: number[]): string {
     if (values.length < 2) return '';
-    const max = Math.max(1, ...values);
+    const max = sharedMax;
     return values
       .map(
         (v, k) =>

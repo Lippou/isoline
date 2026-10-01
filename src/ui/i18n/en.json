@@ -105,7 +105,8 @@
       "terrain": "Terrain view",
       "fog": "Fog of war",
       "resources": "Resources"
-    }
+    },
+    "autoPerformance": "Performance mode enabled automatically (slow machine)."
   },
   "panel": {
     "diplomacy": "Diplomacy",
@@ -324,7 +325,8 @@
       "humansEliminated": "All humans were eliminated",
       "mission": "Mission over",
       "none": "Game over"
-    }
+    },
+    "winnerIs": "{name} wins"
   },
   "mode": {
     "ffa": "Free for all",

@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-01T23:01:12.388Z",
+  "startupToTitleMs": 2419,
+  "world100_mediumZoom_mapReadyMs": 529,
+  "world100_mediumZoom": {
+    "fpsMin": 144,
+    "fpsAvg": 144,
+    "tickMsAvg": 0.99,
+    "memoryTotalMB": 794,
+    "processes": "Browser:180MB GPU:143MB Utility:47MB Tab:425MB"
+  },
+  "world100_fullMap_mapReadyMs": 363,
+  "world100_fullMap": {
+    "fpsMin": 144,
+    "fpsAvg": 144,
+    "tickMsAvg": 1.15,
+    "memoryTotalMB": 763,
+    "processes": "Browser:180MB GPU:138MB Utility:47MB Tab:399MB"
+  }
+}

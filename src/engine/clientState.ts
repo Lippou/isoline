@@ -40,6 +40,8 @@ export class ClientState {
   buildingsVersion = 0;
   fog: { w: number; h: number; data: Uint8Array } | null = null;
   fogVersion = 0;
+  loyalty: { w: number; h: number; data: Uint8Array } | null = null;
+  loyaltyVersion = 0;
 
   /** Units: current and previous packed buffers + time of arrival for interpolation. */
   units: Float32Array = new Float32Array(0);
@@ -125,6 +127,10 @@ export class ClientState {
     if (u.fog) {
       this.fog = u.fog;
       this.fogVersion++;
+    }
+    if (u.loyalty) {
+      this.loyalty = u.loyalty;
+      this.loyaltyVersion++;
     }
     if (u.hash !== undefined) this.lastHash = u.hash;
     return u.events;

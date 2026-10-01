@@ -26,6 +26,7 @@ export interface MapUniforms {
   quality: number;
   pattern: boolean;
   contrast: boolean;
+  loyaltyView: boolean;
   weather: Float32Array;
   ring: [number, number, number, number];
 }
@@ -69,6 +70,7 @@ export class MapLayer {
   private readonly bandRows: number;
   private readonly shader: Shader;
   private glPartial = true;
+  private loggedError = false;
 
   constructor(
     private readonly state: ClientState,
@@ -139,6 +141,7 @@ export class MapLayer {
           uQuality: { value: 1, type: 'f32' },
           uPattern: { value: 0, type: 'f32' },
           uContrast: { value: 0, type: 'f32' },
+          uLoyaltyView: { value: 0, type: 'f32' },
           uWeather: { value: new Float32Array(32).fill(-1), type: 'vec4<f32>', size: 8 },
           uRing: { value: new Float32Array(4), type: 'vec4<f32>' },
         },
@@ -198,12 +201,20 @@ export class MapLayer {
       return;
     }
     try {
+      // Bind our GL texture on the currently active unit, upload, then restore the
+      // previous binding so Pixi's internal state cache stays valid.
+      const prev = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+      // Pixi leaves these pixel-store flags set after its own uploads (sprites, text):
+      // data textures must never be premultiplied or flipped.
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       for (const [src, data] of [
         [this.ownerSrc, this.ownerData],
         [this.stateSrc, this.stateData],
       ] as const) {
-        r.texture.bindSource(src, 0);
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        const glTex = r.texture.getGlSource(src);
+        gl.bindTexture(gl.TEXTURE_2D, glTex.texture);
         let b = 0;
         while (b < BANDS) {
           if (!this.dirtyBands[b]) {
@@ -229,7 +240,16 @@ export class MapLayer {
           }
           b = e + 1;
         }
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+      }
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+      gl.bindTexture(gl.TEXTURE_2D, prev);
+      const err = gl.getError();
+      if (err !== gl.NO_ERROR && !this.loggedError) {
+        this.loggedError = true;
+        const gt = r.texture.getGlSource(this.ownerSrc);
+        console.warn(
+          `[map] upload GL error 0x${err.toString(16)} glTex ${gt.width}x${gt.height} map ${this.w}x${this.h} internal 0x${gt.internalFormat.toString(16)} fmt 0x${gt.format.toString(16)} type 0x${gt.type.toString(16)}`,
+        );
       }
     } catch (e) {
       console.warn('[map] partial upload failed, falling back to full uploads', e);
@@ -253,23 +273,33 @@ export class MapLayer {
     this.paletteSrc.update();
   }
 
-  setFog(fog: { w: number; h: number; data: Uint8Array } | null): void {
-    if (!fog) return;
-    const n = fog.w * fog.h;
-    const resize = n * 4 !== this.fogData.length || this.fogSrc.width !== fog.w;
-    if (resize) this.fogData = new Uint8Array(n * 4);
-    for (let i = 0; i < n; i++) {
-      const v = fog.data[i]!;
-      this.fogData[i * 4] = v;
+  /** Low-resolution layers texture: R = fog visibility, G = viewer loyalty. */
+  private ensureLayers(w: number, h: number): boolean {
+    if (this.fogSrc.width === w && this.fogSrc.height === h && this.fogData.length === w * h * 4)
+      return false;
+    this.fogData = new Uint8Array(w * h * 4);
+    for (let i = 0; i < w * h; i++) {
+      this.fogData[i * 4] = 255;
       this.fogData[i * 4 + 3] = 255;
     }
-    if (resize) {
-      const old = this.fogSrc;
-      this.fogSrc = makeSource(this.fogData, fog.w, fog.h, 'rgba8unorm', true);
-      this.shader.resources.uFog = this.fogSrc;
-      old.destroy();
-      return;
-    }
+    const old = this.fogSrc;
+    this.fogSrc = makeSource(this.fogData, w, h, 'rgba8unorm', true);
+    this.shader.resources.uFog = this.fogSrc;
+    old.destroy();
+    return true;
+  }
+
+  setFog(fog: { w: number; h: number; data: Uint8Array } | null): void {
+    if (!fog) return;
+    this.ensureLayers(fog.w, fog.h);
+    for (let i = 0; i < fog.w * fog.h; i++) this.fogData[i * 4] = fog.data[i]!;
+    this.fogSrc.update();
+  }
+
+  setLoyalty(l: { w: number; h: number; data: Uint8Array } | null): void {
+    if (!l) return;
+    this.ensureLayers(l.w, l.h);
+    for (let i = 0; i < l.w * l.h; i++) this.fogData[i * 4 + 1] = l.data[i]!;
     this.fogSrc.update();
   }
 
@@ -286,6 +316,7 @@ export class MapLayer {
     g.uQuality = u.quality;
     g.uPattern = u.pattern ? 1 : 0;
     g.uContrast = u.contrast ? 1 : 0;
+    g.uLoyaltyView = u.loyaltyView ? 1 : 0;
     (g.uWeather as Float32Array).set(u.weather);
     (g.uRing as Float32Array).set(u.ring);
   }

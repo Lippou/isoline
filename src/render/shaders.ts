@@ -45,6 +45,7 @@ uniform float uTerrainView;  // 1 = cost heat-map
 uniform float uQuality;      // 0 performance … 1 full effects
 uniform float uPattern;      // 1 = colour-blind hatch patterns
 uniform float uContrast;     // 1 = high contrast
+uniform float uLoyaltyView;  // 1 = loyalty overlay on the viewer's land
 uniform vec4 uWeather[8];    // x, y, radius, kind (0 storm, 1 fog, -1 none)
 uniform vec4 uRing;          // battle royale: cx, cy, r, active
 
@@ -284,6 +285,17 @@ void main() {
     vec3 unknown = mix(vec3(0.05, 0.07, 0.11), vec3(0.08, 0.10, 0.15), paper);
     vec3 remembered = mix(vec3(dot(col, vec3(0.3, 0.5, 0.2))), col, 0.25) * 0.55;
     col = v < 0.43 ? mix(unknown, remembered, smoothstep(0.0, 0.43, v)) : mix(remembered, col, smoothstep(0.43, 1.0, v));
+  }
+
+  // Loyalty overlay (N): red = restless, green = loyal (viewer's tiles only).
+  if (uLoyaltyView > 0.5) {
+    float lv = texture(uFog, vUV).g;
+    if (lv > 0.002) {
+      vec3 heatL = mix(vec3(0.95, 0.25, 0.25), vec3(0.35, 0.9, 0.5), smoothstep(0.15, 0.85, lv));
+      col = mix(col, heatL, 0.55);
+    } else {
+      col *= 0.55;
+    }
   }
 
   // Night: cool, darker ink.

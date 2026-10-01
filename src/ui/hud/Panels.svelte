@@ -45,7 +45,7 @@
 {/if}
 
 {#if openId}
-  <section class="drawer glass rise-in" data-testid="panel-open">
+  <section class="drawer glass rise-in" class:wide={openId === 'tech'} data-testid="panel-open">
     <header>
       <h3>{t(`panel.${openId}`)}</h3>
       <button class="x" onclick={() => (hud.panels[openId] = false)}>✕</button>
@@ -107,6 +107,9 @@
     grid-template-rows: auto 1fr;
     z-index: 8;
     overflow: hidden;
+  }
+  .drawer.wide {
+    width: calc(600px * var(--ui-scale));
   }
   header {
     display: flex;

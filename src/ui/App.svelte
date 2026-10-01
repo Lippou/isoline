@@ -70,6 +70,8 @@
     cfg.spawnSeconds = Number(q.get('spawn') ?? 15);
     if (q.get('mode')) cfg.mode = q.get('mode') as typeof cfg.mode;
     if (q.has('fog')) cfg.features.fog = true;
+    if (q.get('gold')) cfg.goldMultiplier = Number(q.get('gold'));
+    if (q.get('difficulty')) cfg.difficulty = q.get('difficulty') as typeof cfg.difficulty;
     const spectate = q.has('spectate');
     cfg.players = spectate
       ? []

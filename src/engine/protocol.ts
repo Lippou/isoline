@@ -37,6 +37,7 @@ export type ToWorker =
   | { type: 'turn'; turn: Turn; fast?: boolean }
   | { type: 'turns'; turns: Turn[] }
   | { type: 'setViewer'; viewer: number; fogEnabled: boolean }
+  | { type: 'layers'; loyalty: boolean }
   | { type: 'snapshot'; id: number }
   | { type: 'query'; id: number; q: Query };
 
@@ -165,6 +166,8 @@ export interface TickUpdate {
   buildings?: BuildingView[];
   rails?: RailView[];
   fog?: { w: number; h: number; data: Uint8Array };
+  /** Low-resolution loyalty of the viewer's tiles (0 = not owned, 1..255). */
+  loyalty?: { w: number; h: number; data: Uint8Array };
   hash?: number;
   tickMs: number;
 }

@@ -35,6 +35,7 @@ const ctx = self as unknown as DedicatedWorkerGlobalScope;
 let game: Game | null = null;
 let viewer = 0;
 let fogEnabled = false;
+let loyaltyLayer = false;
 let seen: Uint8Array | null = null;
 let labels = new Map<number, [number, number, number]>();
 let unitBuf = new Float32Array(UNIT_STRIDE * 256);
@@ -106,6 +107,10 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
         fogEnabled = msg.fogEnabled;
         seen = null;
         if (game) sendUpdate(game, [], [], 0, true);
+        break;
+      case 'layers':
+        loyaltyLayer = msg.loyalty;
+        if (game) sendUpdate(game, [], [], 0, false);
         break;
       case 'snapshot':
         if (game) post({ type: 'snapshot', id: msg.id, snapshot: takeSnapshot(game) });
@@ -210,6 +215,7 @@ function sendUpdate(
     g.railsDirty = false;
   }
   if (fogEnabled && (full || tick % 5 === 0)) up.fog = computeFog(g);
+  if (loyaltyLayer && (full || tick % 10 === 0)) up.loyalty = computeLoyalty(g);
   if (tick % HASH_EVERY === 0) up.hash = hashGame(g);
   const transfer: Transferable[] = [
     changed.buffer,
@@ -220,6 +226,7 @@ function sendUpdate(
     units.buffer,
   ];
   if (up.fog) transfer.push(up.fog.data.buffer);
+  if (up.loyalty) transfer.push(up.loyalty.data.buffer);
   post(up, transfer);
 }
 
@@ -439,6 +446,23 @@ function computeLabels(g: Game): void {
   }
   labels = new Map();
   for (const [o, [x, y, dist]] of best) labels.set(o, [x, y, dist * C]);
+}
+
+// -------------------------------------------------------------- loyalty
+function computeLoyalty(g: Game): { w: number; h: number; data: Uint8Array } {
+  const C = 4;
+  const w = Math.ceil(g.map.width / C);
+  const h = Math.ceil(g.map.height / C);
+  const data = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const tx = Math.min(g.map.width - 1, x * C + 2);
+      const ty = Math.min(g.map.height - 1, y * C + 2);
+      const t = ty * g.map.width + tx;
+      if (g.owner[t] === viewer) data[y * w + x] = Math.max(1, g.loyalty[t]!);
+    }
+  }
+  return { w, h, data };
 }
 
 // ------------------------------------------------------------------ fog

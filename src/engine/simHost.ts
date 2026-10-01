@@ -69,6 +69,10 @@ export class SimHost {
     this.send({ type: 'turns', turns });
   }
 
+  setLayers(loyalty: boolean): void {
+    this.send({ type: 'layers', loyalty });
+  }
+
   setViewer(viewer: number, fogEnabled: boolean): void {
     this.send({ type: 'setViewer', viewer, fogEnabled });
   }

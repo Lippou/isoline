@@ -26,6 +26,7 @@
     end.stats.reason.startsWith('mission:') ? Number(end.stats.reason.split(':')[1]) : -1,
   );
   const top = $derived(ranking.slice(0, 5));
+  const spectator = ctl.session.viewer <= 0;
 
   function again(): void {
     const req = app.launch;
@@ -54,14 +55,16 @@
 
 <div class="end fade-in" data-testid="end-screen">
   <div class="card glass rise-in">
-    <h1 class:won={end.won}>
+    <h1 class:won={end.won || spectator}>
       {mission >= 0
         ? mission > 0
           ? t('end.missionComplete')
           : t('end.missionFailed')
-        : end.won
-          ? t('end.victory')
-          : t('end.defeat')}
+        : spectator
+          ? t('end.winnerIs', { name: ctl.session.state.name(end.stats.winner, i18n.lang) })
+          : end.won
+            ? t('end.victory')
+            : t('end.defeat')}
     </h1>
     {#if mission > 0}<div class="stars">{'★'.repeat(mission)}{'☆'.repeat(3 - mission)}</div>{/if}
     <p class="sub">

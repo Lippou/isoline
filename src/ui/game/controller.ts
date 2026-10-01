@@ -187,7 +187,8 @@ export class GameController {
         break;
       case 'loyaltyView':
         hud.views.loyalty = !hud.views.loyalty;
-        toast(t('hud.loyaltyHint'), 'info');
+        this.session.sim.setLayers(hud.views.loyalty);
+        if (hud.views.loyalty) toast(t('hud.loyaltyHint'), 'info');
         break;
       case 'home':
         this.home();
@@ -270,11 +271,22 @@ export class GameController {
     audio.setIntensity(this.lastIntensity);
   }
 
+  private slowSeconds = 0;
+
   private frame(dt: number): void {
     this.hudTimer += dt;
     if (this.hudTimer > 0.25) {
       this.hudTimer = 0;
       hud.fps = Math.round(this.renderer.fps);
+    }
+    // Automatic performance mode on slow machines (sustained < 40 FPS for 5 s).
+    if (settings.graphics.autoPerformance && this.renderer.settings.quality !== 'performance') {
+      this.slowSeconds = this.renderer.fps < 40 ? this.slowSeconds + dt : 0;
+      if (this.slowSeconds > 5) {
+        this.renderer.settings.quality = 'performance';
+        this.renderer.settings.particles = Math.min(this.renderer.settings.particles, 0.4);
+        toast(t('hud.autoPerformance'), 'info');
+      }
     }
     // Tool previews + layer toggles.
     const ov = this.renderer.overlay;

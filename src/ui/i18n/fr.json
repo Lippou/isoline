@@ -105,7 +105,8 @@
       "terrain": "Vue terrain",
       "fog": "Brouillard de guerre",
       "resources": "Ressources"
-    }
+    },
+    "autoPerformance": "Mode performance activé automatiquement (machine lente)."
   },
   "panel": {
     "diplomacy": "Diplomatie",
@@ -324,7 +325,8 @@
       "humansEliminated": "Tous les humains ont été éliminés",
       "mission": "Fin de mission",
       "none": "Partie terminée"
-    }
+    },
+    "winnerIs": "Victoire de {name}"
   },
   "mode": {
     "ffa": "Chacun pour soi",
