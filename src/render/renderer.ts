@@ -372,7 +372,7 @@ export class GameRenderer {
       const b = (c as Container & { info?: import('../engine/protocol').BuildingView }).info!;
       const inView = b.x >= x0 - 2 && b.x <= x1 + 2 && b.y >= y0 - 2 && b.y <= y1 + 2;
       const lod = z < 0.7 ? b.type === B.City && b.level >= 2 : z < 1.4 ? b.type !== B.DefensePost : true;
-      c.visible = inView && lod;
+      c.visible = inView && lod && this.revealed(b.owner, b.x, b.y);
       if (!c.visible) {
         const light = (c as Container & { light?: Sprite }).light;
         if (light) light.visible = false;
@@ -400,9 +400,9 @@ export class GameRenderer {
         if (lit) {
           light.position.set(b.x + 0.5, b.y + 0.5);
           const flicker = 0.9 + 0.1 * Math.sin(t * 3 + b.id);
-          light.scale.set((0.08 + 0.025 * b.level) * (b.type === B.City ? 1 : 0.6));
+          light.scale.set((0.13 + 0.035 * Math.min(6, b.level)) * (b.type === B.City ? 1 : 0.6));
           light.tint = 0xffd38a;
-          light.alpha = night * 0.55 * flicker;
+          light.alpha = night * 0.8 * flicker;
         }
       }
     }
@@ -454,7 +454,11 @@ export class GameRenderer {
       sp.position.set(x, y);
       // LOD: ships visible from medium zoom, trains at close zoom.
       const minZoom = type === U.Train ? 2.2 : type === U.Merchant ? 1.2 : 0.4;
-      sp.visible = inView && z >= minZoom && !(type === U.Transport && this.hiddenInFogBank(owner, x, y));
+      sp.visible =
+        inView &&
+        z >= minZoom &&
+        this.revealed(owner, x, y) &&
+        !(type === U.Transport && this.hiddenInFogBank(owner, x, y));
       if (!sp.visible) continue;
       const base =
         type === U.Warship
@@ -516,6 +520,19 @@ export class GameRenderer {
         this.unitSprites.delete(id);
       }
     }
+  }
+
+  /** Fog of war: other players' things are drawn only in currently visible cells. */
+  private revealed(owner: number, x: number, y: number): boolean {
+    const s = this.state;
+    const fog = s.fog;
+    if (!fog || s.viewer <= 0 || owner === s.viewer) return true;
+    const me = s.players.get(s.viewer);
+    if (me && (me.allies.includes(owner) || (me.team > 0 && s.players.get(owner)?.team === me.team)))
+      return true;
+    const fx = Math.min(fog.w - 1, Math.max(0, Math.floor(x / 4)));
+    const fy = Math.min(fog.h - 1, Math.max(0, Math.floor(y / 4)));
+    return fog.data[fy * fog.w + fx] === 255;
   }
 
   /** Enemy transports are hidden inside weather fog banks (original weather feature). */
@@ -682,7 +699,7 @@ export class GameRenderer {
       if (!p.alive || p.tiles === 0) continue;
       const [lx, ly, size] = p.label;
       const px = size * z;
-      if (px < 18) continue;
+      if (px < 18 || !this.revealed(p.id, lx, ly)) continue;
       seen.add(p.id);
       let l = this.labelPool.get(p.id);
       if (!l) {

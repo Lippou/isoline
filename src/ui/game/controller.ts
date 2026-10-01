@@ -114,6 +114,62 @@ export class GameController {
       this.renderer.camera.goTo(x, y, Number(q.get('zoom')));
     }
     if (q.has('perf')) hud.showPerf = true;
+    // Automation hook (media capture, scripted QA) — only with ?automation.
+    if (q.has('automation')) {
+      (window as unknown as { __iso: unknown }).__iso = {
+        cmd: (c: Parameters<Session['cmd']>[0]) => this.session.cmd(c),
+        camera: this.renderer.camera,
+        state: () => {
+          const st = this.session.state;
+          return {
+            tick: st.tick,
+            phase: st.phase,
+            width: st.width,
+            height: st.height,
+            local: st.local,
+            players: st.playerList.map((p) => ({
+              id: p.id,
+              name: p.name.en,
+              tiles: p.tiles,
+              label: p.label,
+              kind: p.kind,
+            })),
+          };
+        },
+        ownTiles: (n: number) => {
+          const st = this.session.state;
+          const out: number[] = [];
+          const step = Math.max(1, Math.floor(st.owner.length / 200000));
+          for (let i = 0; i < st.owner.length && out.length < n; i += step)
+            if (st.owner[i] === this.session.viewer) out.push(i);
+          return out;
+        },
+        tilesOf: (id: number, n: number) => {
+          const st = this.session.state;
+          const out: number[] = [];
+          for (let i = 0; i < st.owner.length && out.length < n; i += 97) if (st.owner[i] === id) out.push(i);
+          return out;
+        },
+        coast: (n: number) => {
+          const st = this.session.state;
+          const out: number[] = [];
+          const w = st.width;
+          for (let i = w; i < st.owner.length - w && out.length < n; i += 7) {
+            if (st.owner[i] !== this.session.viewer) continue;
+            const t = st.terrain;
+            if (t[i - 1]! <= 2 || t[i + 1]! <= 2 || t[i - w]! <= 2 || t[i + w]! <= 2) out.push(i);
+          }
+          return out;
+        },
+        hud: () => ({ tick: hud.tick, end: !!hud.end }),
+        buildings: () => this.session.state.buildings.map((b) => ({ ...b })),
+        freeLand: (t: number) => {
+          const st = this.session.state;
+          return st.terrain[t]! > 2 && st.terrain[t]! < 10 && st.owner[t] === 0;
+        },
+        setTool: (k: string) => (hud.tool = { k: 'none' } as never) && k,
+      };
+    }
   }
 
   // ------------------------------------------------------------- actions
@@ -180,6 +236,11 @@ export class GameController {
         hud.views.terrain = !hud.views.terrain;
         break;
       case 'fogView':
+        // Lifting the fog is a spectator/replay tool, not a way to peek in a live game.
+        if (this.session.kind !== 'replay' && this.session.viewer > 0) {
+          toast(t('hud.fogLocked'), 'info');
+          break;
+        }
         hud.views.fog = !hud.views.fog;
         break;
       case 'resourcesView':

@@ -106,7 +106,8 @@
       "fog": "Brouillard de guerre",
       "resources": "Ressources"
     },
-    "autoPerformance": "Mode performance activé automatiquement (machine lente)."
+    "autoPerformance": "Mode performance activé automatiquement (machine lente).",
+    "fogLocked": "Le brouillard de guerre ne peut être levé qu'en spectateur ou en replay."
   },
   "panel": {
     "diplomacy": "Diplomatie",
@@ -390,7 +391,8 @@
     "setReady": "Je suis prêt",
     "kick": "Expulser",
     "noMaps": "Aucune carte dans cette catégorie.",
-    "summary": "{nations} nations et {tribes} tribus partageront la carte."
+    "summary": "{nations} nations et {tribes} tribus partageront la carte.",
+    "startGold": "Or de départ des joueurs (bac à sable)"
   },
   "rule": {
     "allowPorts": "Ports et marine",

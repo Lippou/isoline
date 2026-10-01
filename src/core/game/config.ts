@@ -47,6 +47,8 @@ export interface GameConfig {
   victoryThreshold: number; // percent of useful land
   spawnSeconds: number;
   goldMultiplier: number;
+  /** Sandbox: starting gold for humans and nations. */
+  startGold: number;
   gameSpeed: number;
   allowPorts: boolean;
   allowNukes: boolean;
@@ -89,6 +91,7 @@ export function defaultConfig(seed: number): GameConfig {
     victoryThreshold: 80,
     spawnSeconds: 30,
     goldMultiplier: 1,
+    startGold: 0,
     gameSpeed: 1,
     allowPorts: true,
     allowNukes: true,

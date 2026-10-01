@@ -25,6 +25,8 @@ export class Attack {
   readonly target: number;
   troops: number;
   clock = 0;
+  /** Clock value at which the attacker's pre-existing border tiles are considered "reached". */
+  seedClock = 0;
   createdTick: number;
   heapTiles: number[] = [];
   heapPri: number[] = [];
@@ -101,6 +103,8 @@ function tileCost(game: Game, tile: number, target: number): number {
   return speed;
 }
 
+const FRONT_SHAPE = 0.02;
+
 function jitter(game: Game, tile: number, attackId: number): number {
   return 0.65 + (hash2(tile, attackId, game.config.seed) & 1023) / 1460;
 }
@@ -112,16 +116,56 @@ function enqueueNeighbors(game: Game, a: Attack, tile: number): void {
   for (let k = 0; k < n; k++) {
     const j = NB[k]!;
     if (owner[j] !== a.target || !IS_LAND[map.terrain[j]!] || game.isDead(j)) continue;
-    if (game.queuedBy[j] === a.id) continue;
-    game.queuedBy[j] = a.id;
-    // Tiles touching more attacker tiles are taken first (fills concave pockets).
-    let adj = 0;
-    const m = map.neighbors4(j, NB2);
-    for (let q = 0; q < m; q++) if (owner[NB2[q]!] === a.attacker) adj++;
-    a.push(j, a.clock + tileCost(game, j, a.target) * jitter(game, j, a.id) - 0.22 * (adj - 1));
+    pushFrontier(game, a, j);
   }
 }
-const NB2 = new Int32Array(4);
+
+/** Queues (or re-queues earlier) frontier tile j at its eikonal arrival time. */
+function pushFrontier(game: Game, a: Attack, j: number): void {
+  const t = Math.fround(arrivalTime(game, a, j));
+  if (game.queuedBy[j] === a.id && t >= game.frontTime[j]!) return;
+  game.queuedBy[j] = a.id;
+  game.frontTime[j] = t;
+  a.push(j, t);
+}
+
+/**
+ * Arrival time of the attack at tile j, from its conquered orthogonal neighbours,
+ * solved like a fast-marching eikonal update: with one horizontal and one vertical
+ * neighbour reached at times th and tv, T = (th + tv + sqrt(2c² − (th − tv)²)) / 2,
+ * which makes diagonal fronts advance at the same Euclidean speed as straight
+ * ones (a plain 4-neighbour wave grows Manhattan diamonds). A small 5×5 term
+ * fills concave pockets first and slows convex tips, keeping fronts organic.
+ */
+function arrivalTime(game: Game, a: Attack, j: number): number {
+  const map = game.map;
+  const owner = game.owner;
+  const w = map.width;
+  const x = j % w;
+  const y = (j - x) / w;
+  const reached = (q: number): number =>
+    owner[q] !== a.attacker ? Infinity : game.queuedBy[q] === a.id ? game.frontTime[q]! : a.seedClock;
+  const th = Math.min(x > 0 ? reached(j - 1) : Infinity, x < w - 1 ? reached(j + 1) : Infinity);
+  const tv = Math.min(y > 0 ? reached(j - w) : Infinity, y < map.height - 1 ? reached(j + w) : Infinity);
+  const c = tileCost(game, j, a.target) * jitter(game, j, a.id);
+  let t: number;
+  if (th === Infinity && tv === Infinity) t = a.clock + c;
+  else if (th === Infinity || tv === Infinity) t = Math.min(th, tv) + c;
+  else {
+    const d = th - tv;
+    t = Math.abs(d) >= c ? Math.min(th, tv) + c : (th + tv + Math.sqrt(2 * c * c - d * d)) / 2;
+  }
+  const x0 = Math.max(0, x - 2);
+  const x1 = Math.min(w - 1, x + 2);
+  const y0 = Math.max(0, y - 2);
+  const y1 = Math.min(map.height - 1, y + 2);
+  let n = 0;
+  for (let yy = y0; yy <= y1; yy++) {
+    const row = yy * w;
+    for (let xx = x0; xx <= x1; xx++) if (owner[row + xx] === a.attacker) n++;
+  }
+  return t - FRONT_SHAPE * (n - 10);
+}
 
 /**
  * Creates (or reinforces) a land attack with `troops` already taken from the
@@ -171,6 +215,7 @@ export function launchAttack(
     a.push(beachhead, a.clock);
   } else {
     // Seed the frontier from the attacker's border.
+    a.seedClock = a.clock;
     const owner = game.owner;
     const map = game.map;
     for (const b of p.border) {
@@ -178,9 +223,7 @@ export function launchAttack(
       for (let k = 0; k < n; k++) {
         const j = NB[k]!;
         if (owner[j] !== targetId || !IS_LAND[map.terrain[j]!] || game.isDead(j)) continue;
-        if (game.queuedBy[j] === a.id) continue;
-        game.queuedBy[j] = a.id;
-        a.push(j, a.clock + tileCost(game, j, targetId) * jitter(game, j, a.id));
+        pushFrontier(game, a, j);
       }
     }
   }

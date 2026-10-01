@@ -31,7 +31,7 @@ export function setupPlayers(game: Game): void {
     colorIdx++;
     p.flagSeed = hashString(slot.name + slot.slot);
     p.troops = START_TROOPS.human;
-    p.gold = START_GOLD.human;
+    p.gold = START_GOLD.human + (cfg.startGold ?? 0);
   }
 
   // Nations from the map (most important first), placed immediately.

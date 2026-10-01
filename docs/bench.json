@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-01T23:00:32.167Z",
+  "date": "2026-10-01T23:17:27.938Z",
   "node": "v24.19.0",
   "cpu": "Apple M4 Pro",
   "load_world": {
@@ -8,61 +8,61 @@
   },
   "load_world-giant": {
     "tiles": 5158400,
-    "ms": 960
+    "ms": 955
   },
   "world100": {
     "map": "world",
     "tiles": 2014000,
     "nations": 100,
     "tribes": 100,
-    "ticks": 6000,
-    "avgMs": 0.667,
-    "p95Ms": 2.056,
-    "p99Ms": 4.426,
-    "maxMs": 9.96,
-    "alive": 33,
-    "buildings": 1102,
-    "peakUnits": 222,
+    "ticks": 1200,
+    "avgMs": 0.669,
+    "p95Ms": 1.161,
+    "p99Ms": 1.74,
+    "maxMs": 4,
+    "alive": 166,
+    "buildings": 106,
+    "peakUnits": 13,
     "phase": "playing",
-    "heapMB": 52,
-    "rssMB": 405
+    "heapMB": 30,
+    "rssMB": 345
   },
   "world50_30min": {
     "map": "world",
     "tiles": 2014000,
     "nations": 50,
     "tribes": 60,
-    "ticks": 18000,
-    "avgMs": 0.22,
-    "p95Ms": 0.439,
-    "p99Ms": 1.872,
-    "maxMs": 17.32,
-    "alive": 12,
-    "buildings": 647,
-    "peakUnits": 164,
+    "ticks": 3000,
+    "avgMs": 0.462,
+    "p95Ms": 0.799,
+    "p99Ms": 2.05,
+    "maxMs": 5.72,
+    "alive": 45,
+    "buildings": 244,
+    "peakUnits": 104,
     "phase": "playing",
-    "heapMB": 45,
-    "rssMB": 552
+    "heapMB": 28,
+    "rssMB": 465
   },
   "giant100": {
     "map": "world-giant",
     "tiles": 5158400,
     "nations": 100,
     "tribes": 100,
-    "ticks": 3000,
-    "avgMs": 0.689,
-    "p95Ms": 1.616,
-    "p99Ms": 3.404,
-    "maxMs": 9.14,
-    "alive": 80,
-    "buildings": 524,
-    "peakUnits": 180,
+    "ticks": 600,
+    "avgMs": 0.774,
+    "p95Ms": 1.498,
+    "p99Ms": 1.674,
+    "maxMs": 1.91,
+    "alive": 188,
+    "buildings": 0,
+    "peakUnits": 6,
     "phase": "playing",
-    "heapMB": 101,
-    "rssMB": 701
+    "heapMB": 29,
+    "rssMB": 626
   },
   "determinism": {
     "equal": true,
-    "hash": "52fa3ef8"
+    "hash": "92366ed4"
   }
 }

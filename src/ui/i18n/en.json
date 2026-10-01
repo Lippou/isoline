@@ -106,7 +106,8 @@
       "fog": "Fog of war",
       "resources": "Resources"
     },
-    "autoPerformance": "Performance mode enabled automatically (slow machine)."
+    "autoPerformance": "Performance mode enabled automatically (slow machine).",
+    "fogLocked": "The fog of war can only be lifted when spectating or in a replay."
   },
   "panel": {
     "diplomacy": "Diplomacy",
@@ -390,7 +391,8 @@
     "setReady": "I'm ready",
     "kick": "Kick",
     "noMaps": "No map in this category.",
-    "summary": "{nations} nations and {tribes} tribes will share the map."
+    "summary": "{nations} nations and {tribes} tribes will share the map.",
+    "startGold": "Players’ starting gold (sandbox)"
   },
   "rule": {
     "allowPorts": "Ports and navy",

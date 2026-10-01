@@ -242,3 +242,28 @@ describe('buildings', () => {
     expect(g.buildings.has(post.id)).toBe(false);
   });
 });
+
+describe('front shape', () => {
+  it('grows round territories on open plains (no Manhattan diamonds)', () => {
+    const map = asciiMap(
+      Array.from({ length: 30 }, () => '.'.repeat(30)),
+      8,
+    );
+    const g = testGame(map, 1, { victoryThreshold: 101 });
+    startWith(g, [[120, 120]]);
+    for (let t = 1; g.players[1]!.tiles < 12000 && t < 20000; t++) {
+      g.step(t % 10 === 0 ? [cmd(1, { t: 'attack', tile: map.idx(239, 239), ratio: 0.15 })] : []);
+    }
+    const own = (x: number, y: number) => g.owner[map.idx(x, y)] === 1;
+    const ext = (dx: number, dy: number) => {
+      let r = 0;
+      while (r < 118 && own(120 + Math.round(dx * (r + 1)), 120 + Math.round(dy * (r + 1)))) r++;
+      return r;
+    };
+    const s = Math.SQRT1_2;
+    const axis = ext(1, 0) + ext(-1, 0) + ext(0, 1) + ext(0, -1);
+    const diag = ext(s, s) + ext(-s, s) + ext(s, -s) + ext(-s, -s);
+    // A diamond gives 0.71, a disc 1.0.
+    expect(diag / axis).toBeGreaterThan(0.88);
+  });
+});

@@ -187,6 +187,7 @@ void main() {
   if (uTerrainView > 0.5) col = mix(col, heat(tId), 0.55);
 
   // ---------------------------------------------------------------- territory
+  vec3 atlas = col; // terrain only: what the fog of war still shows
   float own = ownerAt(ti);
   vec4 st = texelFetch(uState, ti, 0);
   float fallout = st.r;
@@ -243,11 +244,17 @@ void main() {
     }
   }
 
-  // Fallout: sickly luminous haze with crackle.
+  // Fallout: charred ash veined with thin glowing cracks (brighter when fresh).
   if (fallout > 0.0) {
-    float crack = fbm(tp * 0.25 + vec2(uTime * 0.07, 0.0));
-    vec3 rad = vec3(0.70, 0.86, 0.22);
-    col = mix(col, rad * (0.35 + 0.5 * crack), clamp(fallout * 0.75, 0.0, 0.8));
+    float lumF = dot(atlas, vec3(0.3, 0.5, 0.2));
+    float grain = fbm(tp * 0.3);
+    vec3 ash = mix(vec3(0.07, 0.065, 0.06), vec3(0.20, 0.18, 0.15), lumF * 0.8 + grain * 0.35);
+    float ridge = 1.0 - abs(2.0 * fbm(tp * 0.11 + vec2(3.1, 7.7)) - 1.0);
+    float vein = smoothstep(0.9, 0.985, ridge);
+    float pulse = 0.75 + 0.25 * sin(uTime * 1.7 + grain * 6.0);
+    vec3 glow = mix(vec3(0.95, 0.62, 0.18), vec3(0.72, 0.95, 0.30), grain);
+    vec3 burnt = ash + glow * vein * pulse * (0.35 + 0.65 * fallout);
+    col = mix(col, burnt, clamp(0.25 + fallout * 0.75, 0.0, 0.92));
   }
   // Dead zone (battle royale).
   if (mod(flags, 2.0) > 0.5) {
@@ -280,11 +287,14 @@ void main() {
 
   // Fog of war.
   if (uFogOn > 0.5) {
+    // The geography stays readable (it is an atlas); who holds it does not.
     float v = texture(uFog, vUV).r;
     float paper = 0.5 + 0.5 * vnoise(tp * 0.08);
-    vec3 unknown = mix(vec3(0.05, 0.07, 0.11), vec3(0.08, 0.10, 0.15), paper);
-    vec3 remembered = mix(vec3(dot(col, vec3(0.3, 0.5, 0.2))), col, 0.25) * 0.55;
-    col = v < 0.43 ? mix(unknown, remembered, smoothstep(0.0, 0.43, v)) : mix(remembered, col, smoothstep(0.43, 1.0, v));
+    float lum = dot(atlas, vec3(0.3, 0.5, 0.2));
+    vec3 sepia = mix(vec3(lum) * vec3(0.78, 0.86, 1.05), atlas, 0.3);
+    vec3 unknown = sepia * (0.36 + 0.08 * paper);
+    vec3 remembered = sepia * (0.55 + 0.06 * paper);
+    col = v < 0.43 ? mix(unknown, remembered, smoothstep(0.0, 0.43, v)) : mix(remembered, col, smoothstep(0.6, 1.0, v));
   }
 
   // Loyalty overlay (N): red = restless, green = loyal (viewer's tiles only).
@@ -299,7 +309,7 @@ void main() {
   }
 
   // Night: cool, darker ink.
-  col = mix(col, col * vec3(0.48, 0.56, 0.80), uNight * 0.75);
+  col = mix(col, col * vec3(0.34, 0.43, 0.78) + vec3(0.0, 0.01, 0.03), uNight * 0.85);
   finalColor = vec4(col, 1.0);
 }
 `;

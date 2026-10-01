@@ -323,6 +323,17 @@
           /></label
         >
         <label
+          >{t('lobby.startGold')} <b class="mono">{(cfg.startGold ?? 0) / 1e6} M</b><input
+            type="range"
+            min="0"
+            max="50000000"
+            step="1000000"
+            bind:value={cfg.startGold}
+            onchange={push}
+            disabled={!isHost}
+          /></label
+        >
+        <label
           >{t('lobby.speed')} <b class="mono">×{cfg.gameSpeed}</b><input
             type="range"
             min="0.5"

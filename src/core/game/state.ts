@@ -64,6 +64,8 @@ export class Game {
   readonly coastPos: Int32Array;
   /** Scratch marks used by attacks (attack id that queued the tile). */
   readonly queuedBy: Int32Array;
+  /** Arrival time of the attack in queuedBy (frontier tiles) or conquest time (taken tiles). */
+  readonly frontTime: Float32Array;
   /** Building id occupying a tile (-1 none). */
   readonly buildingAt: Int32Array;
 
@@ -107,6 +109,7 @@ export class Game {
     this.borderPos = new Int32Array(n).fill(-1);
     this.coastPos = new Int32Array(n).fill(-1);
     this.queuedBy = new Int32Array(n).fill(-1);
+    this.frontTime = new Float32Array(n);
     this.buildingAt = new Int32Array(n).fill(-1);
     this.railTiles = new Uint8Array(n);
     this.grid = new BuildingGrid(map.width, map.height);

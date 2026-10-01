@@ -480,7 +480,7 @@ function computeFog(g: Game): { w: number; h: number; data: Uint8Array } {
   const friends = new Set<number>([me.id, ...me.allies.keys()]);
   for (const p of g.players) if (p && p.team > 0 && p.team === me.team) friends.add(p.id);
   const night = g.config.features.weather && isNight(g.tick);
-  const R = (night ? 16 : 20) / C;
+  const R = (night ? 24 : 30) / C;
   const INF = 1e9;
   const d = new Float32Array(w * h).fill(INF);
   for (let y = 0; y < h; y++) {
@@ -490,15 +490,29 @@ function computeFog(g: Game): { w: number; h: number; data: Uint8Array } {
       if (friends.has(g.owner[ty * g.map.width + tx]!)) d[y * w + x] = 0;
     }
   }
+  // Two-pass 8-neighbour chamfer distance (≈ Euclidean: round vision, no diamonds).
+  const D = Math.SQRT2;
   for (let i = 0; i < w * h; i++) {
     const x = i % w;
-    if (x > 0) d[i] = Math.min(d[i]!, d[i - 1]! + 1);
-    if (i >= w) d[i] = Math.min(d[i]!, d[i - w]! + 1);
+    let v = d[i]!;
+    if (x > 0) v = Math.min(v, d[i - 1]! + 1);
+    if (i >= w) {
+      v = Math.min(v, d[i - w]! + 1);
+      if (x > 0) v = Math.min(v, d[i - w - 1]! + D);
+      if (x < w - 1) v = Math.min(v, d[i - w + 1]! + D);
+    }
+    d[i] = v;
   }
   for (let i = w * h - 1; i >= 0; i--) {
     const x = i % w;
-    if (x < w - 1) d[i] = Math.min(d[i]!, d[i + 1]! + 1);
-    if (i < w * (h - 1)) d[i] = Math.min(d[i]!, d[i + w]! + 1);
+    let v = d[i]!;
+    if (x < w - 1) v = Math.min(v, d[i + 1]! + 1);
+    if (i < w * (h - 1)) {
+      v = Math.min(v, d[i + w]! + 1);
+      if (x < w - 1) v = Math.min(v, d[i + w + 1]! + D);
+      if (x > 0) v = Math.min(v, d[i + w - 1]! + D);
+    }
+    d[i] = v;
   }
   for (let i = 0; i < w * h; i++) if (d[i]! <= R) data[i] = 255;
   const disc = (cx: number, cy: number, r: number) => {

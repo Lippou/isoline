@@ -81,6 +81,8 @@ export interface Snapshot {
   loyalty: number[];
   flags: number[];
   queuedBy: number[];
+  /** Sparse [tile, time, …] for tiles queued or taken by live attacks. */
+  frontTime?: number[];
   players: unknown[];
   attacks: unknown[];
   buildings: unknown[];
@@ -112,6 +114,7 @@ export function takeSnapshot(game: Game): Snapshot {
     loyalty: rleEncode(game.loyalty),
     flags: rleEncode(game.flags),
     queuedBy: rleEncode(game.queuedBy),
+    frontTime: sparseFrontTime(game),
     players: game.players.map((p) => (p ? toPlain(p) : null)) as unknown[],
     attacks: game.attacks.map((a) => toPlain(a)) as unknown[],
     buildings: [...game.buildings.values()].map((b) => toPlain(b)) as unknown[],
@@ -149,6 +152,9 @@ export function restoreSnapshot(map: GameMap, snap: Snapshot): Game {
   rleDecodeInto(snap.loyalty, game.loyalty);
   rleDecodeInto(snap.flags, game.flags);
   rleDecodeInto(snap.queuedBy, game.queuedBy);
+  game.frontTime.fill(0);
+  const ft = snap.frontTime ?? [];
+  for (let k = 0; k + 1 < ft.length; k += 2) game.frontTime[ft[k]!] = ft[k + 1]!;
 
   game.players = snap.players.map((raw) => {
     if (!raw) return null;
@@ -198,4 +204,13 @@ export function snapshotToJson(s: Snapshot): string {
 
 export function snapshotFromJson(text: string): Snapshot {
   return JSON.parse(text) as Snapshot;
+}
+
+function sparseFrontTime(game: Game): number[] {
+  const live = new Set(game.attacks.map((a) => a.id));
+  const out: number[] = [];
+  if (live.size === 0) return out;
+  const q = game.queuedBy;
+  for (let i = 0; i < q.length; i++) if (live.has(q[i]!)) out.push(i, game.frontTime[i]!);
+  return out;
 }

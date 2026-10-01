@@ -46,6 +46,7 @@
     "eslint": "^10.11.0",
     "eslint-plugin-svelte": "^3.23.0",
     "fast-png": "^8.0.0",
+    "gifenc": "^1.0.3",
     "globals": "^17.13.0",
     "lefthook": "^2.1.16",
     "opentype.js": "^2.0.0",
