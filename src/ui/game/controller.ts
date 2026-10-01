@@ -13,7 +13,7 @@ import { audio } from '../../audio/audio';
 import { recordGameEnd } from '../stores/profile.svelte';
 import { takeSnapshotSave } from './saves';
 import { CampaignDirector } from '../campaign/director';
-import { LanClient, currentLan } from '../../engine/lanClient';
+import { type LanClient, currentLan } from '../../engine/lanClient';
 
 const PLAYER_PARAMS = new Set(['player', 'by', 'from', 'with', 'traitor', 'victim', 'target']);
 
@@ -76,6 +76,21 @@ export class GameController {
       this.frame(dt);
     };
     this.session.onTick((u, events) => this.onTick(u.tick, events));
+    if (this.lan) {
+      const lan = this.lan;
+      this.session.onHash((tick, hash) => lan.send({ t: 'hash', tick, hash }));
+      lan.onSnapshot = (snap) => void this.resyncFrom(snap);
+      lan.onDesync = () => (hud.desync = true);
+      lan.onPause = (on) => (hud.paused = on);
+      lan.onChat = (m) =>
+        (hud.chat = [
+          ...hud.chat.slice(-99),
+          { from: m.from, text: m.text, channel: m.channel, t: hud.tick },
+        ]);
+      lan.onStatus = (connected) => {
+        if (!connected) toast(t('lan.connectionLost'), 'warn');
+      };
+    }
     if (this.req.viewer > 0 && ready.phase === 'spawn') this.renderer.camera.fit();
     hud.loading = false;
     hud.ready = true;

@@ -737,7 +737,8 @@
       "code": "Code d'invitation incorrect.",
       "full": "Salon complet.",
       "started": "La partie a déjà commencé."
-    }
+    },
+    "connectionLost": "Connexion à l'hôte perdue — reconnexion…"
   },
   "campaign": {
     "title": "Campagne : Les Cartographes",

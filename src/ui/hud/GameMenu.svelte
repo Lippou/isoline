@@ -91,7 +91,10 @@
             confirmModal(
               t('menu.surrenderTitle'),
               t('menu.surrenderBody'),
-              () => ctl.session.cmd({ t: 'surrender' }),
+              () => {
+                ctl.session.cmd({ t: 'surrender' });
+                hud.panels.menu = false; // closing the menu resumes the game so the order is processed
+              },
               t('menu.surrender'),
               t('common.cancel'),
             )}>{t('menu.surrender')}</button

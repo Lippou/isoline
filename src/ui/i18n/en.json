@@ -1,7 +1,16 @@
 {
-  "brand": { "slogan": "Draw the line. Hold the world." },
-  "common": { "accept": "Accept", "refuse": "Refuse", "back": "Back", "cancel": "Cancel" },
-  "loading": { "map": "Unrolling the map…" },
+  "brand": {
+    "slogan": "Draw the line. Hold the world."
+  },
+  "common": {
+    "accept": "Accept",
+    "refuse": "Refuse",
+    "back": "Back",
+    "cancel": "Cancel"
+  },
+  "loading": {
+    "map": "Unrolling the map…"
+  },
   "title": {
     "play": "Play",
     "solo": "Solo",
@@ -92,7 +101,11 @@
     "loyaltyHint": "Loyalty layer: freshly conquered lands are unstable.",
     "screenshotSaved": "Screenshot saved: {file}",
     "screenshotFailed": "Screenshot failed.",
-    "view": { "terrain": "Terrain view", "fog": "Fog of war", "resources": "Resources" }
+    "view": {
+      "terrain": "Terrain view",
+      "fog": "Fog of war",
+      "resources": "Resources"
+    }
   },
   "panel": {
     "diplomacy": "Diplomacy",
@@ -101,7 +114,12 @@
     "log": "Log",
     "chat": "Messages"
   },
-  "log": { "all": "All", "danger": "Alerts", "warn": "Warnings", "good": "Successes" },
+  "log": {
+    "all": "All",
+    "danger": "Alerts",
+    "warn": "Warnings",
+    "good": "Successes"
+  },
   "chat": {
     "all": "All",
     "team": "Team",
@@ -174,38 +192,98 @@
     "rate": "Research: {rp} points/s (cities)",
     "economy": {
       "title": "Economy",
-      "1": { "name": "Workshops", "desc": "+10% worker income" },
-      "2": { "name": "Standard gauge", "desc": "+10% train revenue" },
-      "3": { "name": "Banking", "desc": "+15% worker income" },
-      "4": { "name": "Prefabrication", "desc": "−10% building costs" }
+      "1": {
+        "name": "Workshops",
+        "desc": "+10% worker income"
+      },
+      "2": {
+        "name": "Standard gauge",
+        "desc": "+10% train revenue"
+      },
+      "3": {
+        "name": "Banking",
+        "desc": "+15% worker income"
+      },
+      "4": {
+        "name": "Prefabrication",
+        "desc": "−10% building costs"
+      }
     },
     "military": {
       "title": "Military",
-      "1": { "name": "Mountain troops", "desc": "−10% losses in hills and mountains" },
-      "2": { "name": "Logistics", "desc": "+10% attack speed" },
-      "3": { "name": "Doctrine", "desc": "−10% losses everywhere" },
-      "4": { "name": "Blitzkrieg", "desc": "+15% attack speed" }
+      "1": {
+        "name": "Mountain troops",
+        "desc": "−10% losses in hills and mountains"
+      },
+      "2": {
+        "name": "Logistics",
+        "desc": "+10% attack speed"
+      },
+      "3": {
+        "name": "Doctrine",
+        "desc": "−10% losses everywhere"
+      },
+      "4": {
+        "name": "Blitzkrieg",
+        "desc": "+15% attack speed"
+      }
     },
     "naval": {
       "title": "Navy",
-      "1": { "name": "Armour plating", "desc": "+20% warship hit points" },
-      "2": { "name": "Naval gunnery", "desc": "+20% warship damage" },
-      "3": { "name": "Turbines", "desc": "+25% ship speed" },
-      "4": { "name": "Shipping lines", "desc": "+30% trade income" }
+      "1": {
+        "name": "Armour plating",
+        "desc": "+20% warship hit points"
+      },
+      "2": {
+        "name": "Naval gunnery",
+        "desc": "+20% warship damage"
+      },
+      "3": {
+        "name": "Turbines",
+        "desc": "+25% ship speed"
+      },
+      "4": {
+        "name": "Shipping lines",
+        "desc": "+30% trade income"
+      }
     },
     "nuclear": {
       "title": "Nuclear",
-      "1": { "name": "Enrichment", "desc": "−10% bomb costs" },
-      "2": { "name": "Rapid reload", "desc": "+25% silo reload speed" },
-      "3": { "name": "Miniaturisation", "desc": "−15% bomb costs" },
-      "4": { "name": "Multiple warheads", "desc": "MIRV: +2 warheads" }
+      "1": {
+        "name": "Enrichment",
+        "desc": "−10% bomb costs"
+      },
+      "2": {
+        "name": "Rapid reload",
+        "desc": "+25% silo reload speed"
+      },
+      "3": {
+        "name": "Miniaturisation",
+        "desc": "−15% bomb costs"
+      },
+      "4": {
+        "name": "Multiple warheads",
+        "desc": "MIRV: +2 warheads"
+      }
     },
     "defense": {
       "title": "Defence",
-      "1": { "name": "Fire-control radar", "desc": "SAM range +10" },
-      "2": { "name": "Salvos", "desc": "SAM: +1 simultaneous target" },
-      "3": { "name": "Civil engineering", "desc": "−5% building costs" },
-      "4": { "name": "Shield", "desc": "SAM: +1 target, range +15" }
+      "1": {
+        "name": "Fire-control radar",
+        "desc": "SAM range +10"
+      },
+      "2": {
+        "name": "Salvos",
+        "desc": "SAM: +1 simultaneous target"
+      },
+      "3": {
+        "name": "Civil engineering",
+        "desc": "−5% building costs"
+      },
+      "4": {
+        "name": "Shield",
+        "desc": "SAM: +1 target, range +15"
+      }
     }
   },
   "stats": {
@@ -258,7 +336,12 @@
     "campaign": "Campaign",
     "tutorial": "Tutorial"
   },
-  "difficulty": { "easy": "Easy", "normal": "Normal", "hard": "Hard", "impossible": "Impossible" },
+  "difficulty": {
+    "easy": "Easy",
+    "normal": "Normal",
+    "hard": "Hard",
+    "impossible": "Impossible"
+  },
   "mapcat": {
     "continents": "Continents",
     "regions": "Regions",
@@ -317,28 +400,64 @@
     "allowSpectators": "Spectators"
   },
   "feature": {
-    "weather": { "name": "Weather & day/night", "desc": "8-minute cycle, storms slowing ships, fog banks." },
-    "fog": { "name": "Fog of war", "desc": "You only see what your lands, ships, radars and planes reveal." },
-    "tech": { "name": "Technology tree", "desc": "5 branches × 4 levels, research produced by cities." },
-    "resources": { "name": "Strategic resources", "desc": "Oil, uranium, fertile land and rare metals." },
-    "loyalty": { "name": "Loyalty & secession", "desc": "Fresh conquests may secede if poorly garrisoned." },
+    "weather": {
+      "name": "Weather & day/night",
+      "desc": "8-minute cycle, storms slowing ships, fog banks."
+    },
+    "fog": {
+      "name": "Fog of war",
+      "desc": "You only see what your lands, ships, radars and planes reveal."
+    },
+    "tech": {
+      "name": "Technology tree",
+      "desc": "5 branches × 4 levels, research produced by cities."
+    },
+    "resources": {
+      "name": "Strategic resources",
+      "desc": "Oil, uranium, fertile land and rare metals."
+    },
+    "loyalty": {
+      "name": "Loyalty & secession",
+      "desc": "Fresh conquests may secede if poorly garrisoned."
+    },
     "events": {
       "name": "World events",
       "desc": "Crises, pandemics, trade booms, solar storms, peace summits."
     },
-    "generals": { "name": "Generals", "desc": "One active ability per player (5-minute cooldown)." },
-    "air": { "name": "Air power", "desc": "Airfields, fighters, bombers and reconnaissance." },
-    "radar": { "name": "Radar towers", "desc": "Reveal the fog within 60 tiles." },
-    "council": { "name": "World Council", "desc": "Every 10 minutes, a population-weighted vote." }
+    "generals": {
+      "name": "Generals",
+      "desc": "One active ability per player (5-minute cooldown)."
+    },
+    "air": {
+      "name": "Air power",
+      "desc": "Airfields, fighters, bombers and reconnaissance."
+    },
+    "radar": {
+      "name": "Radar towers",
+      "desc": "Reveal the fog within 60 tiles."
+    },
+    "council": {
+      "name": "World Council",
+      "desc": "Every 10 minutes, a population-weighted vote."
+    }
   },
   "general": {
-    "blitz": { "name": "Blitz", "desc": "+30% attack speed for 30 s." },
-    "rampart": { "name": "Rampart", "desc": "Defence posts twice as effective for 30 s." },
+    "blitz": {
+      "name": "Blitz",
+      "desc": "+30% attack speed for 30 s."
+    },
+    "rampart": {
+      "name": "Rampart",
+      "desc": "Defence posts twice as effective for 30 s."
+    },
     "sabotage": {
       "name": "Sabotage",
       "desc": "Destroys the enemy train or merchant ship nearest the target point."
     },
-    "propaganda": { "name": "Propaganda", "desc": "+50% loyalty for 60 s, no secession possible." }
+    "propaganda": {
+      "name": "Propaganda",
+      "desc": "+50% loyalty for 60 s, no secession possible."
+    }
   },
   "personality": {
     "expansionist": "Expansionist",
@@ -377,7 +496,10 @@
       "name": "Port",
       "desc": "Coastal. Sends merchant ships to foreign ports and arms warships. Station."
     },
-    "factory": { "name": "Factory", "desc": "Lays railways to stations within 110 tiles and runs trains." },
+    "factory": {
+      "name": "Factory",
+      "desc": "Lays railways to stations within 110 tiles and runs trains."
+    },
     "defensePost": {
       "name": "Defence post",
       "desc": "Within 30 tiles: attacker losses ×5, speed ×3. Destroyed when captured."
@@ -390,8 +512,14 @@
       "name": "SAM battery",
       "desc": "Intercepts bombs and warheads with trajectory prediction. Range 70 → 140 tiles by level."
     },
-    "radar": { "name": "Radar tower", "desc": "Reveals the fog of war within 60 tiles." },
-    "airfield": { "name": "Airfield", "desc": "Produces fighters, bombers and reconnaissance planes." }
+    "radar": {
+      "name": "Radar tower",
+      "desc": "Reveals the fog of war within 60 tiles."
+    },
+    "airfield": {
+      "name": "Airfield",
+      "desc": "Produces fighters, bombers and reconnaissance planes."
+    }
   },
   "unit": {
     "warship": {
@@ -406,15 +534,24 @@
       "name": "Bomber",
       "desc": "Kills troops in a 6-tile radius, no fallout. Can be intercepted."
     },
-    "recon": { "name": "Reconnaissance", "desc": "Reveals an area for 40 seconds." }
+    "recon": {
+      "name": "Reconnaissance",
+      "desc": "Reveals an area for 40 seconds."
+    }
   },
   "nuke": {
-    "nukeA": { "name": "A-bomb", "desc": "750,000 gold. Destruction 12 tiles, fallout 30. Interceptable." },
+    "nukeA": {
+      "name": "A-bomb",
+      "desc": "750,000 gold. Destruction 12 tiles, fallout 30. Interceptable."
+    },
     "nukeH": {
       "name": "H-bomb",
       "desc": "5,000,000 gold. Destruction 80 tiles, fallout 100. Interceptable."
     },
-    "nukeMirv": { "name": "MIRV", "desc": "25M + 15M per previous launch. Splits into 8–12 warheads." }
+    "nukeMirv": {
+      "name": "MIRV",
+      "desc": "25M + 15M per previous launch. Splits into 8–12 warheads."
+    }
   },
   "worldEvent": {
     "crisis": "Global economic crisis: −25% income for 2 minutes.",
@@ -538,7 +675,11 @@
       "lang": "Language"
     },
     "quality": "Quality",
-    "q": { "high": "High", "balanced": "Balanced", "performance": "Performance" },
+    "q": {
+      "high": "High",
+      "balanced": "Balanced",
+      "performance": "Performance"
+    },
     "particles": "Particles",
     "shaders": "Shader effects",
     "vsync": "Vertical sync",
@@ -546,7 +687,12 @@
     "uiScale": "Interface scale",
     "fullscreen": "Fullscreen",
     "autoPerf": "Automatic performance mode on slow machines",
-    "vol": { "master": "Master volume", "music": "Music", "sfx": "Effects", "ui": "Interface" },
+    "vol": {
+      "master": "Master volume",
+      "music": "Music",
+      "sfx": "Effects",
+      "ui": "Interface"
+    },
     "muteUnfocused": "Lower volume when the window is inactive",
     "testSound": "Test sound",
     "confirmations": "Ask for confirmation (betrayals)",
@@ -591,7 +737,8 @@
       "code": "Wrong invitation code.",
       "full": "Lobby full.",
       "started": "The game has already started."
-    }
+    },
+    "connectionLost": "Connection to the host lost — reconnecting…"
   },
   "campaign": {
     "title": "Campaign: The Cartographers",
@@ -680,36 +827,126 @@
   },
   "achievement": {
     "unlocked": "Achievement unlocked",
-    "firstGame": { "name": "First Stroke", "desc": "Finish a game." },
-    "firstWin": { "name": "Line Held", "desc": "Win a game." },
-    "tenGames": { "name": "Atlas Regular", "desc": "Play 10 games." },
-    "worldWin": { "name": "Mappa Mundi", "desc": "Win on the World map." },
-    "giantWin": { "name": "Titan", "desc": "Win on the Giant World." },
-    "threeMaps": { "name": "Globetrotter", "desc": "Win on 3 different maps." },
-    "tycoon": { "name": "Tycoon", "desc": "Earn 50M gold in one game." },
-    "railBaron": { "name": "Rail Baron", "desc": "Earn 5M from trains in one game." },
-    "merchantPrince": { "name": "Merchant Prince", "desc": "Earn 5M from trade in one game." },
-    "admiral": { "name": "Admiral", "desc": "Sink 10 ships in one game." },
-    "nuclearOption": { "name": "Nuclear Option", "desc": "Launch a bomb." },
-    "hydrogen": { "name": "Fusion", "desc": "Launch an H-bomb." },
-    "mirv": { "name": "Steel Rain", "desc": "Launch a MIRV." },
-    "ironDome": { "name": "Dome", "desc": "Intercept 5 missiles in total." },
-    "builder": { "name": "Builder", "desc": "Build 50 buildings in total." },
-    "architect": { "name": "Architect", "desc": "Build 25 buildings in one game." },
-    "expansionist": { "name": "Endless Ink", "desc": "Hold 100,000 tiles at once." },
-    "blitzkrieg": { "name": "Lightning", "desc": "Win in under 15 minutes." },
-    "survivor": { "name": "Survivor", "desc": "Still be alive after 30 minutes." },
-    "doomsdayWin": { "name": "Past Midnight", "desc": "Win a Doomsday clock game." },
-    "royaleWin": { "name": "Last Circle", "desc": "Win a Battle Royale." },
-    "teamWin": { "name": "Team Spirit", "desc": "Win a team game." },
-    "humanity": { "name": "Humanity", "desc": "Win Humans vs nations." },
-    "traitor": { "name": "Dagger", "desc": "Betray an ally." },
-    "loyal": { "name": "Word Kept", "desc": "Win without ever betraying." },
-    "impossibleWin": { "name": "The Impossible", "desc": "Win on Impossible difficulty." },
-    "hardWin": { "name": "Tempered", "desc": "Win on Hard difficulty or above." },
-    "campaignFirst": { "name": "Apprentice", "desc": "Complete the first mission." },
-    "campaignAll": { "name": "Accomplished Cartographer", "desc": "Complete all 6 missions." },
-    "allStars": { "name": "Constellation", "desc": "Earn all 18 campaign stars." }
+    "firstGame": {
+      "name": "First Stroke",
+      "desc": "Finish a game."
+    },
+    "firstWin": {
+      "name": "Line Held",
+      "desc": "Win a game."
+    },
+    "tenGames": {
+      "name": "Atlas Regular",
+      "desc": "Play 10 games."
+    },
+    "worldWin": {
+      "name": "Mappa Mundi",
+      "desc": "Win on the World map."
+    },
+    "giantWin": {
+      "name": "Titan",
+      "desc": "Win on the Giant World."
+    },
+    "threeMaps": {
+      "name": "Globetrotter",
+      "desc": "Win on 3 different maps."
+    },
+    "tycoon": {
+      "name": "Tycoon",
+      "desc": "Earn 50M gold in one game."
+    },
+    "railBaron": {
+      "name": "Rail Baron",
+      "desc": "Earn 5M from trains in one game."
+    },
+    "merchantPrince": {
+      "name": "Merchant Prince",
+      "desc": "Earn 5M from trade in one game."
+    },
+    "admiral": {
+      "name": "Admiral",
+      "desc": "Sink 10 ships in one game."
+    },
+    "nuclearOption": {
+      "name": "Nuclear Option",
+      "desc": "Launch a bomb."
+    },
+    "hydrogen": {
+      "name": "Fusion",
+      "desc": "Launch an H-bomb."
+    },
+    "mirv": {
+      "name": "Steel Rain",
+      "desc": "Launch a MIRV."
+    },
+    "ironDome": {
+      "name": "Dome",
+      "desc": "Intercept 5 missiles in total."
+    },
+    "builder": {
+      "name": "Builder",
+      "desc": "Build 50 buildings in total."
+    },
+    "architect": {
+      "name": "Architect",
+      "desc": "Build 25 buildings in one game."
+    },
+    "expansionist": {
+      "name": "Endless Ink",
+      "desc": "Hold 100,000 tiles at once."
+    },
+    "blitzkrieg": {
+      "name": "Lightning",
+      "desc": "Win in under 15 minutes."
+    },
+    "survivor": {
+      "name": "Survivor",
+      "desc": "Still be alive after 30 minutes."
+    },
+    "doomsdayWin": {
+      "name": "Past Midnight",
+      "desc": "Win a Doomsday clock game."
+    },
+    "royaleWin": {
+      "name": "Last Circle",
+      "desc": "Win a Battle Royale."
+    },
+    "teamWin": {
+      "name": "Team Spirit",
+      "desc": "Win a team game."
+    },
+    "humanity": {
+      "name": "Humanity",
+      "desc": "Win Humans vs nations."
+    },
+    "traitor": {
+      "name": "Dagger",
+      "desc": "Betray an ally."
+    },
+    "loyal": {
+      "name": "Word Kept",
+      "desc": "Win without ever betraying."
+    },
+    "impossibleWin": {
+      "name": "The Impossible",
+      "desc": "Win on Impossible difficulty."
+    },
+    "hardWin": {
+      "name": "Tempered",
+      "desc": "Win on Hard difficulty or above."
+    },
+    "campaignFirst": {
+      "name": "Apprentice",
+      "desc": "Complete the first mission."
+    },
+    "campaignAll": {
+      "name": "Accomplished Cartographer",
+      "desc": "Complete all 6 missions."
+    },
+    "allStars": {
+      "name": "Constellation",
+      "desc": "Earn all 18 campaign stars."
+    }
   },
   "profile": {
     "name": "Name",

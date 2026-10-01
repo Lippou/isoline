@@ -100,8 +100,8 @@
         if (!isHost) cfg = l.config;
       };
       client.onChat = (m) => (chat = [...chat.slice(-60), { name: m.name, text: m.text }]);
-      client.onStart = (config, playerId) => {
-        app.launch = { kind: 'lan', config, viewer: playerId };
+      client.onStart = (config, playerId, _tick, snapshot) => {
+        app.launch = { kind: 'lan', config, viewer: playerId, ...(snapshot ? { snapshot } : {}) };
         go('game');
       };
       client.onKicked = () => go('lan');

@@ -11,6 +11,8 @@ const SMOKE = process.argv.includes('--smoke-test');
 const DEV_URL = process.env.VITE_DEV_SERVER_URL ?? '';
 
 app.setName('Isoline');
+// Tests and tooling can isolate user data (saves, settings, replays) in a dedicated folder.
+if (process.env.ISOLINE_USER_DATA) app.setPath('userData', process.env.ISOLINE_USER_DATA);
 
 protocol.registerSchemesAsPrivileged([
   {

@@ -18,7 +18,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run build && playwright test",
     "bench": "tsx scripts/bench.ts",
     "maps": "tsx scripts/maps/build-maps.ts",
     "brand": "tsx scripts/brand/build-brand.ts",
