@@ -105,11 +105,16 @@ Au-delà de 60 000 tuiles, les assaillants subissent moins de pertes contre l'em
 ### 6.1 Attaques terrestres
 Un clic sur une tuile ennemie ou libre lance une attaque avec **ratio × troupes actuelles** (défaut 20 %). Ratio : touches T/Y, Maj + molette, curseur.
 
-Chaque attaque maintient un **front** : un tas binaire de tuiles cibles adjacentes au territoire de l'assaillant, indexé par un temps d'arrivée :
+Chaque attaque maintient un **front** : un tas binaire de tuiles cibles adjacentes au territoire de l'assaillant, indexé par un **temps d'arrivée** calculé comme dans un « fast marching » (équation eikonale) :
 ```
-priorité = horloge + (speed/16,5 × multiplicateurs) × gigue(0,65…1,35) − 0,22 × (voisins_assaillants − 1)
+c   = speed/16,5 × multiplicateurs × gigue(0,65…1,35)       coût de la tuile
+th  = temps du voisin conquis horizontal le plus tôt, tv = idem vertical
+       (tuiles déjà possédées au lancement = horloge de départ)
+T   = min(th, tv) + c                          si un seul voisin, ou |th − tv| ≥ c
+T   = (th + tv + √(2c² − (th − tv)²)) / 2      sinon
+priorité = T − 0,02 × (tuiles de l'assaillant dans la fenêtre 5×5 − 10)
 ```
-La gigue est déterministe (hash de la tuile). Le bonus des voisins comble les poches concaves : l'encre se propage de façon organique. À chaque tick, l'horloge avance de 1 × multiplicateurs de vitesse, et l'attaque conquiert les tuiles prêtes dans la limite d'un **budget** :
+Une tuile est réinsérée plus tôt quand elle gagne un deuxième voisin conquis. Une vague 4-voisins naïve avance selon la distance de Manhattan et fait pousser des **losanges**. La mise à jour eikonale fait avancer les fronts diagonaux à la même vitesse euclidienne que les fronts droits : les territoires sont **arrondis** (rapport diagonale/axe ≈ 0,95, contre 0,71 pour un losange ; test de non-régression). Le terme 5×5 vaut 10 derrière tout bord droit, quelle que soit son orientation. Il comble les poches concaves et freine les pointes : l'encre se propage de façon organique. La gigue est déterministe (hash de la tuile). À chaque tick, l'horloge avance de 1 × multiplicateurs de vitesse, et l'attaque conquiert les tuiles prêtes dans la limite d'un **budget** :
 ```
 budget/tick = max(1,2 ; 0,36 × √troupes_engagées) × (0,42 contre un joueur)
 ```
@@ -272,14 +277,14 @@ Fins de partie supplémentaires : **dernier survivant** (si la partie a commenc�
 
 **Écran de fin** : classement, courbes de territoire dans le temps (échantillon toutes les 5 s) et or/troupes du joueur, statistiques, **export CSV**, accès aux replays, « continuer à regarder », « rejouer ». Le replay est enregistré automatiquement.
 
-**Lobby** : carte (6 catégories), mode, équipes, difficulté, nations (0 à 100), tribus (0 à 200), seuil, durée du spawn, multiplicateur d'or, vitesse de jeu, ports, nucléaire, dons, usines, Water Nukes, décontamination, spectateurs, 10 fonctionnalités inédites activables. En LAN : code d'invitation et chat.
+**Lobby** : carte (6 catégories), mode, équipes, difficulté, nations (0 à 100), tribus (0 à 200), seuil (au-delà de 100 % : bac à sable sans victoire ni prolongation, via le paramètre de lancement `threshold`), durée du spawn, multiplicateur d'or, or de départ des joueurs (bac à sable, 0 à 50 M), vitesse de jeu, ports, nucléaire, dons, usines, Water Nukes, décontamination, spectateurs, 10 fonctionnalités inédites activables. En LAN : code d'invitation et chat.
 
 ## 15. Fonctionnalités inédites
 
 Chacune est implémentée, testée (`tests/unit/rules.test.ts`, `units.test.ts`) et activable dans le lobby (sauf 15.9 à 15.12, qui sont des fonctions de l'application).
 
-1. **Météo et jour/nuit** : cycle de 8 min. La nuit (deuxième moitié du cycle) réduit la vision de 20 % (rayon 16 au lieu de 20), assombrit la carte et allume les villes. **Tempêtes** : ×0,6 sur la vitesse des navires dans la zone, nuages tourbillonnants et éclairs. **Brouillards** : voile clair qui masque les transports. Les cellules sont générées par le PRNG toutes les 45 à 100 s, durent de 90 à 180 s et dérivent. Rendu par shader.
-2. **Brouillard de guerre** : visibilité calculée à basse résolution (cellules 4×4) par distance chamfer depuis le territoire du joueur, de ses alliés et coéquipiers, plus des disques pour les radars (60), navires et avions (25) et la reconnaissance (40). Le terrain déjà vu reste en mémoire, grisé.
+1. **Météo et jour/nuit** : cycle de 8 min. La nuit (deuxième moitié du cycle) réduit la vision de 20 % (rayon 24 au lieu de 30), assombrit la carte et allume les villes. **Tempêtes** : ×0,6 sur la vitesse des navires dans la zone, nuages tourbillonnants et éclairs. **Brouillards** : voile clair qui masque les transports. Les cellules sont générées par le PRNG toutes les 45 à 100 s, durent de 90 à 180 s et dérivent. Rendu par shader.
+2. **Brouillard de guerre** : visibilité calculée à basse résolution (cellules 4×4) par une distance chamfer 8-voisins (vision circulaire de 30 tuiles, 24 la nuit) depuis le territoire du joueur, de ses alliés et coéquipiers, plus des disques pour les radars (60), navires et avions (25) et la reconnaissance (40). Hors vue, la **géographie reste lisible** (atlas sépia assombri, un peu plus clair pour les zones déjà vues), mais les possessions, unités, bâtiments et étiquettes des autres joueurs sont masqués. La minimap applique le même masque. Le brouillard ne se lève qu'en spectateur ou en replay.
 3. **Arbre technologique** : 5 branches × 4 niveaux. Coûts 60 / 150 / 300 / 500 points. Production `0,5 + 0,5 × niveaux_de_villes` points/s. Effets :
    - Économie : +10 % ouvriers ; +10 % trains ; +15 % ouvriers ; −10 % bâtiments.
    - Militaire : −10 % de pertes en collines et montagnes ; +10 % de vitesse ; −10 % de pertes partout ; +15 % de vitesse.

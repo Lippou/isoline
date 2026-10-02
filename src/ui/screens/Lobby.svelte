@@ -26,6 +26,10 @@
   const client = lan ? currentLan() : null;
   let lobby: LobbyState | null = $state(client?.lobby ?? null);
   const isHost = !client || client.host;
+  // Address other players type in "manual join" (the host's LAN IPs + game port).
+  const port = client ? (client.url.match(/:(\d+)\/?$/)?.[1] ?? '') : '';
+  let hostAddresses = $state<string[]>([]);
+  if (client?.host) void bridge.lan.localAddresses().then((a) => (hostAddresses = a));
   let cfg: GameConfig = $state(lobby?.config ?? structuredClone($state.snapshot(app.lobby.config)));
   if (!lan)
     cfg.players = [
@@ -159,7 +163,12 @@
   <header>
     <button class="btn ghost" onclick={() => go('title')}>← {t('common.back')}</button>
     <h1>{lan ? t('lobby.titleLan') : t('lobby.titleSolo')}</h1>
-    {#if lobby}<span class="code chip">🔑 {t('lobby.code')} <b class="mono">{lobby.code}</b></span>{/if}
+    {#if lobby}<span class="code chip" data-testid="lobby-code"
+        >🔑 {t('lobby.code')} <b class="mono">{lobby.code}</b></span
+      >{/if}
+    {#if client?.host && port}<span class="code chip mono" data-testid="lobby-address"
+        >{(hostAddresses[0] ?? '127.0.0.1') + ':' + port}</span
+      >{/if}
     <button class="btn primary start" onclick={start} disabled={!isHost} data-testid="lobby-start"
       >{t('lobby.start')}</button
     >

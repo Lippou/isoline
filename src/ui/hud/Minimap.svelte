@@ -55,7 +55,11 @@
     const colors = new Map<number, [number, number, number]>();
     for (const p of st.playerList) colors.set(p.id, inkRgb(p.color, settings.access.vision));
     const now = performance.now();
-    const fog = st.fog;
+    const fog = st.fog && ctl.renderer.overlay.fogView ? st.fog : null;
+    // Under the fog only the viewer's (and allies') land keeps its ink.
+    const me = st.players.get(st.viewer);
+    const friends = new Set<number>([st.viewer, ...(me?.allies ?? [])]);
+    if (me && me.team > 0) for (const p of st.playerList) if (p.team === me.team) friends.add(p.id);
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const sx = Math.floor(((x + 0.5) / W) * st.width);
@@ -65,8 +69,14 @@
         let r = base.data[k]!;
         let g = base.data[k + 1]!;
         let b = base.data[k + 2]!;
+        let v = 255;
+        if (fog) {
+          const fx = Math.min(fog.w - 1, Math.floor((sx / st.width) * fog.w));
+          const fy = Math.min(fog.h - 1, Math.floor((sy / st.height) * fog.h));
+          v = fog.data[fy * fog.w + fx]!;
+        }
         const o = st.owner[i]!;
-        if (o > 0) {
+        if (o > 0 && (v === 255 || friends.has(o))) {
           const c = colors.get(o);
           if (c) {
             r = r * 0.35 + c[0] * 0.65;
@@ -84,11 +94,8 @@
           g = g * 0.5 + 220 * 0.5;
           b = b * 0.5 + 60 * 0.5;
         }
-        if (fog && ctl.renderer.overlay.fogView) {
-          const fx = Math.min(fog.w - 1, Math.floor((sx / st.width) * fog.w));
-          const fy = Math.min(fog.h - 1, Math.floor((sy / st.height) * fog.h));
-          const v = fog.data[fy * fog.w + fx]!;
-          const m = v === 255 ? 1 : v > 0 ? 0.45 : 0.15;
+        if (fog) {
+          const m = v === 255 ? 1 : v > 0 ? 0.5 : 0.32;
           r *= m;
           g *= m;
           b *= m;

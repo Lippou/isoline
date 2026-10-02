@@ -129,6 +129,11 @@ sur du papier humide.
   16 niveaux d'altitude (une ligne maîtresse sur quatre).
 - Interface : **verre dépoli** sombre (Slate à 72 % + flou), liserés Aurora, typographie d'atlas.
 - Pictogrammes des bâtiments : glyphes géométriques au trait, façon légende de carte.
+- Brouillard de guerre : la géographie reste visible, virée au sépia et assombrie comme une région
+  non relevée de l'atlas ; seules les possessions ennemies disparaissent.
+- Retombées nucléaires : terre calcinée, couleur de cendre, veinée de fissures ambre et vert pâle
+  qui pulsent ; les zones fraîches brillent davantage.
+- Météo : nuages de tempête tourbillonnants avec éclairs, bancs de brouillard laiteux.
 
 ## 6. Typographie (licence OFL, embarquée)
 
@@ -150,4 +155,22 @@ Les fichiers WOFF2 sont intégrés au bundle de l'application par Vite : aucun c
 
 ## 8. Captures
 
-Les captures d'écran 1920×1080 sont dans `docs/media/` (voir `RAPPORT.md`).
+Générées par `npm run media` (1920×1080, jeu réel, aucune retouche), dans `docs/media/` :
+
+| Fichier | Contenu |
+|---|---|
+| `01-title.png` | Écran titre, partie de démonstration en fond |
+| `02-lobby.png` | Lobby solo : cartes, modes, options, fonctionnalités inédites |
+| `03-gameplay.png` | Début de partie en Europe : expansion, villes, gisements, HUD complet |
+| `04-nukes-flight.png` | Bombe H : flash, onde de choc, cercles d'impact, sous-titre |
+| `05-nuclear-impact.png` | Cratère : retombées calcinées et fissures lumineuses |
+| `06-naval-rail.png` | Levant à 9 min : réseau ferré, trains, navires de guerre, marchands |
+| `07-night.png` | Méditerranée de nuit : encre assombrie, villes éclairées |
+| `08-tech-panel.png` | Arbre technologique |
+| `09-diplomacy.png` | Panneau de diplomatie, demande d'alliance |
+| `10-fog-of-war.png` | Brouillard de guerre sur l'Afrique |
+| `11-campaign.png` | Campagne |
+| `12-editor.png` | Éditeur de cartes (Archipel) |
+| `13-end-screen.png` | Écran de fin : classement, courbes, statistiques |
+| `gameplay.gif` | 10 s de partie en Méditerranée (640×360, 10 i/s) |
+| `trailer.mp4` | Vidéo de 58 s (1080p, H.264) : menus, puis partie bac à sable en Europe jusqu'à la frappe nucléaire |

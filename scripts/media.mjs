@@ -138,8 +138,9 @@ async function playScript(page, { onMoment } = {}) {
 }
 
 // ------------------------------------------------------------------ screenshots
-if (!only || only === 'shots') {
-  // 01 title + 02 lobby + 03 campaign.
+const want = (k) => !only || only === 'shots' || only === k;
+if (want('menus')) {
+  // 01 title + 02 lobby + 11 campaign.
   {
     const { app, page } = await launch('');
     await page.waitForSelector('[data-testid=title-screen]', { timeout: 30000 });
@@ -159,7 +160,9 @@ if (!only || only === 'shots') {
     await shot(page, '11-campaign');
     await app.close();
   }
-  // Sandbox game: gameplay, nukes, naval, panels, night.
+}
+// Sandbox game: gameplay, nukes, panels.
+if (want('sandbox')) {
   {
     const { app, page } = await launch(
       'autostart=europe&nations=16&tribes=20&spawn=3&speed=2&difficulty=normal&startGold=80000000&automation&name=Ilse',
@@ -178,6 +181,26 @@ if (!only || only === 'shots') {
         if (m === 'nukes-impact') await shot(page, '05-nuclear-impact');
       },
     });
+    // Panels.
+    await page.locator('[data-testid=panel-tech]').click();
+    await page.waitForTimeout(600);
+    await shot(page, '08-tech-panel');
+    await page.locator('[data-testid=panel-tech]').click();
+    await page.locator('[data-testid=panel-diplomacy]').click();
+    await page.waitForTimeout(600);
+    await shot(page, '09-diplomacy');
+    await page.locator('[data-testid=panel-diplomacy]').click();
+    await app.close();
+  }
+}
+// Spectated Mediterranean at ×8: busy port by day (~9 min), then the night.
+if (want('med')) {
+  {
+    const { app, page } = await launch(
+      'autostart=mediterranean&spectate&nations=26&tribes=20&spawn=1&speed=8&automation',
+    );
+    await page.waitForSelector('[data-testid=leaderboard]', { timeout: 60000 });
+    for (let k = 0; k < 400 && (await iso(page, 'state')).tick < 5400; k++) await page.waitForTimeout(500);
     // Naval + rail close-up: the busiest port (most buildings around it).
     {
       let bs = await iso(page, 'buildings');
@@ -197,29 +220,12 @@ if (!only || only === 'shots') {
         }
       }
       if (best) {
-        await cam(page, best.x, best.y, 3.4);
+        await cam(page, best.x, best.y, 3.0);
         await page.waitForTimeout(3000);
         await shot(page, '06-naval-rail');
       }
     }
-    // Panels.
-    await page.locator('[data-testid=panel-tech]').click();
-    await page.waitForTimeout(600);
-    await shot(page, '08-tech-panel');
-    await page.locator('[data-testid=panel-tech]').click();
-    await page.locator('[data-testid=panel-diplomacy]').click();
-    await page.waitForTimeout(600);
-    await shot(page, '09-diplomacy');
-    await page.locator('[data-testid=panel-diplomacy]').click();
-    await app.close();
-  }
-  // Night: spectated Mediterranean at ×8 until the night half of the 8-min cycle.
-  {
-    const { app, page } = await launch(
-      'autostart=mediterranean&spectate&nations=26&tribes=20&spawn=1&speed=8&automation',
-    );
-    await page.waitForSelector('[data-testid=leaderboard]', { timeout: 60000 });
-    for (let k = 0; k < 200; k++) {
+    for (let k = 0; k < 400; k++) {
       const tick = (await iso(page, 'state')).tick;
       if (tick % 4800 > 3300) break;
       await page.waitForTimeout(500);
@@ -230,7 +236,9 @@ if (!only || only === 'shots') {
     await shot(page, '07-night');
     await app.close();
   }
-  // Fog of war: expand a little, then frame our border with the unseen world.
+}
+// Fog of war: expand a little, then frame our border with the unseen world.
+if (want('fog')) {
   {
     const { app, page } = await launch(
       'autostart=africa&nations=30&tribes=30&spawn=2&speed=2&fog&automation&name=Ilse',
@@ -244,7 +252,14 @@ if (!only || only === 'shots') {
             const t =
               Math.round(h * 0.4 + Math.sin((a / 16) * 6.283) * r) * w +
               Math.round(w * 0.45 + Math.cos((a / 16) * 6.283) * r);
-            if (window.__iso.freeLand(t)) return t;
+            if (!window.__iso.freeLand(t)) continue;
+            let clear = true;
+            for (let q = 0; q < 24 && clear; q++) {
+              const qa = (q / 24) * 6.283;
+              const u = t + Math.round(Math.sin(qa) * 35) * w + Math.round(Math.cos(qa) * 35);
+              if (window.__iso.ownerOf(u) > 0) clear = false;
+            }
+            if (clear) return t;
           }
         return -1;
       },
@@ -260,11 +275,14 @@ if (!only || only === 'shots') {
       await cmd(page, { t: 'attack', tile: tgt, ratio: 0.3 });
       await page.waitForTimeout(1800);
     }
-    await cam(page, (sp % st.width) + 0.5, Math.floor(sp / st.width) + 0.5, 1.5);
+    await page.waitForTimeout(15000);
+    await cam(page, (sp % st.width) + 0.5, Math.floor(sp / st.width) + 0.5, 1.2);
     await page.waitForTimeout(2500);
     await shot(page, '10-fog-of-war');
     await app.close();
   }
+}
+if (want('editor')) {
   {
     const { app, page } = await launch('screen=editor');
     await page.waitForSelector('[data-testid=editor]');
@@ -273,7 +291,9 @@ if (!only || only === 'shots') {
     await shot(page, '12-editor');
     await app.close();
   }
-  // End screen (spectated Black Sea match at ×8).
+}
+// End screen (spectated Black Sea match at ×8).
+if (want('end')) {
   {
     const { app, page } = await launch(
       'autostart=black-sea&spectate&nations=10&tribes=10&spawn=1&speed=8&gold=4&difficulty=hard',
@@ -355,6 +375,34 @@ if (!only || only === 'video') {
     .filter((f) => f.endsWith('.webm'))
     .map((f) => path.join(videoDir, f));
   vids.sort((a, b) => fs.statSync(a).mtimeMs - fs.statSync(b).mtimeMs);
-  vids.forEach((v, k) => fs.copyFileSync(v, path.join(out, `trailer-part${k + 1}.webm`)));
-  console.log('videos', vids.length);
+  // Assemble a single 58 s H.264 trailer (menus 10 s + match 48 s) with the local ffmpeg-static.
+  const ffmpeg = (await import('ffmpeg-static')).default;
+  const { execFileSync } = await import('node:child_process');
+  execFileSync(ffmpeg, [
+    '-y',
+    '-loglevel',
+    'error',
+    '-threads',
+    '4',
+    '-i',
+    vids[0],
+    '-i',
+    vids[1],
+    '-filter_complex',
+    '[0:v]trim=0:10,setpts=PTS-STARTPTS,fps=30[a];[1:v]trim=4:52,setpts=PTS-STARTPTS,fps=30[b];[a][b]concat=n=2:v=1[v]',
+    '-map',
+    '[v]',
+    '-c:v',
+    'libx264',
+    '-preset',
+    'medium',
+    '-crf',
+    '22',
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    path.join(out, 'trailer.mp4'),
+  ]);
+  console.log('trailer.mp4 written');
 }

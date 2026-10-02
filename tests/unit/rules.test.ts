@@ -292,3 +292,24 @@ describe('automated nations', () => {
     expect(invariants(g)).toEqual([]);
   });
 });
+
+describe('sandbox threshold', () => {
+  it('a threshold above 100 % disables both victory and overtime', () => {
+    const map = asciiMap(
+      Array.from({ length: 10 }, () => '.'.repeat(10)),
+      4,
+    );
+    for (const [th, expected] of [
+      [101, 101],
+      [80, 50],
+    ] as const) {
+      const g = testGame(map, 2, { victoryThreshold: th });
+      startWith(g, [
+        [5, 5],
+        [30, 30],
+      ]);
+      (g as { tick: number }).tick = g.startTick + 60 * 60 * 10;
+      expect(currentThreshold(g)).toBe(expected);
+    }
+  });
+});

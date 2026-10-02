@@ -163,6 +163,7 @@ export class GameController {
         },
         hud: () => ({ tick: hud.tick, end: !!hud.end }),
         buildings: () => this.session.state.buildings.map((b) => ({ ...b })),
+        ownerOf: (t: number) => this.session.state.owner[t] ?? 0,
         freeLand: (t: number) => {
           const st = this.session.state;
           return st.terrain[t]! > 2 && st.terrain[t]! < 10 && st.owner[t] === 0;

@@ -29,7 +29,9 @@
     "geometer": "Geometer",
     "strategist": "Strategist",
     "admiral": "Admiral of Maps",
-    "isolineMaster": "Isoline Master"
+    "isolineMaster": "Isoline Master",
+    "updateAvailable": "Version {version} is available.",
+    "updateOpen": "Open page"
   },
   "menu": {
     "main": "Main menu",
@@ -718,7 +720,8 @@
     "reducedMotion": "Reduce motion",
     "subtitles": "Subtitles for audio alerts",
     "accessNote": "Colour-blind modes use optimised palettes plus per-player hatch patterns.",
-    "language": "Language"
+    "language": "Language",
+    "updateUrl": "Update manifest URL (HTTPS, JSON)"
   },
   "lan": {
     "title": "Local network multiplayer",

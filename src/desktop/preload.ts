@@ -5,6 +5,8 @@ const api = {
   info: () => ipcRenderer.invoke('app:info'),
   smokeReady: () => ipcRenderer.send('app:smoke-ready'),
   quit: () => ipcRenderer.send('app:quit'),
+  checkUpdate: (url: string) => ipcRenderer.invoke('app:checkUpdate', url),
+  openExternal: (url: string) => ipcRenderer.send('app:openExternal', url),
   setFullscreen: (on: boolean) => ipcRenderer.send('app:fullscreen', on),
   screenshot: () => ipcRenderer.invoke('app:screenshot'),
   storage: {

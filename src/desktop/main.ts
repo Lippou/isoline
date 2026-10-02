@@ -155,6 +155,31 @@ app.whenReady().then(() => {
       app.exit(0);
     }
   });
+  // Optional update check (off by default): fetches a small JSON manifest
+  // { "version": "x.y.z", "url": "…", "notes": "…" } only when the user enabled it.
+  ipcMain.handle('app:checkUpdate', async (_e, url: string) => {
+    if (typeof url !== 'string' || !/^https:\/\//.test(url)) return { error: 'url' };
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 5000);
+      const res = await net.fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+      clearTimeout(timer);
+      if (!res.ok) return { error: `http ${res.status}` };
+      const j = (await res.json()) as { version?: unknown; url?: unknown; notes?: unknown };
+      if (typeof j.version !== 'string') return { error: 'format' };
+      return {
+        latest: j.version,
+        url: typeof j.url === 'string' && /^https:\/\//.test(j.url) ? j.url : '',
+        notes: typeof j.notes === 'string' ? j.notes.slice(0, 400) : '',
+        newer: newerVersion(j.version, app.getVersion()),
+      };
+    } catch (err) {
+      return { error: String(err).slice(0, 200) };
+    }
+  });
+  ipcMain.on('app:openExternal', (_e, url: string) => {
+    if (typeof url === 'string' && /^https:\/\//.test(url)) void shell.openExternal(url);
+  });
   ipcMain.on('app:quit', () => app.quit());
   ipcMain.on('app:fullscreen', (_e, on: boolean) => mainWindow?.setFullScreen(on));
   ipcMain.handle('app:screenshot', async () => {
@@ -184,3 +209,11 @@ app.on('window-all-closed', () => {
   shutdownLan();
   app.quit();
 });
+
+/** True when semantic version a is strictly newer than b. */
+function newerVersion(a: string, b: string): boolean {
+  const pa = a.split(/[.-]/).map((x) => parseInt(x, 10) || 0);
+  const pb = b.split(/[.-]/).map((x) => parseInt(x, 10) || 0);
+  for (let k = 0; k < 3; k++) if ((pa[k] ?? 0) !== (pb[k] ?? 0)) return (pa[k] ?? 0) > (pb[k] ?? 0);
+  return false;
+}

@@ -170,6 +170,17 @@
         ><input type="checkbox" bind:checked={settings.game.checkUpdates} onchange={change} />
         {t('settings.checkUpdates')}</label
       >
+      {#if settings.game.checkUpdates}
+        <label
+          >{t('settings.updateUrl')}
+          <input
+            type="url"
+            placeholder="https://…/isoline-latest.json"
+            bind:value={settings.game.updateUrl}
+            onchange={change}
+          /></label
+        >
+      {/if}
       <label
         >{t('settings.playerName')}
         <input type="text" bind:value={settings.playerName} maxlength="24" onchange={change} /></label

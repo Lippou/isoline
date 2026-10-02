@@ -37,6 +37,8 @@ export function shares(game: Game): Map<number, number> {
 
 export function currentThreshold(game: Game): number {
   let th = game.config.victoryThreshold;
+  // Above 100 %: sandbox without territorial victory (no overtime either).
+  if (th > 100) return th;
   if (game.config.mode === 'ffa' && game.phase === 'playing') {
     const elapsed = game.tick - game.startTick;
     if (elapsed >= OVERTIME_START) {

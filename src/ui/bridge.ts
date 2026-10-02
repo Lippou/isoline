@@ -11,6 +11,10 @@ export interface Bridge {
   }>;
   smokeReady(): void;
   quit(): void;
+  checkUpdate(
+    url: string,
+  ): Promise<{ latest: string; url: string; notes: string; newer: boolean } | { error: string }>;
+  openExternal(url: string): void;
   setFullscreen(on: boolean): void;
   screenshot(): Promise<string | null>;
   storage: {
@@ -66,6 +70,8 @@ const fallback: Bridge = {
   }),
   smokeReady: () => {},
   quit: () => window.close(),
+  checkUpdate: async () => ({ error: 'unavailable' }),
+  openExternal: (url) => void window.open(url, '_blank', 'noopener'),
   setFullscreen: (on) => {
     if (on) void document.documentElement.requestFullscreen?.();
     else void document.exitFullscreen?.();

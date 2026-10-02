@@ -69,3 +69,49 @@ test('autostarted spectator game renders, runs the simulation and saves a replay
   expect(errors).toEqual([]);
   await app.close();
 });
+
+test('LAN: host a game, a second instance joins by address + code, both play the same match', async () => {
+  const host = await launch();
+  await expect(host.page.getByTestId('title-screen')).toBeVisible({ timeout: 20_000 });
+  await host.page.getByTestId('menu-play').click();
+  await host.page.getByTestId('menu-lan').click();
+  await host.page.getByTestId('lan-host').click();
+  await expect(host.page.getByTestId('lobby')).toBeVisible({ timeout: 15_000 });
+  const code = (await host.page.getByTestId('lobby-code').locator('b').textContent())!.trim();
+  const port = (await host.page.getByTestId('lobby-address').textContent())!.trim().split(':').pop()!;
+  expect(code).toMatch(/^[A-Z0-9]{6}$/);
+
+  const guest = await launch();
+  await expect(guest.page.getByTestId('title-screen')).toBeVisible({ timeout: 20_000 });
+  await guest.page.getByTestId('menu-play').click();
+  await guest.page.getByTestId('menu-lan').click();
+  await guest.page.getByPlaceholder('192.168.1.20:41234').fill(`127.0.0.1:${port}`);
+  await guest.page.locator('.manual input').nth(1).fill(code);
+  await guest.page.locator('.manual .btn').click();
+  await expect(guest.page.getByTestId('lobby')).toBeVisible({ timeout: 15_000 });
+  await expect(guest.page.getByTestId('lobby-start')).toBeDisabled();
+
+  await host.page.getByRole('button', { name: /Régions|Regions/ }).click();
+  await host.page.getByTestId('map-black-sea').click();
+  await host.page.getByTestId('opt-nations').fill('4');
+  await host.page.getByTestId('opt-spawn').fill('15');
+  await host.page.getByTestId('lobby-start').click();
+  for (const s of [host, guest]) {
+    await expect(s.page.getByTestId('game-screen')).toBeVisible({ timeout: 30_000 });
+    await expect(s.page.getByTestId('clock')).toBeVisible({ timeout: 60_000 });
+  }
+  // Both clients advance the same lockstep simulation.
+  const clock = async (p: typeof host.page) => (await p.getByTestId('clock').textContent())!.trim();
+  await host.page.waitForTimeout(3000);
+  const [a, b] = [await clock(host.page), await clock(guest.page)];
+  expect(Math.abs(toSec(a) - toSec(b))).toBeLessThanOrEqual(1);
+  expect(host.errors).toEqual([]);
+  expect(guest.errors).toEqual([]);
+  await guest.app.close();
+  await host.app.close();
+});
+
+function toSec(s: string): number {
+  const [m, x] = s.split(':').map(Number);
+  return m! * 60 + x!;
+}

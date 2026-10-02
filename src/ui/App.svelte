@@ -72,6 +72,7 @@
     if (q.has('fog')) cfg.features.fog = true;
     if (q.get('gold')) cfg.goldMultiplier = Number(q.get('gold'));
     if (q.get('startGold')) cfg.startGold = Number(q.get('startGold'));
+    if (q.get('threshold')) cfg.victoryThreshold = Number(q.get('threshold'));
     if (q.get('difficulty')) cfg.difficulty = q.get('difficulty') as typeof cfg.difficulty;
     const spectate = q.has('spectate');
     cfg.players = spectate

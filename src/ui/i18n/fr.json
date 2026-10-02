@@ -29,7 +29,9 @@
     "geometer": "Géomètre",
     "strategist": "Stratège",
     "admiral": "Amiral des cartes",
-    "isolineMaster": "Maître des isolines"
+    "isolineMaster": "Maître des isolines",
+    "updateAvailable": "Version {version} disponible.",
+    "updateOpen": "Ouvrir la page"
   },
   "menu": {
     "main": "Menu principal",
@@ -718,7 +720,8 @@
     "reducedMotion": "Réduire les animations",
     "subtitles": "Sous-titres des alertes sonores",
     "accessNote": "Les modes daltoniens utilisent des palettes optimisées et des hachures par joueur.",
-    "language": "Langue"
+    "language": "Langue",
+    "updateUrl": "URL du manifeste de mise à jour (HTTPS, JSON)"
   },
   "lan": {
     "title": "Multijoueur en réseau local",

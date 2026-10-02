@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const electronPath = (await import('electron')).default;
-const exe = process.argv[2]; // optional: packaged app executable
+const soak = process.argv.includes('soak');
+const exe = process.argv.slice(2).find((a) => a !== 'soak'); // optional: packaged app executable
 
 async function launch(query) {
   const userData = path.join(root, '.cache/e2e-userdata', `perf-${Date.now()}`);
@@ -28,7 +29,56 @@ async function launch(query) {
   return { app, page, t0 };
 }
 
+const outFile = path.join(root, 'docs', soak ? 'soak.json' : 'perf-app.json');
 const out = { date: new Date().toISOString() };
+
+if (soak) {
+  // Stability: 60 game minutes (×8) on the World map with 50 nations, memory sampled every 30 s.
+  const { app, page } = await launch(
+    'autostart=world&spectate&nations=50&tribes=60&spawn=1&speed=8&threshold=101&perf',
+  );
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.waitForSelector('[data-testid=perf]', { timeout: 60000 });
+  const samples = [];
+  const t0 = Date.now();
+  let ended = false;
+  while (Date.now() - t0 < 40 * 60_000) {
+    await page.waitForTimeout(30_000);
+    const clock =
+      (await page
+        .getByTestId('clock')
+        .textContent()
+        .catch(() => '')) ?? '';
+    const metrics = await app.evaluate(({ app: a }) => a.getAppMetrics().map((m) => m.memory.workingSetSize));
+    const heap = await page.evaluate(() => performance.memory?.usedJSHeapSize ?? 0);
+    const perf =
+      (await page
+        .getByTestId('perf')
+        .textContent()
+        .catch(() => '')) ?? '';
+    const s = {
+      realS: Math.round((Date.now() - t0) / 1000),
+      clock: clock.trim(),
+      totalMB: Math.round(metrics.reduce((a, b) => a + b, 0) / 1024),
+      rendererHeapMB: Math.round(heap / 1048576),
+      fps: Number(perf.match(/FPS (\d+)/)?.[1] ?? 0),
+    };
+    samples.push(s);
+    console.log(JSON.stringify(s));
+    ended = await page
+      .getByTestId('end-screen')
+      .isVisible()
+      .catch(() => false);
+    const [m] = s.clock.split(':').map(Number);
+    if (ended || m >= 60) break;
+  }
+  out.soak = { samples, ended, errors };
+  await app.close();
+  fs.mkdirSync(path.dirname(outFile), { recursive: true });
+  fs.writeFileSync(outFile, JSON.stringify(out, null, 2));
+  process.exit(0);
+}
 
 // 1. Startup to title screen.
 {
@@ -75,5 +125,5 @@ for (const [label, query] of [
 }
 
 fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
-fs.writeFileSync(path.join(root, 'docs/perf-app.json'), JSON.stringify(out, null, 2));
+fs.writeFileSync(outFile, JSON.stringify(out, null, 2));
 console.log(JSON.stringify(out, null, 2));

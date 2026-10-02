@@ -66,6 +66,8 @@ export interface Settings {
     edgePan: boolean;
     tutorialDone: boolean;
     checkUpdates: boolean;
+    /** HTTPS URL of the update manifest (JSON); empty = no check. */
+    updateUrl: string;
   };
   keys: Record<string, string>;
   access: { vision: ColorVision; highContrast: boolean; reducedMotion: boolean; subtitles: boolean };
@@ -95,6 +97,7 @@ export function defaultSettings(): Settings {
       edgePan: false,
       tutorialDone: false,
       checkUpdates: false,
+      updateUrl: '',
     },
     keys: { ...DEFAULT_KEYS },
     access: { vision: 'none', highContrast: false, reducedMotion: false, subtitles: true },

@@ -11,11 +11,18 @@
   import { startTutorial } from './launch';
 
   let sub = $state(app.screen === 'play');
+  let update = $state<{ latest: string; url: string; notes: string } | null>(null);
   const smoke = new URLSearchParams(location.search).has('smoke');
 
   onMount(() => {
     audio.setScene('menu');
     if (smoke) requestAnimationFrame(() => requestAnimationFrame(() => bridge.smokeReady()));
+    // No network call unless the player opted in and configured a manifest URL.
+    else if (settings.game.checkUpdates && settings.game.updateUrl) {
+      void bridge.checkUpdate(settings.game.updateUrl).then((r) => {
+        if ('newer' in r && r.newer) update = r;
+      });
+    }
   });
 
   function nav(s: Parameters<typeof go>[0]): void {
@@ -66,6 +73,14 @@
       <button class="btn ghost" onclick={() => (sub = false)}>← {t('common.back')}</button>
     {/if}
   </nav>
+  {#if update}
+    <div class="update glass" role="status" data-testid="update-banner">
+      {t('title.updateAvailable', { version: update.latest })}
+      {#if update.url}<button class="btn small" onclick={() => bridge.openExternal(update!.url)}
+          >{t('title.updateOpen')}</button
+        >{/if}
+    </div>
+  {/if}
   <footer>
     <span
       >{profile.name || settings.playerName || t('profile.anonymous')} · {t(`title.${profile.title}`)}</span
@@ -75,6 +90,17 @@
 </div>
 
 <style>
+  .update {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 14px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    z-index: 3;
+  }
   .title {
     position: fixed;
     inset: 0;

@@ -1,0 +1,114 @@
+{
+  "date": "2026-10-02T00:01:40.260Z",
+  "soak": {
+    "samples": [
+      {
+        "realS": 30,
+        "clock": "3:59",
+        "totalMB": 832,
+        "rendererHeapMB": 104,
+        "fps": 142
+      },
+      {
+        "realS": 60,
+        "clock": "7:59",
+        "totalMB": 908,
+        "rendererHeapMB": 168,
+        "fps": 144
+      },
+      {
+        "realS": 90,
+        "clock": "11:59",
+        "totalMB": 998,
+        "rendererHeapMB": 197,
+        "fps": 144
+      },
+      {
+        "realS": 120,
+        "clock": "16:00",
+        "totalMB": 1013,
+        "rendererHeapMB": 199,
+        "fps": 128
+      },
+      {
+        "realS": 150,
+        "clock": "20:00",
+        "totalMB": 919,
+        "rendererHeapMB": 107,
+        "fps": 144
+      },
+      {
+        "realS": 180,
+        "clock": "24:00",
+        "totalMB": 973,
+        "rendererHeapMB": 135,
+        "fps": 144
+      },
+      {
+        "realS": 210,
+        "clock": "28:00",
+        "totalMB": 961,
+        "rendererHeapMB": 165,
+        "fps": 144
+      },
+      {
+        "realS": 240,
+        "clock": "32:00",
+        "totalMB": 993,
+        "rendererHeapMB": 152,
+        "fps": 144
+      },
+      {
+        "realS": 270,
+        "clock": "36:00",
+        "totalMB": 989,
+        "rendererHeapMB": 190,
+        "fps": 144
+      },
+      {
+        "realS": 300,
+        "clock": "40:00",
+        "totalMB": 935,
+        "rendererHeapMB": 127,
+        "fps": 144
+      },
+      {
+        "realS": 330,
+        "clock": "44:00",
+        "totalMB": 983,
+        "rendererHeapMB": 164,
+        "fps": 144
+      },
+      {
+        "realS": 360,
+        "clock": "48:00",
+        "totalMB": 957,
+        "rendererHeapMB": 152,
+        "fps": 144
+      },
+      {
+        "realS": 390,
+        "clock": "52:00",
+        "totalMB": 968,
+        "rendererHeapMB": 117,
+        "fps": 144
+      },
+      {
+        "realS": 420,
+        "clock": "56:00",
+        "totalMB": 973,
+        "rendererHeapMB": 176,
+        "fps": 144
+      },
+      {
+        "realS": 450,
+        "clock": "60:00",
+        "totalMB": 991,
+        "rendererHeapMB": 192,
+        "fps": 144
+      }
+    ],
+    "ended": false,
+    "errors": []
+  }
+}
