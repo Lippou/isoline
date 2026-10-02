@@ -52,9 +52,9 @@
       <span class="item">{t(`mode.${mode}`)}</span>
       <span class="item goal-txt" data-tip={t('hud.victoryThresholdTip', { pct: threshold })}>
         <Icon name="target" size={15} />
-        {#if threshold > 100}{t('hud.noVictory')}{:else}{t('hud.goal', {
-            pct: threshold,
-          })}{/if}
+        {#if mode === 'campaign' || mode === 'tutorial'}{t('hud.goalMission')}{:else if threshold > 100}{t(
+            'hud.noVictory',
+          )}{:else}{t('hud.goal', { pct: threshold })}{/if}
         {#if hud.viewer > 0}<span class="mine mono"
             >{t('hud.youHold', { pct: (myShare * 100).toFixed(1) })}</span
           >{/if}
@@ -69,7 +69,10 @@
           title="{s.name} — {(s.share * 100).toFixed(1)} %"
         ></div>
       {/each}
-      {#if threshold <= 100}<div class="goal" style="left:{threshold}%"></div>{/if}
+      {#if threshold <= 100 && mode !== 'campaign' && mode !== 'tutorial'}<div
+          class="goal"
+          style="left:{threshold}%"
+        ></div>{/if}
     </div>
     <div class="status">
       {#if (hud.world?.doomsday ?? -1) > 0}

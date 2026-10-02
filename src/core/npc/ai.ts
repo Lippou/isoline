@@ -414,29 +414,34 @@ function randomInterior(game: Game, p: Player): number {
 
 function tryBuild(game: Game, p: Player, m: Mem, t: Traits, underAttack: boolean): number {
   const counts = p.buildingCount;
-  const wish: B[] = [];
+  // Weighted wishes: the first port and first factory matter more than the n-th city.
+  const scored: [B, number][] = [];
   const cities = counts[B.City]!;
-  if (cities < 2 + p.tiles / 6000) wish.push(B.City);
-  if (game.config.allowPorts && p.coast.length > 0 && counts[B.Port]! < 1 + cities / 2 && t.trade > 0.7)
-    wish.push(B.Port);
-  if (game.config.allowFactories && cities >= 2 && counts[B.Factory]! < cities / 2) wish.push(B.Factory);
+  const cityTarget = 2 + p.tiles / 6000;
+  if (cities < cityTarget) scored.push([B.City, (1 + (cityTarget - cities) / cityTarget) * t.build]);
+  if (game.config.allowPorts && p.coast.length > 0 && counts[B.Port]! < 1 + cities / 2 && t.trade > 0.3)
+    scored.push([B.Port, (counts[B.Port]! === 0 ? 2.2 : 1.1) * t.trade]);
+  if (game.config.allowFactories && cities >= 2 && counts[B.Factory]! < cities / 2)
+    scored.push([B.Factory, counts[B.Factory]! === 0 ? 1.9 : 1.0]);
   if (
     game.config.allowNukes &&
     p.gold > 2_500_000 &&
     counts[B.Silo]! < (t.nukes > 1 ? 3 : 1) &&
     game.tick - game.startTick > 3000
   )
-    wish.push(B.Silo);
+    scored.push([B.Silo, 1.4 * t.nukes]);
   if (
     game.config.allowNukes &&
     (game.ai.nukedBy.has(p.id) || p.gold > 6_000_000) &&
     counts[B.Sam]! < 1 + cities / 3
   )
-    wish.push(B.Sam);
-  if (game.config.features.radar && counts[B.Radar]! < 1 && p.gold > 1_000_000) wish.push(B.Radar);
+    scored.push([B.Sam, game.ai.nukedBy.has(p.id) ? 3 : 1.2]);
+  if (game.config.features.radar && counts[B.Radar]! < 1 && p.gold > 1_000_000) scored.push([B.Radar, 0.9]);
   if (game.config.features.air && counts[B.Airfield]! < 1 && p.gold > 3_000_000 && t.aggression > 1)
-    wish.push(B.Airfield);
-  if (!underAttack && wish.length === 0) wish.push(B.City);
+    scored.push([B.Airfield, 1.1]);
+  if (!underAttack && scored.length === 0) scored.push([B.City, 0.5]);
+  scored.sort((x, y) => y[1] - x[1] || x[0] - y[0]);
+  const wish = scored.map(([k]) => k);
   for (const kind of wish) {
     const price = buildCost(game, p, kind);
     if (p.gold < price) continue;

@@ -115,3 +115,34 @@ function toSec(s: string): number {
   const [m, x] = s.split(':').map(Number);
   return m! * 60 + x!;
 }
+
+test('campaign: briefing pauses the game, then the guide advances as steps are completed', async () => {
+  const { app, page, errors } = await launch();
+  await expect(page.getByTestId('title-screen')).toBeVisible({ timeout: 20_000 });
+  await page.getByTestId('menu-play').click();
+  await page.getByTestId('menu-campaign').click();
+  await page.getByTestId('mission-m1').click();
+  await expect(page.getByTestId('briefing')).toBeVisible({ timeout: 30_000 });
+  await page.getByTestId('briefing-start').click();
+  await expect(page.getByTestId('briefing')).toBeHidden();
+  const guide = page.getByTestId('dialogue');
+  await expect(guide).toBeVisible();
+  await expect(guide).toContainText(/1 \/ |1 sur|Step 1|Étape 1/);
+  await expect(page.getByTestId('objectives')).toBeVisible();
+  // Place the capital near the map centre: the match starts and the guide moves on.
+  const box = (await page.locator('canvas').first().boundingBox())!;
+  for (const [fx, fy] of [
+    [0.5, 0.2],
+    [0.3, 0.5],
+    [0.7, 0.8],
+    [0.5, 0.85],
+  ]) {
+    await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
+    if (await page.getByTestId('clock').isVisible()) break;
+    await page.waitForTimeout(500);
+  }
+  await expect(page.getByTestId('clock')).toBeVisible({ timeout: 20_000 });
+  await expect(guide).toContainText(/Étape 2|Step 2/, { timeout: 20_000 });
+  expect(errors).toEqual([]);
+  await app.close();
+});

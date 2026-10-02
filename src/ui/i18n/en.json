@@ -161,7 +161,8 @@
     "troopsTip": "Troops available to attack and defend.",
     "victoryThresholdTip": "The first country (or team) to control {pct}% of the useful land wins.",
     "workersTip": "Workers produce gold.",
-    "youHold": "you: {pct}%"
+    "youHold": "you: {pct}%",
+    "goalMission": "Mission objectives (left panel)"
   },
   "panel": {
     "diplomacy": "Diplomacy",

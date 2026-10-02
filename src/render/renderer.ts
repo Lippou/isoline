@@ -482,7 +482,16 @@ export class GameRenderer {
       if (!sp.visible) continue;
       // Real size in tiles when zoomed in; a readable minimum on screen when zoomed out.
       const lenTiles = this.unitArt(type).length;
-      const minPx = type === U.Merchant ? 16 : type === U.Train ? 18 : 24;
+      const minPx =
+        type === U.Warship
+          ? 70
+          : type === U.Merchant
+            ? 50
+            : type === U.Train
+              ? 60
+              : type >= U.Fighter
+                ? 44
+                : 56;
       sp.scale.set(Math.max(1, minPx / (lenTiles * z)));
       (sp.children[1] as Sprite).tint = this.inkOf(owner);
       sp.alpha = type === U.Merchant ? 0.85 : 1;

@@ -75,7 +75,7 @@ const WARSHIP = {
     <rect x="74" y="11.2" width="11" height="1.6" fill="#3a4148"/>
     <line x1="33" y1="12" x2="36" y2="12" stroke="#c5ccd2" stroke-width="0.8"/>`,
   mark: `<rect x="6" y="9" width="5" height="6" rx="0.8" fill="#fff"/><path d="M62 8.5 h3 v7 h-3 z" fill="#fff"/>`,
-  length: 3.2,
+  length: 5,
 };
 
 const TRANSPORT = {
@@ -87,7 +87,7 @@ const TRANSPORT = {
     <g fill="#a39c7c">${Array.from({ length: 12 }, (_, k) => `<circle cx="${16 + (k % 6) * 6}" cy="${k < 6 ? 10.5 : 15.5}" r="1.7"/>`).join('')}</g>
     <rect x="4" y="8" width="7" height="10" rx="1" fill="#8a8672"/>`,
   mark: `<rect x="52" y="8" width="4" height="10" fill="#fff"/>`,
-  length: 2.2,
+  length: 3.4,
 };
 
 const CONTAINERS = ['#b5452f', '#2f6e9e', '#c9a227', '#3d8b5a', '#8a4f9e', '#d07a2a'];
@@ -105,7 +105,7 @@ const MERCHANT = {
     <rect x="7" y="6" width="13" height="10" rx="1" fill="#e9e6dc" stroke="#6d6a62" stroke-width="0.5"/>
     <rect x="9" y="7.5" width="9" height="2" fill="#2d3237"/>`,
   mark: `<rect x="13" y="12" width="5" height="3" fill="#fff"/>`,
-  length: 3,
+  length: 4.2,
 };
 
 const TRAIN = {
@@ -123,7 +123,7 @@ const TRAIN = {
     <rect x="96" y="4.5" width="14" height="7" rx="1" fill="#454c53"/>
     <rect x="121" y="5" width="5" height="6" rx="1" fill="#d9e2e8"/>`,
   mark: `<rect x="111" y="3.5" width="9" height="9" rx="1" fill="#fff"/>`,
-  length: 3.3,
+  length: 4.4,
 };
 
 const plane = (wing: string, body: string, extra = '') => ({
@@ -131,7 +131,7 @@ const plane = (wing: string, body: string, extra = '') => ({
   h: 48,
   base: `<path d="${wing}" fill="#7f8a94" stroke="#2b3138" stroke-width="1"/><path d="${body}" fill="#a3adb6" stroke="#2b3138" stroke-width="0.8"/>${extra}`,
   mark: `<circle cx="22" cy="14" r="2.6" fill="#fff"/><circle cx="22" cy="34" r="2.6" fill="#fff"/>`,
-  length: 1.6,
+  length: 2.4,
 });
 
 const FIGHTER = plane(
@@ -144,14 +144,14 @@ const BOMBER = {
     'M28 24 L22 2 L17 2 L18 21 L8 21 L5 18 L3 18 L5 24 L3 30 L5 30 L8 27 L18 27 L17 46 L22 46 Z',
     'M46 24 Q43 21 32 21 L4 22 L4 26 L32 27 Q43 27 46 24 Z',
   ),
-  length: 2.2,
+  length: 3.2,
 };
 const RECON = {
   ...plane(
     'M28 24 L24 4 L21 4 L21 22 L10 22.5 L8 21 L6 21.5 L8 24 L6 26.5 L8 27 L10 25.5 L21 26 L21 44 L24 44 Z',
     'M44 24 Q41 22.4 32 22.4 L8 23 L8 25 L32 25.6 Q41 25.6 44 24 Z',
   ),
-  length: 1.4,
+  length: 2,
 };
 
 async function unit(art: {

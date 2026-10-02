@@ -161,7 +161,8 @@
     "troopsTip": "Troupes disponibles pour attaquer et défendre.",
     "victoryThresholdTip": "Le premier pays (ou la première équipe) à contrôler {pct} % des terres utiles l'emporte.",
     "workersTip": "Les ouvriers produisent de l'or.",
-    "youHold": "vous : {pct} %"
+    "youHold": "vous : {pct} %",
+    "goalMission": "Objectifs de mission (panneau de gauche)"
   },
   "panel": {
     "diplomacy": "Diplomatie",

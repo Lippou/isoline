@@ -91,6 +91,11 @@ vec4 inkOf(float id) {
 
 bool isWaterId(float t) { return t < 2.5; }
 
+bool waterAt(ivec2 t) {
+  t = clamp(t, ivec2(0), ivec2(uSize) - 1);
+  return texelFetch(uTerrain, t, 0).r * 255.0 < 2.5;
+}
+
 // Realistic, satellite-like ground colours per terrain (with natural variation).
 vec3 biome(float t, vec2 p, float elev) {
   float n = fbm(p * 0.06);
@@ -112,7 +117,7 @@ vec3 biome(float t, vec2 p, float elev) {
   } else if (t < 7.5) {        // desert: sand seas and darker regs
     float dune = sin(p.x * 0.7 + p.y * 0.25 + n * 6.0) * 0.5 + 0.5;
     c = mix(vec3(0.79, 0.67, 0.46), vec3(0.86, 0.75, 0.54), dune * 0.5 + m * 0.5);
-    c = mix(c, vec3(0.62, 0.50, 0.36), smoothstep(0.62, 0.85, n) * 0.6);
+    c = mix(c, vec3(0.70, 0.58, 0.42), smoothstep(0.55, 0.9, vnoise(p * 0.12)) * 0.3);
   } else if (t < 8.5) {        // forest: dense canopy
     float canopy = smoothstep(0.35, 0.8, fine);
     c = mix(vec3(0.17, 0.30, 0.14), vec3(0.12, 0.23, 0.11), canopy);
@@ -249,10 +254,11 @@ void main() {
 
   // Borders: screen-space glowing ink lines with a slow flowing pulse.
   {
-    float l = ownerAt(ti + ivec2(-1, 0));
-    float r = ownerAt(ti + ivec2(1, 0));
-    float u = ownerAt(ti + ivec2(0, -1));
-    float d = ownerAt(ti + ivec2(0, 1));
+    // Water neighbours do not make a border (coasts stay clean): treat them as "same owner".
+    float l = waterAt(ti + ivec2(-1, 0)) ? own : ownerAt(ti + ivec2(-1, 0));
+    float r = waterAt(ti + ivec2(1, 0)) ? own : ownerAt(ti + ivec2(1, 0));
+    float u = waterAt(ti + ivec2(0, -1)) ? own : ownerAt(ti + ivec2(0, -1));
+    float d = waterAt(ti + ivec2(0, 1)) ? own : ownerAt(ti + ivec2(0, 1));
     float dist = 9.0;
     float other = own;
     if (l != own) { dist = min(dist, f.x); other = l; }

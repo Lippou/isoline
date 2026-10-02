@@ -292,6 +292,31 @@ if (want('editor')) {
     await app.close();
   }
 }
+// Campaign: briefing, then the guided first steps.
+if (want('campaign')) {
+  const { app, page } = await launch('');
+  await page.waitForSelector('[data-testid=title-screen]', { timeout: 30000 });
+  await page.getByTestId('menu-play').click();
+  await page.getByTestId('menu-campaign').click();
+  await page.getByTestId('mission-m1').click();
+  await page.waitForSelector('[data-testid=briefing]', { timeout: 30000 });
+  await page.waitForTimeout(1500);
+  await shot(page, '14-briefing');
+  await page.getByTestId('briefing-start').click();
+  const box = await page.locator('canvas').first().boundingBox();
+  for (const [fx, fy] of [
+    [0.5, 0.2],
+    [0.3, 0.5],
+    [0.7, 0.8],
+  ]) {
+    await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
+    if (await page.getByTestId('clock').isVisible()) break;
+    await page.waitForTimeout(500);
+  }
+  await page.waitForTimeout(6000);
+  await shot(page, '15-guide');
+  await app.close();
+}
 // End screen (spectated Black Sea match at ×8).
 if (want('end')) {
   {

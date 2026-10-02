@@ -163,6 +163,21 @@ export class GameController {
         },
         hud: () => ({ tick: hud.tick, end: !!hud.end }),
         buildings: () => this.session.state.buildings.map((b) => ({ ...b })),
+        units: () => {
+          const st = this.session.state;
+          const out: { id: number; type: number; owner: number; x: number; y: number }[] = [];
+          for (let k = 0; k < st.unitCount; k++) {
+            const o = k * 15;
+            out.push({
+              id: st.units[o]!,
+              type: st.units[o + 1]!,
+              owner: st.units[o + 2]!,
+              x: st.units[o + 3]!,
+              y: st.units[o + 4]!,
+            });
+          }
+          return out;
+        },
         ownerOf: (t: number) => this.session.state.owner[t] ?? 0,
         freeLand: (t: number) => {
           const st = this.session.state;
