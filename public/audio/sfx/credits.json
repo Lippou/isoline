@@ -90,9 +90,9 @@
     "license": "CC0 1.0"
   },
   "alliance": {
-    "title": "Trumpet Fanfare",
-    "author": "bevibeldesign",
-    "url": "https://freesound.org/people/bevibeldesign/sounds/350428/",
+    "title": "PEN SIGNATURE SIGNING 2.wav",
+    "author": "ListenTonyBoy",
+    "url": "https://freesound.org/people/ListenTonyBoy/sounds/326961/",
     "license": "CC0 1.0"
   },
   "betrayal": {
@@ -159,6 +159,30 @@
     "title": "rustling paper.wav",
     "author": "keweldog",
     "url": "https://freesound.org/people/keweldog/sounds/181774/",
+    "license": "CC0 1.0"
+  },
+  "tribeFall": {
+    "title": "taiko.wav",
+    "author": "Anuj_Shrestha1",
+    "url": "https://freesound.org/people/Anuj_Shrestha1/sounds/486140/",
+    "license": "CC0 1.0"
+  },
+  "torn": {
+    "title": "tearing paper4.wav",
+    "author": "keweldog",
+    "url": "https://freesound.org/people/keweldog/sounds/181773/",
+    "license": "CC0 1.0"
+  },
+  "stamp": {
+    "title": "traditional stamp.wav",
+    "author": "I.fekry",
+    "url": "https://freesound.org/people/I.fekry/sounds/470710/",
+    "license": "CC0 1.0"
+  },
+  "rejected": {
+    "title": "rejection/incorrect/error",
+    "author": "SkySpeira",
+    "url": "https://freesound.org/people/SkySpeira/sounds/715226/",
     "license": "CC0 1.0"
   }
 }

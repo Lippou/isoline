@@ -1,4 +1,9 @@
+@import '@fontsource/fraunces/400.css';
+@import '@fontsource/fraunces/400-italic.css';
 @import '@fontsource/fraunces/600.css';
+@import '@fontsource/fraunces/700.css';
+@import '@fontsource/ibm-plex-serif/400.css';
+@import '@fontsource/ibm-plex-serif/400-italic.css';
 @import '@fontsource/ibm-plex-serif/500.css';
 @import '@fontsource/ibm-plex-serif/600.css';
 @import '@fontsource/ibm-plex-sans/400.css';
@@ -8,38 +13,80 @@
 @import '@fontsource/ibm-plex-mono/600.css';
 
 /*
- * Design system — "staff map room": opaque dark panels, hairline borders,
- * a muted gold accent for primary actions and steel blue for selection.
- * Legacy token names (--aurora, --brass, --glass…) are kept so every component
- * inherits the palette.
+ * Design system — "hydrographic survey" (BRAND.md §4). Two themes share one ink:
+ *  - default (:root): "ink", navy panels readable over the map during a game;
+ *  - .chart: "chart paper", the light theme of every screen outside a game.
+ * Legacy token names are kept so every component inherits the palette
+ * (--parchment is the text colour, --aurora the selection colour).
  */
 :root {
-  --abyss: #0d1015;
-  --slate: #171b22;
-  --panel: rgba(21, 25, 31, 0.96);
-  --panel-2: #1d222a;
-  --panel-3: #252b34;
-  --aurora: #7fa9d6; /* steel blue: selection, focus, progress */
-  --brass: #d1a64a; /* gold: primary actions, money */
-  --signal: #d2544b; /* danger */
-  --verdant: #6fae74; /* positive */
-  --warn: #d89a35;
-  --parchment: #e8e5dd;
-  --muted: #a7acb4;
-  --faint: #6f7680;
-  --glass: rgba(21, 25, 31, 0.95);
-  --glass-strong: rgba(15, 18, 23, 0.98);
-  --line: #2d343e;
-  --line-strong: #46505c;
+  --abyss: #0c1a26;
+  --slate: #10212f;
+  --panel: rgba(14, 29, 42, 0.96);
+  --panel-2: #142636;
+  --panel-3: #1b3044;
+  --aurora: #6fb3d8; /* shoal blue: selection, focus, progress */
+  --brass: #d6a53f; /* gold: primary actions, money */
+  --brass-hover: #e2b85f;
+  --on-brass: #1c1405;
+  --signal: #e0456f; /* hazard magenta: danger, nuclear, war */
+  --verdant: #5bc98a; /* alliance, success */
+  --warn: #e0a23c;
+  --parchment: #eef3f2; /* text */
+  --muted: #9fb3c2;
+  --faint: #6b8394;
+  --glass: rgba(14, 29, 42, 0.94);
+  --glass-strong: rgba(10, 22, 33, 0.98);
+  --line: #253d52;
+  --line-strong: #3a5770;
+  --input-bg: #0a1824;
+  --select-bg: rgba(111, 179, 216, 0.16);
+  --tip-bg: #08131c;
+  --good-text: #9fe0bb;
+  --bad-text: #f4a3b9;
+  --warn-text: #f0c983;
   --radius: 6px;
   --ui-scale: 1;
   --font-scale: 1;
-  --title: 'IBM Plex Serif', Georgia, serif;
+  --title: 'Fraunces', Georgia, serif;
   --brand: 'Fraunces', Georgia, serif;
   --text: 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --shadow: 0 10px 30px rgba(3, 10, 16, 0.45);
   color-scheme: dark;
+}
+
+/* Chart paper: menus, lobby, settings, profile… (light, cool, navy ink). */
+.chart {
+  --abyss: #eef3f2;
+  --slate: #e3ecec;
+  --panel: rgba(250, 252, 251, 0.97);
+  --panel-2: #e8f0f0;
+  --panel-3: #dce8ea;
+  --aurora: #2c6e91;
+  --brass: #b8862a;
+  --brass-hover: #c99636;
+  --on-brass: #fffaf0;
+  --signal: #b3245f;
+  --verdant: #2f7d55;
+  --warn: #a86a12;
+  --parchment: #16324a;
+  --muted: #4b6478;
+  --faint: #7d93a2;
+  --glass: rgba(250, 252, 251, 0.94);
+  --glass-strong: rgba(255, 255, 255, 0.98);
+  --line: #c9d8dc;
+  --line-strong: #9db4bc;
+  --input-bg: #ffffff;
+  --select-bg: rgba(44, 110, 145, 0.12);
+  --tip-bg: #16324a;
+  --good-text: #2f7d55;
+  --bad-text: #a8204f;
+  --warn-text: #8a560c;
+  --shadow: 0 10px 28px rgba(22, 50, 74, 0.14);
+  color-scheme: light;
+  background: var(--abyss);
+  color: var(--parchment);
 }
 
 * {
@@ -77,7 +124,7 @@ h2,
 h3 {
   font-family: var(--title);
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
   margin: 0;
 }
 h1 {
@@ -90,8 +137,9 @@ h3 {
   font-size: 1.05em;
 }
 
+/* Figures: the text face with tabular digits (columns of numbers line up). */
 .mono {
-  font-family: var(--mono);
+  font-family: var(--text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -109,10 +157,8 @@ h3 {
   align-items: center;
   gap: 0.5em;
   font-family: var(--text);
-  font-size: 0.74em;
+  font-size: 0.86em;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
   color: var(--muted);
   margin: 0 0 0.6em;
 }
@@ -135,7 +181,7 @@ h3 {
   color: var(--parchment);
   padding: 0.55em 1em;
   border-radius: var(--radius);
-  cursor: pointer;
+  cursor: var(--cursor-pointer, pointer);
   transition:
     background 0.12s,
     border-color 0.12s,
@@ -146,7 +192,7 @@ h3 {
 .btn:hover,
 .btn:focus-visible {
   background: var(--panel-3);
-  border-color: #5d6875;
+  border-color: var(--aurora);
   outline: none;
 }
 .btn:active {
@@ -154,20 +200,21 @@ h3 {
 }
 .btn.primary {
   background: var(--brass);
-  color: #1b1408;
+  color: var(--on-brass);
   border-color: var(--brass);
   font-weight: 600;
 }
 .btn.primary:hover {
-  background: #ddb65d;
+  background: var(--brass-hover);
+  border-color: var(--brass-hover);
 }
 .btn.danger {
-  border-color: rgba(210, 84, 75, 0.7);
-  color: #f0b2ac;
-  background: rgba(210, 84, 75, 0.1);
+  border-color: color-mix(in srgb, var(--signal) 70%, transparent);
+  color: var(--bad-text);
+  background: color-mix(in srgb, var(--signal) 10%, transparent);
 }
 .btn.danger:hover {
-  background: rgba(210, 84, 75, 0.2);
+  background: color-mix(in srgb, var(--signal) 20%, transparent);
 }
 .btn.ghost {
   background: transparent;
@@ -187,8 +234,8 @@ h3 {
 }
 .btn.selected {
   border-color: var(--aurora);
-  color: #fff;
-  background: rgba(127, 169, 214, 0.16);
+  color: var(--parchment);
+  background: var(--select-bg);
 }
 .btn:disabled {
   opacity: 0.45;
@@ -208,22 +255,21 @@ h3 {
   color: var(--muted);
 }
 .chip.good {
-  color: #a9d6ad;
-  border-color: rgba(111, 174, 116, 0.5);
+  color: var(--good-text);
+  border-color: color-mix(in srgb, var(--verdant) 50%, transparent);
 }
 .chip.bad {
-  color: #efa69f;
-  border-color: rgba(210, 84, 75, 0.55);
+  color: var(--bad-text);
+  border-color: color-mix(in srgb, var(--signal) 55%, transparent);
 }
 .chip.warn {
-  color: #ebc27a;
-  border-color: rgba(216, 154, 53, 0.55);
+  color: var(--warn-text);
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
 }
 
 .label {
-  font-size: 0.72em;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  font-size: 0.82em;
+  font-weight: 500;
   color: var(--faint);
 }
 
@@ -232,7 +278,7 @@ input[type='url'],
 input[type='number'],
 select,
 textarea {
-  background: #11151a;
+  background: var(--input-bg);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   padding: 0.45em 0.65em;
@@ -258,14 +304,14 @@ input[type='checkbox'] {
 .scroll {
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: #3a424d transparent;
+  scrollbar-color: var(--line-strong) transparent;
 }
 
 .good {
-  color: #9fd0a4;
+  color: var(--good-text);
 }
 .bad {
-  color: #ec9a92;
+  color: var(--bad-text);
 }
 
 .fade-in {
@@ -314,6 +360,30 @@ input[type='checkbox'] {
   clip: rect(0 0 0 0);
 }
 
+/*
+ * Newsprint: the in-game news (journal, special edition, news flash) is the one
+ * paper surface of the ink HUD, printed in the survey's two inks: marine navy for
+ * the text, chart magenta (the danger colour of sea charts) for what is breaking.
+ */
+.newsprint {
+  --np-paper: #f1ece2;
+  --np-paper-2: #e6dfd1;
+  --np-ink: #172a3c;
+  --np-ink-2: #46535f;
+  --np-ink-3: #5c636a;
+  --np-rule: #bdb4a2;
+  --np-spot: #b3245f;
+  --np-good: #276b48;
+  --np-warn: #8f5c0e;
+  --np-serif: 'IBM Plex Serif', Georgia, serif;
+  background: var(--np-paper);
+  color: var(--np-ink);
+  color-scheme: light;
+}
+.newsprint :focus-visible {
+  outline-color: var(--np-ink);
+}
+
 /* Tooltips: <span data-tip="…"> shows an explanation on hover. */
 [data-tip] {
   position: relative;
@@ -327,9 +397,9 @@ input[type='checkbox'] {
   width: max-content;
   max-width: 280px;
   white-space: normal;
-  background: #0b0e12;
+  background: var(--tip-bg);
   border: 1px solid var(--line-strong);
-  color: var(--parchment);
+  color: #eef3f2;
   font-size: 12.5px;
   font-weight: 400;
   text-transform: none;
@@ -339,4 +409,253 @@ input[type='checkbox'] {
   border-radius: 4px;
   z-index: 100;
   pointer-events: none;
+}
+
+/* ===========================================================================
+ * Menu screens on chart paper (BRAND.md §4, « Levé hydrographique »).
+ * Additive rules only: scoped to .chart (every screen outside a game) or to
+ * opt-in classes, so the in-game "ink" theme is untouched.
+ * ======================================================================== */
+.chart {
+  /* Chart inks used by the rendered map previews and the contour motif. */
+  --land: #e9e0c6;
+  --shoal: #d3e6ee;
+  --contour-ink: #a8926a;
+  --panel-solid: #fafcfb;
+  /* Brass for text and for filled buttons that carry text (WCAG AA on paper:
+     raw brass #b8862a is only 2.9:1). */
+  --brass-text: #80590f;
+  --brass-fill: #946919;
+  --brass-fill-hover: #855d12;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-draw: cubic-bezier(0.6, 0, 0.2, 1);
+  --page-pad: clamp(20px, 2.6vw, 48px);
+}
+.chart .btn.primary {
+  background: var(--brass-fill);
+  border-color: var(--brass-fill);
+  color: #fffdf6;
+}
+.chart .btn.primary:hover,
+.chart .btn.primary:focus-visible {
+  background: var(--brass-fill-hover);
+  border-color: var(--brass-fill-hover);
+}
+.chart .btn {
+  transition:
+    background 0.14s,
+    border-color 0.14s,
+    color 0.14s,
+    transform 0.1s;
+}
+.chart .btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+.chart .chip {
+  background: var(--panel-solid);
+  color: var(--muted);
+}
+.chart .label,
+.chart .section-title {
+  color: var(--muted);
+}
+
+/* Page shell shared by the menu pages: header, then a centred body. */
+.page-shell {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 22px;
+  padding: 34px var(--page-pad) 24px;
+  background: var(--abyss);
+  overflow: hidden;
+}
+.page-shell > .page-body {
+  width: min(100%, 1200px);
+  justify-self: center;
+  min-height: 0;
+}
+
+/* Form controls on paper. */
+.chart select {
+  appearance: none;
+  background-color: var(--input-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234B6478' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7em center;
+  padding-right: 2.2em;
+  cursor: var(--cursor-pointer, pointer);
+}
+.chart input[type='text'],
+.chart input[type='url'],
+.chart input[type='number'],
+.chart select,
+.chart textarea {
+  transition:
+    border-color 0.14s,
+    box-shadow 0.14s;
+}
+.chart input:hover:not(:disabled),
+.chart select:hover:not(:disabled) {
+  border-color: var(--aurora);
+}
+.chart input[type='text']:focus,
+.chart input[type='url']:focus,
+.chart input[type='number']:focus,
+.chart select:focus {
+  box-shadow: 0 0 0 3px var(--select-bg);
+}
+.chart input::placeholder {
+  color: var(--muted);
+  opacity: 0.85;
+}
+
+/* Range: thin fathom track, filled up to the value (--fill set by use:rangeFill). */
+.chart input[type='range'] {
+  appearance: none;
+  height: 22px;
+  background: transparent;
+  cursor: var(--cursor-pointer, pointer);
+  margin: 0;
+}
+.chart input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background:
+    linear-gradient(var(--aurora), var(--aurora)) 0 / var(--fill, 0%) 100% no-repeat,
+    var(--line);
+}
+.chart input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--panel-solid);
+  border: 2px solid var(--aurora);
+  box-shadow: 0 1px 3px rgba(22, 50, 74, 0.25);
+  transition: transform 0.12s var(--ease-out);
+}
+.chart input[type='range']:hover::-webkit-slider-thumb,
+.chart input[type='range']:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+.chart input[type='range']:focus-visible {
+  outline-offset: 4px;
+}
+.chart input[type='range']:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Switch: a checkbox drawn as a toggle (keeps native semantics and bind:checked). */
+.chart input[type='checkbox'].switch {
+  appearance: none;
+  flex: none;
+  position: relative;
+  width: 34px;
+  height: 20px;
+  margin: 0;
+  border-radius: 10px;
+  background: var(--line-strong);
+  cursor: var(--cursor-pointer, pointer);
+  transition: background 0.16s var(--ease-out);
+}
+.chart input[type='checkbox'].switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(22, 50, 74, 0.3);
+  transition: transform 0.18s var(--ease-out);
+}
+.chart input[type='checkbox'].switch:checked {
+  background: var(--aurora);
+}
+.chart input[type='checkbox'].switch:checked::after {
+  transform: translateX(14px);
+}
+.chart input[type='checkbox'].switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Empty states: a direction, not a mood. */
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--muted);
+}
+.empty-state h3 {
+  color: var(--parchment);
+  font-size: 1.25em;
+}
+.empty-state p {
+  margin: 0;
+  max-width: 46ch;
+  line-height: 1.55;
+}
+.empty-state .acts {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* High contrast on paper: darker filets and secondary text. */
+.high-contrast .chart {
+  --line: #7d93a2;
+  --line-strong: #4b6478;
+  --muted: #2a4459;
+  --faint: #4b6478;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart *,
+  .chart *::before,
+  .chart *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
+}
+.reduced-motion .chart *,
+.reduced-motion .chart *::before,
+.reduced-motion .chart *::after {
+  animation-iteration-count: 1 !important;
+}
+
+/* Custom cursors (src/ui/cursors.ts): ink arrow, brass arrow on what can be clicked.
+   The !important beats components that still ask for the system hand. */
+html {
+  cursor: var(--cursor-default, auto);
+}
+html
+  :is(
+    button,
+    a[href],
+    select,
+    summary,
+    label,
+    [role='button'],
+    [role='tab'],
+    .btn,
+    input[type='range'],
+    input[type='checkbox'],
+    input[type='radio']
+  ):not(:disabled) {
+  cursor: var(--cursor-pointer, pointer) !important;
+}
+html :is(button, .btn, input, select):disabled {
+  cursor: not-allowed !important;
+}
+html :is(input[type='text'], input[type='url'], input[type='number'], textarea) {
+  cursor: text;
 }

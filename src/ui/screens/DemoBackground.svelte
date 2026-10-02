@@ -1,5 +1,7 @@
 <script lang="ts">
-  // Living title-screen backdrop: an AI-only match rendered with the game renderer.
+  // Living title-screen backdrop: an AI-only match rendered with the game renderer, shown in
+  // daylight as a chart on paper (BRAND.md §4): a pale paper wash and paper margins over the
+  // map, and a slow drift of the camera. The map shader itself is not touched here.
   import { onMount, onDestroy } from 'svelte';
   import { Session } from '../../engine/session';
   import { GameRenderer } from '../../render/renderer';
@@ -55,13 +57,18 @@
     if (disposed) return;
     const cam = renderer.camera;
     cam.fit();
-    let t = 0;
+    let t = Math.random() * 200;
+    const still = settings.access.reducedMotion;
     renderer.onFrame = (dt) => {
-      t += dt;
-      // Slow cinematic drift + breathing zoom.
-      cam.cx = session!.state.width * (0.5 + 0.18 * Math.sin(t * 0.03));
-      cam.cy = session!.state.height * (0.5 + 0.12 * Math.cos(t * 0.025));
-      cam.zoom = cam.minZoom * (2.3 + 0.4 * Math.sin(t * 0.05));
+      if (!still) t += dt;
+      // Slow drift across the chart with a gentle breathing zoom, always covering the screen
+      // (the view never slides past the map's edges).
+      const cover = Math.max(cam.viewW / cam.mapW, cam.viewH / cam.mapH);
+      cam.zoom = cover * (1.35 + 0.15 * Math.sin(t * 0.03));
+      const hw = cam.viewW / cam.zoom / 2;
+      const hh = cam.viewH / cam.zoom / 2;
+      cam.cx = hw + (cam.mapW - 2 * hw) * (0.5 + 0.46 * Math.sin(t * 0.018));
+      cam.cy = hh + (cam.mapH - 2 * hh) * (0.5 + 0.46 * Math.cos(t * 0.014));
     };
     ready = true;
   });
@@ -73,17 +80,52 @@
   });
 </script>
 
-<div class="demo" class:ready bind:this={host} aria-hidden="true"></div>
+<div class="daylight" aria-hidden="true">
+  <div class="demo" class:ready bind:this={host}></div>
+  <div class="wash"></div>
+  <div class="margins"></div>
+</div>
 
 <style>
+  .daylight {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: var(--abyss);
+  }
   .demo {
     position: absolute;
     inset: 0;
     opacity: 0;
     transition: opacity 1.6s ease;
-    filter: saturate(0.9) brightness(0.62);
+    filter: saturate(0.78) brightness(1.08) contrast(0.92);
   }
   .demo.ready {
     opacity: 1;
+  }
+  /* A pale paper wash: the live map reads as a chart printed in daylight. */
+  .wash {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--abyss) 34%, transparent);
+    mix-blend-mode: screen;
+  }
+  /* Paper margins: the chart fades into the paper behind the cartouche and the legend. */
+  .margins {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(
+        130% 95% at 52% 46%,
+        transparent 38%,
+        color-mix(in srgb, var(--abyss) 72%, transparent) 100%
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--abyss) 55%, transparent),
+        transparent 34%,
+        transparent 66%,
+        color-mix(in srgb, var(--abyss) 50%, transparent)
+      );
   }
 </style>

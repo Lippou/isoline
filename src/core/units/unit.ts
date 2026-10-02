@@ -38,7 +38,7 @@ export interface Unit {
   path: number[];
   pathIdx: number;
   speed: number;
-  /** Transport troops / bomb kind / train stops… */
+  /** Transport troops / merchant: tiles sailed / train: progress along its rail. */
   troops: number;
   /** Generic target: unit id, tile or building id depending on type. */
   target: number;
@@ -46,6 +46,7 @@ export interface Unit {
   dest: number;
   /** Home building id (port / airfield / silo). */
   home: number;
+  /** Warship veterancy / merchant port level / train: paying (city or port) stops so far. */
   level: number;
   kills: number;
   cooldown: number;
@@ -58,7 +59,7 @@ export interface Unit {
   tx: number;
   ty: number;
   kind: number;
-  /** Train: current rail id, direction and stop count. */
+  /** Train: current rail id, direction and stations reached so far. */
   rail: number;
   dir: number;
   stops: number;
@@ -99,16 +100,21 @@ export function makeUnit(id: number, type: U, owner: number, x: number, y: numbe
   };
 }
 
-/** Move a unit along its waypoint path by `step` tiles. Returns true when the end is reached. */
-export function advanceOnPath(u: Unit, step: number, width: number): boolean {
-  let remaining = step;
+/**
+ * Sail a ship `steps` tiles along its waypoint path, counted like OpenFront's
+ * 4-connected water routes: a leg from one waypoint to the next costs |dx| + |dy|
+ * steps (the hull glides along the straight leg). Returns the steps actually sailed;
+ * the end is reached when u.pathIdx >= u.path.length.
+ */
+export function sailOnPath(u: Unit, steps: number, width: number): number {
+  let remaining = steps;
   while (remaining > 0 && u.pathIdx < u.path.length) {
     const wp = u.path[u.pathIdx]!;
     const wx = (wp % width) + 0.5;
     const wy = ((wp / width) | 0) + 0.5;
     const dx = wx - u.x;
     const dy = wy - u.y;
-    const d = Math.hypot(dx, dy);
+    const d = Math.abs(dx) + Math.abs(dy);
     if (d <= remaining) {
       u.x = wx;
       u.y = wy;
@@ -120,5 +126,5 @@ export function advanceOnPath(u: Unit, step: number, width: number): boolean {
       remaining = 0;
     }
   }
-  return u.pathIdx >= u.path.length;
+  return steps - remaining;
 }

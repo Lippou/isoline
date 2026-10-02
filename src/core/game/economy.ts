@@ -1,112 +1,105 @@
-// Population growth (bell curve peaking at 42 % troops/cap), troop/worker
-// rebalancing and gold income.
+// Troops and passive gold (OpenFront model): a single troop pool regenerating
+// towards a ceiling set by land and completed cities, and a flat gold income.
 import type { Game } from './state';
 import type { Player } from './player';
 import {
-  BASE_INCOME,
-  GROWTH_MAX,
-  GROWTH_PEAK,
-  GROWTH_SIGMA_HIGH,
-  GROWTH_SIGMA_LOW,
+  B,
+  GOLD_PER_TICK,
   MAX_GOLD,
-  POP_BASE,
-  POP_PER_CITY_LEVEL,
-  REBALANCE_RATE,
-  TERRITORY_EXP,
-  TERRITORY_K,
   TICKS_PER_SECOND,
-  WORKER_INCOME,
-  TRIBE_INCOME,
-  TRIBE_MAX_TROOPS,
+  TRIBE_REGEN_MULT,
+  TRIBE_TROOPS_DIVISOR,
+  TROOPS_BASE,
+  TROOPS_PER_CITY_LEVEL,
+  TROOPS_TILE_EXP,
+  TROOPS_TILE_K,
+  TROOP_REGEN_BASE,
+  TROOP_REGEN_DIV,
+  TROOP_REGEN_EXP,
 } from './constants';
 import { resourceBonus } from '../rules/resources';
-import { techEconomy } from '../rules/tech';
+import { techEconomy, techTroopCap } from '../rules/tech';
+import { capitalGoldMult, capitalGrowthMult } from '../rules/capital';
 
-export function populationCap(game: Game, p: Player): number {
-  const territory = TERRITORY_K * Math.pow(Math.max(0, p.usefulTiles), TERRITORY_EXP);
-  let cap = POP_BASE + POP_PER_CITY_LEVEL * p.cityLevels + territory;
-  if (game.config.features.resources) cap *= 1 + resourceBonus(game, p).growth * 0.5;
-  return cap;
+/** Sum of the levels of p's completed cities (cities under construction add nothing yet). */
+export function completedCityLevels(game: Game, p: Player): number {
+  let n = 0;
+  for (const b of game.buildings.values())
+    if (b.owner === p.id && b.type === B.City && b.buildLeft === 0) n += b.level;
+  return n;
 }
 
-/** Bell-shaped growth factor in [0, 1] of the troops/cap ratio. */
-export function growthCurve(ratio: number): number {
-  const s = ratio < GROWTH_PEAK ? GROWTH_SIGMA_LOW : GROWTH_SIGMA_HIGH;
-  const z = (ratio - GROWTH_PEAK) / s;
-  return Math.exp(-z * z);
+/**
+ * Troop ceiling: 2 × (usefulTiles^0.6 × 800 + 25,000) + 60,000 per completed
+ * city level; a third of that for tribes, × the difficulty for nations.
+ */
+export function maxTroops(game: Game, p: Player, cityLevels = completedCityLevels(game, p)): number {
+  const land = Math.pow(Math.max(0, p.usefulTiles), TROOPS_TILE_EXP) * TROOPS_TILE_K;
+  let max = 2 * (land + TROOPS_BASE) + TROOPS_PER_CITY_LEVEL * cityLevels;
+  if (p.kind === 'tribe') max /= TRIBE_TROOPS_DIVISOR;
+  else if (p.kind === 'nation') max *= game.difficulty().troops;
+  if (p.kind !== 'tribe' && game.config.features.tech) max *= techTroopCap(p); // Conscription
+  return max;
 }
+
+/**
+ * Troops gained this tick given the ceiling `max`:
+ * (10 + troops^0.73 / 5) × (1 − troops / max), clamped to the ceiling. Above the
+ * ceiling the factor turns negative and the army shrinks back towards it.
+ */
+export function troopRegen(game: Game, p: Player, max: number): number {
+  const troops = Math.max(0, p.troops);
+  let add = (TROOP_REGEN_BASE + Math.pow(troops, TROOP_REGEN_EXP) / TROOP_REGEN_DIV) * (1 - troops / max);
+  if (p.kind === 'tribe') add *= TRIBE_REGEN_MULT;
+  else if (p.kind === 'nation') add *= game.difficulty().regen;
+  if (add > 0) {
+    if (game.config.features.resources) add *= 1 + resourceBonus(game, p).growth;
+    add *= game.features.growthMult;
+    // Disorganised after losing the capital (rules/capital.ts).
+    add *= capitalGrowthMult(game, p);
+  }
+  return Math.min(troops + add, max) - troops;
+}
+
+// Scratch buffer: completed city levels per player id, rebuilt every tick.
+let cityLevelsBuf = new Float64Array(0);
 
 export function updateEconomy(game: Game): void {
-  const diff = game.difficulty();
   const tick = game.tick;
+  if (cityLevelsBuf.length < game.players.length) cityLevelsBuf = new Float64Array(game.players.length * 2);
+  const cityLevels = cityLevelsBuf;
+  cityLevels.fill(0);
+  for (const b of game.buildings.values())
+    if (b.type === B.City && b.buildLeft === 0) cityLevels[b.owner]! += b.level;
+
   for (const p of game.alivePlayers()) {
-    const cap = populationCap(game, p);
-    p.popCap = cap;
-    const pop = p.troops + p.workers;
-    // --- growth
-    let growth: number;
-    if (pop < cap) {
-      growth = GROWTH_MAX * cap * growthCurve(p.troops / cap) * (1 - pop / cap);
-      if (p.kind === 'nation') growth *= diff.troops;
-      // Tribes grow like a nation, then stop once they reach their troop ceiling.
-      if (p.kind === 'tribe' && p.troops >= TRIBE_MAX_TROOPS) growth = 0;
-      if (game.config.features.resources) growth *= 1 + resourceBonus(game, p).growth;
-      growth *= game.features.growthMult;
-      growth = Math.min(growth, cap - pop);
-    } else {
-      growth = -(pop - cap) * 0.01;
-    }
+    // --- troops
+    const max = maxTroops(game, p, cityLevels[p.id]!);
+    p.popCap = max;
+    const growth = troopRegen(game, p, max);
     p.lastGrowth = growth;
-    const ratio = autoRatio(p, cap);
-    if (growth > 0) {
-      p.troops += growth * ratio;
-      p.workers += growth * (1 - ratio);
-    } else if (pop > 0) {
-      p.troops += (growth * p.troops) / pop;
-      p.workers += (growth * p.workers) / pop;
-    }
-    // --- rebalance towards the requested troop ratio
-    const total = p.troops + p.workers;
-    if (total > 0) {
-      const want = total * ratio;
-      const maxMove = total * REBALANCE_RATE;
-      const delta = Math.max(-maxMove, Math.min(maxMove, want - p.troops));
-      if (delta > 0) {
-        const moved = Math.min(delta, p.workers);
-        p.workers -= moved;
-        p.troops += moved;
-      } else if (delta < 0) {
-        const moved = Math.min(-delta, p.troops);
-        p.troops -= moved;
-        p.workers += moved;
-      }
-    }
-    if (p.troops < 0) p.troops = 0;
-    if (p.workers < 0) p.workers = 0;
+    p.troops = Math.max(0, p.troops + growth);
 
     // --- gold
     if (p.kind === 'tribe') {
       // Tribes trade and hoard: their treasury is the prize for conquering them.
-      p.income = TRIBE_INCOME / TICKS_PER_SECOND;
+      p.income = Math.floor(GOLD_PER_TICK.tribe * game.config.goldMultiplier);
       p.gold = Math.min(MAX_GOLD, p.gold + p.income);
       continue;
     }
     const sanctioned = game.features.sanction && game.features.sanction.target === p.id ? 0.5 : 1;
+    // Capital lost: disorganised, then still without a seat of government (rules/capital.ts).
     const mult =
-      game.config.goldMultiplier *
-      game.features.incomeMult *
-      sanctioned *
-      (p.kind === 'nation' ? diff.income : 1);
+      game.config.goldMultiplier * game.features.incomeMult * sanctioned * capitalGoldMult(game, p);
     const techMult = game.config.features.tech ? techEconomy(p) : 1;
-    const base = BASE_INCOME[p.kind] * mult;
-    const workers = p.workers * WORKER_INCOME * mult * techMult;
-    const res = game.config.features.resources ? resourceBonus(game, p).gold * mult : 0;
-    const perSecond = base + workers + res;
-    const perTick = perSecond / TICKS_PER_SECOND;
+    const base = Math.floor(GOLD_PER_TICK[p.kind] * mult * techMult);
+    const res = game.config.features.resources
+      ? Math.floor((resourceBonus(game, p).gold / TICKS_PER_SECOND) * mult)
+      : 0;
+    const perTick = base + res;
     p.income = perTick;
-    p.incomeBreakdown.base = base;
-    p.incomeBreakdown.workers = workers;
-    p.incomeBreakdown.resources = res;
+    p.incomeBreakdown.base = base * TICKS_PER_SECOND;
+    p.incomeBreakdown.resources = res * TICKS_PER_SECOND;
     addGold(p, perTick);
     if (tick % 50 === 0) {
       // Trade/train figures are accumulated elsewhere; decay the displayed averages.
@@ -119,12 +112,4 @@ export function updateEconomy(game: Game): void {
 export function addGold(p: Player, amount: number): void {
   p.gold = Math.min(MAX_GOLD, p.gold + amount);
   if (amount > 0) p.stats.goldEarned += amount;
-}
-
-/** troopRatio 0 means "simple mode": keep troops near the growth optimum. */
-function autoRatio(p: Player, cap: number): number {
-  if (p.troopRatio > 0) return p.troopRatio;
-  const pop = p.troops + p.workers;
-  if (pop <= 0) return 0.6;
-  return Math.min(0.95, Math.max(0.2, (GROWTH_PEAK * cap) / pop));
 }

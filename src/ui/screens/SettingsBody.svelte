@@ -1,10 +1,16 @@
 <script lang="ts">
+  // Settings, shared by the Settings page (chart paper) and the in-game menu (ink): colours
+  // come from the theme tokens only, and the layout folds its tabs on top when narrow.
   import { settings, saveSettings, keyLabel, DEFAULT_KEYS } from '../stores/settings.svelte';
   import { t } from '../i18n/i18n.svelte';
   import { bridge } from '../bridge';
   import { audio } from '../../audio/audio';
   import Icon from '../icons/Icon.svelte';
   import type { IconName } from '../icons/icons';
+  import { rangeFill } from '../components/rangeFill';
+  import { isDesktop, type UpdateStatus } from '../bridge';
+  import { app } from '../stores/app.svelte';
+  import { update, checkUpdate, saveUpdateToken, clearUpdateToken } from '../stores/update.svelte';
   const TAB_ICONS: Record<string, IconName> = {
     graphics: 'eye',
     audio: 'sound',
@@ -16,6 +22,20 @@
 
   let tab = $state<'graphics' | 'audio' | 'game' | 'controls' | 'access' | 'lang'>('graphics');
   let listening = $state<string | null>(null);
+  let token = $state('');
+
+  /** One line on the update state: up to date, new version, progress or what went wrong. */
+  function updateLine(u: UpdateStatus): string {
+    if (u.state === 'checking') return t('update.checking');
+    if (u.state === 'none') return t('update.upToDate');
+    if (u.state === 'available' || u.state === 'ready')
+      return t('title.updateAvailable', { version: u.version ?? '' });
+    if (u.state === 'downloading')
+      return t('update.downloading', { pct: Math.round((u.progress ?? 0) * 100) });
+    if (u.state === 'error')
+      return t(`update.err.${u.error ?? 'network'}`) + (u.detail ? ` (${u.detail})` : '');
+    return '';
+  }
 
   function change(): void {
     saveSettings();
@@ -41,319 +61,689 @@
 <svelte:window onkeydowncapture={capture} />
 
 <div class="settings" data-testid="settings">
-  <nav>
-    {#each tabs as tb (tb)}
-      <button class="tab" class:on={tab === tb} onclick={() => (tab = tb)} data-testid="settings-tab-{tb}"
-        ><Icon name={TAB_ICONS[tb] ?? 'settings'} size={16} />{t(`settings.tab.${tb}`)}</button
-      >
-    {/each}
-  </nav>
-  <div class="content">
-    <h2>{t(`settings.tab.${tab}`)}</h2>
-
-    {#if tab === 'graphics'}
-      <div class="form">
-        <label
-          >{t('settings.quality')}
-          <select bind:value={settings.graphics.quality} onchange={change}>
-            <option value="high">{t('settings.q.high')}</option>
-            <option value="balanced">{t('settings.q.balanced')}</option>
-            <option value="performance">{t('settings.q.performance')}</option>
-          </select>
-        </label>
-        <label
-          >{t('settings.particles')}
-          <b class="mono">{Math.round(settings.graphics.particles * 100)}%</b><input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            bind:value={settings.graphics.particles}
-            onchange={change}
-          /></label
-        >
-        <label class="row"
-          ><input type="checkbox" bind:checked={settings.graphics.shaders} onchange={change} />
-          {t('settings.shaders')}</label
-        >
-        <label class="row"
-          ><input
-            type="checkbox"
-            bind:checked={settings.graphics.vsync}
-            onchange={() => {
-              if (settings.graphics.vsync) settings.graphics.maxFps = 0;
-              change();
-            }}
-          />
-          {t('settings.vsync')}</label
-        >
-        <label
-          >{t('settings.maxFps')} <b class="mono">{settings.graphics.maxFps || '∞'}</b><input
-            type="range"
-            min="0"
-            max="240"
-            step="30"
-            bind:value={settings.graphics.maxFps}
-            onchange={() => {
-              settings.graphics.vsync = settings.graphics.maxFps === 0;
-              change();
-            }}
-          /></label
-        >
-        <label
-          >{t('settings.uiScale')} <b class="mono">{Math.round(settings.graphics.uiScale * 100)}%</b><input
-            type="range"
-            min="0.8"
-            max="1.5"
-            step="0.05"
-            bind:value={settings.graphics.uiScale}
-            onchange={change}
-          /></label
-        >
-        <label class="row"
-          ><input
-            type="checkbox"
-            bind:checked={settings.graphics.fullscreen}
-            onchange={() => {
-              bridge.setFullscreen(settings.graphics.fullscreen);
-              change();
-            }}
-          />
-          {t('settings.fullscreen')}</label
-        >
-        <label class="row"
-          ><input type="checkbox" bind:checked={settings.graphics.autoPerformance} onchange={change} />
-          {t('settings.autoPerf')}</label
-        >
-      </div>
-    {:else if tab === 'audio'}
-      <div class="form">
-        {#each ['master', 'music', 'sfx', 'ui', 'voice'] as k (k)}
-          <label
-            >{t(`settings.vol.${k}`)}
-            <b class="mono">{Math.round(settings.audio[k as 'master'] * 100)}%</b><input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              bind:value={settings.audio[k as 'master']}
-              onchange={change}
-            /></label
-          >
-        {/each}
-        <label class="row"
-          ><input type="checkbox" bind:checked={settings.audio.voiceOn} onchange={change} />
-          {t('settings.voiceOn')}</label
-        >
-        <label class="row"
-          ><input type="checkbox" bind:checked={settings.audio.muteUnfocused} onchange={change} />
-          {t('settings.muteUnfocused')}</label
-        >
+  <div class="layout">
+    <nav aria-label={t('title.settings')}>
+      {#each tabs as tb (tb)}
         <button
-          class="btn"
-          onclick={() => {
-            audio.ensure();
-            audio.sfx('alliance');
-          }}>{t('settings.testSound')}</button
+          class="tab"
+          class:on={tab === tb}
+          aria-pressed={tab === tb}
+          onclick={() => (tab = tb)}
+          data-testid="settings-tab-{tb}"
         >
-      </div>
-    {:else if tab === 'game'}
-      <div class="form">
-        <label class="row"
-          ><input type="checkbox" bind:checked={settings.game.confirmations} onchange={change} />
-          {t('settings.confirmations')}</label
-        >
-        <label class="row"
-          ><input type="checkbox" bind:checked={settings.game.simpleMode} onchange={change} />
-          {t('settings.simpleMode')}</label
-        >
-        <label
-          >{t('settings.fontSize')} <b class="mono">{Math.round(settings.game.fontSize * 100)}%</b><input
-            type="range"
-            min="0.85"
-            max="1.4"
-            step="0.05"
-            bind:value={settings.game.fontSize}
-            onchange={change}
-          /></label
-        >
-        <label
-          >{t('settings.wheel')}
-          <select bind:value={settings.game.wheel} onchange={change}>
-            <option value="zoom">{t('settings.wheel.zoom')}</option>
-            <option value="trackpad">{t('settings.wheel.trackpad')}</option>
-          </select>
-        </label>
-        <label class="row"
-          ><input type="checkbox" bind:checked={settings.game.checkUpdates} onchange={change} />
-          {t('settings.checkUpdates')}</label
-        >
-        {#if settings.game.checkUpdates}
-          <label
-            >{t('settings.updateUrl')}
-            <input
-              type="url"
-              placeholder="https://…/isoline-latest.json"
-              bind:value={settings.game.updateUrl}
-              onchange={change}
-            /></label
-          >
-        {/if}
-        <label
-          >{t('settings.playerName')}
-          <input type="text" bind:value={settings.playerName} maxlength="24" onchange={change} /></label
-        >
-      </div>
-    {:else if tab === 'controls'}
-      <table>
-        <tbody>
-          {#each Object.keys(DEFAULT_KEYS) as k (k)}
-            <tr>
-              <td>{t(`keys.${k}`)}</td>
-              <td
-                ><button class="key" class:listen={listening === k} onclick={() => (listening = k)}
-                  >{listening === k ? t('settings.pressKey') : keyLabel(settings.keys[k] ?? '')}</button
-                ></td
+          <span class="key"><Icon name={TAB_ICONS[tb] ?? 'settings'} size={16} /></span>
+          <span class="tt"><b>{t(`settings.tab.${tb}`)}</b><small>{t(`settings.tabDesc.${tb}`)}</small></span>
+        </button>
+      {/each}
+    </nav>
+    <div class="content">
+      {#key tab}
+        <div class="pane">
+          <header>
+            <h2>{t(`settings.tab.${tab}`)}</h2>
+            <p>{t(`settings.tabDesc.${tab}`)}</p>
+          </header>
+
+          {#if tab === 'graphics'}
+            <div class="rows">
+              <div class="srow">
+                <div class="sl">
+                  <label for="set-quality">{t('settings.quality')}</label><small
+                    >{t('settings.d.quality')}</small
+                  >
+                </div>
+                <select id="set-quality" bind:value={settings.graphics.quality} onchange={change}>
+                  <option value="high">{t('settings.q.high')}</option>
+                  <option value="balanced">{t('settings.q.balanced')}</option>
+                  <option value="performance">{t('settings.q.performance')}</option>
+                </select>
+              </div>
+              <div class="srow">
+                <div class="sl">
+                  <label for="set-particles">{t('settings.particles')}</label><small
+                    >{t('settings.d.particles')}</small
+                  >
+                </div>
+                <div class="rng">
+                  <b class="mono">{Math.round(settings.graphics.particles * 100)} %</b><input
+                    id="set-particles"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    bind:value={settings.graphics.particles}
+                    onchange={change}
+                    use:rangeFill={settings.graphics.particles}
+                  />
+                </div>
+              </div>
+              <label class="srow">
+                <span class="sl"
+                  ><span class="lb">{t('settings.shaders')}</span><small>{t('settings.d.shaders')}</small
+                  ></span
+                >
+                <input
+                  class="switch"
+                  type="checkbox"
+                  bind:checked={settings.graphics.shaders}
+                  onchange={change}
+                />
+              </label>
+              <label class="srow">
+                <span class="sl"
+                  ><span class="lb">{t('settings.vsync')}</span><small>{t('settings.d.vsync')}</small></span
+                >
+                <input
+                  class="switch"
+                  type="checkbox"
+                  bind:checked={settings.graphics.vsync}
+                  onchange={() => {
+                    if (settings.graphics.vsync) settings.graphics.maxFps = 0;
+                    change();
+                  }}
+                />
+              </label>
+              <div class="srow">
+                <div class="sl">
+                  <label for="set-fps">{t('settings.maxFps')}</label><small>{t('settings.d.maxFps')}</small>
+                </div>
+                <div class="rng">
+                  <b class="mono">{settings.graphics.maxFps || '∞'}</b><input
+                    id="set-fps"
+                    type="range"
+                    min="0"
+                    max="240"
+                    step="30"
+                    bind:value={settings.graphics.maxFps}
+                    onchange={() => {
+                      settings.graphics.vsync = settings.graphics.maxFps === 0;
+                      change();
+                    }}
+                    use:rangeFill={settings.graphics.maxFps}
+                  />
+                </div>
+              </div>
+              <div class="srow">
+                <div class="sl">
+                  <label for="set-ui">{t('settings.uiScale')}</label><small>{t('settings.d.uiScale')}</small>
+                </div>
+                <div class="rng">
+                  <b class="mono">{Math.round(settings.graphics.uiScale * 100)} %</b><input
+                    id="set-ui"
+                    type="range"
+                    min="0.8"
+                    max="1.5"
+                    step="0.05"
+                    bind:value={settings.graphics.uiScale}
+                    onchange={change}
+                    use:rangeFill={settings.graphics.uiScale}
+                  />
+                </div>
+              </div>
+              <label class="srow">
+                <span class="sl"
+                  ><span class="lb">{t('settings.fullscreen')}</span><small
+                    >{t('settings.d.fullscreen')}</small
+                  ></span
+                >
+                <input
+                  class="switch"
+                  type="checkbox"
+                  bind:checked={settings.graphics.fullscreen}
+                  onchange={() => {
+                    bridge.setFullscreen(settings.graphics.fullscreen);
+                    change();
+                  }}
+                />
+              </label>
+              <label class="srow">
+                <span class="sl"
+                  ><span class="lb">{t('settings.autoPerf')}</span><small>{t('settings.d.autoPerf')}</small
+                  ></span
+                >
+                <input
+                  class="switch"
+                  type="checkbox"
+                  bind:checked={settings.graphics.autoPerformance}
+                  onchange={change}
+                />
+              </label>
+            </div>
+          {:else if tab === 'audio'}
+            <div class="rows">
+              {#each ['master', 'music', 'sfx', 'ui', 'voice'] as k (k)}
+                <div class="srow">
+                  <div class="sl"><label for="vol-{k}">{t(`settings.vol.${k}`)}</label></div>
+                  <div class="rng">
+                    <b class="mono">{Math.round(settings.audio[k as 'master'] * 100)} %</b><input
+                      id="vol-{k}"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      bind:value={settings.audio[k as 'master']}
+                      onchange={change}
+                      use:rangeFill={settings.audio[k as 'master']}
+                    />
+                  </div>
+                </div>
+              {/each}
+              <label class="srow">
+                <span class="sl"
+                  ><span class="lb">{t('settings.voiceOn')}</span><small>{t('settings.d.voiceOn')}</small
+                  ></span
+                >
+                <input
+                  class="switch"
+                  type="checkbox"
+                  bind:checked={settings.audio.voiceOn}
+                  onchange={change}
+                />
+              </label>
+              <label class="srow">
+                <span class="sl"
+                  ><span class="lb">{t('settings.muteUnfocused')}</span><small
+                    >{t('settings.d.muteUnfocused')}</small
+                  ></span
+                >
+                <input
+                  class="switch"
+                  type="checkbox"
+                  bind:checked={settings.audio.muteUnfocused}
+                  onchange={change}
+                />
+              </label>
+            </div>
+            <div class="foot">
+              <button
+                class="btn"
+                onclick={() => {
+                  audio.ensure();
+                  audio.sfx('alliance');
+                }}><Icon name="sound" size={15} />{t('settings.testSound')}</button
               >
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-      <button
-        class="btn"
-        onclick={() => {
-          settings.keys = { ...DEFAULT_KEYS };
-          saveSettings();
-        }}>{t('settings.resetKeys')}</button
-      >
-    {:else if tab === 'access'}
-      <div class="form">
-        <label
-          >{t('settings.vision')}
-          <select bind:value={settings.access.vision} onchange={change} data-testid="opt-vision">
-            <option value="none">{t('settings.vision.none')}</option>
-            <option value="protanopia">{t('settings.vision.protanopia')}</option>
-            <option value="deuteranopia">{t('settings.vision.deuteranopia')}</option>
-            <option value="tritanopia">{t('settings.vision.tritanopia')}</option>
-          </select>
-        </label>
-        <label class="row"
-          ><input type="checkbox" bind:checked={settings.access.highContrast} onchange={change} />
-          {t('settings.highContrast')}</label
-        >
-        <label class="row"
-          ><input type="checkbox" bind:checked={settings.access.reducedMotion} onchange={change} />
-          {t('settings.reducedMotion')}</label
-        >
-        <label class="row"
-          ><input type="checkbox" bind:checked={settings.access.subtitles} onchange={change} />
-          {t('settings.subtitles')}</label
-        >
-        <p class="muted">{t('settings.accessNote')}</p>
-      </div>
-    {:else}
-      <div class="form">
-        <label
-          >{t('settings.language')}
-          <select bind:value={settings.lang} onchange={change} data-testid="opt-lang">
-            <option value="fr">Français</option>
-            <option value="en">English</option>
-          </select>
-        </label>
-      </div>
-    {/if}
+            </div>
+          {:else if tab === 'game'}
+            <div class="rows">
+              <div class="srow">
+                <div class="sl">
+                  <label for="set-name">{t('settings.playerName')}</label><small
+                    >{t('settings.d.playerName')}</small
+                  >
+                </div>
+                <input
+                  id="set-name"
+                  type="text"
+                  bind:value={settings.playerName}
+                  maxlength="24"
+                  onchange={change}
+                />
+              </div>
+              <label class="srow">
+                <span class="sl"
+                  ><span class="lb">{t('settings.confirmations')}</span><small
+                    >{t('settings.d.confirmations')}</small
+                  ></span
+                >
+                <input
+                  class="switch"
+                  type="checkbox"
+                  bind:checked={settings.game.confirmations}
+                  onchange={change}
+                />
+              </label>
+              <div class="srow">
+                <div class="sl">
+                  <label for="set-font">{t('settings.fontSize')}</label><small
+                    >{t('settings.d.fontSize')}</small
+                  >
+                </div>
+                <div class="rng">
+                  <b class="mono">{Math.round(settings.game.fontSize * 100)} %</b><input
+                    id="set-font"
+                    type="range"
+                    min="0.85"
+                    max="1.4"
+                    step="0.05"
+                    bind:value={settings.game.fontSize}
+                    onchange={change}
+                    use:rangeFill={settings.game.fontSize}
+                  />
+                </div>
+              </div>
+              <div class="srow">
+                <div class="sl">
+                  <label for="set-wheel">{t('settings.wheel')}</label><small>{t('settings.d.wheel')}</small>
+                </div>
+                <select id="set-wheel" bind:value={settings.game.wheel} onchange={change}>
+                  <option value="zoom">{t('settings.wheel.zoom')}</option>
+                  <option value="trackpad">{t('settings.wheel.trackpad')}</option>
+                </select>
+              </div>
+              {#if isDesktop}
+                <div class="srow updates" data-testid="settings-updates">
+                  <div class="sl">
+                    <span class="lb">{t('update.title')}</span>
+                    <small
+                      >{t('update.desc', { version: app.version })} · {t(
+                        `update.access.${update.s.access}`,
+                      )}</small
+                    >
+                    <small class="ustate" class:err={update.s.state === 'error'}>{updateLine(update.s)}</small
+                    >
+                  </div>
+                  <div class="uact">
+                    <button
+                      class="btn small"
+                      onclick={() => void checkUpdate()}
+                      disabled={update.s.state === 'checking'}>{t('update.checkNow')}</button
+                    >
+                  </div>
+                </div>
+                <label class="srow">
+                  <span class="sl"
+                    ><span class="lb">{t('update.auto')}</span><small>{t('update.d.auto')}</small></span
+                  >
+                  <input
+                    class="switch"
+                    type="checkbox"
+                    bind:checked={settings.game.autoUpdate}
+                    onchange={change}
+                  />
+                </label>
+                <div class="srow">
+                  <div class="sl">
+                    <label for="set-token">{t('update.token')}</label><small>{t('update.d.token')}</small>
+                  </div>
+                  <div class="uact">
+                    <input
+                      id="set-token"
+                      type="password"
+                      autocomplete="off"
+                      placeholder={update.s.access === 'saved' ? '••••••••' : 'github_pat_…'}
+                      bind:value={token}
+                    />
+                    <button
+                      class="btn small"
+                      disabled={!token.trim()}
+                      onclick={() => void saveUpdateToken(token).then(() => (token = ''))}
+                      >{t('update.save')}</button
+                    >
+                    {#if update.s.access === 'saved'}
+                      <button class="btn small ghost" onclick={() => void clearUpdateToken()}
+                        >{t('update.forget')}</button
+                      >
+                    {/if}
+                  </div>
+                </div>
+              {/if}
+            </div>
+          {:else if tab === 'controls'}
+            <table>
+              <tbody>
+                {#each Object.keys(DEFAULT_KEYS) as k (k)}
+                  <tr>
+                    <td>{t(`keys.${k}`)}</td>
+                    <td
+                      ><button class="kbd" class:listen={listening === k} onclick={() => (listening = k)}
+                        >{listening === k ? t('settings.pressKey') : keyLabel(settings.keys[k] ?? '')}</button
+                      ></td
+                    >
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+            <div class="foot">
+              <button
+                class="btn"
+                onclick={() => {
+                  settings.keys = { ...DEFAULT_KEYS };
+                  saveSettings();
+                }}><Icon name="undo" size={15} />{t('settings.resetKeys')}</button
+              >
+            </div>
+          {:else if tab === 'access'}
+            <div class="rows">
+              <div class="srow">
+                <div class="sl">
+                  <label for="set-vision">{t('settings.vision')}</label><small
+                    >{t('settings.accessNote')}</small
+                  >
+                </div>
+                <select
+                  id="set-vision"
+                  bind:value={settings.access.vision}
+                  onchange={change}
+                  data-testid="opt-vision"
+                >
+                  <option value="none">{t('settings.vision.none')}</option>
+                  <option value="protanopia">{t('settings.vision.protanopia')}</option>
+                  <option value="deuteranopia">{t('settings.vision.deuteranopia')}</option>
+                  <option value="tritanopia">{t('settings.vision.tritanopia')}</option>
+                </select>
+              </div>
+              <label class="srow">
+                <span class="sl"
+                  ><span class="lb">{t('settings.highContrast')}</span><small
+                    >{t('settings.d.highContrast')}</small
+                  ></span
+                >
+                <input
+                  class="switch"
+                  type="checkbox"
+                  bind:checked={settings.access.highContrast}
+                  onchange={change}
+                />
+              </label>
+              <label class="srow">
+                <span class="sl"
+                  ><span class="lb">{t('settings.reducedMotion')}</span><small
+                    >{t('settings.d.reducedMotion')}</small
+                  ></span
+                >
+                <input
+                  class="switch"
+                  type="checkbox"
+                  bind:checked={settings.access.reducedMotion}
+                  onchange={change}
+                />
+              </label>
+              <label class="srow">
+                <span class="sl"
+                  ><span class="lb">{t('settings.subtitles')}</span><small>{t('settings.d.subtitles')}</small
+                  ></span
+                >
+                <input
+                  class="switch"
+                  type="checkbox"
+                  bind:checked={settings.access.subtitles}
+                  onchange={change}
+                />
+              </label>
+            </div>
+          {:else}
+            <div class="rows">
+              <div class="srow">
+                <div class="sl">
+                  <label for="set-lang">{t('settings.language')}</label><small
+                    >{t('settings.d.language')}</small
+                  >
+                </div>
+                <select id="set-lang" bind:value={settings.lang} onchange={change} data-testid="opt-lang">
+                  <option value="fr">Français</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+            </div>
+          {/if}
+        </div>
+      {/key}
+    </div>
   </div>
 </div>
 
 <style>
   .settings {
-    display: grid;
-    grid-template-columns: 220px 1fr;
+    container-type: inline-size;
     min-height: 100%;
+    display: grid;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
   }
   nav {
     display: grid;
     align-content: start;
     gap: 2px;
-    padding: 10px;
+    padding: 14px 10px;
     border-right: 1px solid var(--line);
     background: var(--panel-2);
   }
   .tab {
-    display: flex;
+    position: relative;
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 12px;
     align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
+    padding: 9px 10px;
     background: none;
-    border: 1px solid transparent;
+    border: 0;
     border-radius: 4px;
-    color: var(--muted);
-    cursor: pointer;
+    color: var(--parchment);
+    cursor: var(--cursor-pointer, pointer);
     text-align: left;
+    transition: background 0.14s;
+  }
+  .tab::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 9px;
+    bottom: 9px;
+    width: 2px;
+    border-radius: 1px;
+    background: var(--aurora);
+    transform: scaleY(0);
+    transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
   }
   .tab:hover {
-    color: var(--parchment);
     background: var(--panel-3);
   }
   .tab.on {
-    color: var(--parchment);
-    background: var(--panel-3);
-    box-shadow: inset 3px 0 0 var(--brass);
+    background: var(--select-bg);
+  }
+  .tab.on::before {
+    transform: scaleY(1);
+  }
+  .key {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    color: var(--muted);
+    transition:
+      color 0.14s,
+      border-color 0.14s;
+  }
+  .tab.on .key {
+    color: var(--aurora);
+    border-color: var(--aurora);
+  }
+  .tt {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+  }
+  .tt b {
+    font-weight: 600;
+  }
+  .tt small {
+    color: var(--muted);
+    font-size: 0.8em;
+    line-height: 1.3;
   }
   .content {
-    padding: 18px 24px;
-    display: grid;
-    align-content: start;
-    gap: 14px;
+    padding: 22px 28px 26px;
+    min-width: 0;
   }
-  .content h2 {
-    font-size: 1.25em;
-  }
-  .form {
+  .pane {
     display: grid;
-    gap: 14px;
-    max-width: 560px;
+    gap: 16px;
+    animation: pane-in 0.24s ease-out both;
   }
-  .form label {
-    display: grid;
-    gap: 5px;
+  @keyframes pane-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+  .pane header h2 {
+    font-size: 1.45em;
+  }
+  .pane header p {
+    margin: 2px 0 0;
     color: var(--muted);
   }
-  .form label.row {
-    display: flex;
+  .rows {
+    display: grid;
+    max-width: 760px;
+  }
+  /* One setting per row: what it is and what it does on the left, the control on the right. */
+  .srow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(200px, 280px);
+    gap: 8px 28px;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  label.srow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    cursor: var(--cursor-pointer, pointer);
+  }
+  .sl {
+    display: grid;
+    gap: 2px;
+  }
+  .sl label,
+  .sl .lb {
+    font-weight: 500;
+  }
+  .sl label {
+    cursor: var(--cursor-pointer, pointer);
+  }
+  .sl small {
+    color: var(--muted);
+    font-size: 0.86em;
+    line-height: 1.4;
+  }
+  .rng {
+    display: grid;
+    grid-template-columns: 4.2em 1fr;
     align-items: center;
     gap: 10px;
-    color: var(--parchment);
   }
-  .form b {
-    color: var(--parchment);
-    float: right;
+  .rng b {
+    text-align: right;
+    font-weight: 600;
+    color: var(--aurora);
+  }
+  .srow select,
+  .srow input[type='text'],
+  .srow input[type='url'] {
+    width: 100%;
+    min-width: 0;
+  }
+  .foot {
+    display: flex;
+    gap: 8px;
   }
   table {
     border-collapse: collapse;
     width: 100%;
-    max-width: 680px;
+    max-width: 760px;
   }
   td {
-    padding: 5px 8px;
+    padding: 7px 4px;
     border-bottom: 1px solid var(--line);
   }
-  .key {
-    min-width: 7em;
+  td:last-child {
+    text-align: right;
+  }
+  .kbd {
+    min-width: 7.5em;
     font-family: var(--mono);
+    font-size: 0.92em;
     background: var(--panel-2);
     border: 1px solid var(--line-strong);
+    border-bottom-width: 2px;
     border-radius: 4px;
-    padding: 0.25rem 0.6rem;
-    cursor: pointer;
+    padding: 0.25rem 0.7rem;
+    cursor: var(--cursor-pointer, pointer);
     color: var(--parchment);
+    transition: border-color 0.14s;
   }
-  .key.listen {
-    border-color: var(--brass);
-    color: var(--brass);
+  .kbd:hover {
+    border-color: var(--aurora);
   }
-  .muted {
-    color: var(--faint);
-    font-size: 0.85em;
+  .kbd.listen {
+    border-color: var(--aurora);
+    color: var(--aurora);
+    animation: listen 1s ease-in-out infinite alternate;
+  }
+  @keyframes listen {
+    to {
+      background: var(--select-bg);
+    }
+  }
+
+  /* Narrow (the in-game menu): tabs fold into a row above the content. */
+  @container (max-width: 820px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+    nav {
+      grid-auto-flow: column;
+      grid-auto-columns: 1fr;
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+      padding: 6px;
+      background: none;
+    }
+    .tab {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      gap: 4px;
+      padding: 6px 4px;
+      text-align: center;
+    }
+    .tab .key {
+      border: 0;
+      width: auto;
+      height: auto;
+    }
+    .tt small {
+      display: none;
+    }
+    .tab::before {
+      left: 10px;
+      right: 10px;
+      top: auto;
+      bottom: 0;
+      width: auto;
+      height: 2px;
+      transform: scaleX(0);
+    }
+    .tab.on::before {
+      transform: scaleX(1);
+    }
+    .content {
+      padding: 14px 4px;
+    }
+    .srow {
+      grid-template-columns: 1fr;
+    }
+    label.srow {
+      grid-template-columns: 1fr auto;
+    }
+  }
+  .uact {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .uact input {
+    width: 220px;
+  }
+  .ustate {
+    color: var(--muted);
+  }
+  .ustate.err {
+    color: var(--danger, #c0392b);
   }
 </style>

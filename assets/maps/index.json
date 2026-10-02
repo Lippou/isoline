@@ -8,7 +8,11 @@
   "category": "continents",
   "width": 1350,
   "height": 1368,
-  "nations": 60
+  "nations": 60,
+  "desc": {
+   "fr": "Déserts, savanes et forêts : soixante nations sur un bloc continental.",
+   "en": "Deserts, savannas and forests: sixty nations on one continental block."
+  }
  },
  {
   "id": "archipelago",
@@ -19,7 +23,26 @@
   "category": "fictional",
   "width": 1400,
   "height": 1000,
-  "nations": 40
+  "nations": 40,
+  "desc": {
+   "fr": "Des centaines d'îles : la marine est reine.",
+   "en": "Hundreds of islands: the navy rules."
+  }
+ },
+ {
+  "id": "arena",
+  "name": {
+   "fr": "Arène circulaire",
+   "en": "Circular Arena"
+  },
+  "category": "arcade",
+  "width": 1200,
+  "height": 1200,
+  "nations": 24,
+  "desc": {
+   "fr": "Un disque symétrique fait pour la bataille royale : forêts, rivières et une couronne de montagnes.",
+   "en": "A symmetric disc built for battle royale: forests, rivers and a crown of mountains."
+  }
  },
  {
   "id": "asia",
@@ -30,7 +53,41 @@
   "category": "continents",
   "width": 1700,
   "height": 1459,
-  "nations": 60
+  "nations": 60,
+  "desc": {
+   "fr": "Le plus vaste continent, de l'Oural au Pacifique.",
+   "en": "The largest continent, from the Urals to the Pacific."
+  }
+ },
+ {
+  "id": "atlantis",
+  "name": {
+   "fr": "Atlantide",
+   "en": "Atlantis"
+  },
+  "category": "legends",
+  "width": 1500,
+  "height": 1100,
+  "nations": 21,
+  "desc": {
+   "fr": "L’île de Platon : la cité aux anneaux d’eau et de terre, la grande plaine quadrillée de canaux, les dix rois.",
+   "en": "Plato's island: the city of rings of water and land, the great plain gridded with canals, the ten kings."
+  }
+ },
+ {
+  "id": "balkans",
+  "name": {
+   "fr": "Balkans",
+   "en": "Balkans"
+  },
+  "category": "regions",
+  "width": 1450,
+  "height": 1549,
+  "nations": 31,
+  "desc": {
+   "fr": "Alpes dinariques, Carpates et îles égéennes : la poudrière de l'Europe.",
+   "en": "Dinaric Alps, Carpathians and Aegean isles: Europe's powder keg."
+  }
  },
  {
   "id": "black-sea",
@@ -41,7 +98,101 @@
   "category": "regions",
   "width": 1200,
   "height": 789,
-  "nations": 15
+  "nations": 15,
+  "desc": {
+   "fr": "Une mer fermée, deux détroits et la steppe.",
+   "en": "An enclosed sea, two straits and the steppe."
+  }
+ },
+ {
+  "id": "british-isles",
+  "name": {
+   "fr": "Îles Britanniques",
+   "en": "British Isles"
+  },
+  "category": "regions",
+  "width": 1100,
+  "height": 1782,
+  "nations": 26,
+  "desc": {
+   "fr": "Angleterre, Écosse, Irlande et la Manche : îles, détroits et highlands.",
+   "en": "England, Scotland, Ireland and the Channel: islands, straits and highlands."
+  }
+ },
+ {
+  "id": "caribbean",
+  "name": {
+   "fr": "Caraïbes",
+   "en": "Caribbean"
+  },
+  "category": "regions",
+  "width": 1800,
+  "height": 1114,
+  "nations": 25,
+  "desc": {
+   "fr": "L'isthme centraméricain et un chapelet d'îles autour de la mer des Caraïbes.",
+   "en": "The Central American isthmus and a string of islands around the Caribbean Sea."
+  }
+ },
+ {
+  "id": "checkerboard",
+  "name": {
+   "fr": "Damier",
+   "en": "Checkerboard"
+  },
+  "category": "arcade",
+  "width": 1406,
+  "height": 1034,
+  "nations": 34,
+  "desc": {
+   "fr": "Trente-cinq cases de sable et de forêt reliées par des chaussées, un donjon au centre.",
+   "en": "Thirty-five squares of sand and forest linked by causeways, a keep in the middle."
+  }
+ },
+ {
+  "id": "dragon",
+  "name": {
+   "fr": "Terre du Dragon",
+   "en": "Dragonland"
+  },
+  "category": "legends",
+  "width": 1700,
+  "height": 1100,
+  "nations": 22,
+  "desc": {
+   "fr": "Un continent en forme de dragon, ailes déployées : crête dorsale, os des ailes en montagnes, lac du Cœur.",
+   "en": "A continent shaped like a dragon, wings spread: a dorsal crest, wing bones of mountains, the Heart lake."
+  }
+ },
+ {
+  "id": "duel",
+  "name": {
+   "fr": "Duel",
+   "en": "Duel"
+  },
+  "category": "arcade",
+  "width": 1600,
+  "height": 900,
+  "nations": 16,
+  "desc": {
+   "fr": "Deux moitiés en miroir, un détroit, deux chaussées et un fort au milieu : idéal à 2–4 joueurs.",
+   "en": "Two mirrored halves, a strait, two causeways and a fort in the middle: ideal for 2–4 players."
+  }
+ },
+ {
+  "id": "east-asia",
+  "name": {
+   "fr": "Japon & Corée",
+   "en": "Japan & Korea"
+  },
+  "category": "regions",
+  "width": 1600,
+  "height": 1159,
+  "nations": 19,
+  "desc": {
+   "fr": "Japon, Corée et Chine du Nord autour de la mer du Japon.",
+   "en": "Japan, Korea and northern China around the Sea of Japan."
+  }
  },
  {
   "id": "europe",
@@ -52,7 +203,71 @@
   "category": "continents",
   "width": 1500,
   "height": 1328,
-  "nations": 57
+  "nations": 57,
+  "desc": {
+   "fr": "Un continent dense et morcelé : chaque frontière est un front.",
+   "en": "A dense, fragmented continent: every border is a front line."
+  }
+ },
+ {
+  "id": "fjords",
+  "name": {
+   "fr": "Fjords",
+   "en": "Fjords"
+  },
+  "category": "fictional",
+  "width": 1500,
+  "height": 1100,
+  "nations": 30,
+  "desc": {
+   "fr": "Une côte glacée lacérée de fjords, un mur de montagnes et ses cols.",
+   "en": "An icy coast slashed by fjords, a wall of mountains and its passes."
+  }
+ },
+ {
+  "id": "four-kingdoms",
+  "name": {
+   "fr": "Quatre royaumes",
+   "en": "Four Kingdoms"
+  },
+  "category": "arcade",
+  "width": 1300,
+  "height": 1300,
+  "nations": 24,
+  "desc": {
+   "fr": "Quatre royaumes jumeaux séparés par des bras de mer et des chaussées, un plateau central riche et disputé.",
+   "en": "Four twin kingdoms parted by sea channels and causeways, with a rich, contested central plateau."
+  }
+ },
+ {
+  "id": "hex-arena",
+  "name": {
+   "fr": "Arène hexagonale",
+   "en": "Hex Arena"
+  },
+  "category": "arcade",
+  "width": 1200,
+  "height": 1200,
+  "nations": 24,
+  "desc": {
+   "fr": "Six secteurs identiques séparés par des crêtes à cols, autour d’un plateau entouré de douves.",
+   "en": "Six identical sectors split by ridges with passes, around a moated central plateau."
+  }
+ },
+ {
+  "id": "india",
+  "name": {
+   "fr": "Sous-continent indien",
+   "en": "Indian Subcontinent"
+  },
+  "category": "regions",
+  "width": 1500,
+  "height": 1308,
+  "nations": 25,
+  "desc": {
+   "fr": "Un sous-continent adossé à l'Himalaya, des royaumes du Deccan au Bengale.",
+   "en": "A subcontinent backed by the Himalayas, from the Deccan kingdoms to Bengal."
+  }
  },
  {
   "id": "labyrinth",
@@ -63,7 +278,26 @@
   "category": "arcade",
   "width": 960,
   "height": 640,
-  "nations": 24
+  "nations": 24,
+  "desc": {
+   "fr": "Couloirs, murs et canaux : un casse-tête tactique.",
+   "en": "Corridors, walls and canals: a tactical puzzle."
+  }
+ },
+ {
+  "id": "mars",
+  "name": {
+   "fr": "Mars",
+   "en": "Mars"
+  },
+  "category": "planets",
+  "width": 1800,
+  "height": 760,
+  "nations": 30,
+  "desc": {
+   "fr": "Mars au temps de son océan boréal : Olympus Mons, Valles Marineris inondée, Hellas.",
+   "en": "Mars in the age of its northern ocean: Olympus Mons, a flooded Valles Marineris, Hellas."
+  }
  },
  {
   "id": "mediterranean",
@@ -74,7 +308,56 @@
   "category": "regions",
   "width": 1800,
   "height": 791,
-  "nations": 39
+  "nations": 39,
+  "desc": {
+   "fr": "Le berceau des empires, entre trois continents.",
+   "en": "The cradle of empires, between three continents."
+  }
+ },
+ {
+  "id": "middle-east",
+  "name": {
+   "fr": "Moyen-Orient",
+   "en": "Middle East"
+  },
+  "category": "regions",
+  "width": 1550,
+  "height": 1439,
+  "nations": 36,
+  "desc": {
+   "fr": "Déserts d'Arabie, Mésopotamie et détroits stratégiques : Suez, Ormuz, Bab-el-Mandeb.",
+   "en": "Arabian deserts, Mesopotamia and strategic straits: Suez, Hormuz, Bab-el-Mandeb."
+  }
+ },
+ {
+  "id": "moon",
+  "name": {
+   "fr": "La Lune",
+   "en": "The Moon"
+  },
+  "category": "planets",
+  "width": 1400,
+  "height": 1105,
+  "nations": 28,
+  "desc": {
+   "fr": "La face visible : les mers de basalte se traversent en bateau, les cratères font des forteresses.",
+   "en": "The near side: basalt seas are crossed by boat, craters make fortresses."
+  }
+ },
+ {
+  "id": "nine-realms",
+  "name": {
+   "fr": "Les Neuf Mondes",
+   "en": "The Nine Realms"
+  },
+  "category": "legends",
+  "width": 1200,
+  "height": 1400,
+  "nations": 25,
+  "desc": {
+   "fr": "Les neuf mondes de l’arbre Yggdrasil, reliés par ses branches ; Asgard ne s’atteint que par Bifröst.",
+   "en": "The nine worlds of the tree Yggdrasil, linked by its branches; Asgard is reached only by Bifröst."
+  }
  },
  {
   "id": "north-america",
@@ -85,7 +368,26 @@
   "category": "continents",
   "width": 1600,
   "height": 1201,
-  "nations": 36
+  "nations": 36,
+  "desc": {
+   "fr": "De l'Arctique aux Caraïbes : grandes plaines et isthme de Panama.",
+   "en": "From the Arctic to the Caribbean: great plains and the Panama isthmus."
+  }
+ },
+ {
+  "id": "ocean-world",
+  "name": {
+   "fr": "Océanide",
+   "en": "Oceanid"
+  },
+  "category": "planets",
+  "width": 1500,
+  "height": 1000,
+  "nations": 30,
+  "desc": {
+   "fr": "Une planète-océan : arcs d’îles volcaniques, atolls géants à lagon et deux grandes îles.",
+   "en": "An ocean planet: volcanic island arcs, giant lagoon atolls and two great islands."
+  }
  },
  {
   "id": "oceania",
@@ -96,7 +398,26 @@
   "category": "continents",
   "width": 1600,
   "height": 1191,
-  "nations": 17
+  "nations": 17,
+  "desc": {
+   "fr": "Îles et archipels : ici, tout se joue en mer.",
+   "en": "Islands and archipelagos: everything is decided at sea."
+  }
+ },
+ {
+  "id": "olympus",
+  "name": {
+   "fr": "Archipel de l'Olympe",
+   "en": "Olympian Archipelago"
+  },
+  "category": "legends",
+  "width": 1500,
+  "height": 1100,
+  "nations": 26,
+  "desc": {
+   "fr": "Une mer de héros entre deux rivages : l’Olympe inaccessible au centre, les Cyclades, Crète, Troie, Ithaque.",
+   "en": "A sea of heroes between two shores: unreachable Olympus in the middle, the Cyclades, Crete, Troy, Ithaca."
+  }
  },
  {
   "id": "pangaea",
@@ -107,7 +428,71 @@
   "category": "fictional",
   "width": 1600,
   "height": 1000,
-  "nations": 50
+  "nations": 50,
+  "desc": {
+   "fr": "Un supercontinent unique : guerre terrestre totale.",
+   "en": "A single supercontinent: all-out land war."
+  }
+ },
+ {
+  "id": "pirates",
+  "name": {
+   "fr": "Mer des Flibustiers",
+   "en": "Buccaneer Sea"
+  },
+  "category": "legends",
+  "width": 1600,
+  "height": 1000,
+  "nations": 24,
+  "desc": {
+   "fr": "Îles à criques, cayes et une côte de jungle : l’Île au Trésor garde son lagon au milieu.",
+   "en": "Islands full of coves, cays and a jungle coast: Treasure Island keeps its lagoon in the middle."
+  }
+ },
+ {
+  "id": "pixel-world",
+  "name": {
+   "fr": "Monde 8 bits",
+   "en": "8-Bit World"
+  },
+  "category": "arcade",
+  "width": 1536,
+  "height": 1024,
+  "nations": 28,
+  "desc": {
+   "fr": "Un monde en gros pixels, couleurs de console d’antan, côtes en escalier.",
+   "en": "A world of big pixels in vintage console colours, with staircase coasts."
+  }
+ },
+ {
+  "id": "ring",
+  "name": {
+   "fr": "L'Anneau",
+   "en": "The Ring"
+  },
+  "category": "fictional",
+  "width": 1400,
+  "height": 1400,
+  "nations": 36,
+  "desc": {
+   "fr": "Un anneau de terres autour d'une mer intérieure, coupé de trois détroits.",
+   "en": "A ring of land around an inner sea, cut by three straits."
+  }
+ },
+ {
+  "id": "scandinavia",
+  "name": {
+   "fr": "Scandinavie & Baltique",
+   "en": "Scandinavia & Baltic"
+  },
+  "category": "regions",
+  "width": 1250,
+  "height": 1715,
+  "nations": 28,
+  "desc": {
+   "fr": "Fjords, taïga et Baltique : une guerre de détroits dans le froid.",
+   "en": "Fjords, taiga and the Baltic: a war of straits in the cold."
+  }
  },
  {
   "id": "south-america",
@@ -118,7 +503,71 @@
   "category": "continents",
   "width": 1100,
   "height": 1332,
-  "nations": 24
+  "nations": 24,
+  "desc": {
+   "fr": "L'Amazonie, les Andes et un continent presque insulaire.",
+   "en": "The Amazon, the Andes and an almost insular continent."
+  }
+ },
+ {
+  "id": "southeast-asia",
+  "name": {
+   "fr": "Asie du Sud-Est",
+   "en": "Southeast Asia"
+  },
+  "category": "regions",
+  "width": 1750,
+  "height": 1314,
+  "nations": 31,
+  "desc": {
+   "fr": "Péninsules et milliers d'îles : l'Insulinde se conquiert par la mer.",
+   "en": "Peninsulas and thousands of islands: the Indies are won at sea."
+  }
+ },
+ {
+  "id": "spiral",
+  "name": {
+   "fr": "Spirale",
+   "en": "Spiral"
+  },
+  "category": "arcade",
+  "width": 1300,
+  "height": 1300,
+  "nations": 24,
+  "desc": {
+   "fr": "Deux bras de terre enroulés autour d’un moyeu : le centre est à tout le monde.",
+   "en": "Two arms of land coiled around a hub: the centre belongs to everyone."
+  }
+ },
+ {
+  "id": "titan",
+  "name": {
+   "fr": "Titan",
+   "en": "Titan"
+  },
+  "category": "planets",
+  "width": 1700,
+  "height": 732,
+  "nations": 28,
+  "desc": {
+   "fr": "La lune orange de Saturne : mers de méthane au nord, champs de dunes, hauts plateaux de Xanadu.",
+   "en": "Saturn's orange moon: methane seas in the north, dune fields, the Xanadu highlands."
+  }
+ },
+ {
+  "id": "twin-continents",
+  "name": {
+   "fr": "Continents jumeaux",
+   "en": "Twin Continents"
+  },
+  "category": "fictional",
+  "width": 1700,
+  "height": 1000,
+  "nations": 40,
+  "desc": {
+   "fr": "Deux continents rivaux reliés par un unique isthme.",
+   "en": "Two rival continents joined by a single isthmus."
+  }
  },
  {
   "id": "two-lakes",
@@ -129,7 +578,11 @@
   "category": "fictional",
   "width": 1100,
   "height": 700,
-  "nations": 24
+  "nations": 24,
+  "desc": {
+   "fr": "Un continent percé de deux mers intérieures.",
+   "en": "A continent pierced by two inland seas."
+  }
  },
  {
   "id": "world-giant",
@@ -140,7 +593,11 @@
   "category": "continents",
   "width": 3200,
   "height": 1612,
-  "nations": 100
+  "nations": 100,
+  "desc": {
+   "fr": "Le monde en très haute résolution, pour les longues parties.",
+   "en": "The world in very high resolution, for long games."
+  }
  },
  {
   "id": "world",
@@ -151,6 +608,10 @@
   "category": "continents",
   "width": 2000,
   "height": 1007,
-  "nations": 100
+  "nations": 100,
+  "desc": {
+   "fr": "La planète entière et ses cent nations.",
+   "en": "The whole planet and its hundred nations."
+  }
  }
 ]

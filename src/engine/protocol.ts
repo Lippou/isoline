@@ -7,9 +7,14 @@ import type { Snapshot } from '../core/net/snapshot';
 import type { Personality, PlayerKind, PlayerStats, HistorySample } from '../core/game/player';
 import type { GenParams } from '../core/map/generator';
 import type { WeatherCell } from '../core/rules/features';
+import type { Threat } from './threats';
+import type { PlayerFlag } from '../core/data/flagSpec';
+
+/** Commerce panel: trade income is summed over this sliding window (5 minutes). */
+export const TRADE_WINDOW_TICKS = 3000;
 
 /** Floats per unit in the packed unit buffer. */
-export const UNIT_STRIDE = 15;
+export const UNIT_STRIDE = 16;
 export const enum UF {
   Id = 0,
   Type = 1,
@@ -25,7 +30,8 @@ export const enum UF {
   Ty = 11,
   T0 = 12,
   T1 = 13,
-  Troops = 14,
+  Troops = 14, // transports: troops · trains: direction · missiles: arc (-1 up, 1 down, 0 straight)
+  Dest = 15, // missiles: target tile (-1 otherwise)
 }
 
 export type MapSource =
@@ -56,14 +62,17 @@ export interface PlayerView {
   color: number;
   flagSeed: number;
   iso: string;
+  /** Flag chosen by a human player (from its config slot); absent otherwise. */
+  flag?: PlayerFlag;
   alive: boolean;
   spawned: boolean;
   tiles: number;
   usefulTiles: number;
   troops: number;
-  workers: number;
   gold: number;
   traitor: boolean;
+  /** Ticks left on the traitor mark (0 when not a traitor). */
+  traitorFor: number;
   inactive: boolean;
   immune: boolean;
   allies: number[];
@@ -71,6 +80,12 @@ export interface PlayerView {
   general: string;
   label: [number, number, number]; // x, y, size (tiles)
   bigMalus: number;
+  /** Extra reach of this player's SAMs from research (tiles), added to samRange(level). */
+  samBonus: number;
+  /** Capital tile (-1: none — lost and not re-established, or a tribe). */
+  capital: number;
+  /** Ticks left of the disorganisation after losing its capital (0: none). */
+  disorgFor: number;
 }
 
 export interface LocalView {
@@ -78,27 +93,69 @@ export interface LocalView {
   alive: boolean;
   gold: number;
   troops: number;
-  workers: number;
+  /** Troop ceiling (maxTroops). */
   popCap: number;
+  /** Troops gained per tick (negative above the ceiling). */
   growth: number;
+  /** Passive gold per tick. */
   income: number;
-  incomeBreakdown: { base: number; workers: number; trade: number; trains: number; resources: number };
-  troopRatio: number;
-  attacks: { id: number; target: number; troops: number }[];
+  /** Per second: base and resources; trade and trains are decaying averages of the payouts. */
+  incomeBreakdown: { base: number; trade: number; trains: number; resources: number };
+  /** My land attacks; `retreating`: cancelled, troops on their way back. */
+  attacks: { id: number; target: number; troops: number; retreating: boolean }[];
   boats: number;
   tech: number[];
   researching: number;
   researchPoints: number;
   researchCost: number;
+  /** Research points per second, and where they come from (base trickle, centres, bonus). */
   researchRate: number;
+  research: { base: number; labs: number; labLevels: number; mult: number };
+  /** Goals queued after the current one. */
+  researchQueue: number[];
   generalReadyIn: number;
   general: string;
   immuneFor: number;
   traitorFor: number;
   debuffFor: number;
+  /** Incoming alliance requests (oldest first) and the ticks each one has left before it lapses. */
   allyRequests: number[];
+  allyRequestsIn: number[];
   allies: { id: number; expiresIn: number }[];
   embargo: number[];
+  /** Land attacks involving me (mine and those against me): troops and a point on their front line. */
+  fronts: {
+    id: number;
+    attacker: number;
+    target: number;
+    troops: number;
+    /** One point per separate stretch of front (largest first), on the front line. */
+    points: [number, number][];
+  }[];
+  /** My transport ships at sea: position, troops and where they will land. */
+  transports: {
+    id: number;
+    troops: number;
+    x: number;
+    y: number;
+    tx: number;
+    ty: number;
+    retreating: boolean;
+  }[];
+  /** Countries at war with me: fighting on our border, landing troops or launching missiles (lingers 10 s). */
+  wars: number[];
+  /** Countries I cannot trade with (embargo in either direction, manual or temporary). */
+  noTrade: number[];
+  /**
+   * Commerce with each partner: gold earned over the last TRADE_WINDOW_TICKS, by sea and by
+   * rail, and the merchant ships / trains running between us right now.
+   */
+  trade: { id: number; sea: number; rail: number; ships: number; trains: number }[];
+  /**
+   * Embargoes with each country, both ways: manual ones (`mine`: I block them, `theirs`: they
+   * block me) and the temporary ones after an attack or a betrayal (ticks left, 0 = none).
+   */
+  embargoes: { id: number; mine: boolean; theirs: boolean; mineFor: number; theirsFor: number }[];
   buildCosts: number[];
   warshipCost: number;
   nukeCosts: number[];
@@ -109,6 +166,18 @@ export interface LocalView {
   blitzFor: number;
   rampartFor: number;
   propagandaFor: number;
+  /** My capital tile (-1: none — lost, a new one is to be chosen). */
+  capital: number;
+  /** Who took my last capital (0: razed, or none lost). */
+  capitalLostBy: number;
+  /** Ticks left of my disorganisation after losing the capital (0: none). */
+  disorgFor: number;
+  /** Ticks before I may move the capital I hold again (0: now). */
+  capitalCooldown: number;
+  /** While without a capital: the safest spot for a new one (-1: none fits, or one is held). */
+  capitalHint: number;
+  /** Threatened borders: land neighbours massing a much bigger army with hostile intent. */
+  threats: Threat[];
 }
 
 export interface WorldView {
@@ -121,6 +190,10 @@ export interface WorldView {
   weather: WeatherCell[];
   event: { id: string; until: number } | null;
   council: { closes: number; votes: number; myVote: number } | null;
+  /** Next World Council session (absolute tick; -1 when the council is off). */
+  councilNext: number;
+  /** The Council's sanctions in force: the leader's income is halved. */
+  sanction: { target: number; until: number } | null;
   ceasefireUntil: number;
   nukeBanUntil: number;
   radarsOffUntil: number;
@@ -149,6 +222,38 @@ export interface RailView {
   tiles: number[];
 }
 
+/** A sea trade lane drawn on the map: the route merchants sail between two ports. */
+export interface TradeRouteView {
+  /** Stable id of the lane (the renderer's caches). */
+  id: number;
+  /** Owners of its two ports. */
+  a: number;
+  b: number;
+  /** Waypoints (tile indices) of the route merchants actually sail, from a's port to b's. */
+  path: number[];
+  /** Gold paid on it over the last TRADE_WINDOW_TICKS (both ends together). */
+  gold: number;
+  /** Merchant ships sailing it now. */
+  ships: number;
+  /** Tick of the last ship seen on it or of the last delivery. */
+  last: number;
+  /** Tick an embargo cut it (-1: never). */
+  cut: number;
+}
+
+/** Traffic on a railway: trips run over the last TRADE_WINDOW_TICKS, and an embargo cut. */
+export interface RailTrafficView {
+  id: number;
+  trips: number;
+  cut: number;
+}
+
+export interface TradeRoutesView {
+  tick: number;
+  sea: TradeRouteView[];
+  rail: RailTrafficView[];
+}
+
 export interface TickUpdate {
   type: 'tick';
   tick: number;
@@ -169,6 +274,8 @@ export interface TickUpdate {
   fog?: { w: number; h: number; data: Uint8Array };
   /** Low-resolution loyalty of the viewer's tiles (0 = not owned, 1..255). */
   loyalty?: { w: number; h: number; data: Uint8Array };
+  /** Trade lanes and rail traffic for the map's trade-route view (every 2 s). */
+  routes?: TradeRoutesView;
   hash?: number;
   tickMs: number;
 }
@@ -198,6 +305,7 @@ export interface FinalStats {
     color: number;
     flagSeed: number;
     iso: string;
+    flag?: PlayerFlag;
     team: number;
     alive: boolean;
     tiles: number;

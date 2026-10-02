@@ -4,6 +4,7 @@ import type { FinalStats } from '../../engine/protocol';
 import type { GameConfig } from '../../core/game/config';
 import { toast } from './game.svelte';
 import { t } from '../i18n/i18n.svelte';
+import { sanitizeFlag, sanitizeFlagSpec, type FlagSpec, type PlayerFlag } from '../../core/data/flagSpec';
 
 export const PROFILE_VERSION = 1;
 
@@ -71,7 +72,15 @@ export interface Profile {
   achievements: Record<string, string>; // id → ISO date
   leaderboard: { score: number; map: string; date: string; won: boolean; mode: string }[];
   campaign: Record<string, number>; // mission id → stars (0..3)
+  /** Flag shown next to the player's name: generated from the name, a real country's, or the custom design. */
+  flagChoice: FlagChoice;
+  /** Real flag picked (flag-icons code), kept while another choice is active. */
+  flagIso: string;
+  /** The flag editor's design, kept while another choice is active. */
+  customFlag: FlagSpec | null;
 }
+
+export type FlagChoice = 'generated' | 'iso' | 'custom';
 
 function defaultProfile(): Profile {
   return {
@@ -95,6 +104,9 @@ function defaultProfile(): Profile {
     achievements: {},
     leaderboard: [],
     campaign: {},
+    flagChoice: 'generated',
+    flagIso: '',
+    customFlag: null,
   };
 }
 
@@ -107,6 +119,29 @@ export async function loadProfile(): Promise<void> {
     profile,
     raw ? { ...d, ...raw, totals: { ...d.totals, ...(raw.totals ?? {}) }, version: PROFILE_VERSION } : d,
   );
+  // The flag fields come from a file the user can edit: keep only valid values.
+  profile.customFlag = sanitizeFlagSpec(profile.customFlag);
+  const iso = sanitizeFlag({ iso: profile.flagIso });
+  profile.flagIso = iso && 'iso' in iso ? iso.iso : '';
+  if (!['generated', 'iso', 'custom'].includes(profile.flagChoice)) profile.flagChoice = 'generated';
+  if (profile.flagChoice === 'iso' && !profile.flagIso) profile.flagChoice = 'generated';
+  if (profile.flagChoice === 'custom' && !profile.customFlag) profile.flagChoice = 'generated';
+}
+
+/** The flag the player carries into games (undefined: the generated one). */
+export function myFlag(): PlayerFlag | undefined {
+  if (profile.flagChoice === 'iso' && profile.flagIso) return { iso: profile.flagIso };
+  if (profile.flagChoice === 'custom' && profile.customFlag)
+    return { spec: $state.snapshot(profile.customFlag) as FlagSpec };
+  return undefined;
+}
+
+/** Choose the flag (and remember a design or a country for later). */
+export function setMyFlag(choice: FlagChoice, value?: { iso?: string; spec?: FlagSpec }): void {
+  if (value?.iso !== undefined) profile.flagIso = value.iso;
+  if (value?.spec) profile.customFlag = sanitizeFlagSpec(value.spec);
+  profile.flagChoice = choice;
+  void saveProfile();
 }
 
 export function saveProfile(): Promise<boolean> {

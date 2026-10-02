@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '../icons/Icon.svelte';
+  import { audio } from '../../audio/audio';
   import { hud } from '../stores/game.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
   import type { GameController } from '../game/controller';
@@ -17,6 +18,7 @@
     const msg = filterProfanity(text.trim()).slice(0, 200);
     text = '';
     if (!msg) return;
+    audio.ui('confirm');
     if (ctl.lan) ctl.lan.send({ t: 'chat', channel, text: msg });
     else hud.chat = [...hud.chat.slice(-99), { from: s.viewer, text: msg, channel, t: hud.tick }];
   }
@@ -49,7 +51,13 @@
 </ul>
 <div class="quick">
   {#each [0, 1, 2, 3, 4, 5, 6, 7] as q (q)}
-    <button class="chip" onclick={() => s.cmd({ t: 'quick', target: -1, msg: q })}>{t(`quick.${q}`)}</button>
+    <button
+      class="chip"
+      onclick={() => {
+        audio.ui('confirm');
+        s.cmd({ t: 'quick', target: -1, msg: q });
+      }}>{t(`quick.${q}`)}</button
+    >
   {/each}
 </div>
 <form
@@ -80,7 +88,7 @@
   }
   .chip {
     background: none;
-    cursor: pointer;
+    cursor: var(--cursor-pointer, pointer);
   }
   .chip.on {
     color: var(--aurora);
@@ -103,7 +111,7 @@
     background: none;
     border: 0;
     color: var(--aurora);
-    cursor: pointer;
+    cursor: var(--cursor-pointer, pointer);
     padding: 0;
     font-weight: 600;
   }

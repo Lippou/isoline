@@ -5,6 +5,12 @@
   import { inkHex } from '../../render/colors';
   import { currentSession } from '../stores/app.svelte';
   import Icon from '../icons/Icon.svelte';
+  import { keyLabel } from '../stores/settings.svelte';
+  import type { GameController } from '../game/controller';
+
+  let { ctl }: { ctl: GameController } = $props();
+  const solo = ctl.session.kind === 'solo';
+  const SPEEDS = [0.5, 1, 2, 4];
 
   const shares = $derived.by(() => {
     const total = hud.world?.usefulLand ?? 1;
@@ -49,10 +55,37 @@
       <span class="item mono clock" data-testid="clock" data-tip={t('hud.elapsed')}>
         <Icon name="time" size={15} />{clock(elapsed)}
       </span>
+      {#if solo}
+        <span class="item time" data-testid="time-controls">
+          <button
+            class="tbtn"
+            class:on={hud.paused}
+            aria-pressed={hud.paused}
+            data-tip="{t(hud.paused ? 'hud.resume' : 'hud.pause')} ({keyLabel(settings.keys.pause ?? '')})"
+            aria-label={t(hud.paused ? 'hud.resume' : 'hud.pause')}
+            onclick={() => ctl.togglePause()}><Icon name={hud.paused ? 'play' : 'pause'} size={14} /></button
+          >
+          {#each SPEEDS as v (v)}
+            <button
+              class="tbtn mono"
+              class:on={!hud.paused && hud.speed === v}
+              aria-pressed={hud.speed === v}
+              data-tip={t('hud.speedTip', {
+                down: keyLabel(settings.keys.speedDown ?? ''),
+                up: keyLabel(settings.keys.speedUp ?? ''),
+              })}
+              onclick={() => {
+                if (hud.paused) ctl.togglePause();
+                ctl.setSpeed(v);
+              }}>×{v === 0.5 ? '½' : v}</button
+            >
+          {/each}
+        </span>
+      {/if}
       <span class="item">{t(`mode.${mode}`)}</span>
       <span class="item goal-txt" data-tip={t('hud.victoryThresholdTip', { pct: threshold })}>
         <Icon name="target" size={15} />
-        {#if mode === 'campaign' || mode === 'tutorial'}{t('hud.goalMission')}{:else if threshold > 100}{t(
+        {#if mode === 'campaign'}{t('hud.goalMission')}{:else if threshold > 100}{t(
             'hud.noVictory',
           )}{:else}{t('hud.goal', { pct: threshold })}{/if}
         {#if hud.viewer > 0}<span class="mine mono"
@@ -69,10 +102,7 @@
           title="{s.name} — {(s.share * 100).toFixed(1)} %"
         ></div>
       {/each}
-      {#if threshold <= 100 && mode !== 'campaign' && mode !== 'tutorial'}<div
-          class="goal"
-          style="left:{threshold}%"
-        ></div>{/if}
+      {#if threshold <= 100 && mode !== 'campaign'}<div class="goal" style="left:{threshold}%"></div>{/if}
     </div>
     <div class="status">
       {#if (hud.world?.doomsday ?? -1) > 0}
@@ -80,11 +110,11 @@
           ><Icon name="nuke" size={13} />{t('hud.doomsday', { pct: hud.world?.doomsday ?? 0 })}</span
         >
       {/if}
-      {#if hud.world?.event}
-        <span class="chip" data-tip={t(`worldEvent.${hud.world.event.id}.desc`)}
-          ><Icon name="event" size={13} />{t(`worldEvent.${hud.world.event.id}.short`)} · {secs(
-            hud.world.event.until - hud.tick,
-          )} s</span
+      {#if hud.world?.event && hud.world.event.until > hud.tick}
+        {@const ev = hud.world.event}
+        <span class="chip event" data-testid="event-chip" data-tip={t(`worldEvent.${ev.id}.desc`)}
+          ><Icon name="event" size={13} />{t(`worldEvent.${ev.id}.short`)}
+          <span class="mono">{clock(ev.until - hud.tick)}</span></span
         >
       {/if}
       {#if (hud.world?.ceasefireUntil ?? 0) > hud.tick}<span class="chip good"
@@ -160,6 +190,36 @@
     color: var(--parchment);
     font-size: 1.05em;
   }
+  .time {
+    gap: 2px;
+    padding: 3px 6px;
+  }
+  .tbtn {
+    appearance: none;
+    display: inline-grid;
+    place-items: center;
+    min-width: 28px;
+    height: 24px;
+    padding: 0 6px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.92em;
+    transition:
+      background 0.12s,
+      color 0.12s;
+  }
+  .tbtn:hover {
+    background: var(--panel-3);
+    color: var(--parchment);
+  }
+  .tbtn.on {
+    background: var(--select-bg);
+    border-color: var(--aurora);
+    color: var(--parchment);
+  }
   .mine {
     color: var(--parchment);
     margin-left: 4px;
@@ -169,7 +229,7 @@
     width: 100%;
     height: 8px;
     display: flex;
-    background: rgba(13, 16, 21, 0.85);
+    background: var(--glass);
     border: 1px solid var(--line);
     border-radius: 2px;
     overflow: hidden;
@@ -198,5 +258,13 @@
   }
   .status .chip {
     background: var(--glass);
+  }
+  /* At the top of the window: explanations open below the chips, above the toasts. */
+  .top:has(.status [data-tip]:hover) {
+    z-index: 31;
+  }
+  .status .chip[data-tip]:hover::after {
+    top: calc(100% + 6px);
+    bottom: auto;
   }
 </style>

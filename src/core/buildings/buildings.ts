@@ -2,65 +2,85 @@
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import {
-  CITY_COST_BASE,
-  CITY_COST_GROWTH,
-  PORT_COST_GROWTH,
+  AIRFIELD_COST,
   B,
   BUILD_TICKS,
+  CITY_COST_BASE,
+  CITY_COST_CAP,
+  DEFENSE_POST_COST_CAP,
+  DEFENSE_POST_COST_STEP,
   DEMOLISH_REFUND,
+  LAB_COST_BASE,
+  LAB_COST_CAP,
   MIN_BUILDING_SPACING,
+  RADAR_COST,
   SAM_COSTS,
+  SILO_COST,
   STATION_TYPES,
 } from '../game/constants';
 import type { Building } from './building';
 import { IS_LAND } from '../map/terrain';
 import { onStationBuilt, onStationRemoved } from '../units/trains';
 import { resourceBonus } from '../rules/resources';
-import { techBuildCost } from '../rules/tech';
+import { RESEARCH_PER_LAB_LEVEL, buildingLock, techBuildCost, techBuildTime } from '../rules/tech';
 
-export const MAX_LEVEL = [99, 5, 5, 1, 5, 5, 3, 3] as const;
+/** Highest level per type (OpenFront: no cap on cities, ports, factories, silos and SAMs). */
+export const MAX_LEVEL = [99, 99, 99, 1, 99, 99, 3, 3, 99] as const;
 
-/** Raw price of the next building of `type` for player p (before discounts). */
-function rawCost(game: Game, p: Player, type: B): number {
-  const c = p.buildingCount;
-  switch (type) {
-    case B.City:
-      return cityCost(p.cityLevels);
-    case B.Port:
-    case B.Factory:
-      return portFactoryCost(portFactoryLevels(game, p));
-    case B.DefensePost:
-      return Math.min(250_000, 50_000 * (c[B.DefensePost]! + 1));
-    case B.Silo:
-      return 1_000_000;
-    case B.Sam:
-      return SAM_COSTS[0];
-    case B.Radar:
-      return 300_000;
-    case B.Airfield:
-      return 800_000;
-    default:
-      return 1e12;
-  }
+/** Building types whose levels share one price ladder. */
+const PRICE_GROUP: readonly (readonly B[])[] = [
+  [B.City],
+  [B.Port, B.Factory],
+  [B.Factory, B.Port],
+  [B.DefensePost],
+  [B.Silo],
+  [B.Sam],
+  [B.Radar],
+  [B.Airfield],
+  [B.Lab],
+];
+
+/** Levels of p's buildings of `type`; a building still under construction counts as 1. */
+export function levelsOwned(game: Game, p: Player, type: B): number {
+  let n = 0;
+  for (const b of game.buildings.values())
+    if (b.owner === p.id && b.type === type) n += b.buildLeft > 0 ? 1 : b.level;
+  return n;
 }
 
 /**
- * Cities and ports/factories get steadily more expensive (no cap): gold buys
- * population, so a capped price would make the economy grow exponentially.
+ * OpenFront's price index for `type`: n = Σ min(levels owned, levels ever built)
+ * over its price group. Upgrades and buildings under construction raise it,
+ * captured buildings never raise it beyond what p built, lost ones lower it.
  */
-export function cityCost(levels: number): number {
-  return Math.round(CITY_COST_BASE * Math.pow(CITY_COST_GROWTH, levels));
-}
-
-export function portFactoryCost(levels: number): number {
-  return Math.round(CITY_COST_BASE * Math.pow(PORT_COST_GROWTH, levels));
-}
-
-function portFactoryLevels(game: Game, p: Player): number {
+export function priceIndex(game: Game, p: Player, type: B): number {
   let n = 0;
-  for (const b of game.buildings.values())
-    if (b.owner === p.id && (b.type === B.Port || b.type === B.Factory)) n += b.level;
+  for (const t of PRICE_GROUP[type]!) n += Math.min(levelsOwned(game, p, t), p.levelsBuilt[t]!);
   return n;
+}
+
+/** Raw price of the next building (or upgrade) of `type` for player p (before discounts). */
+function rawCost(game: Game, p: Player, type: B): number {
+  switch (type) {
+    case B.City:
+    case B.Port:
+    case B.Factory:
+      return Math.min(CITY_COST_CAP, CITY_COST_BASE * 2 ** priceIndex(game, p, type));
+    case B.DefensePost:
+      return Math.min(DEFENSE_POST_COST_CAP, DEFENSE_POST_COST_STEP * (priceIndex(game, p, type) + 1));
+    case B.Silo:
+      return SILO_COST;
+    case B.Sam:
+      return Math.min(SAM_COSTS[1], SAM_COSTS[0] * (priceIndex(game, p, type) + 1));
+    case B.Radar:
+      return RADAR_COST;
+    case B.Airfield:
+      return AIRFIELD_COST;
+    case B.Lab:
+      return Math.min(LAB_COST_CAP, LAB_COST_BASE * 2 ** priceIndex(game, p, type));
+    default:
+      return 1e12;
+  }
 }
 
 function discount(game: Game, p: Player): number {
@@ -74,32 +94,10 @@ export function buildCost(game: Game, p: Player, type: B): number {
   return Math.round(rawCost(game, p, type) * discount(game, p));
 }
 
+/** An upgrade costs exactly what a new building of the same type would. */
 export function upgradeCost(game: Game, p: Player, b: Building): number {
-  let raw: number;
-  switch (b.type) {
-    case B.City:
-      raw = cityCost(p.cityLevels);
-      break;
-    case B.Port:
-    case B.Factory:
-      raw = portFactoryCost(portFactoryLevels(game, p));
-      break;
-    case B.Silo:
-      raw = 1_000_000;
-      break;
-    case B.Sam:
-      raw = SAM_COSTS[1];
-      break;
-    case B.Radar:
-      raw = 300_000;
-      break;
-    case B.Airfield:
-      raw = 800_000;
-      break;
-    default:
-      return Infinity;
-  }
-  return Math.round(raw * discount(game, p));
+  if (MAX_LEVEL[b.type] <= 1) return Infinity;
+  return buildCost(game, p, b.type);
 }
 
 export function buildingAllowed(game: Game, type: B): boolean {
@@ -117,37 +115,113 @@ export function buildingAllowed(game: Game, type: B): boolean {
       return cfg.features.radar;
     case B.Airfield:
       return cfg.features.air;
+    case B.Lab:
+      return cfg.features.tech;
     default:
       return true;
   }
 }
 
 export type PlaceError =
-  'ok' | 'notOwned' | 'notLand' | 'occupied' | 'tooClose' | 'notCoastal' | 'gold' | 'disabled' | 'phase';
+  | 'ok'
+  | 'notOwned'
+  | 'notLand'
+  | 'occupied'
+  | 'tooClose'
+  | 'notCoastal'
+  | 'gold'
+  | 'disabled'
+  | 'phase'
+  | 'locked';
 
-/** Why (or whether) player p can place `type` on `tile`. Upgrade-by-placement of cities returns 'ok'. */
+/** Why (or whether) player p can place a new `type` on `tile`. */
 export function checkPlacement(game: Game, p: Player, type: B, tile: number): PlaceError {
   if (game.phase !== 'playing') return 'phase';
   if (!buildingAllowed(game, type)) return 'disabled';
+  // Tech tree: silos, SAMs, radars and airfields must be researched first.
+  if (buildingLock(game, p, type) >= 0) return 'locked';
+  const spot = spotError(game, p, type, tile);
+  if (spot !== 'ok') return spot;
+  if (p.gold < buildCost(game, p, type)) return 'gold';
+  return 'ok';
+}
+
+/** The location part of checkPlacement (ownership, terrain, coast, spacing). */
+function spotError(game: Game, p: Player, type: B, tile: number): PlaceError {
   if (tile < 0 || tile >= game.map.size) return 'notLand';
   if (game.owner[tile] !== p.id) return 'notOwned';
   if (!IS_LAND[game.map.terrain[tile]!] || game.isDead(tile)) return 'notLand';
   if (game.buildingAt[tile]! >= 0) return 'occupied';
   if (type === B.Port) {
     const wt = game.map.adjacentWater(tile);
-    if (wt < 0 || (game.map.componentSize[game.map.component[wt]!] ?? 0) < 120) return 'notCoastal';
+    // A sea or lake coast, or the bank of a river flowing into one (river port).
+    if (wt < 0 || game.map.navWater(wt) < 120) return 'notCoastal';
   }
+  if (tooClose(game, tile)) return 'tooClose';
+  return 'ok';
+}
+
+/** Whether a structure stands closer than MIN_BUILDING_SPACING (Euclidean) to `tile`. */
+function tooClose(game: Game, tile: number): boolean {
   const w = game.map.width;
   const x = tile % w;
   const y = (tile / w) | 0;
+  const r2 = MIN_BUILDING_SPACING * MIN_BUILDING_SPACING;
   let close = false;
   game.grid.query(x, y, MIN_BUILDING_SPACING, (id) => {
     const b = game.buildings.get(id)!;
-    if (Math.abs(b.x - x) < MIN_BUILDING_SPACING && Math.abs(b.y - y) < MIN_BUILDING_SPACING) close = true;
+    if ((b.x - x) ** 2 + (b.y - y) ** 2 < r2) close = true;
   });
-  if (close) return 'tooClose';
-  if (p.gold < buildCost(game, p, type)) return 'gold';
-  return 'ok';
+  return close;
+}
+
+/**
+ * Where a build order on `tile` lands: the tile itself when it is a valid spot,
+ * otherwise the nearest valid spot of p within MIN_BUILDING_SPACING (structures
+ * must stand that far apart, so clicks are snapped like in OpenFront). -1 if none.
+ */
+export function snapBuildTile(game: Game, p: Player, type: B, tile: number): number {
+  if (spotError(game, p, type, tile) === 'ok') return tile;
+  const w = game.map.width;
+  const x0 = tile % w;
+  const y0 = (tile / w) | 0;
+  const r = MIN_BUILDING_SPACING - 1;
+  let best = -1;
+  let bestD = Infinity;
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      const d = dx * dx + dy * dy;
+      if (d >= bestD || d > r * r) continue;
+      const x = x0 + dx;
+      const y = y0 + dy;
+      if (!game.map.inBounds(x, y)) continue;
+      const i = y * w + x;
+      if (game.owner[i] !== p.id || spotError(game, p, type, i) !== 'ok') continue;
+      best = i;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
+/** p's building of `type` closest to `tile` within MIN_BUILDING_SPACING (upgrade by placement). */
+export function buildingToUpgrade(game: Game, p: Player, type: B, tile: number): Building | null {
+  const w = game.map.width;
+  const x = tile % w;
+  const y = (tile / w) | 0;
+  const r2 = MIN_BUILDING_SPACING * MIN_BUILDING_SPACING;
+  let best: Building | null = null;
+  let bestD = Infinity;
+  game.grid.query(x, y, MIN_BUILDING_SPACING, (id) => {
+    const b = game.buildings.get(id)!;
+    if (b.owner !== p.id || b.type !== type) return;
+    const d = (b.x - x) ** 2 + (b.y - y) ** 2;
+    if (d < r2 && d < bestD) {
+      best = b;
+      bestD = d;
+    }
+  });
+  return best;
 }
 
 /** For ports: snap a clicked tile to the nearest owned coastal tile within a small radius. */
@@ -179,6 +253,10 @@ export function placeBuilding(game: Game, p: Player, type: B, tile: number, free
   const cost = free ? 0 : buildCost(game, p, type);
   p.gold -= cost;
   const w = game.map.width;
+  // Megaprojects (tech): construction goes faster.
+  const ticks = game.config.features.tech
+    ? Math.round(BUILD_TICKS[type] * techBuildTime(p))
+    : BUILD_TICKS[type];
   const b: Building = {
     id: game.nextId(),
     type,
@@ -187,11 +265,12 @@ export function placeBuilding(game: Game, p: Player, type: B, tile: number, free
     x: tile % w,
     y: (tile / w) | 0,
     level: 1,
-    buildLeft: free ? 0 : BUILD_TICKS[type],
-    buildTotal: BUILD_TICKS[type],
+    buildLeft: free ? 0 : ticks,
+    buildTotal: ticks,
     cooldown: 0,
     tubes: type === B.Silo ? [0] : [],
     timer: 0,
+    rejections: 0,
     createdTick: game.tick,
     alive: true,
     invested: cost,
@@ -200,6 +279,7 @@ export function placeBuilding(game: Game, p: Player, type: B, tile: number, free
   game.grid.add(b);
   game.buildingAt[tile] = b.id;
   p.buildingCount[type]++;
+  p.levelsBuilt[type]++;
   if (type === B.City) p.cityLevels += 1;
   p.stats.buildingsBuilt++;
   game.buildingsDirty = true;
@@ -213,15 +293,24 @@ function completeBuilding(game: Game, b: Building): void {
   game.buildingsDirty = true;
   game.emit({ k: 'built', owner: b.owner, kind: b.type, tile: b.tile });
   if (STATION_TYPES.includes(b.type)) onStationBuilt(game, b);
+  if (b.type === B.Lab) labNotice(game, b);
+}
+
+/** Journal: a new research centre starts producing (upgrades stay silent, like cities). */
+function labNotice(game: Game, b: Building): void {
+  if (game.players[b.owner]?.kind !== 'human') return;
+  game.notify(b.owner, 'notify.labReady', 'good', { n: RESEARCH_PER_LAB_LEVEL * b.level });
 }
 
 export function upgradeBuilding(game: Game, p: Player, b: Building): boolean {
   if (b.owner !== p.id || b.buildLeft > 0 || b.level >= MAX_LEVEL[b.type]) return false;
+  if (buildingLock(game, p, b.type) >= 0) return false; // captured before researching it
   const cost = upgradeCost(game, p, b);
   if (p.gold < cost) return false;
   p.gold -= cost;
   b.invested += cost;
   b.level++;
+  p.levelsBuilt[b.type]++;
   if (b.type === B.City) p.cityLevels++;
   if (b.type === B.Silo) b.tubes.push(0);
   game.buildingsDirty = true;

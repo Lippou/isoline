@@ -34,7 +34,7 @@ export const SFX = [
   { id: 'sunk', sound: 398032, len: 1.3, lufs: -21 }, // Splash
   { id: 'horn', sound: 420716, len: 3.5, lufs: -22 }, // ship horn very close
   { id: 'train', sound: 71778, len: 2.5, lufs: -25 }, // Steam Whistle
-  { id: 'alliance', sound: 350428, len: 4, lufs: -19 }, // Trumpet Fanfare
+  { id: 'alliance', sound: 326961, len: 2.6, lufs: -19 }, // Pen signature on paper (a pact is signed)
   { id: 'betrayal', sound: 164273, len: 4, lufs: -17 }, // Orchestral Hit - The Villain Appears
   { id: 'event', sound: 425172, len: 4.5, lufs: -21 }, // Church bell
   { id: 'victory', sound: 456966, len: 4.4, lufs: -16 }, // Success Fanfare Trumpets
@@ -46,6 +46,10 @@ export const SFX = [
   { id: 'confirm', sound: 0, query: 'rubber stamp', len: 0.7, lufs: -22 },
   { id: 'error', sound: 0, query: 'wood knock', len: 0.5, lufs: -25 },
   { id: 'paper', sound: 181774, len: 1.2, lufs: -25 }, // rustling paper
+  { id: 'torn', sound: 181773, len: 1.5, lufs: -21 }, // tearing paper (an ally betrays us: the pact is torn)
+  { id: 'stamp', sound: 470710, len: 0.9, lufs: -19 }, // rubber stamp (an alliance offer stamped "refused")
+  { id: 'rejected', sound: 715226, len: 1.7, lufs: -23 }, // short rejection tone under the stamp
+  { id: 'tribeFall', sound: 486140, len: 1.8, lufs: -21 }, // single taiko hit (a tribe is wiped out)
 ];
 
 async function bySound(id) {

@@ -1,5 +1,7 @@
 // Procedural flags / coats of arms generated from a seed (Canvas 2D).
 import { Rng } from '../core/rng';
+import { flagKey, type FlagSpec, type PlayerFlag } from '../core/data/flagSpec';
+import { flagSvgUrl } from './flagSvg';
 
 const FIELD = [
   '#1B3A6B',
@@ -197,11 +199,60 @@ const REAL = import.meta.glob('../../node_modules/flag-icons/flags/4x3/*.svg', {
 const REAL_BY_ISO = new Map<string, string>();
 for (const [k, url] of Object.entries(REAL)) REAL_BY_ISO.set(k.slice(k.lastIndexOf('/') + 1, -4), url);
 
-/** Flag image for a player: the real flag of a real country, else its generated emblem. */
-export function flagUrl(p: { flagSeed: number; iso?: string }, width = 48): string {
-  if (p.iso) {
-    const url = REAL_BY_ISO.get(p.iso);
-    if (url) return url;
+/** Every real flag the picker offers ('xx', the "unknown" placeholder, left out). */
+export const REAL_FLAG_CODES: readonly string[] = [...REAL_BY_ISO.keys()].filter((c) => c !== 'xx').sort();
+
+/** URL of a real flag by code, or undefined when it is not bundled. */
+export function realFlagUrl(iso: string): string | undefined {
+  return REAL_BY_ISO.get(iso);
+}
+
+/** Anything that carries a flag: player views, final stats, front-page rosters. */
+export interface FlagOwner {
+  flagSeed: number;
+  iso?: string;
+  /** The player's chosen flag (humans, 1.4+); absent: real flag by iso, else generated. */
+  flag?: PlayerFlag | null;
+}
+
+const customCache = new Map<string, string>();
+/** data: URL of a custom flag design (cached by its key). */
+export function customFlagUrl(spec: FlagSpec): string {
+  const key = flagKey({ spec });
+  let u = customCache.get(key);
+  if (!u) {
+    u = flagSvgUrl(spec, 120);
+    customCache.set(key, u);
   }
+  return u;
+}
+
+/** The flag actually shown for an owner: chosen flag, else real flag, else generated. */
+export function resolveFlag(p: FlagOwner): PlayerFlag | null {
+  const f = p.flag;
+  if (f) {
+    if ('spec' in f) return f;
+    if ('iso' in f && REAL_BY_ISO.has(f.iso)) return f;
+  }
+  if (p.iso && REAL_BY_ISO.has(p.iso)) return { iso: p.iso };
+  return null;
+}
+
+/** Width / height of the flag image an owner shows (real flags are 4:3, the others 3:2). */
+export function flagAspect(p: FlagOwner): number {
+  const f = resolveFlag(p);
+  return f && 'iso' in f ? 4 / 3 : 3 / 2;
+}
+
+/** Stable cache key of the flag an owner shows. */
+export function ownerFlagKey(p: FlagOwner): string {
+  const f = resolveFlag(p);
+  return f ? flagKey(f) : `seed:${p.flagSeed >>> 0}`;
+}
+
+/** Flag image for a player: its chosen flag, the real flag of a real country, else its generated emblem. */
+export function flagUrl(p: FlagOwner, width = 48): string {
+  const f = resolveFlag(p);
+  if (f) return 'iso' in f ? REAL_BY_ISO.get(f.iso)! : customFlagUrl(f.spec);
   return flagDataUrl(p.flagSeed, width);
 }

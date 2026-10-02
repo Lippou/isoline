@@ -23,6 +23,7 @@ export interface IconSet {
   transport: UnitSprite;
   merchant: UnitSprite;
   train: UnitSprite;
+  trainCar: UnitSprite;
   fighter: UnitSprite;
   bomber: UnitSprite;
   recon: UnitSprite;
@@ -33,6 +34,61 @@ export interface IconSet {
   deposit: Texture[];
   /** Tactical signal badges, in SIGNALS order. */
   signals: Texture[];
+  /** Diplomatic status badges shown above country names. */
+  status: Record<StatusIcon, Texture>;
+  /** White glyphs (tinted at runtime). */
+  sword: Texture;
+  /** Weather cell markers, by kind: storm, fog bank. */
+  weather: Texture[];
+}
+
+/** Status badges above a country's name, in display order (left to right). */
+export const STATUS_ICONS = [
+  'crown',
+  'traitor',
+  'inactive',
+  'ally',
+  'request',
+  'war',
+  'noTrade',
+  'nuke',
+  'nukeMe',
+] as const;
+export type StatusIcon = (typeof STATUS_ICONS)[number];
+
+/** Glyph and colour of each status badge. */
+export const STATUS_STYLE: Record<StatusIcon, { icon: IconName; color: string }> = {
+  crown: { icon: 'crown', color: '#f5c542' },
+  traitor: { icon: 'brokenShield', color: '#f6c343' },
+  inactive: { icon: 'inactive', color: '#8ab8ff' },
+  ally: { icon: 'alliance', color: '#5be08a' },
+  request: { icon: 'mail', color: '#f3f1ea' },
+  war: { icon: 'sword', color: '#ff6b6b' },
+  noTrade: { icon: 'noTrade', color: '#f3f1ea' },
+  nuke: { icon: 'nuke', color: '#f3f1ea' },
+  nukeMe: { icon: 'nuke', color: '#ff4d4d' },
+};
+
+function statusSvg(k: StatusIcon): string {
+  const { icon, color } = STATUS_STYLE[k];
+  // The embargo badge keeps a white dollar under a red bar.
+  const slash = k === 'noTrade' ? `<path d="m3 3 18 18" stroke="#ff5c5c" stroke-width="2.6"/>` : '';
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">` +
+    `<circle cx="32" cy="32" r="28" fill="#10141a" fill-opacity="0.92" stroke="${color}" stroke-width="3.5"/>` +
+    `<g transform="translate(15 15) scale(1.4167)" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${iconMarkup(icon)}${slash}</g>` +
+    `</svg>`
+  );
+}
+
+/** Marker at the centre of a weather cell: a light glyph on a dark, translucent disc. */
+function weatherSvg(icon: IconName, color: string): string {
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">` +
+    `<circle cx="32" cy="32" r="27" fill="#0c1a26" fill-opacity="0.72" stroke="${color}" stroke-opacity="0.8" stroke-width="2.5"/>` +
+    `<g transform="translate(16 16) scale(1.333)" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconMarkup(icon)}</g>` +
+    `</svg>`
+  );
 }
 
 function gen(renderer: Renderer, draw: (g: Graphics) => void): Texture {
@@ -43,7 +99,7 @@ function gen(renderer: Renderer, draw: (g: Graphics) => void): Texture {
   return t;
 }
 
-async function svgTexture(svg: string, width: number, height: number): Promise<Texture> {
+export async function svgTexture(svg: string, width: number, height: number): Promise<Texture> {
   const img = new Image();
   img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   await img.decode();
@@ -108,22 +164,26 @@ const MERCHANT = {
   length: 4.2,
 };
 
-const TRAIN = {
-  w: 132,
+// Trains are articulated: a locomotive and wagons drawn one by one along the track.
+const TRAIN_LOCO = {
+  w: 40,
   h: 16,
   base: `
-    ${[0, 1, 2]
-      .map(
-        (k) =>
-          `<rect x="${3 + k * 30}" y="3" width="27" height="10" rx="1.5" fill="${['#6b5844', '#5d6168', '#6b5844'][k]}" stroke="#25221e" stroke-width="0.8"/>` +
-          `<line x1="${6 + k * 30}" y1="8" x2="${27 + k * 30}" y2="8" stroke="#00000055" stroke-width="0.8"/>`,
-      )
-      .join('')}
-    <path d="M94 2.5 L122 2.5 Q129 3 130 8 Q129 13 122 13.5 L94 13.5 Z" fill="#2f3439" stroke="#15181b" stroke-width="0.8"/>
-    <rect x="96" y="4.5" width="14" height="7" rx="1" fill="#454c53"/>
-    <rect x="121" y="5" width="5" height="6" rx="1" fill="#d9e2e8"/>`,
-  mark: `<rect x="111" y="3.5" width="9" height="9" rx="1" fill="#fff"/>`,
-  length: 4.4,
+    <path d="M2 2.5 L30 2.5 Q37 3 38 8 Q37 13 30 13.5 L2 13.5 Z" fill="#2f3439" stroke="#15181b" stroke-width="0.8"/>
+    <rect x="4" y="4.5" width="14" height="7" rx="1" fill="#454c53"/>
+    <rect x="29" y="5" width="5" height="6" rx="1" fill="#d9e2e8"/>`,
+  mark: `<rect x="19" y="3.5" width="9" height="9" rx="1" fill="#fff"/>`,
+  length: 1.33,
+};
+
+const TRAIN_CAR = {
+  w: 30,
+  h: 16,
+  base: `
+    <rect x="1.5" y="3" width="27" height="10" rx="1.5" fill="#6b5844" stroke="#25221e" stroke-width="0.8"/>
+    <line x1="4.5" y1="8" x2="25.5" y2="8" stroke="#00000055" stroke-width="0.8"/>`,
+  mark: ``,
+  length: 1,
 };
 
 const plane = (wing: string, body: string, extra = '') => ({
@@ -203,8 +263,16 @@ export async function buildIcons(renderer: Renderer): Promise<IconSet> {
   }
   const signals: Texture[] = [];
   for (const sig of SIGNALS) signals.push(await svgTexture(badgeSvg(sig.icon, '#e9b44c', '#1a1d22'), 96, 96));
+  const status = {} as Record<StatusIcon, Texture>;
+  for (const k of STATUS_ICONS) status[k] = await svgTexture(statusSvg(k), 96, 96);
   return {
     signals,
+    status,
+    sword: await svgTexture(iconSvg('sword', '#ffffff', 2.4, 24), 64, 64),
+    weather: [
+      await svgTexture(weatherSvg('storm', '#c9d6e8'), 96, 96),
+      await svgTexture(weatherSvg('fogBank', '#eef3f2'), 96, 96),
+    ],
     buildings,
     backdrop: await svgTexture(
       svgDoc(64, 64, `<circle cx="32" cy="32" r="27" fill="#12161b" fill-opacity="0.92"/>`),
@@ -220,7 +288,8 @@ export async function buildIcons(renderer: Renderer): Promise<IconSet> {
     warship: await unit(WARSHIP),
     transport: await unit(TRANSPORT),
     merchant: await unit(MERCHANT),
-    train: await unit(TRAIN),
+    train: await unit(TRAIN_LOCO),
+    trainCar: await unit(TRAIN_CAR),
     fighter: await unit(FIGHTER),
     bomber: await unit(BOMBER),
     recon: await unit(RECON),

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { hud, toast } from '../stores/game.svelte';
+  import { resetWindows } from '../stores/windows.svelte';
   import { t, date, i18n } from '../i18n/i18n.svelte';
   import { go, confirmModal } from '../stores/app.svelte';
   import { settings, keyLabel } from '../stores/settings.svelte';
@@ -7,6 +8,7 @@
   import { listSaves, SAVE_SLOTS, type SaveInfo } from '../game/saves';
   import { onMount } from 'svelte';
   import SettingsBody from '../screens/SettingsBody.svelte';
+  import PageHeader from '../PageHeader.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   let view = $state<'main' | 'save' | 'settings' | 'help'>('main');
@@ -60,6 +62,9 @@
     'nukeA',
     'nukeH',
     'nukeMirv',
+    'flipArc',
+    'speedDown',
+    'speedUp',
     'allyAccept',
     'allyRefuse',
     'selectWarships',
@@ -76,71 +81,96 @@
   ];
 </script>
 
-<div class="overlay fade-in" data-testid="game-menu">
-  <div class="menu glass rise-in" class:wide={view !== 'main'}>
-    {#if view === 'main'}
-      <h2>{t('menu.title')}</h2>
-      <button class="btn primary" onclick={() => (hud.panels.menu = false)}>{t('menu.resume')}</button>
-      {#if solo}<button class="btn" onclick={openSave}>{t('menu.save')}</button>{/if}
-      <button class="btn" onclick={() => (view = 'settings')}>{t('menu.settings')}</button>
-      <button class="btn" onclick={() => (view = 'help')}>{t('menu.help')}</button>
-      {#if !hud.spectating && hud.local?.alive && ctl.session.kind !== 'replay'}
-        <button
-          class="btn danger"
-          onclick={() =>
-            confirmModal(
-              t('menu.surrenderTitle'),
-              t('menu.surrenderBody'),
-              () => {
-                ctl.session.cmd({ t: 'surrender' });
-                hud.panels.menu = false; // closing the menu resumes the game so the order is processed
-              },
-              t('menu.surrender'),
-              t('common.cancel'),
-            )}>{t('menu.surrender')}</button
-        >
-      {/if}
-      <button class="btn danger" onclick={quit} data-testid="menu-quit">{t('menu.quit')}</button>
-    {:else if view === 'save'}
-      <h2>{t('menu.save')}</h2>
-      <div class="slots">
-        {#each Array.from({ length: SAVE_SLOTS }, (_, k) => k + 1) as slot (slot)}
-          {@const s = saves.find((x) => x.slot === slot)}
-          <button class="slot" onclick={() => save(slot)}>
-            <b>{t('menu.slot', { slot })}</b>
-            <span>{s ? `${s.mapName[i18n.lang]} · ${date(Date.parse(s.date))}` : t('menu.empty')}</span>
-          </button>
-        {/each}
-      </div>
-      <button class="btn" onclick={() => (view = 'main')}>{t('common.back')}</button>
-    {:else if view === 'settings'}
-      <h2>{t('menu.settings')}</h2>
-      <div class="scroll settings"><SettingsBody /></div>
-      <button class="btn" onclick={() => (view = 'main')}>{t('common.back')}</button>
-    {:else}
-      <h2>{t('menu.help')}</h2>
-      <div class="help scroll">
-        <p>{t('help.intro')}</p>
-        <ul>
-          <li>{t('help.click')}</li>
-          <li>{t('help.radial')}</li>
-          <li>{t('help.drag')}</li>
-          <li>{t('help.wheel')}</li>
-        </ul>
-        <table>
-          <tbody>
-            {#each keys as k (k)}
-              <tr><td>{t(`keys.${k}`)}</td><td><kbd>{keyLabel(settings.keys[k] ?? '')}</kbd></td></tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
-      <button class="btn" onclick={() => (view = 'main')}>{t('common.back')}</button>
-    {/if}
+{#if view === 'settings'}
+  <!-- The very same page as the main menu's Settings (chart paper, side tabs, switches). -->
+  <div class="page-shell chart sheet rise-in" data-testid="game-menu">
+    <PageHeader
+      title={t('title.settings')}
+      subtitle={t('settings.subtitle')}
+      onback={() => (view = 'main')}
+    />
+    <div class="page-body sheet-body scroll"><SettingsBody /></div>
   </div>
-</div>
+{:else}
+  <div class="overlay fade-in" data-testid="game-menu">
+    <div class="menu glass rise-in" class:wide={view !== 'main'}>
+      {#if view === 'main'}
+        <h2>{t('menu.title')}</h2>
+        <button class="btn primary" onclick={() => (hud.panels.menu = false)}>{t('menu.resume')}</button>
+        {#if solo}<button class="btn" onclick={openSave}>{t('menu.save')}</button>{/if}
+        <button class="btn" onclick={() => (view = 'settings')}>{t('menu.settings')}</button>
+        <button class="btn" onclick={() => (view = 'help')}>{t('menu.help')}</button>
+        <button
+          class="btn ghost"
+          onclick={() => {
+            resetWindows();
+            toast(t('menu.windowsReset'), 'info');
+          }}
+          data-testid="menu-reset-windows">{t('menu.resetWindows')}</button
+        >
+        {#if !hud.spectating && hud.local?.alive && ctl.session.kind !== 'replay'}
+          <button
+            class="btn danger"
+            onclick={() =>
+              confirmModal(
+                t('menu.surrenderTitle'),
+                t('menu.surrenderBody'),
+                () => {
+                  ctl.session.cmd({ t: 'surrender' });
+                  hud.panels.menu = false; // closing the menu resumes the game so the order is processed
+                },
+                t('menu.surrender'),
+                t('common.cancel'),
+              )}>{t('menu.surrender')}</button
+          >
+        {/if}
+        <button class="btn danger" onclick={quit} data-testid="menu-quit">{t('menu.quit')}</button>
+      {:else if view === 'save'}
+        <h2>{t('menu.save')}</h2>
+        <div class="slots">
+          {#each Array.from({ length: SAVE_SLOTS }, (_, k) => k + 1) as slot (slot)}
+            {@const s = saves.find((x) => x.slot === slot)}
+            <button class="slot" onclick={() => save(slot)}>
+              <b>{t('menu.slot', { slot })}</b>
+              <span>{s ? `${s.mapName[i18n.lang]} · ${date(Date.parse(s.date))}` : t('menu.empty')}</span>
+            </button>
+          {/each}
+        </div>
+        <button class="btn" onclick={() => (view = 'main')}>{t('common.back')}</button>
+      {:else}
+        <h2>{t('menu.help')}</h2>
+        <div class="help scroll">
+          <p>{t('help.intro')}</p>
+          <ul>
+            <li>{t('help.click')}</li>
+            <li>{t('help.radial')}</li>
+            <li>{t('help.drag')}</li>
+            <li>{t('help.wheel')}</li>
+          </ul>
+          <table>
+            <tbody>
+              {#each keys as k (k)}
+                <tr><td>{t(`keys.${k}`)}</td><td><kbd>{keyLabel(settings.keys[k] ?? '')}</kbd></td></tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+        <button class="btn" onclick={() => (view = 'main')}>{t('common.back')}</button>
+      {/if}
+    </div>
+  </div>
+{/if}
 
 <style>
+  .sheet {
+    z-index: 70;
+  }
+  .sheet-body {
+    background: var(--panel-solid);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow-y: auto;
+  }
   .overlay {
     position: absolute;
     inset: 0;
@@ -177,7 +207,7 @@
     border-radius: 10px;
     border: 1px solid var(--line);
     background: rgba(255, 255, 255, 0.03);
-    cursor: pointer;
+    cursor: var(--cursor-pointer, pointer);
   }
   .slot:hover {
     border-color: var(--aurora);
@@ -186,7 +216,6 @@
     color: var(--faint);
     font-size: 0.85em;
   }
-  .settings,
   .help {
     max-height: 62vh;
     padding-right: 0.4rem;

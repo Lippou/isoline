@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from '../icons/Icon.svelte';
-  import { hud } from '../stores/game.svelte';
+  import { hud, openPaper } from '../stores/game.svelte';
   import { t, clock, i18n } from '../i18n/i18n.svelte';
   import type { GameController } from '../game/controller';
   let { ctl }: { ctl: GameController } = $props();
@@ -10,6 +10,7 @@
   let viewer = $state(-1);
 
   async function seek(target: number): Promise<void> {
+    hud.replaySeek = -1;
     if (target >= rp.tick) {
       rp.seekForward(target);
       return;
@@ -34,7 +35,7 @@
     onclick={() => {
       rp.setPaused(!rp.paused);
       hud.paused = rp.paused;
-    }}><Icon name={rp.paused ? 'play' : 'pause'} size={16} /></button
+    }}><Icon name={hud.paused ? 'play' : 'pause'} size={16} /></button
   >
   <span class="mono">{clock(hud.replay?.tick ?? 0)} / {clock(hud.replay?.end ?? 0)}</span>
   <input
@@ -47,7 +48,16 @@
   />
   <div class="speeds">
     {#each speeds as s (s)}
-      <button class="chip" class:on={rp.speed === s} onclick={() => rp.setSpeed(s)}>×{s}</button>
+      <button
+        class="chip"
+        class:on={(hud.replay?.speed ?? rp.speed) === s}
+        aria-pressed={(hud.replay?.speed ?? rp.speed) === s}
+        onclick={() => {
+          rp.setSpeed(s);
+          // (The replay source is not reactive: the bar follows the store.)
+          if (hud.replay) hud.replay.speed = rp.speed;
+        }}>×{s}</button
+      >
     {/each}
   </div>
   <select
@@ -60,7 +70,21 @@
       <option value={p.id}>{p.name[i18n.lang] || p.name.en}</option>
     {/each}
   </select>
-  {#if seeking}<span class="chip">{t('replay.seeking')}</span>{/if}
+  {#if ctl.edition}
+    <button
+      class="btn"
+      onclick={() => openPaper('front')}
+      aria-label={t('front.open')}
+      data-tip={t('front.open')}
+      data-testid="replay-paper"><Icon name="news" size={16} /></button
+    >
+  {/if}
+  {#if seeking}<span class="chip">{t('replay.seeking')}</span>
+  {:else if hud.replaySeek > (hud.replay?.tick ?? 0)}<span class="chip" role="status"
+      >{t('front.seeking', {
+        clock: clock(hud.replaySeek - (ctl.edition?.startTick ?? hud.world?.startTick ?? 0)),
+      })}</span
+    >{/if}
 </div>
 
 <style>
@@ -85,7 +109,7 @@
   }
   .chip {
     background: none;
-    cursor: pointer;
+    cursor: var(--cursor-pointer, pointer);
   }
   .chip.on {
     color: var(--aurora);

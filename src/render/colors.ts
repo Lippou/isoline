@@ -31,7 +31,7 @@ export function inkNum(colorIndex: number, vision: ColorVision): number {
 }
 
 export const UI = {
-  abyss: 0x0b1220,
+  abyss: 0x15405e, // open sea beyond the map edges (daylight chart)
   slate: 0x16233a,
   aurora: 0x4fe3c1,
   brass: 0xf2b84b,

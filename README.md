@@ -68,7 +68,7 @@ curl -LO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-fil
 curl -LO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
 ```
 
-Les cartes générées (`assets/maps/`, 8 Mo) sont versionnées : `npm run maps` n'est nécessaire que pour les modifier. Sources : Natural Earth 1:10m et 1:50m (domaine public), [natural-earth-vector](https://github.com/nvkelso/natural-earth-vector).
+Les cartes générées (`assets/maps/`, 25 cartes, 14 Mo) sont versionnées : `npm run maps` n'est nécessaire que pour les modifier (`npm run maps -- balkans,ring` pour n'en reconstruire que certaines). Sources : Natural Earth 1:10m et 1:50m (domaine public), [natural-earth-vector](https://github.com/nvkelso/natural-earth-vector).
 
 ### Options de lancement (développement et automatisation)
 - `--smoke-test` : ouvre l'écran titre puis quitte avec le code 0 (utilisé par `verify:packages`).
@@ -100,7 +100,7 @@ scripts/       build, packaging, vérification, benchmarks, médias, marque, car
 
 ## Contrôles essentiels
 
-Clic gauche : attaquer ou étendre · Clic droit : menu contextuel · Molette ou pincement : zoom · ZQSD/WASD, flèches ou glisser : caméra · 1–6, U, I, 7 : construire · 8 / 9 / 0 : bombes A, H et MIRV · T/Y : ratio d'attaque · K/L : accepter/refuser une alliance · E : général · Espace / V / R / N : vues terrain, brouillard, ressources, loyauté · Échap : menu. Tous les raccourcis sont remappables (Paramètres → Contrôles) ; liste complète dans `GAME_DESIGN.md` §16.
+Clic gauche : attaquer ou étendre · Clic droit : menu contextuel · Molette ou pincement : zoom · ZQSD/WASD, flèches ou glisser : caméra · 1–6, O, I, 7 : construire · 8 / 9 / 0 : bombes A, H et MIRV · U : inverser la trajectoire des missiles · T/Y : ratio d'attaque · K/L : accepter/refuser une alliance · E : général · Espace / V / R / N : vues terrain, brouillard, ressources, loyauté · Échap : menu. Tous les raccourcis sont remappables (Paramètres → Contrôles) ; liste complète dans `GAME_DESIGN.md` §16.
 
 ## Licence
 

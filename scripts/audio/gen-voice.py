@@ -22,7 +22,6 @@ VOICES = {'fr': ('ff_siwis', 'fr-fr', 0.95), 'en': ('af_heart', 'en-us', 0.95)}
 
 # Lines spoken by the advisor (keys of src/ui/i18n/<lang>.json).
 MISSIONS = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']
-TUTORIAL = ['spawn', 'camera', 'expand', 'ratio', 'city', 'attack', 'port', 'alliance', 'tech', 'done']
 
 
 def lookup(d, key):
@@ -35,12 +34,13 @@ def lookup(d, key):
 
 
 def keys_for(d):
-    out = ['tutorial.brief', 'campaign.failed', 'guide.spawn']
-    out += [f'tutorial.{k}' for k in TUTORIAL]
+    # The campaign is the tutorial: briefings, guide steps, outros and contextual hints.
+    out = ['campaign.failed', 'guide.spawn']
     for m in MISSIONS:
         out += [f'campaign.{m}.brief', f'campaign.{m}.outro']
         guide = lookup(d, f'guide.{m}') or {}
         out += [f'guide.{m}.{k}' for k in guide]
+    out += [f'guide.hint.{k}' for k in (lookup(d, 'guide.hint') or {})]
     return out
 
 

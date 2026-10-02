@@ -24,7 +24,8 @@ mac:
   icon: build-resources/icon.icns
   hardenedRuntime: true
   gatekeeperAssess: false
-  identity: '-'
+  # Developer ID (notarised by scripts/release.mjs through the keychain profile isoline-notary).
+  identity: 'Sacha Axel Binot (2WDB96R7Z3)'
   entitlements: build-resources/entitlements.mac.plist
   entitlementsInherit: build-resources/entitlements.mac.plist
   target:

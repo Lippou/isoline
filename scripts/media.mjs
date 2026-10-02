@@ -81,9 +81,20 @@ async function playScript(page, { onMoment } = {}) {
   for (const t of pick(6)) await cmd(page, { t: 'build', kind: 0, tile: t });
   for (const t of await iso(page, 'coast', [3])) await cmd(page, { t: 'build', kind: 1, tile: t });
   for (const t of pick(9).slice(6)) await cmd(page, { t: 'build', kind: 2, tile: t + 2 });
-  for (const t of pick(13).slice(10)) await cmd(page, { t: 'build', kind: 4, tile: t + 3 });
+  // Tech tree: SAM batteries (defence I, tech 16), then the H-bomb (nuclear II, tech 13),
+  // which brings the nuclear programme (silos) on the way.
+  const waitTech = async (branch, level) => {
+    for (let k = 0; k < 240; k++) {
+      if (((await iso(page, 'state')).local?.tech?.[branch] ?? 0) >= level) return;
+      await page.waitForTimeout(500);
+    }
+  };
+  await cmd(page, { t: 'research', tech: 16 });
+  await waitTech(4, 1);
   await cmd(page, { t: 'build', kind: 5, tile: own[Math.floor(own.length / 2)] + 5 });
-  await cmd(page, { t: 'research', tech: 3 });
+  await cmd(page, { t: 'research', tech: 13 });
+  await waitTech(3, 1);
+  for (const t of pick(13).slice(10)) await cmd(page, { t: 'build', kind: 4, tile: t + 3 });
   await page.waitForTimeout(9000);
   // Fleet.
   const coast = await iso(page, 'coast', [40]);
@@ -118,6 +129,7 @@ async function playScript(page, { onMoment } = {}) {
     .filter((p) => p.kind === 'nation' && p.tiles > 800)
     .sort((a, b) => dist(a) - dist(b));
   const target = nations.find((n) => safePath(n.label[0], n.label[1])) ?? nations[0];
+  await waitTech(3, 2);
   console.log('nuke target', target?.name, 'sams', sams.length);
   if (target) {
     const tx = Math.round(target.label[0]);

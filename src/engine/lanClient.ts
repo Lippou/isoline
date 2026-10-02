@@ -5,6 +5,7 @@ import type { Command, Turn } from '../core/net/commands';
 import type { TurnSource } from './turns';
 import type { Snapshot } from '../core/net/snapshot';
 import type { GameConfig } from '../core/game/config';
+import type { PlayerFlag } from '../core/data/flagSpec';
 
 export class LanClient {
   private ws: WebSocket | null = null;
@@ -31,8 +32,8 @@ export class LanClient {
 
   constructor(readonly url: string) {}
 
-  connect(name: string, code: string, spectator = false): void {
-    this.hello = { t: 'hello', name, version: NET_VERSION, spectator, code };
+  connect(name: string, code: string, spectator = false, flag?: PlayerFlag): void {
+    this.hello = { t: 'hello', name, version: NET_VERSION, spectator, code, ...(flag ? { flag } : {}) };
     this.open();
   }
 

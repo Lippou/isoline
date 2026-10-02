@@ -1,39 +1,62 @@
-// Naval units: transports (amphibious attacks), warships (targeting, veterancy,
-// repair, patrol), merchant ships (trade income, piracy) and shells.
+// Naval units: transports (amphibious attacks, retreat), warships (targeting, veterancy,
+// repair retreats to port, patrol), merchant ships (trade income, piracy) and shells.
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import {
   B,
   MAX_TRANSPORTS,
-  MERCHANT_DAMPING,
   MERCHANT_HP,
-  MERCHANT_INTERVAL,
   MERCHANT_SPEED,
   PIRACY_RANGE,
+  RETREAT_MALUS,
+  RIVER_SAIL_SPEED,
   SHELL_SPEED,
-  TRADE_BASE,
-  TRADE_LEVEL_BONUS,
   TRADE_PER_TILE,
+  TRADE_ROLL_TICKS,
+  TRADE_SHORT_RANGE,
+  TRADE_SIGMOID_GOLD,
+  TRADE_SIGMOID_K,
+  TRADE_SPAWN_RATE,
   TRANSPORT_HP,
+  TRANSPORT_MIN_TROOPS,
   TRANSPORT_SPEED,
   VETERANCY_BONUS,
   VETERANCY_KILLS,
-  WARSHIP_COSTS,
+  WARSHIP_COST_CAP,
+  WARSHIP_COST_STEP,
   WARSHIP_DAMAGE,
+  WARSHIP_DOCK_RANGE,
   WARSHIP_FIRE_TICKS,
   WARSHIP_HP,
-  WARSHIP_PATROL_RADIUS,
+  WARSHIP_HUNT_SPEED,
+  WARSHIP_MANUAL_LOCK_TICKS,
+  WARSHIP_PASSIVE_HEAL,
+  WARSHIP_PASSIVE_HEAL_RANGE,
+  WARSHIP_PATROL_RANGE,
+  WARSHIP_PORT_HEAL_PER_LEVEL,
+  WARSHIP_PORT_SWITCH,
   WARSHIP_RANGE,
-  WARSHIP_REPAIR,
+  WARSHIP_RETREAT_HP,
   portRange,
   WARSHIP_SPEED,
 } from '../game/constants';
-import { U, advanceOnPath, makeUnit, type Unit } from './unit';
+import { U, makeUnit, sailOnPath, type Unit } from './unit';
 import { launchAttack } from '../rules/combat';
+import { navalHostilities, openHostilities } from '../rules/diplomacy';
 import { addGold } from '../game/economy';
 import type { Building } from '../buildings/building';
-import { IS_LAND } from '../map/terrain';
+import { IS_LAND, T } from '../map/terrain';
 import { techNaval } from '../rules/tech';
+import { FOG_SIGHT, inFogBank, sightBetween } from '../rules/weather';
+
+/** Transport `kind`: 0 sailing to its landing, 1 turned back home. */
+export const TRANSPORT_RETREATING = 1;
+/** Warship `kind` (OpenFront's warship state); `home` holds the port it repairs at. */
+export const enum WS {
+  Patrolling = 0,
+  Retreating = 1,
+  Docked = 2,
+}
 
 // ------------------------------------------------------------- helpers
 function tileOf(game: Game, u: Unit): number {
@@ -41,6 +64,12 @@ function tileOf(game: Game, u: Unit): number {
   const x = Math.min(w - 1, Math.max(0, Math.floor(u.x)));
   const y = Math.min(game.map.height - 1, Math.max(0, Math.floor(u.y)));
   return y * w + x;
+}
+
+/** Steps a ship sails this tick: weather, and the slow going up a river. */
+function sailSpeed(game: Game, u: Unit): number {
+  const river = game.map.terrain[tileOf(game, u)] === T.River ? RIVER_SAIL_SPEED : 1;
+  return u.speed * game.features.shipSpeedAt(u.x, u.y) * river;
 }
 
 function center(game: Game, tile: number): [number, number] {
@@ -68,8 +97,11 @@ export function addUnit(game: Game, u: Unit): Unit {
   return u;
 }
 
-/** Nearest land tile touching a sizeable water body, searching around `tile`. */
-export function findLanding(game: Game, tile: number, radius = 40): number {
+/**
+ * Nearest land tile touching a sizeable naval body (a sea or a lake of 120+ tiles, or a
+ * river flowing into one), searching around `tile`.
+ */
+export function findLanding(game: Game, tile: number, radius = 40, skipOwner = -1): number {
   const map = game.map;
   const w = map.width;
   const x0 = tile % w;
@@ -85,8 +117,9 @@ export function findLanding(game: Game, tile: number, radius = 40): number {
       if (!map.inBounds(x, y)) continue;
       const i = y * w + x;
       if (!map.isCoastalLand(i) || game.isDead(i)) continue;
+      if (skipOwner > 0 && friendlyLand(game, skipOwner, i)) continue;
       const wt = map.adjacentWater(i);
-      if (wt < 0 || (map.componentSize[map.component[wt]!] ?? 0) < 120) continue;
+      if (wt < 0 || map.navWater(wt) < 120) continue;
       best = i;
       bestD = d;
     }
@@ -94,7 +127,7 @@ export function findLanding(game: Game, tile: number, radius = 40): number {
   return best;
 }
 
-/** Owned coastal tile of p closest to `near`, adjacent to water body `body`. */
+/** Owned coastal (sea, lake or river bank) tile of p closest to `near`, on naval body `body`. */
 function bestDeparture(game: Game, p: Player, body: number, near: number): number {
   const w = game.map.width;
   const nx = near % w;
@@ -109,11 +142,17 @@ function bestDeparture(game: Game, p: Player, body: number, near: number): numbe
     const d = ((c % w) - nx) ** 2 + (((c / w) | 0) - ny) ** 2;
     if (d >= bestD) continue;
     const wt = game.map.adjacentWater(c);
-    if (wt < 0 || game.map.component[wt] !== body) continue;
+    if (wt < 0 || game.map.navBody[wt] !== body) continue;
     best = c;
     bestD = d;
   }
   return best;
+}
+
+/** Tile held by p or a teammate (no landing there). */
+function friendlyLand(game: Game, p: number, tile: number): boolean {
+  const owner = game.owner[tile]!;
+  return owner === p || (owner > 0 && game.sameTeam(p, owner));
 }
 
 export type BoatError = 'ok' | 'max' | 'noLanding' | 'noCoast' | 'noPath' | 'friendly' | 'troops' | 'immune';
@@ -123,14 +162,15 @@ export function planBoat(
   p: Player,
   tile: number,
 ): { error: BoatError; landing: number; from: number; path: number[] | null } {
-  const landing = findLanding(game, tile);
+  // Aiming at foreign land, our own banks in between are skipped (a river often runs
+  // along the frontier): the boat lands on the far side.
+  const landing = findLanding(game, tile, 40, friendlyLand(game, p.id, tile) ? -1 : p.id);
   if (landing < 0) return { error: 'noLanding', landing, from: -1, path: null };
-  const owner = game.owner[landing]!;
-  if (owner === p.id || (owner > 0 && game.sameTeam(p.id, owner))) {
+  if (friendlyLand(game, p.id, landing)) {
     return { error: 'friendly', landing, from: -1, path: null };
   }
   const wDst = game.map.adjacentWater(landing);
-  const body = game.map.component[wDst]!;
+  const body = game.map.navBody[wDst]!;
   const dep = bestDeparture(game, p, body, landing);
   if (dep < 0) return { error: 'noCoast', landing, from: -1, path: null };
   const wSrc = game.map.adjacentWater(dep);
@@ -139,17 +179,23 @@ export function planBoat(
   return { error: 'ok', landing, from: wSrc, path };
 }
 
+/**
+ * Transport fields: `troops` aboard, `target` the land tile it sails to (the landing, or
+ * the home coast once turned back), `dest` the landing's owner at launch, `kind`
+ * TRANSPORT_RETREATING once turned back, (`sx`, `sy`) the launch point.
+ */
 export function launchBoat(game: Game, p: Player, tile: number, ratio: number): BoatError {
   if (game.phase !== 'playing') return 'noPath';
   let active = 0;
   for (const u of game.units) if (u.alive && u.type === U.Transport && u.owner === p.id) active++;
   if (active >= MAX_TRANSPORTS) return 'max';
   const troops = p.troops * ratio;
-  if (troops < 50) return 'troops';
+  if (troops < TRANSPORT_MIN_TROOPS) return 'troops';
   const plan = planBoat(game, p, tile);
   if (plan.error !== 'ok') return plan.error;
   const targetOwner = game.owner[plan.landing]!;
   if (targetOwner > 0 && !game.attackAllowed(p.id, targetOwner, true)) return 'immune';
+  if (targetOwner > 0) navalHostilities(game, p, game.players[targetOwner]!);
   p.troops -= troops;
   const [sx, sy] = center(game, plan.from);
   const u = makeUnit(game.nextId(), U.Transport, p.id, sx, sy);
@@ -161,16 +207,66 @@ export function launchBoat(game: Game, p: Player, tile: number, ratio: number): 
   u.target = plan.landing;
   u.dest = targetOwner;
   u.t0 = game.tick;
+  u.sx = sx;
+  u.sy = sy;
   addUnit(game, u);
   return 'ok';
 }
 
+/** Navigable tile under a ship (or the last waypoint it passed, when it cuts a corner of land). */
+function waterUnder(game: Game, u: Unit): number {
+  const t = tileOf(game, u);
+  if (game.map.isNavigable(t)) return t;
+  const prev = u.path[Math.min(u.pathIdx, u.path.length) - 1];
+  return prev !== undefined && game.map.isNavigable(prev) ? prev : -1;
+}
+
+/** Points a transport at its owner's nearest coast on its sea (OpenFront's bestTransportShipSpawn). */
+function routeHome(game: Game, u: Unit): boolean {
+  const here = waterUnder(game, u);
+  if (here < 0) return false;
+  const home = bestDeparture(game, game.players[u.owner]!, game.map.navBody[here]!, here);
+  if (home < 0) return false;
+  const path = game.map.nav.findPath(here, game.map.adjacentWater(home));
+  if (!path) return false;
+  u.path = path;
+  u.pathIdx = 0;
+  u.target = home;
+  return true;
+}
+
+/**
+ * OpenFront's BoatRetreatExecution: the transport turns back to its owner's nearest coast
+ * on its sea; landing there, its troops rejoin the pool, RETREAT_MALUS of them lost. With
+ * no coast (or no route) to go back to, they come home at once, in full.
+ */
+export function retreatTransport(game: Game, p: Player, id: number): boolean {
+  const u = unitById(game, id);
+  if (!u || !u.alive || u.owner !== p.id || u.type !== U.Transport || u.kind === TRANSPORT_RETREATING)
+    return false;
+  u.kind = TRANSPORT_RETREATING;
+  if (!routeHome(game, u)) {
+    p.troops += u.troops;
+    u.troops = 0;
+    u.alive = false;
+  }
+  return true;
+}
+
+/** A transport reaches its target tile (OpenFront's TransportShipExecution, path complete). */
 function landTransport(game: Game, u: Unit): void {
   const p = game.players[u.owner]!;
   const tile = u.target;
   const owner = game.owner[tile]!;
   if (!p.alive) return;
-  if (owner === p.id || (owner > 0 && game.friendly(p.id, owner)) || !IS_LAND[game.map.terrain[tile]!]) {
+  if (owner === p.id) {
+    // Back on its own land (a retreat): the troops rejoin the pool, a quarter lost.
+    const deaths = u.troops * RETREAT_MALUS;
+    p.troops += u.troops - deaths;
+    p.stats.troopsLost += deaths;
+    return;
+  }
+  if ((owner > 0 && game.friendly(p.id, owner)) || !IS_LAND[game.map.terrain[tile]!] || game.isDead(tile)) {
     p.troops += u.troops; // bounce back home
     return;
   }
@@ -178,28 +274,34 @@ function landTransport(game: Game, u: Unit): void {
     p.troops += u.troops;
     return;
   }
+  // The landing tile is taken outright; the attack spreads from it.
+  if (owner > 0) openHostilities(game, p, game.players[owner]!);
+  game.setOwner(tile, p.id);
   launchAttack(game, p.id, owner, u.troops, tile);
 }
 
 // -------------------------------------------------------------- warships
+/** min(1M, 250k × (n + 1)) with n = min(warships afloat, warships ever built). */
 export function warshipCost(game: Game, p: Player): number {
   let owned = 0;
   for (const u of game.units) if (u.alive && u.type === U.Warship && u.owner === p.id) owned++;
-  return WARSHIP_COSTS[Math.min(WARSHIP_COSTS.length - 1, owned)]!;
+  const n = Math.min(owned, p.warshipsBuilt);
+  const cost = Math.min(WARSHIP_COST_CAP, WARSHIP_COST_STEP * (n + 1));
+  return game.config.features.tech ? Math.round(cost * techNaval(p).shipCost) : cost; // Shipyards
 }
 
-/** Ready ports of p whose water body contains `waterTile` (or any if -1), nearest first. */
+/** Ready ports of p on the naval body of `tile` (any when it is not navigable), nearest first. */
 function portsNear(game: Game, p: Player, tile: number): Building[] {
   const w = game.map.width;
   const tx = tile % w;
   const ty = (tile / w) | 0;
-  const body = game.isWaterTile(tile) ? game.map.component[tile]! : -1;
+  const body = game.map.isNavigable(tile) ? game.map.navBody[tile]! : -1;
   const ports: Building[] = [];
   for (const b of game.buildings.values()) {
     if (b.owner !== p.id || b.type !== B.Port || b.buildLeft > 0) continue;
     const wt = game.map.adjacentWater(b.tile);
     if (wt < 0) continue;
-    if (body >= 0 && game.map.component[wt] !== body) continue;
+    if (body >= 0 && game.map.navBody[wt] !== body) continue;
     ports.push(b);
   }
   ports.sort(
@@ -222,29 +324,33 @@ export function buildWarship(game: Game, p: Player, tile: number): boolean {
   if (!port) return false;
   const wt = game.map.adjacentWater(port.tile);
   p.gold -= cost;
-  p.warshipsBought++;
+  p.warshipsBuilt++;
   const [x, y] = center(game, wt);
   const u = makeUnit(game.nextId(), U.Warship, p.id, x, y);
   const naval = techNaval(p);
   u.hp = u.maxHp = WARSHIP_HP * naval.hp;
   u.speed = WARSHIP_SPEED;
-  u.home = port.id;
-  u.patrol = game.isWaterTile(tile) && game.map.component[tile] === game.map.component[wt] ? tile : wt;
+  u.patrol = game.map.isNavigable(tile) && game.map.navBody[tile] === game.map.navBody[wt] ? tile : wt;
   u.cooldown = 10;
   addUnit(game, u);
   return true;
 }
 
+/** A move order: new patrol point; a repair retreat is called off and auto-retreat held for a while (OpenFront). */
 export function orderShips(game: Game, p: Player, ids: number[], tile: number): void {
-  if (!game.isWaterTile(tile)) return;
+  if (!game.map.isNavigable(tile)) return;
   for (const id of ids) {
     const u = unitById(game, id);
     if (!u || !u.alive || u.owner !== p.id || u.type !== U.Warship) continue;
-    if (game.map.component[tileOf(game, u)] !== game.map.component[tile]) continue;
+    const here = waterUnder(game, u);
+    if (here < 0 || game.map.navBody[here] !== game.map.navBody[tile]) continue;
     u.patrol = tile;
     u.path = [];
     u.pathIdx = 0;
     u.target = -1;
+    u.kind = WS.Patrolling;
+    u.home = -1;
+    u.t1 = game.tick + WARSHIP_MANUAL_LOCK_TICKS;
   }
 }
 
@@ -252,18 +358,39 @@ function priorityOf(t: U): number {
   return t === U.Transport ? 3 : t === U.Warship ? 2 : t === U.Merchant ? 1 : 0;
 }
 
+/**
+ * OpenFront's target choice within WARSHIP_RANGE of the ship: the nearest transport, else
+ * the nearest warship, else the nearest merchant worth pirating — one sailing within
+ * WARSHIP_PATROL_RANGE of the patrol point, bound for a port that is neither ours nor a
+ * friend's, while we have a port on this sea to bring it home.
+ */
 function acquireTarget(game: Game, ship: Unit): void {
   let best: Unit | null = null;
   let bestScore = -Infinity;
   const r2 = WARSHIP_RANGE * WARSHIP_RANGE;
+  const pr2 = WARSHIP_PATROL_RANGE * WARSHIP_PATROL_RANGE;
+  const [px, py]: [number, number] = ship.patrol >= 0 ? center(game, ship.patrol) : [ship.x, ship.y];
+  let hasPort: boolean | undefined;
+  // Weather: across a fog bank (around the warship or its prey) it spots at half range.
+  const fogged = inFogBank(game, ship.x, ship.y);
+  const fr2 = r2 * FOG_SIGHT * FOG_SIGHT;
   for (const v of game.units) {
     if (!v.alive || v.owner === ship.owner) continue;
     if (v.type !== U.Transport && v.type !== U.Warship && v.type !== U.Merchant) continue;
+    if (v.type === U.Warship && v.kind === WS.Docked) continue; // safe in port (OpenFront)
     if (game.friendly(ship.owner, v.owner)) continue;
-    // Merchants are only pirated from players we could attack.
-    if (v.type === U.Merchant && !game.attackAllowed(ship.owner, v.owner, false)) continue;
     const d2 = (v.x - ship.x) ** 2 + (v.y - ship.y) ** 2;
     if (d2 > r2) continue;
+    if (d2 > fr2 && (fogged || inFogBank(game, v.x, v.y))) continue;
+    if (v.type === U.Merchant) {
+      // Merchants are only pirated from players we could attack.
+      if (!game.attackAllowed(ship.owner, v.owner, false)) continue;
+      if ((v.x - px) ** 2 + (v.y - py) ** 2 > pr2) continue;
+      const dest = game.buildings.get(v.dest);
+      if (dest && game.friendly(ship.owner, dest.owner)) continue;
+      hasPort ??= portsNear(game, game.players[ship.owner]!, tileOf(game, ship)).length > 0;
+      if (!hasPort) continue;
+    }
     const score = priorityOf(v.type) * 1e6 - d2;
     if (score > bestScore) {
       bestScore = score;
@@ -276,7 +403,7 @@ function acquireTarget(game: Game, ship: Unit): void {
 function moveToward(game: Game, u: Unit, tx: number, ty: number, speed: number): void {
   const goal = Math.floor(ty) * game.map.width + Math.floor(tx);
   const here = tileOf(game, u);
-  if (!game.isWaterTile(goal)) return;
+  if (!game.map.isNavigable(goal)) return;
   if (game.map.nav.lineOfWater(here, goal)) {
     u.path = [goal];
     u.pathIdx = 0;
@@ -286,27 +413,29 @@ function moveToward(game: Game, u: Unit, tx: number, ty: number, speed: number):
     u.pathIdx = path ? 1 : 0;
     u.dest = goal;
   }
-  advanceOnPath(u, speed, game.map.width);
+  sailOnPath(u, speed, game.map.width);
 }
 
 function patrolStep(game: Game, u: Unit, speed: number): void {
   if (u.patrol < 0) return;
   if (u.pathIdx < u.path.length) {
-    advanceOnPath(u, speed, game.map.width);
+    sailOnPath(u, speed, game.map.width);
     return;
   }
-  // Pick a new deterministic waypoint around the patrol point.
+  // Pick a new deterministic waypoint in the square ± range / 2 around the patrol point (OpenFront).
+  // A patrol at sea keeps to open water; one posted on a river stays on the river.
   const w = game.map.width;
   const px = u.patrol % w;
   const py = (u.patrol / w) | 0;
+  const half = WARSHIP_PATROL_RANGE >> 1;
+  const onRiver = game.map.terrain[u.patrol] === T.River;
   for (let tries = 0; tries < 6; tries++) {
-    const a = game.rng.next() * Math.PI * 2;
-    const r = game.rng.next() * WARSHIP_PATROL_RADIUS;
-    const x = Math.round(px + Math.cos(a) * r);
-    const y = Math.round(py + Math.sin(a) * r);
+    const x = px + game.rng.int(-half, half);
+    const y = py + game.rng.int(-half, half);
     if (!game.map.inBounds(x, y)) continue;
     const t = y * w + x;
-    if (!game.isWaterTile(t) || game.map.component[t] !== game.map.component[u.patrol]) continue;
+    if (!game.map.isNavigable(t) || game.map.navBody[t] !== game.map.navBody[u.patrol]) continue;
+    if (!onRiver && game.map.terrain[t] === T.River) continue;
     const path = game.map.nav.findPath(tileOf(game, u), t, 20_000);
     if (path) {
       u.path = path;
@@ -326,20 +455,123 @@ function fire(game: Game, ship: Unit, target: Unit): void {
   addUnit(game, s);
 }
 
-function nearFriendlyPort(game: Game, u: Unit): boolean {
-  let found = false;
-  const maxR = portRange(10);
-  game.grid.query(u.x, u.y, maxR, (id) => {
-    if (found) return;
+// ---------------------------------------------------------- warship repairs
+/** Warships of the port's owner docked at it (`except` left out). */
+function dockedAt(game: Game, port: Building, except?: Unit): number {
+  let n = 0;
+  for (const v of game.units)
+    if (v.alive && v.type === U.Warship && v.kind === WS.Docked && v.home === port.id && v !== except) n++;
+  return n;
+}
+
+/** A port holds one docked ship per level. */
+function portFull(game: Game, port: Building, except?: Unit): boolean {
+  return dockedAt(game, port, except) >= port.level;
+}
+
+/** The port a retreating or docked warship repairs at, while it is still one of its owner's. */
+function repairPort(game: Game, u: Unit): Building | null {
+  const b = game.buildings.get(u.home);
+  return b && b.type === B.Port && b.owner === u.owner && b.buildLeft === 0 ? b : null;
+}
+
+/** OpenFront's healing: 1 hp a tick near one of your ports, plus the docked share of the port's pool. */
+function healWarship(game: Game, u: Unit): void {
+  if (u.hp >= u.maxHp) return;
+  const r2 = WARSHIP_PASSIVE_HEAL_RANGE * WARSHIP_PASSIVE_HEAL_RANGE;
+  let near = false;
+  game.grid.query(u.x, u.y, WARSHIP_PASSIVE_HEAL_RANGE, (id) => {
+    if (near) return;
     const b = game.buildings.get(id)!;
     if (
       b.type === B.Port &&
-      game.friendly(b.owner, u.owner) &&
-      (b.x - u.x) ** 2 + (b.y - u.y) ** 2 < portRange(b.level) ** 2
+      b.owner === u.owner &&
+      b.buildLeft === 0 &&
+      (b.x - u.x) ** 2 + (b.y - u.y) ** 2 <= r2
     )
-      found = true;
+      near = true;
   });
-  return found;
+  let heal = near ? WARSHIP_PASSIVE_HEAL : 0;
+  if (u.kind === WS.Docked) {
+    const port = repairPort(game, u);
+    if (port) heal += (port.level * WARSHIP_PORT_HEAL_PER_LEVEL) / Math.max(1, dockedAt(game, port));
+  }
+  u.hp = Math.min(u.maxHp, u.hp + heal);
+}
+
+function endRepair(u: Unit): void {
+  u.kind = WS.Patrolling;
+  u.home = -1;
+  u.path = [];
+  u.pathIdx = 0;
+}
+
+/** Breaks off for the nearest of its owner's ports on its sea (none: it keeps patrolling). */
+function startRepair(game: Game, u: Unit): void {
+  const here = waterUnder(game, u);
+  const port = here >= 0 ? portsNear(game, game.players[u.owner]!, here)[0] : undefined;
+  if (!port) return;
+  u.kind = WS.Retreating;
+  u.home = port.id;
+  u.target = -1;
+  u.path = [];
+  u.pathIdx = 0;
+}
+
+/**
+ * OpenFront's refreshRetreatPortTile: a lost port is replaced by the nearest one with a free
+ * berth; a full one too, when there is a free one; and a free port markedly closer
+ * (under WARSHIP_PORT_SWITCH of the squared distance) is preferred. False: nowhere to go.
+ */
+function refreshRepairPort(game: Game, u: Unit): boolean {
+  const current = repairPort(game, u);
+  if (current && (game.tick + u.id) % 5 !== 0) return true;
+  const here = waterUnder(game, u);
+  if (here < 0) return current !== null;
+  const ports = portsNear(game, game.players[u.owner]!, here);
+  const free = ports.find((b) => !portFull(game, b, u));
+  const onSea = current !== null && ports.includes(current);
+  if (!onSea) {
+    if (!free) return false;
+    u.home = free.id;
+    return true;
+  }
+  if (!free || free === current) return true;
+  const d2 = (b: Building) => (b.x - u.x) ** 2 + (b.y - u.y) ** 2;
+  if (portFull(game, current, u) || d2(free) < d2(current) * WARSHIP_PORT_SWITCH) u.home = free.id;
+  return true;
+}
+
+/**
+ * A retreating warship sails for its port without firing, and docks within
+ * WARSHIP_DOCK_RANGE if a berth is free (else it waits off the port, or resumes its patrol
+ * once healed). Returns false when the retreat is over.
+ */
+function sailToRepair(game: Game, u: Unit, speed: number): boolean {
+  if (!refreshRepairPort(game, u)) {
+    endRepair(u);
+    return false;
+  }
+  const port = repairPort(game, u)!;
+  u.target = -1;
+  if ((port.x + 0.5 - u.x) ** 2 + (port.y + 0.5 - u.y) ** 2 <= WARSHIP_DOCK_RANGE * WARSHIP_DOCK_RANGE) {
+    if (!portFull(game, port, u)) {
+      u.kind = WS.Docked;
+      u.path = [];
+      u.pathIdx = 0;
+      return true;
+    }
+    if (u.hp < u.maxHp) return true;
+    endRepair(u);
+    return false;
+  }
+  const [wx, wy] = center(game, game.map.adjacentWater(port.tile));
+  moveToward(game, u, wx, wy, speed);
+  if (u.path.length === 0) {
+    endRepair(u); // no route to the port
+    return false;
+  }
+  return true;
 }
 
 function killUnit(game: Game, victim: Unit, by: number): void {
@@ -385,46 +617,100 @@ export function clearPathCache(): void {
   pathCache.clear();
 }
 
+/** Port-to-port routes are memoised (merchants keep sailing the same lanes). */
 function tradePath(game: Game, from: Building, to: Building): number[] | null {
   const key = `${game.map.meta.id}:${from.tile}>${to.tile}`;
   if (pathCache.has(key)) return pathCache.get(key)!;
   const a = game.map.adjacentWater(from.tile);
   const b = game.map.adjacentWater(to.tile);
   const path = a >= 0 && b >= 0 ? game.map.nav.findPath(a, b) : null;
-  if (pathCache.size > 4000) pathCache.clear();
+  if (pathCache.size > 20_000) pathCache.clear();
   pathCache.set(key, path);
   return path;
 }
 
+const sigmoid = (x: number, k: number, mid: number) => 1 / (1 + Math.exp(-k * (x - mid)));
+
+/**
+ * OpenFront's global trade throttle for `n` merchants at sea: a mild boost while
+ * the world fleet is small, damping past ~330 ships onto a 25 % plateau, and a
+ * hard cap far beyond (~800).
+ */
+export function tradeShipSaturation(n: number): number {
+  const boost = 1 + 0.45 * Math.exp(-n / 120);
+  const damping = 1 - sigmoid(n, Math.LN2 / 50, 330);
+  const plateau = 0.25 * (1 - sigmoid(n, Math.LN2 / 100, 800));
+  return boost * Math.max(damping, plateau);
+}
+
+/** One spawn roll succeeds with probability 1 / rate; failed rolls (pity timer) raise the odds. */
+export function tradeSpawnRate(rejections: number, merchants: number): number {
+  return Math.max(1, Math.floor(TRADE_SPAWN_RATE / (rejections + 1) / tradeShipSaturation(merchants)));
+}
+
+/** Value of a cargo sailed over `dist` tiles (before the gold multiplier and bonuses). */
+export function tradeGold(dist: number): number {
+  return (
+    TRADE_SIGMOID_GOLD / (1 + Math.exp(-TRADE_SIGMOID_K * (dist - TRADE_SHORT_RANGE))) + TRADE_PER_TILE * dist
+  );
+}
+
+/** A port rolls once per level; the first success launches a merchant. */
+function rollMerchant(game: Game, port: Building, merchants: number): boolean {
+  for (let k = 0; k < port.level; k++) {
+    if (game.rng.chance(1 / tradeSpawnRate(port.rejections, merchants))) {
+      port.rejections = 0;
+      return true;
+    }
+    port.rejections++;
+  }
+  return false;
+}
+
+/**
+ * Destination of a merchant leaving `port`: a port of another player on the same
+ * water body, both sides trading (no embargo). Weight = level; the closest third
+ * (at least 4) count twice and friendly ports once more, unless they lie within
+ * TRADE_SHORT_RANGE tiles (Manhattan).
+ */
+function pickTradePort(game: Game, port: Building, owner: Player): Building | null {
+  const wt = game.map.adjacentWater(port.tile);
+  if (wt < 0) return null;
+  const body = game.map.navBody[wt];
+  const candidates: { b: Building; d: number }[] = [];
+  for (const other of game.buildings.values()) {
+    if (other.type !== B.Port || other.owner === port.owner || other.buildLeft > 0) continue;
+    const o = game.players[other.owner]!;
+    if (!o.alive || o.kind === 'tribe' || owner.hasEmbargoWith(o, game.tick)) continue;
+    const ow = game.map.adjacentWater(other.tile);
+    if (ow < 0 || game.map.navBody[ow] !== body) continue;
+    candidates.push({ b: other, d: Math.abs(other.x - port.x) + Math.abs(other.y - port.y) });
+  }
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => a.d - b.d || a.b.id - b.b.id);
+  const closeBonus = Math.min(Math.max(candidates.length / 3, 4), candidates.length);
+  const weights = candidates.map(({ b, d }, i) => {
+    const far = d >= TRADE_SHORT_RANGE;
+    let w = b.level;
+    if (far && i < closeBonus) w += b.level;
+    if (far && game.friendly(port.owner, b.owner)) w += b.level;
+    return w;
+  });
+  return candidates[game.rng.weighted(weights)]!.b;
+}
+
 function spawnMerchants(game: Game, merchants: number): void {
-  const tradeMult = game.features.tradeMult;
   for (const port of game.buildings.values()) {
     if (port.type !== B.Port || port.buildLeft > 0) continue;
+    if ((game.tick + port.createdTick) % TRADE_ROLL_TICKS !== 0) continue;
     const owner = game.players[port.owner]!;
     if (!owner.alive || owner.kind === 'tribe') continue;
-    port.timer++;
-    const interval =
-      ((MERCHANT_INTERVAL / (1 + 0.5 * (port.level - 1))) * (1 + merchants / MERCHANT_DAMPING)) /
-      Math.max(0.2, tradeMult);
-    if (port.timer < interval) continue;
-    port.timer = 0;
-    const wt = game.map.adjacentWater(port.tile);
-    if (wt < 0) continue;
-    const body = game.map.component[wt];
-    const candidates: Building[] = [];
-    for (const other of game.buildings.values()) {
-      if (other.type !== B.Port || other.owner === port.owner || other.buildLeft > 0) continue;
-      const o = game.players[other.owner]!;
-      if (!o.alive || o.kind === 'tribe' || owner.hasEmbargoWith(o, game.tick)) continue;
-      const ow = game.map.adjacentWater(other.tile);
-      if (ow < 0 || game.map.component[ow] !== body) continue;
-      candidates.push(other);
-    }
-    if (candidates.length === 0) continue;
-    const dest = candidates[game.rng.int(0, candidates.length - 1)]!;
+    if (!rollMerchant(game, port, merchants)) continue;
+    const dest = pickTradePort(game, port, owner);
+    if (!dest) continue;
     const path = tradePath(game, port, dest);
     if (!path) continue;
-    const [x, y] = center(game, wt);
+    const [x, y] = center(game, game.map.adjacentWater(port.tile));
     const m = makeUnit(game.nextId(), U.Merchant, port.owner, x, y);
     m.hp = m.maxHp = MERCHANT_HP;
     m.speed = MERCHANT_SPEED;
@@ -441,33 +727,36 @@ function spawnMerchants(game: Game, merchants: number): void {
   }
 }
 
+/** Whether a (not pirated) merchant may still deliver its cargo; otherwise it is scrapped. */
+function voyageValid(game: Game, m: Unit): boolean {
+  const dest = game.buildings.get(m.dest);
+  if (!dest || dest.owner === m.owner) return false;
+  const host = game.players[dest.owner]!;
+  return host.alive && host.kind !== 'tribe' && !game.players[m.owner]!.hasEmbargoWith(host, game.tick);
+}
+
+function payTrade(game: Game, p: Player, amount: number, at: Building): void {
+  const gold = amount * (game.config.features.tech ? techNaval(p).trade : 1);
+  addGold(p, gold);
+  p.stats.tradeGold += gold;
+  p.incomeBreakdown.trade += gold;
+  game.emit({ k: 'tradePay', x: at.x, y: at.y, owner: p.id, amount: Math.round(gold) });
+}
+
 function arriveMerchant(game: Game, m: Unit): void {
   const dest = game.buildings.get(m.dest);
   const owner = game.players[m.owner]!;
   if (!dest || !owner.alive) return;
-  const dist = Math.hypot(m.x - m.sx, m.y - m.sy);
-  const travelled = (game.tick - m.t0) * MERCHANT_SPEED;
-  const base =
-    (TRADE_BASE + Math.max(dist, travelled) * TRADE_PER_TILE) *
-    (1 + TRADE_LEVEL_BONUS * (m.level - 1)) *
-    game.features.tradeMult;
+  // d = tiles actually sailed (kept in m.troops); both ends of the route earn the full value.
+  const value = Math.floor(tradeGold(m.troops) * game.config.goldMultiplier) * game.features.tradeMult;
   if (m.kind === 1) {
     // Pirated cargo unloads in the pirate's own port.
-    addGold(owner, base);
-    owner.stats.tradeGold += base;
-    owner.incomeBreakdown.trade += base;
-    game.emit({ k: 'tradePay', x: dest.x, y: dest.y, owner: owner.id, amount: Math.round(base) });
+    payTrade(game, owner, value, dest);
     return;
   }
-  const host = game.players[dest.owner]!;
-  if (!host.alive || owner.hasEmbargoWith(host, game.tick)) return;
-  addGold(owner, base);
-  owner.stats.tradeGold += base;
-  owner.incomeBreakdown.trade += base;
-  addGold(host, base * 0.5);
-  host.stats.tradeGold += base * 0.5;
-  host.incomeBreakdown.trade += base * 0.5;
-  game.emit({ k: 'tradePay', x: dest.x, y: dest.y, owner: owner.id, amount: Math.round(base) });
+  if (!voyageValid(game, m)) return;
+  payTrade(game, owner, value, game.buildings.get(m.home) ?? dest);
+  payTrade(game, game.players[dest.owner]!, value, dest);
 }
 
 // ------------------------------------------------------------------ update
@@ -487,20 +776,26 @@ export function updateShips(game: Game): void {
           if (u.hp <= 0) u.alive = false;
           break;
         }
-        const speed = u.speed * game.features.shipSpeedAt(u.x, u.y);
-        if (advanceOnPath(u, speed, w)) {
+        sailOnPath(u, sailSpeed(game, u), w);
+        if (u.pathIdx >= u.path.length) {
+          // Turned back but its home coast was lost meanwhile: on to the next one, if any.
+          if (u.kind === TRANSPORT_RETREATING && game.owner[u.target] !== u.owner && routeHome(game, u))
+            break;
           u.alive = false;
-          landTransport(game, u);
+          if (u.kind === TRANSPORT_RETREATING && game.owner[u.target] !== u.owner) owner.troops += u.troops;
+          else landTransport(game, u);
         }
         break;
       }
       case U.Merchant: {
-        if (!owner || !owner.alive) {
+        // Embargo, lost or captured destination: the voyage is cancelled.
+        if (!owner || !owner.alive || (u.kind !== 1 && !voyageValid(game, u))) {
           u.alive = false;
           break;
         }
-        const speed = u.speed * game.features.shipSpeedAt(u.x, u.y);
-        if (advanceOnPath(u, speed, w)) {
+        // Tiles sailed (OpenFront's tilesTraveled) price the cargo.
+        u.troops += sailOnPath(u, sailSpeed(game, u), w);
+        if (u.pathIdx >= u.path.length) {
           u.alive = false;
           arriveMerchant(game, u);
         }
@@ -561,34 +856,39 @@ function updateWarship(game: Game, u: Unit): void {
     u.alive = false;
     return;
   }
-  if (u.hp < u.maxHp && game.tick % 5 === 0 && nearFriendlyPort(game, u))
-    u.hp = Math.min(u.maxHp, u.hp + WARSHIP_REPAIR * 5);
+  // Repairs (OpenFront's WarshipExecution): heal, stay docked until full, break off below half hp.
+  const hpBefore = u.hp;
+  healWarship(game, u);
   if (u.cooldown > 0) u.cooldown--;
+  const speed = sailSpeed(game, u);
+  if (u.kind === WS.Docked) {
+    if (repairPort(game, u) && u.hp < u.maxHp) return;
+    endRepair(u);
+  }
+  if (u.kind === WS.Patrolling && game.tick >= u.t1 && hpBefore < Math.floor(u.maxHp * WARSHIP_RETREAT_HP))
+    startRepair(game, u);
+  if (u.kind === WS.Retreating && sailToRepair(game, u, speed)) return;
   if ((game.tick + u.id) % 5 === 0) acquireTarget(game, u);
-  const speed = u.speed * game.features.shipSpeedAt(u.x, u.y);
   const target = u.target >= 0 ? unitById(game, u.target) : undefined;
-  if (target && target.alive) {
+  if (target && target.alive && !(target.type === U.Warship && target.kind === WS.Docked)) {
+    const d = Math.hypot(target.x - u.x, target.y - u.y);
     if (target.type === U.Merchant) {
-      const d = Math.hypot(target.x - u.x, target.y - u.y);
+      // Hunted down at two steps a tick, captured once alongside.
       if (d <= PIRACY_RANGE) {
         captureMerchant(game, u, target);
         u.target = -1;
       } else {
-        moveToward(game, u, target.x, target.y, speed);
+        moveToward(game, u, target.x, target.y, speed * (WARSHIP_HUNT_SPEED / WARSHIP_SPEED));
       }
       return;
     }
-    if (u.cooldown === 0) {
+    // Transports and warships are shelled while the patrol goes on: no chase (OpenFront).
+    if (u.cooldown === 0 && d <= sightBetween(game, u.x, u.y, target.x, target.y, WARSHIP_RANGE)) {
       fire(game, u, target);
       u.cooldown = WARSHIP_FIRE_TICKS;
     }
-    // Close in slowly on transports to keep them in range.
-    if (target.type === U.Transport && Math.hypot(target.x - u.x, target.y - u.y) > 60) {
-      moveToward(game, u, target.x, target.y, speed);
-      return;
-    }
   }
-  patrolStep(game, u, speed * 0.6);
+  patrolStep(game, u, speed);
 }
 
 export { tileOf as unitTile };

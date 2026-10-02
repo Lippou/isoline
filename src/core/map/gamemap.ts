@@ -1,9 +1,15 @@
 // The static map: terrain, altitude, deposits and derived topology
-// (water bodies / landmasses, coast distance, coarse naval graph).
+// (water bodies / landmasses, naval bodies with their navigable rivers, coast distance,
+// coarse naval graph).
 import { IS_LAND, IS_WATER, T } from './terrain';
 import { NavGrid } from './nav';
+import { navigableRivers } from './rivers';
 
-export type MapCategory = 'continents' | 'regions' | 'fictional' | 'arcade' | 'procedural' | 'custom';
+export type MapCategory =
+  'continents' | 'regions' | 'fictional' | 'legends' | 'planets' | 'arcade' | 'procedural' | 'custom';
+
+/** Ground and sea colours of the map shader (default: Earth). Visual only. */
+export type MapPalette = 'mars' | 'moon' | 'titan' | 'pixel';
 
 export interface LocalizedName {
   fr: string;
@@ -38,6 +44,8 @@ export interface MapMeta {
   deposits: DepositSpec[];
   /** Optional geographic extent (for documentation / day-night longitude). */
   bounds?: { lonMin: number; lonMax: number; latMin: number; latMax: number; projection: string };
+  /** Non-Earth colours (planets, 8-bit world); absent = Earth. */
+  palette?: MapPalette;
   author?: string;
   version?: number;
 }
@@ -56,6 +64,15 @@ export class GameMap {
   readonly componentSize: number[] = [0];
   /** Distance (tiles, capped 255) to the nearest land/water boundary. */
   readonly coastDist: Uint8Array;
+  /**
+   * Naval body per tile (0 = not navigable). Ships sail the seas and lakes and the rivers
+   * that flow into them: a river tile is navigable when its river (4-connected river
+   * tiles) touches a water body. Rivers stay land (owned, conquered, built on); a sea, the
+   * lakes and the rivers joining them form one body.
+   */
+  readonly navBody: Int32Array;
+  /** Water tiles (seas and lakes, rivers left out) of each naval body: ports and landings need 120. */
+  readonly navBodyWater: number[] = [0];
   /** Number of passable land tiles (victory denominator before fallout). */
   landCount = 0;
   nav!: NavGrid;
@@ -74,6 +91,7 @@ export class GameMap {
       for (const d of meta.deposits) this.stampDeposit(d);
     }
     this.component = new Int32Array(this.size);
+    this.navBody = new Int32Array(this.size);
     this.coastDist = new Uint8Array(this.size);
     this.computeDerived();
   }
@@ -128,29 +146,42 @@ export class GameMap {
     return n;
   }
 
-  /** True if a land tile touches water (ports, landings). */
+  /** Ships may sail on tile i: water, or a river flowing into a sea or a lake. */
+  isNavigable(i: number): boolean {
+    return this.navBody[i]! > 0;
+  }
+
+  /** Sea and lake tiles of the naval body of tile i (0 when not navigable). */
+  navWater(i: number): number {
+    return this.navBodyWater[this.navBody[i]!] ?? 0;
+  }
+
+  /**
+   * True if a land tile touches navigable water — the sea, a lake or a navigable river
+   * (ports, departures, landings). A navigable river tile is itself coastal.
+   */
   isCoastalLand(i: number): boolean {
     if (!this.isLand(i)) return false;
     const w = this.width;
     const x = i % w;
-    const t = this.terrain;
+    const nb = this.navBody;
     return (
-      (x > 0 && IS_WATER[t[i - 1]!] === 1) ||
-      (x < w - 1 && IS_WATER[t[i + 1]!] === 1) ||
-      (i >= w && IS_WATER[t[i - w]!] === 1) ||
-      (i < this.size - w && IS_WATER[t[i + w]!] === 1)
+      (x > 0 && nb[i - 1]! > 0) ||
+      (x < w - 1 && nb[i + 1]! > 0) ||
+      (i >= w && nb[i - w]! > 0) ||
+      (i < this.size - w && nb[i + w]! > 0)
     );
   }
 
-  /** A water tile next to land tile i, preferring the largest water body (or -1). */
+  /** A navigable tile (water or river) next to tile i, preferring the largest naval body (or -1). */
   adjacentWater(i: number): number {
     const w = this.width;
     const x = i % w;
     let best = -1;
     let bestSize = -1;
     const consider = (j: number) => {
-      if (IS_WATER[this.terrain[j]!] !== 1) return;
-      const s = this.componentSize[this.component[j]!] ?? 0;
+      if (this.navBody[j]! <= 0) return;
+      const s = this.navWater(j);
       if (s > bestSize) {
         bestSize = s;
         best = j;
@@ -245,6 +276,42 @@ export class GameMap {
       }
     }
 
+    this.computeNavBodies(stack);
     this.nav = new NavGrid(this);
+  }
+
+  /** Naval bodies: water tiles, plus the rivers reaching them, 4-connected. */
+  private computeNavBodies(stack: Int32Array): void {
+    const { size, width: w, terrain } = this;
+    const body = this.navBody;
+    // 1. Navigable river tiles: rivers flowing into a sea or a lake.
+    const navRiver = navigableRivers(terrain, w, this.height);
+    let sp = 0;
+    // 2. Bodies over water + navigable rivers.
+    const nav = (j: number) => IS_WATER[terrain[j]!] === 1 || navRiver[j] === 1;
+    let nextId = 1;
+    for (let s = 0; s < size; s++) {
+      if (body[s] !== 0 || !nav(s)) continue;
+      const id = nextId++;
+      let water = 0;
+      sp = 0;
+      stack[sp++] = s;
+      body[s] = id;
+      while (sp > 0) {
+        const i = stack[--sp]!;
+        if (IS_WATER[terrain[i]!] === 1) water++;
+        const x = i % w;
+        if (x > 0) push(i - 1, id);
+        if (x < w - 1) push(i + 1, id);
+        if (i >= w) push(i - w, id);
+        if (i < size - w) push(i + w, id);
+      }
+      this.navBodyWater[id] = water;
+    }
+    function push(j: number, id: number): void {
+      if (body[j] !== 0 || !nav(j)) return;
+      body[j] = id;
+      stack[sp++] = j;
+    }
   }
 }

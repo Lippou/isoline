@@ -1,10 +1,153 @@
-# Rapport de livraison — Isoline 1.1.0
+# Rapport de livraison — Isoline 1.4.0
 
 Ce rapport fait le point sur ce qui est livré, ce qui a été mesuré, les écarts avec le cahier des charges et les limites connues. Toutes les mesures viennent de scripts du dépôt et peuvent être reproduites (`npm run bench`, `npm run bench:app`, `node scripts/perf-app.mjs soak`, `npm run verify:packages`).
 
 **Machine de mesure** : Mac mini Apple M4 Pro (12 cœurs, 24 Go), macOS 27.2, écran 144 Hz, Node 24.19, Electron 44.5.
 
-## 0. Version 1.1 : retours de test traités
+## 0. Version 1.4 : sixième lot de retours
+
+| Retour | Réponse |
+|---|---|
+| Tirs des navires de guerre trop rapides (cadence et projectile) | Un obus toutes les 3 s (au lieu de 1,8 s), qui vole à 3 tuiles par tick (au lieu de 9), toujours autoguidé et plus rapide que tout navire. |
+| Replay : ×2, ×4, ×8 changent la vitesse mais l'affichage reste sur ×1 | Les boutons de vitesse et de pause suivent maintenant l'état réel. |
+| Arbre des technologies trop vite terminé, facile à oublier ; des centres de recherche | Nouveau bâtiment **Centre de recherche** (touche J ; 250 k, 500 k, 1 M puis 2 M) : 1,5 point/s par niveau (0,5 sans centre), les villes ne produisent plus de recherche. 36 technologies sur 6 paliers (150 à 11 000 points, 143 100 au total au lieu de 17 300) plus une technologie sans fin par branche. Parties IA : palier II vers 10 min, III vers 15–20, IV vers 25–35, V vers 40–55. File d'attente (Maj+clic, 12 objectifs), rappel « Recherche à l'arrêt » (point sur le bouton, pastille au-dessus de la barre de construction, brève au journal), option « Continuer automatiquement ». |
+| Pas de son en demandant une alliance depuis la Diplomatie | Chaque action de la Diplomatie, du Commerce et des Messages émet un son de confirmation ; le bouton passe à « Proposée… » pendant 20 s. |
+| On ne voit plus le journal derrière l'arbre ; déplacer les fenêtres ; menu à gauche | Barre de menus verticale à gauche ; chaque panneau est une fenêtre déplaçable et redimensionnable, plusieurs ouvertes à la fois (Technologies et Journal côte à côte), positions mémorisées, « Replacer les fenêtres » dans le menu Échap. |
+| Choisir un drapeau, l'afficher à côté des noms, créer le sien | 270 drapeaux réels ou éditeur (16 dispositions, 3 couleurs, 10 emblèmes) dans le profil et le salon ; le drapeau suit le joueur partout (carte, classement, journal, une, réseau local, sauvegardes, replays) et chaque nation a son drapeau devant son nom sur la carte. |
+| Demande d'alliance reçue : petite fenêtre en bas à droite | Carte au style du bandeau de pacte, au-dessus de la mini-carte : drapeaux, nom, Accepter (K) / Refuser (L), barre des 20 s, empilement jusqu'à trois. |
+| Garder les compétences (Blitz…) ? | Inchangé : elles se désactivent déjà dans le salon (« Généraux »). Avis ci-dessous dans la réponse. |
+
+Mesures : 184 tests unitaires et d'intégration, 5 e2e. Rythme (IA seules, 3 graines × 3 cartes × 2 difficultés) : 17 parties sur 18 entre 28 et 50 min, une sans fin à 60 min (Monde, Normal, graine 1234 ; la prolongation la termine ensuite).
+
+## 0. Version 1.3 : cinquième lot de retours
+
+| Retour | Réponse |
+|---|---|
+| Encore des ondulations sur les territoires | Cause trouvée : l'heure de conquête de chaque tuile n'était gardée qu'à 256 ticks près, et l'animation de conquête se rejouait toutes les 25,6 s en vagues le long des anciens fronts. Les tuiles sont « fixées » une fois l'animation finie ; le fond des pays est uni (±3 % de relief). |
+| Bombes A et H interceptées entre deux SAM, hors des zones affichées | La portée réelle comptait le bonus de recherche de l'IA (radar de tir +10, bouclier +15) que l'écran ignorait. Zones, survol, placement et prévision de trajectoire affichent maintenant la portée exacte de la simulation. |
+| Musique relancée à chaque changement de page, coupée et reprise en jeu | Chaque clic relançait la musique (dans les menus, le même morceau depuis le début ; en jeu, le suivant). Corrigé, et un changement demandé pendant un fondu attend sa fin. Mesure : une seule mise en route pour 4 pages et 6 clics dans les menus, une seule pour 12 clics en partie. |
+| Paramètres du menu Échap différents de ceux de l'accueil | C'est désormais la même page (papier clair, onglets à gauche, interrupteurs). |
+| Trop de troupes au départ, 17 M en 20 minutes ; trop d'or trop vite | Départ 12 500 troupes (au lieu de 25 000), plafond `2 × (tuiles^0,6 × 800 + 25 000) + 60 000 par niveau de ville` (au lieu de 1 000, 50 000 et 250 000), régénération −20 %, commerce et trains à moitié. Partie IA à 20 min : meneur à ~3 M de troupes (au lieu de 9,5 à 16 M), nation moyenne ~0,9 M (au lieu de 2,8 M) ; or gagné −50 % environ. Écart assumé avec OpenFront. |
+| Son différent pour l'élimination d'une tribu | Coup de taiko pour une tribu, cuivres pour une nation. |
+| Navires de guerre qui partent se réparer au premier obus | Ils rompent le combat sous la moitié de leurs PV (75 % dans OpenFront). |
+| Confirmation en cliquant sur un allié | Le clic gauche, les touches d'attaque et de débarquement, le bombardier et la bombe visant un allié demandent la même confirmation que le clic droit. |
+| Pouvoir frapper son propre territoire, avec confirmation | Bombes A et H permises sur vos terres après confirmation ; MIRV refusé sur votre pays. |
+| Être notifié d'un refus d'alliance comme d'une acceptation, mais différemment | Même bandeau que le pacte signé, mais déchiré (sceau barré, drapeaux qui s'écartent, déchirure rouge, son de papier déchiré) ; une demande restée sans réponse le signale aussi. Les bandeaux s'enchaînent quand plusieurs réponses arrivent ensemble. |
+| Idée 1 : une de fin de partie | « Le Courrier des Isolignes — Édition finale » : titre selon le dénouement, récit, cartes de l'empire au fil du temps, courbe des terres avec les grands tournants, « Votre sort ». Chaque moment a un bouton « Revoir » qui ouvre le replay 8 s avant. |
+| Idée 2 : routes commerciales visibles | Vue « Routes commerciales » (touche C, active par défaut) : vos lignes maritimes en tirets laiton, plus épaisses selon l'or rapporté, celles des autres en filets discrets, voies ferrées actives soulignées ; un embargo montre la route coupée pendant 10 s. Aucun coût mesurable en images par seconde. |
+| Idée 3 : capitale au point de départ | Capitale marquée d'une étoile. Si elle tombe : 60 s de désorganisation (renforts et revenu −25 %, attaques −20 %), 10 % de l'or au conquérant, puis vous choisissez la nouvelle capitale (clic droit « Établir la capitale ici », ou « Au plus sûr ») ; sans capitale, revenu −10 %. Les IA se réinstallent seules. |
+| Idée 4 : frontière menacée | Un voisin hostile 1,75 fois plus fort que vous (combats récents, mauvaise relation, ou plan d'attaque de l'IA) fait luire la frontière commune en ambre, avec une brève « Vigilance » au journal et une explication au survol. |
+| Idée 5 : météo visible | Orages (pluie, éclairs, bandes en spirale) qui ralentissent navires (−40 %) et avions (−25 %), bancs de brouillard qui réduisent de moitié radars et détection des navires ; contour, icône et explication au survol, à toutes les qualités. |
+| Conversion en site web (question) | Voir la réponse ci-dessous (§0.1). |
+
+Autres corrections : chargement des sauvegardes et replays ouverts depuis la liste (erreur de copie vers le moteur de simulation) ; objectif de la mission 4 ramené à 1,5 M d'or (commerce divisé par deux) et sa narration réenregistrée ; seuil de victoire en prolongation prolongé jusqu'à 35 % (atteint à 60 min) pour finir les impasses entre continents.
+
+Mesures (IA seules, Europe / Mer Noire / Monde, graines 1234, 42, 7, 99) : Normal 12 parties entre 31,9 et 56,4 min ; Difficile 11 sur 12 entre 34 et 55 min, une à 70 min (Monde). Tests : 163 unitaires et d'intégration, 5 e2e, contrôle des paquets réussi. App empaquetée 1.3.0, carte Monde, 100 joueurs : 144 FPS synchronisés, minimum compris (zoom moyen et carte entière), tick 0,95 à 1,17 ms.
+
+### 0.1 Une version web ?
+
+Possible, et sans risque de régression si on l'ajoute à côté de la version de bureau plutôt qu'à sa place : le jeu est déjà écrit en technologies web (Svelte, PixiJS/WebGL, simulation dans un Web Worker) et contient déjà une variante « navigateur » de son pont avec le système. À prévoir : sauvegardes et replays dans IndexedDB (le stockage du navigateur limité à quelques Mo ne suffit pas), le multijoueur LAN remplacé par un petit serveur relais WebSocket (le navigateur ne peut pas ouvrir de port local), les 37 Mo de musique, voix et cartes chargés à la demande et mis en cache, l'hébergement et la licence. Les tests e2e devraient alors tourner aussi dans un navigateur. Intérêt : partage par simple lien, mises à jour instantanées, multijoueur en ligne. Coût : quelques jours pour une version solo, nettement plus pour le multijoueur en ligne (serveur, comptes, anti-triche).
+
+## 0. Version 1.2 : retours de test traités
+
+Référence : le code source d'OpenFront (dépôt `openfrontio/OpenFrontIO`, état du 1er octobre 2026), relu pour en reprendre les règles et les valeurs. Le code d'OpenFront (AGPL) n'a pas été copié : les règles sont réécrites dans le style d'Isoline.
+
+| Retour | Réponse |
+|---|---|
+| Pas de « bip bip » quand ce n'est pas notre pays qui est touché | La sirène et l'alerte ne concernent plus que les pays dont les terres sont dans le souffle (le pays visé pour un MIRV), comme dans OpenFront. Survoler un pays ne déclenche plus rien. Au plus une sirène toutes les 4 s. Le bruit de lancement ne s'entend que pour ses propres tirs, ceux qui vous visent ou ceux visibles à l'écran. Test unitaire ajouté. |
+| Voir la zone protégée par les SAM au lancement d'un missile | Pendant la visée (et au survol des boutons nucléaires, silo et SAM, et au placement d'un silo ou d'un SAM) : portée de chaque SAM connu, les vôtres en vert, ceux des alliés en jaune, les autres en rouge, en contours pointillés tournants fusionnés. |
+| Voir la trajectoire pour esquiver les SAM, l'inverser (effet miroir) avec un bouton ou un panneau | La trajectoire est désormais **simulée** (arc de Bézier d'OpenFront, hauteur `max(d/3, 50)`). Elle s'inverse avec **U** ou dans le nouveau **panneau de lancement** (salve, arc haut / arc bas, verdict). L'aperçu montre le silo qui tirera, les zones hors de portée des SAM (pointillés fins), le point d'interception prévu (croix rouge) et les cercles de souffle. Test unitaire : un même tir est intercepté en arc haut et passe en arc bas, et l'aperçu le prédit. |
+| Le jeu est dur à comprendre visuellement sur la carte | Badges au-dessus des noms (OpenFront), noms colorés par relation avec un contour sombre, frontières teintées (allié vert, guerre rouge pulsé, embargo rouge pâle), territoires plus contrastés et frontières plus épaisses, niveau des bâtiments en chiffres, missiles en vol avec cercles d'impact aux couleurs du lanceur. |
+| Alliance : poignée de main et nom en vert ; traître : bouclier cassé et nom en jaune ; guerre : nom en rouge et une épée ; pas de commerce : dollar barré | Fait, sur la carte, dans la carte de survol et le panneau Diplomatie. S'y ajoutent, comme dans OpenFront : couronne (premier), enveloppe (demande d'alliance), radioactivité (missile en vol, rouge s'il vous vise), lune (inactif). La guerre dure tant qu'une attaque, un débarquement ou un missile vous oppose, puis 10 s. |
+| Revérifier ce qu'offre OpenFront et reprendre son fonctionnement | Repris : économie complète (ci-dessous) ; SAM (un missile par niveau, 9 s de recharge, portée `150 − 480/(niv + 5)`, interceptions certaines, missiles atteignables seulement à moins de 150 tuiles de leur silo ou de leur cible) ; silos (un tube par niveau, 9 s) ; souffle (rayon intérieur rasé, moitié des tuiles jusqu'au rayon extérieur, bâtiments et unités détruits) ; pertes `troupes × (part restante)^5` ; MIRV (jusqu'à 350 ogives sur tout le pays visé) ; trahison (traître 30 s, rompre une alliance compte) ; embargo de 5 min contre tout agresseur ; alliances qui lèvent ces embargos et rappellent les missiles en vol ; espacement de 15 tuiles entre bâtiments. Combat : rapport de forces d'OpenFront (voir plus bas), sur les fronts arrondis d'Isoline. Conservées : les fonctions inédites d'Isoline (aviation, radar, technologies, ressources, météo, loyauté, conseil). |
+| Les villes ne montent pas en prix comme dans le jeu de base ; retrouver l'économie originale | Prix d'OpenFront : ville, port et usine `125 000 × 2ⁿ` **plafonnés à 1 M** ; SAM 1,5 M puis 3 M ; poste de défense jusqu'à 250 000 ; navire de guerre jusqu'à 1 M (n compte les niveaux construits, chantiers et améliorations compris ; un bâtiment perdu fait baisser le prix). Or fixe de 1 000/s, sans ouvriers. Troupes : plafond `2 × (terres^0,6 × 1 000 + 50 000) + 250 000 par niveau de ville` et régénération `(10 + troupes^0,73 / 4) × (1 − troupes / plafond)`. Commerce maritime et trains aux formules d'OpenFront (les deux ports payés). Conquête : trésor de la nation vaincue (moitié pour un humain). |
+
+**Retours suivants (même version)** :
+
+| Retour | Réponse |
+|---|---|
+| Combats totalement inégaux : 3 M de troupes bloquées face à une nation de 100 000 sans défense ; tribus trop résistantes | Logique de rapport de forces d'OpenFront : la vitesse du front et les pertes dépendent de « armée du défenseur / troupes de l'attaque ». Mesure sur un terrain plat : 3 M contre 100 000 (3 000 tuiles) rasés en 4,9 s pour 3 % de pertes ; 3 contre 1 en 6,5 s ; à 1 contre 1 l'attaque prend 35 % du pays en 48 s puis s'épuise ; 20 % d'une armée de 1,5 M rase une tribu à son plafond en 5 s. 6 tests unitaires figent ce comportement. |
+| Bateaux (transport, guerre) et trains trop grands ; les trains doivent s'articuler | Tailles minimales à l'écran réduites de moitié environ (navires 26 à 36 px au lieu de 50 à 70) ; taille réelle de près. Trains en locomotive et wagons séparés qui suivent le tracé parcouru. |
+| En attaque, de vrais cubes rouges trop gros | Bords de territoire lissés dans le shader (mélange de propriété sur les 4 cases voisines) : courbes au lieu de l'escalier des cases ; étincelles de conquête 3 fois moins nombreuses et plus petites. |
+| Un visuel quand un pacte de paix est signé ; un son de papier signé, pas des trompettes | Bandeau « Pacte d'alliance signé » (drapeaux scellés, signature tracée) au-dessus de la barre de construction, arc vert entre les deux capitales ; son : plume sur parchemin (Freesound 326961, CC0). |
+| Au survol de la barre de construction, ne voir que les bâtiments correspondants, avec les distances (SAM, usines…) | Filtre : bâtiments du type survolé mis en valeur (halo, visibles à tous les zooms), les autres estompés ; portées des vôtres (défense 30, usine 110, port, radar, aérodrome), SAM par relation. Aussi pendant le placement. |
+
+**Troisième lot de retours (même version)** :
+
+| Retour | Réponse |
+|---|---|
+| Bruit d'épée à chaque clic ; pièces trop fréquentes ; sons trop répétés ; trahison audible par tous | Bruit de clic d'attaque supprimé ; pièces de pillage toutes les 4 s au plus ; intervalles minimaux allongés (pièces 3 s, canon 1,5 s, train 20 s…) ; combats, interceptions et naufrages audibles seulement s'ils vous concernent ou sont à l'écran ; trahison pour le traître et la victime seulement. |
+| Voir les troupes engagées dans une attaque, et celles de la contre-attaque | Pastille sur chaque front (vos troupes à votre couleur, celles qui vous visent en magenta) et liste « Attaques reçues ». |
+| Clic droit avec un bâtiment sélectionné : désélectionner | Le clic droit annule l'outil ou la sélection en cours. |
+| Arrêter, accélérer ou ralentir le temps | Pause, ×½, ×1, ×2, ×4 dans la barre du haut (solo), touches `[` et `]` ; la vitesse du lobby est maintenant appliquée. |
+| « tech.economy.3 » dans le journal | Le nom de la technologie est affiché. |
+| Une vraie direction artistique, des menus plus riches, plus d'animation | Direction « Levé hydrographique » (`BRAND.md` §4) : menus clairs façon carte marine, isolignes qui se tracent (accueil, transitions, chargement), menu en légende, lobby en trois étapes avec aperçus façon carte marine et nations, campagne en itinéraire, profil, réglages, replays et « À propos » refaits. Revue avec les skills de design (frontend-design, ui-ux-pro-max, design-critique) et corrections : focus clavier, contrastes AA, mise en page en 1280×800. |
+| Au survol d'un pays : villes, ports, usines, navires… | Fiche de survol : bâtiments par type (et niveaux), navires de guerre, transports. |
+| Bateaux trop rapides (les détruire à la bombe A) | Une case par tick comme OpenFront (environ 2 fois plus lents) ; un test vérifie qu'une bombe A détruit un transport en route. |
+| Le jeu est trop sombre | Mers et reliefs éclaircis, cycle jour/nuit réduit à un léger crépuscule, fonds clairs. |
+| Trop grand au départ | 52 tuiles au départ (OpenFront) au lieu d'environ 200. |
+| Accepter une alliance par clic droit sur le pays | « Accepter son alliance » / « Refuser » quand le pays l'a proposée. |
+| Voir les alliances en cours et leur durée | Bloc « Alliances en cours » toujours visible : durée, barre, renouvellement. |
+| Navires de guerre qui détectent de trop loin | Portée 90 (au lieu de 130), patrouille 70, plus de chasse au-delà de la zone de patrouille (règles d'OpenFront). |
+| Continuer à jouer à la fin d'une partie | Bouton « Continuer à jouer » : la partie reprend sans nouvelle victoire. |
+| Plus de cartes | 11 cartes ajoutées (25 au total) : Îles britanniques, Scandinavie, Balkans, Moyen-Orient, Inde, Japon et Corée, Asie du Sud-Est, Caraïbes, Continents jumeaux, Fjords, Anneau. |
+
+Mesures après ce lot (app empaquetée 1.2.0) : démarrage 2,1 s ; 144 FPS synchronisés ; sans synchronisation, 298 à 329 FPS au zoom moyen et 553 à 638 sur carte entière ; tick 0,88 à 1,05 ms. Rythme (8 graines × 3 cartes × 2 difficultés) : 45 parties sur 48 entre 25 et 60 minutes (22 à 58 min, médiane 35 min). Tests : 91 unitaires et d'intégration, 5 e2e.
+
+**Quatrième lot de retours (même version)** :
+
+| Retour | Réponse |
+|---|---|
+| L'indicateur de troupes en attaque bouge trop, texte illisible ; un par front | Le serveur de simulation regroupe la ligne de front en tronçons (jusqu'à 4 par attaque) ; chaque pastille reste fixée tant que son tronçon ne s'éloigne pas de plus de 28 tuiles, puis glisse doucement. Pastille sombre, chiffre en gras 15 px, épée à la couleur du camp. |
+| La musique coupe et boucle bizarrement | Plus de boucle native (couture audible) : le morceau suivant prend le relais en fondu 5 s avant la fin. Changement d'ambiance (calme, tension, guerre) avec hystérésis et durée minimale, pour ne plus basculer sans cesse. |
+| Combats encore inégaux : reprendre la mécanique de base d'OpenFront | Portage des règles d'`AttackExecution` et de `attackLogic` : chaque tick, l'attaque prend autant de tuiles que la longueur de son front (plus 0 à 4) ; terrain (plaine, colline, montagne), poste de défense (×5 pertes, ×3 coût), retombées ; pertes et vitesse selon le rapport « armée du défenseur / troupes envoyées » ; choc frontal des attaques opposées ; défenseur sous 100 tuiles annexé. Envoi par défaut : 20 % des troupes. Mesures : à 1 contre 1, environ 31 tuiles par tick sur un front de 60 ; 3 M contre 100 000 (3 000 tuiles) rasés en 7,3 s pour 3 % de pertes ; une tribu à son plafond tombe en 6,5 s. |
+| Curseur personnalisé | Curseurs dessinés pour Isoline : flèche encre à pointe laiton (losange du logo), variante laiton sur ce qui est cliquable, réticule de géomètre sur la carte (encre), laiton pour construire, magenta pour viser un missile. |
+| Trahir doit aussi fragiliser (OpenFront) | Relations d'OpenFront : la victime passe à −100 envers le traître, ses autres voisins à −40, un pays attaqué de −60 à −100 selon la difficulté (retour lent vers 0). Les nations refusent l'alliance d'un pays mal vu et 90 % des demandes d'un traître, et attaquent un traître voisin plus faible même allié (sans devenir traîtres). Toujours : marque de traître 30 s (×0,5 pertes et ×0,8 coût pour ceux qui l'attaquent), embargo de 5 min, annonce mondiale. |
+| Les navires regagnent de la vie au port le plus proche, sans tirer, en restant vulnérables | Sous 75 % de vie, le navire rentre au port le plus proche de sa mer, sans tirer, toujours ciblable. À quai (un navire par niveau de port) : intouchable, +5 PV par niveau de port et par tick, puis retour en patrouille. +1 PV par tick à moins de 105 tuiles d'un de vos ports. Un ordre de déplacement annule le retour. |
+| Menu « Commerce » : avec qui on échange, poser un embargo, voir qui nous en impose un | Nouveau panneau Commerce (barre en haut à gauche) : or gagné en 5 minutes par la mer et par le rail, partenaires classés par or avec navires et trains en route, embargo en un clic ; liste des embargos (le vôtre, contre vous, réciproque, temporaires après une attaque, avec la durée restante) ; « Embargo sur tous sauf alliés », « Lever tous mes embargos ». |
+| On peut attaquer un pays lointain en cliquant dessus | Comme OpenFront, une attaque terrestre exige une frontière commune (terres libres : reliées à vous à moins de 200 tuiles). Sinon, message « Aucune frontière commune : envoyez un bateau (B ou clic droit → Débarquer) » ; plus de bascule automatique vers un débarquement, ni d'effet diplomatique. |
+| Accepter ou demander une alliance plus visible au clic droit | En tête du menu, cadre vert : « Accepter son alliance » (avec « vous propose une alliance ») ou « Proposer une alliance ». |
+| Trois bateaux au maximum à la fois | Limite de 3 transports (OpenFront) ; liste « Bateaux en mer (n/3) » dans le panneau des ressources. |
+| Enlever les « ondes » sur les territoires | Relief et biomes aplanis sous la couleur des pays (seul un léger ombrage reste) ; plus de cercles de portée d'usine au survol. |
+| Le SAM protège trop loin | Portée ×0,7 : 49 tuiles au niveau 1, 71 au niveau 5, 105 au plus ; distance d'interception des missiles 105. |
+| Annuler un envoi de bateau ou une attaque | Bateau : bouton de rappel dans « Bateaux en mer », il rentre à la côte la plus proche et rend 75 % des troupes (100 % s'il n'a pas de côte). Attaque : ✕ dans « Attaques en cours », gel de 2 s puis retour de 75 % des troupes (100 % sur terres libres), affiché « repli ». |
+| Un bouton pour contre-attaquer avec pile les troupes qu'il faut | « Riposter » sur chaque attaque reçue : envoie 110 % des troupes adverses (dans la limite des vôtres), qui annulent l'assaut au choc. |
+| Une cible sur le point de débarquement | Réticule pulsé sur la plage visée, relié au bateau par un trait fin, jusqu'à l'arrivée (retiré si le bateau est rappelé). |
+| Journal en papier journal ; quand une nation tombe, un article qui se déplie | « Le Courrier des Isolignes » : édition à l'heure de la partie, rubriques (Tout, Conflits, Vigilance, Bonnes nouvelles), titres par minute et brèves, liens vers la carte. Chute d'une nation : « Édition spéciale » dépliée en haut à gauche, drapeau, titre et cause (défaite au combat face à…, capitulation, anéantissement nucléaire, hors de la zone), puis repliée dans le bouton Journal. |
+| Technologies plus élaborées ; débloquer le nucléaire pour que l'économie passe avant la guerre | Arbre de 24 technologies (6 branches, 5 paliers, 100 à 2 400 points). Silo et bombe A exigent le « Programme nucléaire » (lui-même après Banque centrale et Industrie lourde), puis bombe H, MIRV, SAM, radar et aviation ont leur technologie. Recherche d'une cible lointaine (prérequis enchaînés et numérotés), fiche détaillée, verrous visibles dans la barre de construction et le panneau de lancement. |
+| Nuages légers en vue dézoomée | Nuages et leur ombre dans le shader de la carte, en fondu à partir d'un zoom ×1,1 ; désactivés en mode performance et en mouvement réduit. |
+| Événement mondial : l'infobulle affiche « World Event » ; le détailler à gauche en « flash info » | Infobulle corrigée (les 5 événements ont titre, description chiffrée et effet). Carte « Flash info » à gauche : effet principal, explication, début et fin avec barre, décisions du Conseil en vigueur et prochaine séance ; repliée après 30 s. |
+
+Mesures après ce lot (app empaquetée 1.2.0, carte Monde, 100 joueurs) : 144 FPS synchronisés, minimum compris, au zoom moyen comme sur carte entière ; tick 0,97 ms ; carte prête en 0,37 s. 125 tests unitaires et d'intégration, 5 e2e, contrôle des paquets réussi. Rythme (IA seules, Europe / Mer Noire / Monde, 8 graines en Normal et 12 en Difficile) : 58 parties sur 60 entre 25 et 60 minutes (médiane 40 min en Normal, 35 en Difficile). Une partie dure moins de 25 minutes (Mer Noire, 24,0 min). Une autre ne se termine pas (Monde, Difficile, graine 42) : chaque survivant tient un continent et le seuil de victoire en prolongation s'arrête à 50 % (OpenFront n'a pas ce plancher).
+
+Écarts assumés avec OpenFront :
+- Un navire qui rentre au port ne tire pas (la demande) alors qu'OpenFront le laisse riposter.
+- Le seuil d'annexion reste celui d'OpenFront (100 tuiles) : un pays tout juste apparu (52 tuiles) est annexé dès sa première tuile perdue une fois l'immunité finie.
+- Un transport embarque au moins 50 troupes ; la trahison garde l'embargo de 5 minutes d'Isoline.
+
+**Rythme mesuré avant ce dernier lot** (`npm run pacing`, IA seules, fin de partie en minutes, Europe / Mer Noire / Monde) :
+
+| Difficulté | Graine 1234 | Graine 42 |
+|---|---|---|
+| Facile | 31 / 43 / 40 | 45 / 40 / 40 |
+| Normal | 36 / 27 / 30 | 27 / 25 / 40 |
+| Difficile | 28 / 30 / 40 | 36 / 33 / 41 |
+| Impossible | **18** / 37 / 46 | 35 / **14** / 45 |
+
+22 parties sur 24 durent de 25 à 46 minutes. Les deux parties trop courtes sont en Impossible, entre IA : une nation y fait boule de neige. Restreindre davantage l'IA Impossible faisait chuter d'autres parties (Difficile, Mer Noire) sous 22 minutes ; la variante retenue est celle qui laisse le moins de cas extrêmes. Les combats plus décisifs raccourcissent les parties : avant la refonte du combat, elles duraient de 35 à 59 minutes.
+
+Corrections de l'IA pour garder ce rythme :
+- avec des prix plafonnés, une nation riche n'achetait plus que des villes : elle choisit désormais par tirage pondéré (silos, SAM et ports aussi) ;
+- deux empires séparés par l'océan ne s'attaquaient plus : une armée au plafond tente des débarquements outre-mer ;
+- offensives dimensionnées à la moitié de l'armée visée et guerres plus espacées, contre-attaques qui annulent l'assaut.
+
+Points d'attention :
+- L'économie est nettement plus riche qu'en 1.1, comme dans OpenFront. Une nation gagne environ 15 M d'or en 10 minutes sur la carte Monde, surtout grâce au commerce. Les plafonds de troupes atteignent des dizaines de millions en fin de partie.
+- Les replays enregistrés avec une version précédente se rejouent avec les nouvelles règles et divergent : la liste des replays le signale. Les sauvegardes 1.1 se chargent ; l'historique de construction y est reconstitué à partir des bâtiments possédés.
+- La tour radar passe de U à O ; les réglages existants sont migrés.
+- La réplique de campagne `guide.m2.troops` a été réécrite (le curseur « part des troupes » n'existe plus) et sa voix régénérée.
+
+## 0 bis. Version 1.1 : retours de test traités
 
 | Retour | Réponse |
 |---|---|
@@ -30,9 +173,9 @@ Les choix de bruitages et de musique ont été faits **sans écoute** possible d
 
 | Livrable | État | Emplacement |
 |---|---|---|
-| macOS universel (Intel + Apple Silicon) | ✅ DMG 253,0 Mo et ZIP 251,6 Mo, signature ad hoc vérifiée (`codesign --verify --deep --strict`) | `dist/Isoline-1.1.0-mac-universal.{dmg,zip}` |
-| Windows x64, installeur | ✅ NSIS 144,0 Mo (choix du dossier, raccourcis bureau et menu Démarrer, désinstalleur, icône) | `dist/Isoline-1.1.0-win-x64-setup.exe` |
-| Windows x64, portable | ✅ 143,7 Mo | `dist/Isoline-1.1.0-win-x64-portable.exe` |
+| macOS universel (Intel + Apple Silicon) | ✅ DMG 253,0 Mo et ZIP 251,6 Mo, signature ad hoc vérifiée (`codesign --verify --deep --strict`) | `dist/Isoline-1.2.0-mac-universal.{dmg,zip}` |
+| Windows x64, installeur | ✅ NSIS 144,0 Mo (choix du dossier, raccourcis bureau et menu Démarrer, désinstalleur, icône) | `dist/Isoline-1.2.0-win-x64-setup.exe` |
+| Windows x64, portable | ✅ 143,7 Mo | `dist/Isoline-1.2.0-win-x64-portable.exe` |
 | `npm run verify:packages` | ✅ 27 contrôles, dont lancement de l'app macOS en `--smoke-test` (code 0) | `scripts/verify-packages.mjs` |
 | Documentation | ✅ `README.md`, `GAME_DESIGN.md`, `BRAND.md` + `brand/`, `CREDITS.md`, `CHANGELOG.md`, ce rapport | racine |
 | Médias | ✅ 15 captures 1920×1080, GIF de 10 s, vidéo de 58 s en 1080p | `docs/media/` |
@@ -42,16 +185,16 @@ Les choix de bruitages et de musique ont été faits **sans écoute** possible d
 
 | Exigence | Cible | Mesure | Verdict |
 |---|---|---|---|
-| Démarrage jusqu'à l'écran titre | < 5 s | **2,1 s** (app empaquetée 1.1.0, `dist/mac-universal`) | ✅ |
+| Démarrage jusqu'à l'écran titre | < 5 s | **2,1 s** (app empaquetée 1.2.0, `dist/mac-universal`) | ✅ |
 | Chargement d'une carte de 2 M de tuiles | < 3 s | Monde (2,01 M) : 0,41 s de décodage et d'analyse, 0,35–1,0 s de « lancer » à « carte affichée » dans l'app empaquetée. Monde géant (5,16 M) : 0,96 s | ✅ |
-| FPS, 100 nations, zoom moyen | ≥ 60 (M1) | 60 FPS stables, plafond de l'écran de mesure (60 Hz) ; sans synchronisation verticale : **447 à 485 FPS** au zoom moyen, 809 à 1 055 sur carte entière (100 nations + 100 tribus, nouveau rendu réaliste) | ✅ sur M4 Pro ; **M1 non testé** (§4) |
+| FPS, 100 nations, zoom moyen | ≥ 60 (M1) | 144 FPS stables, plafond de l'écran de mesure (144 Hz) ; sans synchronisation verticale : **298 à 329 FPS** au zoom moyen, 553 à 638 sur carte entière (100 nations + 100 tribus, 1.2.0). En 1.1.0 : 447 à 485 et 809 à 1 055 ; l'écart vient surtout de la flotte marchande, bien plus nombreuse avec l'économie d'OpenFront | ✅ sur M4 Pro ; **M1 non testé** (§4) |
 | FPS sur portable Windows à GPU intégré | ≥ 30 | non mesuré (aucune machine Windows) | ⚠️ |
-| Tick de simulation | < 50 ms en moyenne | 100 nations, Monde : **0,69 ms** en moyenne, p99 4,0 ms, max 7,2 ms (6 000 ticks). Monde géant, 100 nations : 1,08 ms | ✅ |
+| Tick de simulation | < 50 ms en moyenne | App 1.2.0, 100 nations, Monde : **0,88 à 1,05 ms** en moyenne. Mesures 1.1 : 0,69 ms, p99 4,0 ms, max 7,2 ms (6 000 ticks). Monde géant, 100 nations : 1,08 ms | ✅ |
 | Mémoire | < 1,5 Go | 0,74–0,81 Go (tous processus Electron) à 100 nations ; pic à 1,01 Go pendant l'endurance (mesurée en 1.0) | ✅ |
 | Taille de l'app | < 300 Mo | Téléchargements : 253 Mo (macOS universel), 144 Mo (Windows), dont 42 Mo de musique, bruitages et voix. Installée : 378 Mo (Windows), 510 Mo (macOS, deux architectures) | ⚠️ voir §4 |
 | Stabilité | pas de fuite sur 60 min ; pas de crash sur 30 min à 50 nations | Endurance : 60 min de jeu à 50 nations (×8), aucune erreur, mémoire stable (§2.2) ; 30 min sans affichage à 50 nations sans erreur | ✅ |
 | Déterminisme | même seed et mêmes commandes = même hash | Vérifié sur macOS (tests et `bench`) ; LAN 4 clients pendant 20 min sans désynchronisation. **Windows non vérifié** | ✅ / ⚠️ |
-| Couverture de `src/core` | ≥ 70 % | instructions 87,5 %, branches 79,5 %, fonctions 93,2 %, lignes 90,3 % | ✅ |
+| Couverture de `src/core` | ≥ 70 % | instructions 88,5 %, branches 79,7 %, fonctions 92,8 %, lignes 91,2 % (1.2.0) | ✅ |
 
 ### 2.1 Mesures dans l'application empaquetée (`node scripts/perf-app.mjs dist/mac-universal/Isoline.app/Contents/MacOS/Isoline`)
 Démarrage à froid jusqu'à l'écran titre : 2 158 ms. Monde avec 100 nations, 100 tribus, vitesse ×2 :
@@ -109,7 +252,7 @@ Liste de contrôle finale (§24) :
 | Nucléaire | ✅ | A/H/MIRV, SAM avec prédiction de trajectoire, retombées, alertes |
 | Diplomatie | ✅ | alliances, trahison, embargo, chat filtré, emojis, signaux |
 | Tribus et nations | ✅ | 4 difficultés, 6 personnalités, budget de travail déterministe |
-| Modes | ✅ | FFA, équipes, humains contre nations, tribus, Apocalypse, prolongation, Battle Royale, campagne (6 missions), didacticiel (9 étapes) |
+| Modes | ✅ | FFA, équipes, humains contre nations, tribus, Apocalypse, prolongation, Battle Royale, campagne (6 missions, qui sert de didacticiel) |
 | 14 fonctionnalités inédites | ✅ | toutes activables dans le lobby et testées (`tests/unit/rules.test.ts`, `units.test.ts`) |
 | HUD, menu radial, raccourcis remappables, pavé tactile | ✅ | |
 | DA originale, shaders, particules, LOD, drapeaux procéduraux | ✅ | |
@@ -125,7 +268,7 @@ Définition de « terminé » (§23) :
 1. `npm run package:all` et `npm run verify:packages` : ✅
 2. App macOS : écran titre, partie solo complète, sauvegarde/rechargement, replay, partie LAN : ✅ (tests e2e et parcours scriptés). L'app a été lancée depuis `dist/`, pas depuis `/Applications` (§4).
 3. Sections 5 à 21 : implémentées ; écarts ci-dessous.
-4. Tests (57 unitaires et d’intégration, 5 e2e), couverture ≥ 70 %, performances mesurées : ✅
+4. Tests (91 unitaires et d’intégration, 5 e2e), performances mesurées : ✅
 5. Documentation : ✅
 
 ## 4. Écarts, décisions et limites connues
@@ -160,10 +303,10 @@ Définition de « terminé » (§23) :
 
 ## 5. Méthode de vérification
 
-- `npm test` : 57 tests Vitest (règles, combat, économie, unités, IA, déterminisme, snapshots, serveur LAN avec 4 clients pendant 20 min et une reconnexion, forme des fronts, seuil bac à sable, pillage des tribus, rayon d'action des ports, comptabilité des retombées).
+- `npm test` : 79 tests Vitest (1.2 : rapport de forces au combat, trajectoires inversables et prédiction d'interception, chargeur des SAM, MIRV, alertes ciblées, traître de 30 s, embargo temporaire, migration des sauvegardes, prix et formules d'OpenFront ; avant : 57) (règles, combat, économie, unités, IA, déterminisme, snapshots, serveur LAN avec 4 clients pendant 20 min et une reconnexion, forme des fronts, seuil bac à sable, pillage des tribus, rayon d'action des ports, comptabilité des retombées).
 - `npm run test:e2e` : 5 parcours Playwright dans Electron (solo jusqu'à la capitulation et l'écran de fin ; tous les écrans ; spectateur et replay ; LAN à deux instances ; campagne : briefing, guide et progression des étapes).
 - `npm run pacing` : durée des parties entre IA (équilibrage).
 - Bug trouvé en 1.1 grâce aux captures (« -0,0 % » au classement) : une intensité de retombées de 256 repassait à 0 dans un octet et faussait le compte des terres utiles, donc les parts de territoire et la victoire. Corrigé, avec un test de non-régression.
 - `npm run lint`, `npm run typecheck` : 0 erreur.
-- `node scripts/i18n-keys.mjs` : 327 clés utilisées, aucune manquante en FR ou en EN.
+- `node scripts/i18n-keys.mjs` : 487 clés utilisées, aucune manquante en FR ou en EN.
 - Parties observées en accéléré (spectateur) jusqu'à la victoire, captures relues : c'est ainsi qu'ont été trouvés et corrigés les fronts en losange, le brouillard qui laissait voir les unités, les retombées confondues avec un territoire et le titre « Défaite » affiché aux spectateurs.

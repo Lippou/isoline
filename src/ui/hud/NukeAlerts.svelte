@@ -24,12 +24,8 @@
 
 <style>
   .alerts {
-    position: absolute;
-    top: 110px;
-    left: 14px;
     display: grid;
     gap: 6px;
-    z-index: 28;
   }
   .alert {
     display: flex;
@@ -40,7 +36,7 @@
     border: 1px solid var(--signal);
     background: rgba(70, 10, 16, 0.85);
     color: var(--parchment);
-    cursor: pointer;
+    cursor: var(--cursor-pointer, pointer);
     animation: pulse 0.8s ease-in-out infinite alternate;
   }
   .icon {

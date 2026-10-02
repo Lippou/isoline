@@ -129,6 +129,8 @@ export function testGame(map: GM, humans: number, patch: Partial<GameConfig> = {
     events: false,
     council: false,
     loyalty: false,
+    // The tech tree locks silos, bombs and SAMs until researched: off for core-rule tests.
+    tech: false,
     ...(patch.features ?? {}),
   };
   return new Game(map, cfg);

@@ -70,7 +70,7 @@ Enregistrements réels publiés sur Freesound sous **Creative Commons 0** (domai
 | `sunk` | « Splash » | swordofkings128 | CC0 1.0 | https://freesound.org/people/swordofkings128/sounds/398032/ |
 | `horn` | « ship horn very close » | tierrafilm@gmail.com | CC0 1.0 | https://freesound.org/people/tierrafilm@gmail.com/sounds/420716/ |
 | `train` | « Steam Whistle.mp3 » | Bidone | CC0 1.0 | https://freesound.org/people/Bidone/sounds/71778/ |
-| `alliance` | « Trumpet Fanfare » | bevibeldesign | CC0 1.0 | https://freesound.org/people/bevibeldesign/sounds/350428/ |
+| `alliance` | « PEN SIGNATURE SIGNING 2 » | ListenTonyBoy | CC0 1.0 | https://freesound.org/people/ListenTonyBoy/sounds/326961/ |
 | `betrayal` | « Orchestral Hit - The Villain Appears » | Dredile | CC0 1.0 | https://freesound.org/people/Dredile/sounds/164273/ |
 | `event` | « Church bell.wav » | Audeption | CC0 1.0 | https://freesound.org/people/Audeption/sounds/425172/ |
 | `victory` | « Success Fanfare Trumpets.mp3 » | FunWithSound | CC0 1.0 | https://freesound.org/people/FunWithSound/sounds/456966/ |

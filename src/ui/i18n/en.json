@@ -2,6 +2,70 @@
   "brand": {
     "slogan": "Draw the line. Hold the world."
   },
+  "flag": {
+    "title": "Flag",
+    "change": "Change flag",
+    "pickerTitle": "Your flag",
+    "pickerSub": "It flies next to your name: on the map, in the standings, the log and the front page.",
+    "tabWorld": "World flags",
+    "tabCustom": "Design my own",
+    "tabAuto": "From your name",
+    "search": "Search a country…",
+    "count": "{n} flags",
+    "noMatch": "No country matches “{q}”.",
+    "autoHint": "A flag drawn from your name: change your name and it changes too. It is the one used when you pick none.",
+    "preview": "Preview",
+    "inGame": "In game",
+    "sampleLog": "{name} signs a pact",
+    "current": "Current:",
+    "use": "Use this flag",
+    "layoutTitle": "Layout",
+    "colorsTitle": "Colours",
+    "emblemTitle": "Emblem",
+    "position": "Position",
+    "color": "Colour {n}",
+    "emblemColor": "Emblem",
+    "otherColor": "Other colour",
+    "random": "Randomise",
+    "reset": "Reset",
+    "lowContrast": "The emblem is hard to see on this field: pick a more contrasting colour.",
+    "layout": {
+      "plain": "Plain",
+      "bandsH2": "Two horizontal bands",
+      "bandsH3": "Three horizontal bands",
+      "bandsV2": "Two vertical bands",
+      "bandsV3": "Three vertical bands",
+      "stripes": "Stripes",
+      "cross": "Cross",
+      "nordic": "Nordic cross",
+      "saltire": "Saltire",
+      "diagonal": "Diagonal split",
+      "bend": "Diagonal band",
+      "canton": "Canton",
+      "border": "Border",
+      "disc": "Disc",
+      "triangle": "Hoist triangle",
+      "quartered": "Quartered"
+    },
+    "emblem": {
+      "none": "No emblem",
+      "star": "Star",
+      "sun": "Sun",
+      "crescent": "Crescent",
+      "compass": "Compass rose",
+      "anchor": "Anchor",
+      "mountain": "Mountain",
+      "wave": "Waves",
+      "tree": "Fir tree",
+      "crown": "Crown",
+      "isoline": "Isoline"
+    },
+    "at": {
+      "center": "Centre",
+      "hoist": "Hoist",
+      "canton": "Canton"
+    }
+  },
   "common": {
     "accept": "Accept",
     "refuse": "Refuse",
@@ -18,7 +82,6 @@
     "solo": "Solo",
     "lan": "Multiplayer (LAN)",
     "campaign": "Campaign",
-    "tutorial": "Tutorial",
     "load": "Load game",
     "editor": "Map editor",
     "replays": "Replays",
@@ -33,20 +96,35 @@
     "admiral": "Admiral of Maps",
     "isolineMaster": "Isoline Master",
     "updateAvailable": "Version {version} is available.",
-    "updateOpen": "Open page",
     "mainMenu": "Main menu",
-    "playDesc": "Solo game, campaign, tutorial or local network.",
+    "playDesc": "Solo game, campaign or local network.",
     "editorDesc": "Create and edit your own maps.",
     "replaysDesc": "Watch your recorded games again.",
     "profileDesc": "Statistics, achievements and local leaderboard.",
     "settingsDesc": "Graphics, sound, controls, accessibility, language.",
     "aboutDesc": "Version, credits and licences.",
     "soloDesc": "Pick a map and take on computer-controlled nations.",
-    "campaignDesc": "Six guided missions of rising difficulty.",
-    "tutorialDesc": "Learn the basics step by step (about 6 minutes).",
+    "campaignDesc": "Six guided missions: the campaign teaches you the game, step by step.",
     "lanDesc": "Host or join a game on your local network.",
     "loadDesc": "Resume a saved game.",
-    "recommended": "Recommended"
+    "recommended": "Recommended",
+    "peekPlay": "Campaign: {stars} of {total} stars.",
+    "peekNew": "First time? The campaign teaches you the basics, one mission at a time.",
+    "peekMaps": "{n} custom maps saved.",
+    "peekMapsOne": "One custom map saved.",
+    "peekMapsNone": "No custom maps yet: start from a blank page or an existing map.",
+    "peekReplays": "{n} replays saved.",
+    "peekReplaysOne": "One replay saved.",
+    "peekReplaysNone": "Your finished games will be saved here automatically.",
+    "peekProfile": "{games} games played, {wins} wins, {ach} of {total} achievements.",
+    "peekSettings": "Language: {lang}. Graphics quality: {quality}.",
+    "peekAbout": "Isoline {version}. Original or openly licensed code, maps, sounds and images.",
+    "peekSolo": "Last map chosen: {map}.",
+    "peekCampaign": "{stars} of {total} stars. Next mission: {mission}.",
+    "peekLan": "No external server: every player must be on the same network.",
+    "peekSaves": "{n} saves available.",
+    "peekSavesOne": "One save available.",
+    "peekSavesNone": "No saves yet. Save from the pause menu during a game."
   },
   "menu": {
     "main": "Main menu",
@@ -70,31 +148,32 @@
     "loadFailed": "This save cannot be loaded.",
     "noSaves": "No saves yet.",
     "loadSubtitle": "Ten save slots, plus an automatic save every two minutes.",
-    "colSlot": "Slot"
+    "colSlot": "Slot",
+    "noSavesTitle": "No saves yet",
+    "noSavesHint": "During a game, open the pause menu (Esc) to save. In solo games an automatic save is also made every two minutes.",
+    "resetWindows": "Reset window positions",
+    "windowsReset": "Windows back in place"
   },
   "help": {
     "intro": "Isoline is played on a living atlas: spread your ink, build an economy, forge alliances and hold the world.",
-    "click": "Left click a neighbouring land: land attack. On a coast across the water: naval landing.",
+    "click": "Left click a neighbouring land: land attack. A coast across the water: B or right click → Land troops.",
     "radial": "Right click: context menu (build, weapons, ships, diplomacy). Alt + click: emojis.",
     "drag": "Drag (left or middle button): move the map. Shift + drag: select warships.",
     "wheel": "Wheel / pinch: zoom. Shift + wheel: attack ratio."
   },
   "hud": {
     "chooseSpawn": "Choose your starting point",
-    "population": "Population",
+    "army": "Troops",
     "troops": "troops",
-    "workers": "workers",
     "gold": "Gold",
     "income": {
       "base": "Base income",
-      "workers": "Workers",
       "resources": "Deposits",
-      "trade": "Trade (total)",
-      "trains": "Trains (total)"
+      "trade": "Trade",
+      "trains": "Trains"
     },
     "attackRatio": "Attack ratio",
-    "troopShare": "Troop share",
-    "cancelAttack": "Cancel attack (−10%)",
+    "cancelAttack": "Cancel attack (−25%)",
     "leaderboard": "Leaderboard",
     "showTribes": "tribes",
     "centerOn": "Centre the camera",
@@ -106,6 +185,9 @@
     "immune": "Immunity {s}s",
     "traitor": "Traitor",
     "traitorMark": "traitor",
+    "pause": "Pause",
+    "resume": "Resume",
+    "speedTip": "Game speed ({down}: slower, {up}: faster)",
     "paused": "Paused",
     "resyncing": "Resynchronising…",
     "menu": "Menu",
@@ -124,14 +206,16 @@
       "terrain": "Terrain view",
       "fog": "Fog of war",
       "resources": "Resources",
-      "loyalty": "Loyalty"
+      "loyalty": "Loyalty",
+      "tradeRoutes": "Trade routes",
+      "tradeRoutesTip": "Lines between trading ports (yours in brass), thicker when they pay well; busy railways light up; a route cut by an embargo shows broken, in magenta, for 10 s."
     },
     "autoPerformance": "Performance mode enabled automatically (slow machine).",
     "fogLocked": "The fog of war can only be lifted when spectating or in a replay.",
     "attackRatioTip": "Share of your troops sent with each attack or expansion order.",
     "boatsTip": "Troop transports at sea.",
     "buildTime": "Build time: {s} s",
-    "capTip": "Current population compared with the ceiling set by your land and cities.",
+    "capTip": "Troops compared with the ceiling set by your land and completed cities (+60,000 per city level).",
     "colCountry": "Country",
     "colLand": "Land",
     "colTroops": "Troops",
@@ -143,39 +227,42 @@
     "groupNavy": "Navy",
     "groupNukes": "Nuclear",
     "groupViews": "Views",
-    "growthTip": "Population growth per second. It peaks around 42% of the ceiling.",
+    "growthTip": "Troops regenerated per second. Regeneration is fastest around 42% of the ceiling and stops at the ceiling.",
     "immuneTip": "Nobody can attack you during this time.",
     "inactive": "Player away",
     "incomeTitle": "Income",
     "needsAirfield": "Requires an airfield",
     "noVictory": "Free play (no victory)",
+    "incomingAttacks": "Incoming attacks",
+    "boatsAtSea": "Boats at sea ({n}/3)",
+    "boatHome": "Returning home",
+    "recallBoat": "Recall the boat (troops come back, minus 25%)",
+    "retreating": "retreating",
+    "wilderness": "Unclaimed land",
+    "counter": "Strike back",
+    "counterTip": "Counter-attack with {n} troops: enough to cancel this attack in the clash.",
     "ongoingAttacks": "Ongoing attacks",
     "ownedN": "Owned: {n}",
-    "populationTip": "Total population = troops + workers. Cities and land raise the ceiling.",
+    "armyTip": "Your army: it attacks, defends and regenerates on its own. Land and completed cities raise the ceiling.",
     "readyN": "Ready: {n}",
     "spawnHelp": "Click on unclaimed land. The match starts as soon as your capital is placed.",
     "spawnWait": "Countries are taking position.",
     "spawnTimerTip": "Time left before automatic placement.",
     "traitorTip": "You betrayed an ally: your defence is reduced and other nations remember it.",
-    "troopShareTip": "How growth is split between troops (to fight) and workers (for gold).",
     "troopsTip": "Troops available to attack and defend.",
     "victoryThresholdTip": "The first country (or team) to control {pct}% of the useful land wins.",
-    "workersTip": "Workers produce gold.",
     "youHold": "you: {pct}%",
-    "goalMission": "Mission objectives (left panel)"
+    "goalMission": "Mission objectives (bottom of the screen)",
+    "windowMoveTip": "Drag to move · double-click: back to its place",
+    "windowResize": "Resize"
   },
   "panel": {
     "diplomacy": "Diplomacy",
     "tech": "Technologies",
     "stats": "Statistics",
-    "log": "Log",
-    "chat": "Messages"
-  },
-  "log": {
-    "all": "All",
-    "danger": "Alerts",
-    "warn": "Warnings",
-    "good": "Successes"
+    "log": "News",
+    "chat": "Messages",
+    "trade": "Trade"
   },
   "chat": {
     "all": "All",
@@ -209,6 +296,9 @@
     "air": "Aircraft",
     "diplomacy": "Diplomacy",
     "allyRequest": "Propose alliance",
+    "allyAccept": "Accept their alliance",
+    "allyAskedYou": "This country is offering you an alliance.",
+    "allyRefuse": "Decline their alliance",
     "allyRenew": "Renew alliance",
     "allyBreak": "Break alliance",
     "donate": "Donate",
@@ -225,18 +315,27 @@
     "expand": "Expand here",
     "attackPlain": "Attack",
     "attackDesc": "Sends the shown share of your troops (adjust with T / Y or Shift + wheel).",
-    "boatDesc": "Ships troops from your nearest coast and lands them here.",
+    "boatDesc": "Ships troops from your nearest coast and lands them here, sailing up navigable rivers if need be.",
     "upgradeNamed": "Upgrade: {name}",
     "level": "lvl",
     "signalTitle": "Send a signal",
     "yours": "your territory",
     "unclaimed": "Unclaimed land",
-    "sea": "Sea"
+    "sea": "Sea",
+    "capitalHere": "Establish the capital here",
+    "capitalMove": "Move the capital here",
+    "capitalDesc": "Seat of government: losing it disorganises the country for a minute. At most one move every 5 minutes.",
+    "capitalNeeded": "Your country has no capital",
+    "capitalFront": "too close to a border",
+    "capitalFallout": "irradiated"
   },
   "confirm": {
     "betrayTitle": "Betray your ally?",
-    "betrayBody": "Attacking an ally breaks the alliance: defence ×0.5 and speed ×0.8 for 30 s, traitor mark and embargo for 5 minutes.",
-    "betrayYes": "Betray"
+    "betrayBody": "Breaking the alliance or attacking an ally makes you a traitor for 30 s (defence ×0.5, speed ×0.8) and triggers a 5-minute embargo.",
+    "betrayYes": "Betray",
+    "selfNukeTitle": "Strike your own territory?",
+    "selfNukeBody": "The bomb will raze your land, buildings and troops under the blast and leave fallout. Useful to break an invader, but it cannot be undone.",
+    "selfNukeYes": "Launch anyway"
   },
   "diplo": {
     "embargoAll": "General embargo (except team)",
@@ -250,14 +349,16 @@
     "betrayedLine": "{traitor} betrayed {victim}",
     "break": "Break",
     "embargo": "Embargo",
+    "tempEmbargoTip": "Temporary embargo: an attacked country refuses to trade with its aggressor for 5 minutes.",
     "give": "Give 10% gold",
     "giveTip": "Sends 10% of your gold to this ally.",
-    "intro": "An alliance lasts 5 minutes and forbids attacks between allies. Renewing requires both parties' consent. Attacking an ally is a betrayal: halved defence for 30 s and an automatic embargo.",
+    "intro": "An alliance lasts 5 minutes and forbids attacks between allies. Renewing requires both parties' consent. Breaking an alliance or attacking an ally is a betrayal: traitor mark and halved defence for 30 s, plus an automatic embargo. Any attacked country stops trading with its aggressor for 5 minutes.",
     "propose": "Propose alliance",
     "renew": "Renew",
     "search": "Search for a country…",
     "showAllN": "Show all {n} countries",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "proposed": "Offer sent…"
   },
   "council": {
     "title": "World Council",
@@ -275,27 +376,107 @@
     "ceasefire.desc": "No new attacks between players for 60 seconds."
   },
   "tech": {
-    "rate": "Research: {rp} points/s (cities)",
+    "intro": "Nothing is being researched: click a technology, its missing prerequisites come first.",
+    "perSecond": "points/s",
+    "bank": "{n} points banked",
+    "studying": "Researching",
+    "stop": "Stop",
+    "goal": "Research goal",
+    "tier": "Tier {n}",
+    "etaNow": "ready now",
+    "etaS": "≈ {s} s",
+    "etaM": "≈ {m} min",
+    "etaMS": "≈ {m} min {s}",
+    "state": {
+      "done": "Researched",
+      "current": "In progress",
+      "queued": "Queued",
+      "available": "Available",
+      "locked": "Locked"
+    },
+    "unlocks": "Unlocks",
+    "requires": "Requires",
+    "requiresNone": "Nothing",
+    "doneHint": "Already researched: its effect is active.",
+    "pathSteps": "{n} steps",
+    "points": "{n} points",
+    "research": "Research",
+    "researchPath": "Research ({n} steps)",
+    "requiresTech": "Requires research: {tech}",
+    "openTree": "Click to open the technology tree.",
+    "unlock": {
+      "silo": "Missile silos",
+      "atom": "A-bombs",
+      "hydrogen": "H-bombs",
+      "mirv": "MIRVs",
+      "sam": "SAM batteries",
+      "radar": "Radar towers",
+      "airfield": "Airfields and aircraft"
+    },
     "economy": {
+      "title": "Economy",
       "1": {
-        "name": "Workshops",
-        "desc": "+10% worker income"
+        "name": "Trading posts",
+        "desc": "+10% base income"
       },
       "2": {
-        "name": "Standard gauge",
-        "desc": "+10% train revenue"
+        "name": "Central bank",
+        "desc": "+15% base income"
       },
       "3": {
-        "name": "Banking",
-        "desc": "+15% worker income"
+        "name": "Universities",
+        "desc": "+25% research speed"
       },
       "4": {
-        "name": "Prefabrication",
+        "name": "World markets",
+        "desc": "+20% trade and train income"
+      },
+      "5": {
+        "name": "Stock exchange",
+        "desc": "+10% on all income"
+      },
+      "6": {
+        "name": "Globalisation",
+        "desc": "+20% trade and train income"
+      },
+      "r": {
+        "name": "Prosperity",
+        "desc": "+2% on all income per level"
+      }
+    },
+    "industry": {
+      "title": "Industry",
+      "1": {
+        "name": "Railways",
+        "desc": "+10% train income"
+      },
+      "2": {
+        "name": "Heavy industry",
         "desc": "−10% building costs"
       },
-      "title": "Economy"
+      "3": {
+        "name": "Aerospace",
+        "desc": "Unlocks airfields and aircraft; leads to MIRVs"
+      },
+      "4": {
+        "name": "Automation",
+        "desc": "−10% building costs"
+      },
+      "5": {
+        "name": "Megaprojects",
+        "desc": "Twice faster construction, +10% train income"
+      },
+      "6": {
+        "name": "Robotics",
+        "desc": "−10% building costs"
+      },
+      "r": {
+        "name": "Productivity",
+        "desc": "−1% building costs per level"
+      }
     },
     "military": {
+      "title": "Military",
       "1": {
         "name": "Mountain troops",
         "desc": "−10% losses in hills and mountains"
@@ -305,16 +486,28 @@
         "desc": "+10% attack speed"
       },
       "3": {
-        "name": "Doctrine",
+        "name": "Combined arms",
         "desc": "−10% losses everywhere"
       },
       "4": {
         "name": "Blitzkrieg",
         "desc": "+15% attack speed"
       },
-      "title": "Military"
+      "5": {
+        "name": "Conscription",
+        "desc": "+10% maximum troops"
+      },
+      "6": {
+        "name": "Special forces",
+        "desc": "−10% losses everywhere"
+      },
+      "r": {
+        "name": "Drill",
+        "desc": "−1% losses per level"
+      }
     },
     "naval": {
+      "title": "Navy",
       "1": {
         "name": "Armour plating",
         "desc": "+20% warship hit points"
@@ -329,49 +522,102 @@
       },
       "4": {
         "name": "Shipping lines",
-        "desc": "+30% trade income"
+        "desc": "+25% trade income"
       },
-      "title": "Navy"
-    },
-    "nuclear": {
-      "1": {
-        "name": "Enrichment",
-        "desc": "−10% bomb costs"
+      "5": {
+        "name": "Shipyards",
+        "desc": "−25% warship cost"
       },
-      "2": {
-        "name": "Rapid reload",
-        "desc": "+25% silo reload speed"
+      "6": {
+        "name": "Container ships",
+        "desc": "+25% trade income"
       },
-      "3": {
-        "name": "Miniaturisation",
-        "desc": "−15% bomb costs"
-      },
-      "4": {
-        "name": "Multiple warheads",
-        "desc": "MIRV: +2 warheads"
-      },
-      "title": "Nuclear"
+      "r": {
+        "name": "Freight",
+        "desc": "+3% trade income per level"
+      }
     },
     "defense": {
+      "title": "Defence",
       "1": {
-        "name": "Fire-control radar",
-        "desc": "SAM range +10"
+        "name": "Surface-to-air missiles",
+        "desc": "Unlocks SAM batteries"
       },
       "2": {
-        "name": "Salvos",
-        "desc": "SAM: +1 simultaneous target"
+        "name": "Fire-control radar",
+        "desc": "Unlocks radar towers; SAM range +10"
       },
       "3": {
-        "name": "Civil engineering",
-        "desc": "−5% building costs"
+        "name": "Salvos",
+        "desc": "SAM: +1 simultaneous target"
       },
       "4": {
         "name": "Shield",
         "desc": "SAM: +1 target, range +15"
       },
-      "title": "Defence"
+      "5": {
+        "name": "Fallout shelters",
+        "desc": "−30% troops killed by bombs"
+      },
+      "6": {
+        "name": "Missile shield",
+        "desc": "SAM: +1 target, range +10"
+      },
+      "r": {
+        "name": "Interception",
+        "desc": "SAM: range +1 per level"
+      }
     },
-    "intro": "Research progresses thanks to your cities. Pick a branch: its next level will be studied automatically."
+    "nuclear": {
+      "title": "Nuclear",
+      "1": {
+        "name": "Atomic physics",
+        "desc": "+10% research speed; leads to the nuclear programme"
+      },
+      "2": {
+        "name": "Nuclear programme",
+        "desc": "Unlocks missile silos and the A-bomb"
+      },
+      "3": {
+        "name": "Thermonuclear bomb",
+        "desc": "Unlocks the H-bomb"
+      },
+      "4": {
+        "name": "Miniaturisation",
+        "desc": "−20% bomb costs, silos reload 25% faster"
+      },
+      "5": {
+        "name": "Multiple warheads",
+        "desc": "Unlocks the MIRV"
+      },
+      "6": {
+        "name": "Mass production",
+        "desc": "−25% bomb costs"
+      },
+      "r": {
+        "name": "Launch cadence",
+        "desc": "Silos reload 5% faster per level"
+      }
+    },
+    "srcBase": "base {n}",
+    "srcLabs": "{lv} centre levels {n}",
+    "srcBonus": "bonus +{n}%",
+    "noLab": "No research centre: barely 0.5 point/s.",
+    "buildLab": "Build a centre",
+    "queueTitle": "Queue",
+    "queueEmpty": "Shift+click a technology to plan the next one.",
+    "queueAdd": "Add to queue",
+    "queueRemove": "Remove from queue",
+    "queued": "Queued",
+    "auto": "Continue automatically",
+    "autoHint": "Empty queue: starts the cheapest available technology.",
+    "idle": "Research stopped",
+    "idleChoose": "choose",
+    "idleBank": "{n} points waiting",
+    "tierRepeat": "Endless",
+    "repeatLevel": "Level {n}",
+    "repeatHint": "Endless research: every level adds its effect and costs 15% more.",
+    "repeatMax": "Maximum level reached."
   },
   "stats": {
     "tiles": "Territory",
@@ -395,13 +641,11 @@
     "defeat": "Defeat",
     "missionComplete": "Mission complete",
     "missionFailed": "Mission failed",
-    "duration": "Duration",
-    "ranking": "Ranking",
-    "graphs": "Territory over time",
-    "yourStats": "Your statistics",
     "exportCsv": "Export (CSV)",
-    "watchReplay": "Replays",
-    "keepWatching": "Keep watching",
+    "continue": "Keep playing",
+    "continueTip": "Resume the game in the same world, with no further victory: conquest goes on freely.",
+    "continued": "{player} carries on: the conquest continues.",
+    "keepWatching": "Watch the map",
     "playAgain": "Play again",
     "backToMenu": "Main menu",
     "replaySaved": "Replay saved",
@@ -412,9 +656,102 @@
       "mission": "Mission over",
       "none": "Game over"
     },
-    "winnerIs": "{name} wins",
-    "showResults": "Show results",
-    "eliminated": "Eliminated"
+    "showResults": "Reopen the paper",
+    "playAgainTip": "A new game with the same settings, in a freshly drawn world.",
+    "page": {
+      "nav": "Pages of the paper",
+      "front": "Front page",
+      "mission": "Communiqué",
+      "results": "Results",
+      "status": "Page {n} of {of}: {name}",
+      "jump": "Continued on page 2: the full ranking, your statistics and your awards",
+      "jumpMission": "Continued on page 2: the mission's ranking and statistics"
+    },
+    "results": {
+      "ear": "Final edition · Page 2",
+      "kicker": "Results and statistics",
+      "lasted": "a {duration} game",
+      "ranking": "The final ranking",
+      "col": {
+        "rank": "Rank",
+        "nation": "Nation",
+        "tiles": "Territory",
+        "troops": "Troops",
+        "gold": "Gold",
+        "kills": "Enemies killed",
+        "buildings": "Buildings",
+        "nukes": "Bombs",
+        "fate": "Fate"
+      },
+      "you": "you",
+      "winner": "Winner",
+      "winnerTeam": "Winning team",
+      "winnerHead": "{name} wins",
+      "standing": "Standing",
+      "fell": "Fell at {clock}",
+      "out": "Eliminated",
+      "showAll": "Show the {n} other nations",
+      "showLess": "Shorten the ranking",
+      "yours": "Your record",
+      "winners": "The winner's record",
+      "territory": "Territory, from the start of the game to its end",
+      "final": "Final territory",
+      "betrayals": "Betrayals",
+      "score": "Score",
+      "awards": "Awards",
+      "noAwards": "No new achievement this time.",
+      "awardsCount": "{n} of {total} achievements in all",
+      "settings": "The game at a glance",
+      "map": "Map",
+      "mode": "Mode",
+      "difficulty": "Difficulty",
+      "threshold": "Victory",
+      "thresholdValue": "{n} % of the land",
+      "sandbox": "None (sandbox)",
+      "nations": "Nations",
+      "tribes": "Tribes",
+      "speed": "Speed",
+      "goldRate": "Gold income",
+      "duration": "Duration",
+      "ending": "Ending",
+      "date": "Date",
+      "archives": "Archives",
+      "replayWatched": "Replay of the game",
+      "replayNone": "No replay for this game.",
+      "exportReplay": "Export the replay…",
+      "allReplays": "All replays"
+    },
+    "mission": {
+      "ear": "Mission communiqué",
+      "number": "Campaign · mission {n} of {of}",
+      "lasted": "Duration: {clock}",
+      "kicker": "Mission “{title}”",
+      "starsLabel": "{n} stars out of {max}",
+      "best": "Best result: {n} of {max}",
+      "objectives": "Objectives",
+      "par": "Finish in under {time}",
+      "bonus": "Bonus",
+      "done": "Achieved",
+      "missed": "Missed",
+      "figures": "Report",
+      "nextUp": "Next mission: {title}.",
+      "last": "That was the campaign's last mission.",
+      "again": "The objectives stay open: the mission can be tried again at any time.",
+      "retry": "Try again",
+      "next": "Next mission",
+      "campaign": "Campaign"
+    },
+    "fall": {
+      "ear": "Dispatch",
+      "title": "Your nation has fallen",
+      "surrendered": "You surrendered",
+      "by": "Taken by {name}, at {clock}.",
+      "nuked": "Razed by nuclear fire, at {clock}.",
+      "at": "At {clock} of play.",
+      "body": "The game goes on without you. Follow it to the end: the Courier's final edition comes out then.",
+      "watch": "Follow the game",
+      "quit": "Leave the game"
+    }
   },
   "mode": {
     "ffa": "Free for all",
@@ -423,8 +760,7 @@
     "tribes": "Solo vs tribes",
     "doomsday": "Doomsday clock",
     "battleRoyale": "Battle Royale",
-    "campaign": "Campaign",
-    "tutorial": "Tutorial"
+    "campaign": "Campaign"
   },
   "difficulty": {
     "easy": "Easy",
@@ -436,6 +772,8 @@
     "continents": "Continents",
     "regions": "Regions",
     "fictional": "Fictional",
+    "legends": "Legends",
+    "planets": "Planets",
     "arcade": "Arcade",
     "procedural": "Procedural",
     "custom": "Custom"
@@ -488,9 +826,9 @@
     "subtitleSolo": "Pick a map, adjust the game, then launch it.",
     "subtitleLan": "Share the code and the address with the other players on the network.",
     "addressTip": "Address to type into “Join manually” on the other computers.",
-    "stepMap": "1. Map",
-    "stepRules": "2. Settings",
-    "stepLaunch": "3. Launch",
+    "stepMap": "Map",
+    "stepRules": "Settings",
+    "stepLaunch": "Launch",
     "gGame": "Game",
     "gOpponents": "Opponents",
     "gVictory": "Victory and start",
@@ -501,7 +839,22 @@
     "spawnHelp": "Maximum time to place your capital. The match starts as soon as every player has chosen.",
     "speedHelp": "×1 means 10 simulation turns per second.",
     "summaryLong": "{mode}, {diff} difficulty. You will face {nations} nations and {tribes} tribes. The first to control {pct}% of the land wins.",
-    "waitHost": "Only the host can change the settings and start the game."
+    "waitHost": "Only the host can change the settings and start the game.",
+    "stepMapHint": "Choose where the game takes place.",
+    "stepRulesHint": "Opponents, victory, economy and rules.",
+    "stepLaunchHint": "Check the summary, then start the game.",
+    "gGameDesc": "The mode sets who fights whom; the difficulty sets how aggressive the nations are.",
+    "gOpponentsDesc": "Who shares the map with you.",
+    "gVictoryDesc": "What you must hold to win, and the time to choose your capital.",
+    "gEconomyDesc": "The pace of the game and how much gold flows.",
+    "togglesDesc": "Allow or remove whole weapons and mechanics.",
+    "featuresDesc": "Optional game systems. Turning them all off gives a more direct game.",
+    "dotsActive": "Nations in play: {n}",
+    "dotsFree": "Free places: {n}",
+    "startHint": "You will then choose where to place your capital on the map.",
+    "procPreview": "World generated from seed {seed}",
+    "noCustomTitle": "No custom maps",
+    "noCustom": "Draw your own world in the map editor: it will appear here as soon as it is saved."
   },
   "rule": {
     "allowPorts": "Ports and navy",
@@ -515,7 +868,7 @@
   "feature": {
     "weather": {
       "name": "Weather & day/night",
-      "desc": "8-minute cycle, storms slowing ships, fog banks."
+      "desc": "8-minute cycle; storms that slow ships and aircraft; fog banks that cut radar and warship range."
     },
     "fog": {
       "name": "Fog of war",
@@ -523,7 +876,7 @@
     },
     "tech": {
       "name": "Technology tree",
-      "desc": "5 branches × 4 levels, research produced by cities."
+      "desc": "6 branches of 6 technologies, plus 6 endless ones; points produced by research centres; silos, bombs, SAMs, radars and airfields must be researched."
     },
     "resources": {
       "name": "Strategic resources",
@@ -603,12 +956,12 @@
   "building": {
     "city": {
       "name": "City",
-      "desc": "+250,000 max population per level, produces research. Railway station.",
+      "desc": "+60,000 maximum troops per level once built. Railway station.",
       "short": "City"
     },
     "port": {
       "name": "Port",
-      "desc": "Built on the coast. Sends merchant ships to foreign ports and acts as a station. Radius of action of 60 tiles (+10 per level): warships are built and repaired inside it.",
+      "desc": "Built on the coast. Sends merchant ships to foreign ports: both ports earn the cargo, worth more on long routes. Acts as a station. Radius of action of 60 tiles (+10 per level): warships are built inside it. A damaged warship docks here to be repaired.",
       "short": "Port"
     },
     "factory": {
@@ -628,7 +981,7 @@
     },
     "sam": {
       "name": "SAM battery",
-      "desc": "Intercepts bombs and warheads with trajectory prediction. Range 70 → 140 tiles by level.",
+      "desc": "Intercepts bombs and warheads with trajectory prediction. Range 49 → 105 tiles by level.",
       "short": "SAM"
     },
     "radar": {
@@ -640,12 +993,20 @@
       "name": "Airfield",
       "desc": "Produces fighters, bombers and reconnaissance planes.",
       "short": "Airfield"
+    },
+    "lab": {
+      "name": "Research centre",
+      "desc": "Produces 1.5 research points per second per level once built; without a centre, research crawls at 0.5 point/s. Unlimited levels. Changes hands when captured.",
+      "short": "Research"
     }
   },
   "unit": {
+    "transport": {
+      "name": "Transport ships at sea"
+    },
     "warship": {
       "name": "Warship",
-      "desc": "Placed on water, within the radius of action of one of your ports. Firing range 130 tiles; targets transports first, then warships, and captures merchants. Gains veterancy and patrols around its anchor point.",
+      "desc": "Placed on water, within the radius of action of one of your ports. Firing range 90 tiles; targets transports first, then warships, and captures merchants. Gains veterancy and patrols around its anchor point.",
       "short": "Cruiser"
     },
     "fighter": {
@@ -664,41 +1025,108 @@
       "short": "Recon"
     }
   },
+  "alliances": {
+    "title": "Current alliances",
+    "left": "Time left before the alliance ends",
+    "renew": "Renew",
+    "renewTip": "Offer to extend the alliance by 5 minutes (both countries must agree).",
+    "acceptRenew": "Accept renewal",
+    "acceptRenewTip": "Your ally offers to extend the alliance by 5 minutes."
+  },
+  "pact": {
+    "signed": "Alliance pact signed",
+    "renewed": "Alliance renewed",
+    "terms": "With {name} · 5 minutes · no attacks between you",
+    "refused": "Alliance refused",
+    "refusedTerms": "{name} turned your offer down",
+    "lapsed": "Offer unanswered",
+    "lapsedTerms": "{name} did not answer in time",
+    "stamp": "Refused",
+    "stampLapsed": "No reply",
+    "betrayed": "Pact betrayed",
+    "betrayedTerms": "{name} broke your alliance"
+  },
+  "launch": {
+    "title": "Missile launch",
+    "available": "{n} ready",
+    "count": "Salvo",
+    "max": "Max",
+    "arc": "Trajectory",
+    "arcUp": "Arc up",
+    "arcDown": "Arc down",
+    "flipTip": "Mirror the trajectory to fly around SAMs",
+    "mirvNote": "The MIRV always climbs on an upward arc and cannot be intercepted. Its warheads, which rain on the whole target country, can be.",
+    "aim": "Point at a target on the map",
+    "teammate": "You cannot target a teammate",
+    "noSilo": "No silo: build one first",
+    "reloading": "Silos reloading",
+    "banned": "The World Council has banned nuclear weapons",
+    "gold": "Not enough gold",
+    "mirvClear": "The carrier cannot be intercepted",
+    "intercepted": "A SAM will intercept this missile: flip the arc ({key}) or aim elsewhere",
+    "clear": "Clear sky: no known SAM can reach it",
+    "betray": "Betrayal: breaks the alliance with {list}",
+    "legendOwn": "Your SAMs",
+    "legendAlly": "Allied SAMs",
+    "legendEnemy": "Enemy SAMs",
+    "legendDots": "Fine dots: out of SAM reach",
+    "hint": "Click: launch · Esc: cancel",
+    "arcUpToast": "Missiles: arc up",
+    "arcDownToast": "Missiles: arc down",
+    "locked": "Requires research: {tech}"
+  },
   "nuke": {
     "nukeA": {
       "name": "A-bomb",
-      "desc": "750,000 gold. Destruction 12 tiles, fallout 30. Interceptable.",
+      "desc": "750,000 gold. Razes everything within 12 tiles and half the land up to 30. Interceptable near its silo and its target.",
       "short": "A-bomb"
     },
     "nukeH": {
       "name": "H-bomb",
-      "desc": "5,000,000 gold. Destruction 80 tiles, fallout 100. Interceptable.",
+      "desc": "5,000,000 gold. Razes everything within 80 tiles and half the land up to 100. Interceptable near its silo and its target.",
       "short": "H-bomb"
     },
     "nukeMirv": {
       "name": "MIRV",
-      "desc": "25M + 15M per previous launch. Splits into 8–12 warheads.",
+      "desc": "25M + 15M per MIRV already launched. Splits high in the sky into warheads (up to 350) that strike the whole target country.",
       "short": "MIRV"
     }
   },
   "worldEvent": {
     "crisis": "Global economic crisis: −25% income for 2 minutes.",
-    "pandemic": "Pandemic: population growth is halved.",
-    "boom": "Trade boom: trade and trains pay double!",
-    "solarStorm": "Solar storm: radars are blind for 90 s.",
-    "peaceSummit": "Peace summit: forced truce for 60 seconds.",
+    "pandemic": "Pandemic: troop growth is halved for 2 minutes.",
+    "boom": "Trade boom: merchant ships and trains pay double for 2 minutes!",
+    "solarStorm": "Solar storm: radars are blind for 90 seconds.",
+    "peaceSummit": "Peace summit: a forced 60-second truce between all countries.",
     "crisis.short": "Crisis",
     "pandemic.short": "Pandemic",
     "boom.short": "Trade boom",
     "solarStorm.short": "Solar storm",
-    "peaceSummit.short": "Peace summit"
+    "peaceSummit.short": "Peace summit",
+    "crisis.title": "Global economic crisis",
+    "pandemic.title": "Global pandemic",
+    "boom.title": "Trade boom",
+    "solarStorm.title": "Solar storm",
+    "peaceSummit.title": "Peace summit",
+    "crisis.desc": "Every country's income drops by 25% for 2 minutes. Trade and trains are unaffected.",
+    "pandemic.desc": "Troop growth is halved for 2 minutes. Every army lost 3% of its troops when the outbreak began.",
+    "boom.desc": "Merchant ships and trains pay double for 2 minutes: a good time to trade.",
+    "solarStorm.desc": "Radars are blind for 90 seconds: the fog of war falls back over the areas they revealed.",
+    "peaceSummit.desc": "A forced 60-second truce: no country can attack another. Tribes can still be attacked.",
+    "crisis.fx": "Income −25%",
+    "pandemic.fx": "Troop growth −50%",
+    "boom.fx": "Trade and trains ×2",
+    "solarStorm.fx": "Radars offline",
+    "peaceSummit.fx": "No attacks between countries"
   },
   "event": {
     "gameStart": "The game begins! Immunity protects players for 60 s.",
     "eliminated": "{player} has been eliminated.",
     "betrayal": "{traitor} betrayed {victim}!",
     "doomsdayStep": "The clock ticks: {share}% of the land is now required.",
-    "ringShrink": "The playable zone is shrinking!"
+    "ringShrink": "The playable zone is shrinking!",
+    "capitalFell": "{player}'s capital falls to {by}.",
+    "capitalRazed": "{player}'s capital is razed."
   },
   "alert": {
     "nuke": "Nuclear missile launched by {by} — impact in {eta}s!",
@@ -709,6 +1137,7 @@
     "allianceRequest": "{from} proposes an alliance.",
     "renewRequest": "{from} wants to renew your alliance.",
     "allianceRefused": "{by} refused your alliance.",
+    "allianceLapsed": "{by} did not answer your alliance offer.",
     "allianceFormed": "Alliance formed with {with}.",
     "allianceRenewed": "Alliance renewed with {with}.",
     "allianceEnded": "The alliance with {with} has ended.",
@@ -726,18 +1155,29 @@
     "sabotaged": "Sabotage ordered by {by}!",
     "researchDone": "Research complete: {tech}.",
     "secession": "Secession: {tiles} tiles revolted!",
-    "youDied": "You have been eliminated. You can keep watching as a spectator."
+    "youDied": "You have been eliminated. You can keep watching as a spectator.",
+    "capitalLost": "Your capital fell to {by}: {gold} gold of the treasury seized and a minute of disorganisation. Choose a new capital.",
+    "capitalRazed": "Your capital was razed: {gold} gold of the treasury lost and a minute of disorganisation. Choose a new capital.",
+    "capitalTaken": "You take {player}'s capital: {gold} gold seized, and the country is disorganised for a minute.",
+    "capitalMoved": "Capital established: the government sits here.",
+    "threat": "{player} is massing an army {ratio} times yours on your border: {why}.",
+    "researchRepeat": "Research complete: {tech}, level {level}.",
+    "researchIdle": "Nothing is being researched: pick the next technology.",
+    "labReady": "Research centre ready: research speeds up.",
+    "labLost": "{by} has seized one of your research centres.",
+    "labTaken": "You take a research centre from {player}."
   },
   "error": {
+    "nukeSelfMirv": "A MIRV cannot target your own country: its warheads would fall all over your land.",
     "cannotAttack": "Cannot attack this target (immunity, team or ceasefire).",
-    "noFrontier": "No shared border with this target.",
+    "noFrontier": "No shared border: to reach it, send a boat (B key or right click → Land troops).",
     "warship": "Cannot arm a warship: a port on this sea is required, or not enough gold.",
     "nuke": "No missile available (silo, gold or reload).",
     "air": "No airfield available, target out of range or not enough gold.",
     "general": "Ability unavailable.",
     "simulation": "Simulation error — see the log.",
     "boat": {
-      "max": "Too many transports at sea (4 max).",
+      "max": "Too many transports at sea (3 max).",
       "noLanding": "No coast to land on here.",
       "noCoast": "You have no coast on this sea.",
       "noPath": "No sea route to this coast.",
@@ -752,8 +1192,15 @@
       "notLand": "Invalid terrain.",
       "occupied": "Spot occupied.",
       "tooClose": "Too close to another building.",
-      "notCoastal": "A port must be on the coast.",
-      "gold": "Not enough gold."
+      "notCoastal": "A port must be on the coast or on the bank of a navigable river.",
+      "gold": "Not enough gold.",
+      "locked": "Requires research: {tech}."
+    },
+    "capital": {
+      "notOwned": "The capital must be on your own land.",
+      "fallout": "Irradiated land: the capital cannot sit there.",
+      "front": "Too close to a border: the capital must stand more than 5 tiles from any foreign land (allies excepted).",
+      "cooldown": "Capital moved recently: it can move again in {s} s."
     }
   },
   "keys": {
@@ -780,6 +1227,7 @@
     "fogView": "Fog",
     "resourcesView": "Resources",
     "loyaltyView": "Loyalty",
+    "tradeRoutes": "Trade routes",
     "home": "Centre on my territory",
     "chat": "Messages",
     "pause": "Pause (solo)",
@@ -791,7 +1239,11 @@
     "panLeft": "Camera left",
     "panRight": "Camera right",
     "zoomIn": "Zoom in",
-    "zoomOut": "Zoom out"
+    "zoomOut": "Zoom out",
+    "flipArc": "Flip missile trajectory",
+    "speedDown": "Slow time down (solo)",
+    "speedUp": "Speed time up (solo)",
+    "buildLab": "Research centre"
   },
   "settings": {
     "tab": {
@@ -825,12 +1277,10 @@
     "muteUnfocused": "Lower volume when the window is inactive",
     "testSound": "Test sound",
     "confirmations": "Ask for confirmation (betrayals)",
-    "simpleMode": "Simple mode (automatic troop/worker split)",
     "fontSize": "Text size",
     "wheel": "Wheel / trackpad",
     "wheel.zoom": "Mouse wheel: zoom",
     "wheel.trackpad": "Trackpad: two-finger scroll, pinch to zoom",
-    "checkUpdates": "Check for updates (network call, off by default)",
     "playerName": "Player name",
     "pressKey": "Press a key…",
     "resetKeys": "Reset keys",
@@ -844,9 +1294,36 @@
     "subtitles": "Subtitles for audio alerts",
     "accessNote": "Colour-blind modes use optimised palettes plus per-player hatch patterns.",
     "language": "Language",
-    "updateUrl": "Update manifest URL (HTTPS, JSON)",
     "subtitle": "Changes apply immediately and are saved automatically.",
-    "voiceOn": "Voice narration in the campaign and tutorial"
+    "voiceOn": "Voice narration in the campaign",
+    "tabDesc": {
+      "graphics": "Display quality, effects and full screen.",
+      "audio": "Volumes, voices and sound in the background.",
+      "game": "Name, confirmations, text and mouse.",
+      "controls": "Keyboard shortcuts, all editable.",
+      "access": "Colours, contrast, motion, subtitles.",
+      "lang": "Language of the interface and voices."
+    },
+    "d": {
+      "quality": "High for a recent computer. Performance lightens the map effects.",
+      "particles": "Amount of sparks, smoke and explosions.",
+      "shaders": "Water reflections, relief and light. Turn them off on a modest computer.",
+      "vsync": "Matches frames to the screen to avoid tearing.",
+      "maxFps": "Caps frames per second to save battery. ∞: no limit.",
+      "uiScale": "Makes the in-game panels larger or smaller.",
+      "fullscreen": "The game fills the whole screen.",
+      "autoPerf": "Switches to performance mode if the game slows down.",
+      "voiceOn": "Ilse's advice is read aloud.",
+      "muteUnfocused": "Lowers the sound when you switch to another window.",
+      "playerName": "Shown on the map and in network lobbies.",
+      "confirmations": "Asks for confirmation before you betray an ally.",
+      "fontSize": "Size of the interface text.",
+      "wheel": "Fit zooming to a mouse or a trackpad.",
+      "highContrast": "Strengthens rules and secondary text.",
+      "reducedMotion": "Turns off decorative motion in the menus and on the map.",
+      "subtitles": "A caption accompanies every sound alert.",
+      "language": "Applies at once to the menus, the map and the voices."
+    }
   },
   "lan": {
     "title": "Local network multiplayer",
@@ -876,11 +1353,13 @@
     "hostStep2": "Other players see your game in the list, or type the address and the code.",
     "hostStep3": "Adjust the game and start it when everyone is ready.",
     "manualHelp": "If the game does not show up, type the address shown in the host's lobby.",
-    "address": "Address (IP:port)"
+    "address": "Address (IP:port)",
+    "asSpectator": "Join as a spectator",
+    "foundDesc": "Lobbies open on your network appear here on their own."
   },
   "campaign": {
     "title": "Campaign: The Cartographers",
-    "intro": "Six missions to learn how to draw, hold and defend your lines. Each mission awards up to three stars: success, speed and bonus objective.",
+    "intro": "Six missions that teach you the game: drawing, holding and defending your lines. Each mission awards up to three stars: success, speed and bonus objective.",
     "play": "Play",
     "advisor": "Advisor Ilse",
     "objectives": "Objectives",
@@ -888,21 +1367,16 @@
     "failed": "We lost our lands. Let's try again.",
     "m1": {
       "title": "First Lines",
-      "summary": "Between two lakes, take 15% of the land.",
-      "d1": "Welcome, cartographer. Every line you draw on this map becomes a border.",
-      "d2": "Spread over free land, then absorb the neighbouring tribes. Aim for 15% of the territory.",
       "main": "Control 15% of the land",
+      "city": "Build a city",
       "bonus": "Own 2 cities",
       "outro": "Fine first lines. The nations have noticed your ink.",
-      "brief": "Two great lakes divide this region. Three small nations are settling here, surrounded by tribes that guard their gold. You start from nothing: a point on the map and a few thousand men. Your mission is to become a regional power by controlling fifteen percent of the land.",
-      "tip1": "A click on unclaimed land sends the share of troops set at the bottom left. Several small clicks beat a single large one.",
-      "tip2": "Cities greatly increase your population: build them as soon as gold allows."
+      "brief": "Two great lakes divide this region. Three small nations are settling here, surrounded by tribes that guard their gold. You start with a capital and a few thousand men. I will guide you step by step: expand, build a city, subdue the tribes, and become a regional power by controlling fifteen percent of the land.",
+      "tip1": "A click on unclaimed land sends part of your troops there, as set by the attack ratio at the bottom left. Several small clicks beat a single large one.",
+      "tip2": "Cities raise your troop ceiling. Your starting treasury pays for the first one; each new city costs twice as much as the previous one."
     },
     "m2": {
       "title": "Hold the Line",
-      "summary": "Survive 20 minutes in Europe against aggressive nations.",
-      "d1": "Europe is a powder keg. The neighbouring nations are warlike.",
-      "d2": "Hold for 10 minutes. Defence posts multiply attacker losses by five.",
       "main": "Survive 20 minutes",
       "bonus": "Build 3 defence posts",
       "outro": "Your lines held. The attackers broke against your ramparts.",
@@ -912,45 +1386,35 @@
     },
     "m3": {
       "title": "The Island",
-      "summary": "In the archipelago, eliminate a nation from the sea.",
-      "d1": "Islands are won at sea. Click a coast across the water to land troops.",
-      "d2": "Eliminate at least one nation. Beware of warships that sink transports.",
-      "main": "Eliminate a nation",
+      "main": "Eliminate a nation (not a tribe)",
       "bonus": "Sink 2 ships",
       "outro": "The archipelago remembers your name.",
-      "brief": "An archipelago of hundreds of islands. Here, every conquest goes through the sea. A dozen nations share the coasts, and their warships sink careless transports. Eliminate at least one rival nation.",
-      "tip1": "Click a coast across the water: your troops embark from your nearest shore.",
-      "tip2": "A port lets you build warships to escort your landings."
+      "brief": "An archipelago of hundreds of islands: here, every conquest goes through the sea. A dozen nations share the coasts, and their warships sink careless transports. Land on another island, then eliminate at least one rival nation; tribes don't count.",
+      "tip1": "Aim at a coast across the water and press B: a transport sails from your nearest shore. At most three can be at sea at the same time.",
+      "tip2": "A port lets you fit out warships (key 7) to escort your landings. Storms slow every ship down.",
+      "land": "Land troops on another island"
     },
     "m4": {
       "title": "Rails and Riches",
-      "summary": "On Pangaea, earn 3 million from trade and trains.",
-      "d1": "Wealth flows. Factories lay rails to your cities and ports.",
-      "d2": "Trains pay at every stop, merchant ships at every foreign port. Earn 3 million.",
-      "main": "Earn 3M gold (trade + trains)",
+      "main": "Earn 1.5M gold (trade + trains)",
       "bonus": "Own 3 factories",
       "outro": "Your iron lines became lines of credit.",
-      "brief": "Pangaea joins all land into a single continent: trade routes here are long and lucrative. Your goal is not conquest but fortune. Earn three million gold through sea trade and trains.",
+      "brief": "Pangaea joins all land into a single continent: trade routes here are long and lucrative. Your goal is not conquest but fortune: earn one and a half million gold through sea trade and trains, and research railways in your first research centre.",
       "tip1": "A factory automatically links your nearby cities, ports and factories by rail. Every train stop pays gold.",
-      "tip2": "Ports send merchant ships to foreign ports; an embargo cuts that trade."
+      "tip2": "Ports send merchant ships to foreign ports; an embargo cuts that trade. Press C to show the trade routes.",
+      "tech": "Research Railways"
     },
     "m5": {
       "title": "Artificial Sun",
-      "summary": "In the Mediterranean, launch an H-bomb.",
-      "d1": "Some lines are only drawn with fire. Build a silo and amass 5 million.",
-      "d2": "Launch an H-bomb. Enemy SAM batteries can intercept it: aim well.",
       "main": "Launch an H-bomb",
       "bonus": "Intercept a missile with a SAM",
       "outro": "The world saw your sun. It will not forget it.",
-      "brief": "The Mediterranean, cradle of empires. Some borders are only drawn in fire. You must acquire the ultimate weapon and use it: launch a hydrogen bomb. Beware, enemy SAM batteries can intercept it.",
-      "tip1": "A silo costs one million; the hydrogen bomb costs five. Grow your economy first.",
+      "brief": "The Mediterranean, cradle of empires. Some borders are only drawn in fire. Build a research centre, complete the nuclear programme, then launch a hydrogen bomb. Beware, enemy SAM batteries can intercept it.",
+      "tip1": "A silo costs one million and the hydrogen bomb five, and both must be researched first. The more research centres you have, the faster the research.",
       "tip2": "Aim far from any SAM battery: the missile can be intercepted in flight."
     },
     "m6": {
       "title": "One Minute to Midnight",
-      "summary": "World, Doomsday clock: reach 40%.",
-      "d1": "The clock is ticking. After 10 minutes, those holding too little land collapse.",
-      "d2": "Reach 40% of the world before it is too late.",
       "main": "Reach 40% of the territory",
       "bonus": "Do it in under 45 minutes",
       "outro": "You stopped the clock. The atlas now bears your name.",
@@ -969,34 +1433,14 @@
     "objective": "Objective",
     "parTime": "Par time",
     "starsRule": "One star for success, one for beating the par time, one for the bonus objective.",
-    "lockedHint": "Complete the previous mission to unlock this one."
-  },
-  "tutorial": {
-    "spawn": "Click on unclaimed land to place your capital. The match starts right away.",
-    "spawn.short": "Choose a starting point",
-    "camera": "Move the map by dragging it, and zoom with the mouse wheel or by pinching the trackpad.",
-    "camera.short": "Move the camera",
-    "expand": "Click on the unclaimed land around you: your troops spread out. Reach 1,200 tiles.",
-    "expand.short": "Expand (1,200 tiles)",
-    "ratio": "The attack ratio sets the share of troops sent with each order. Change it with T and Y, or with Shift and the wheel.",
-    "ratio.short": "Adjust the attack ratio",
-    "city": "Build a city: press 1 then click your territory, or right click, Build, City. Cities increase your population.",
-    "city.short": "Build a city",
-    "attack": "Attack the neighbouring tribe, in grey: one click on its border is enough. You will take a share of its gold.",
-    "attack.short": "Attack a tribe",
-    "port": "Build a port on the coast with key 2. It generates trade and lets you build warships.",
-    "port.short": "Build a port",
-    "alliance": "Open the Diplomacy panel on the left and propose an alliance to a neighbouring nation.",
-    "alliance.short": "Form an alliance",
-    "tech": "Open the Technologies panel on the left and choose a branch to research.",
-    "tech.short": "Start research",
-    "done": "You know the essentials. Carry on with this match, or start the campaign from the main menu.",
-    "done.short": "Done",
-    "title": "Tutorial",
-    "brief": "Welcome. This tutorial teaches you the essentials in about six minutes: choosing a starting point, expanding, building, attacking and forming alliances. Each step stays on screen until you have completed it.",
-    "goal": "Follow the guide's steps",
-    "tip1": "Left click to attack or expand, right click for the actions menu.",
-    "tip2": "Hover over any part of the interface for an explanation."
+    "lockedHint": "Complete the previous mission to unlock this one.",
+    "starsTotal": "{n} of {total} stars",
+    "routeLabel": "Campaign route",
+    "starsOf": "{n} of 3 stars",
+    "locked": "Locked",
+    "hint": "Tip",
+    "need": "You need {gold} gold ({time} to go)",
+    "needGold": "You need {gold} gold"
   },
   "achievement": {
     "unlocked": "Achievement unlocked",
@@ -1133,9 +1577,14 @@
     "anonymous": "Anonymous cartographer",
     "defaultName": "Cartographer",
     "subtitle": "Your cumulative statistics, achievements and best scores, stored on this computer.",
-    "needAch": "{n} achievements required"
+    "needAch": "{n} achievements required",
+    "record": "Record",
+    "won": "Won",
+    "noScoresHint": "No scores yet. Finish a game to write your first score here.",
+    "playFirst": "New game"
   },
   "replay": {
+    "staleTip": "Recorded with an earlier version of the game: the rules have changed, so the replay may drift from the original game.",
     "watch": "Watch",
     "import": "Import a .rpl",
     "none": "No replays. They are saved automatically at the end of every game.",
@@ -1148,7 +1597,9 @@
     "colWinner": "Winner",
     "colDuration": "Duration",
     "colDate": "Date",
-    "export": "Export file"
+    "export": "Export file",
+    "emptyTitle": "No replays yet",
+    "emptyHint": "Every finished game is saved here automatically. You can also import an .rpl file from another player."
   },
   "editor": {
     "new": "New map",
@@ -1181,18 +1632,30 @@
       "land": "The map needs at least 2,000 land tiles.",
       "spawns": "Place at least 4 spawn points (automatic button available)."
     },
-    "depositsShort": "deposits"
+    "depositsShort": "deposits",
+    "mapName": "Map name",
+    "newHint": "Pick a starting size: a blank ocean to sculpt.",
+    "pickMap": "Choose a map…",
+    "spawns": "Spawn points",
+    "deposits": "Deposits"
   },
   "about": {
     "text": "Isoline is a real-time territorial conquest game played on a living atlas. Code, maps, sounds and images are original or under free licences.",
     "credits": "Credits",
     "naturalEarth": "public-domain geographic data (naturalearthdata.com)",
-    "license": "Code under the MIT licence · Fonts under the SIL Open Font License."
+    "license": "Code under the MIT licence, fonts under the SIL Open Font License.",
+    "version": "Version",
+    "platform": "Platform",
+    "licenses": "Licences"
   },
   "subtitle": {
     "siren": "Nuclear alert siren",
     "explosion": "Nuclear explosion",
-    "betrayal": "Dissonant chord: betrayal"
+    "betrayal": "Dissonant chord: betrayal",
+    "pact": "Pen on parchment: pact signed",
+    "refused": "Stamp: alliance refused",
+    "capitalLost": "War horn: your capital has fallen",
+    "capitalTaken": "Blade drawn: capital taken"
   },
   "signal": {
     "attack": "Attack here",
@@ -1215,23 +1678,29 @@
   "guide": {
     "spawn": "Choose where to place your capital: click on unclaimed land, ideally away from other nations. The match starts as soon as you have placed it.",
     "m1": {
+      "camera": "Drag the map to move around, and zoom with the mouse wheel or a trackpad pinch. Press H to come back to your territory.",
       "expand": "Expand: click on unclaimed land along your border. Your troops advance on their own while they have the strength.",
+      "ratio": "At the bottom left, the attack ratio sets the share of your troops sent with each click. Change it with T and Y, or Shift and the mouse wheel: a low ratio keeps troops back for defence.",
       "city": "Your population soon reaches its ceiling. Build a city: press 1 then click your territory, or right click, Build, City.",
       "tribes": "Tribes, in grey, guard a treasury. Attack one: each piece of land you take yields a share of its gold.",
+      "capital": "The star on your territory marks your capital. If it falls, your country is disorganised for a minute and you will have to choose a new one: keep it away from the front.",
       "goal": "Keep going until you hold fifteen percent of the land. A second city earns the bonus star."
     },
     "m2": {
       "spawn": "Place your capital. Rugged terrain, such as the Alps or the Carpathians, will be easier to defend.",
       "expand": "Take unclaimed land quickly, before neighbouring nations surround you.",
       "defense": "Build a defence post (key 4) near your most exposed border.",
-      "troops": "Keep at least half of your population under arms: set the Troop share slider to 50% or more.",
-      "alliance": "Propose an alliance to a neighbour from the Diplomacy panel. An ally cannot attack you.",
+      "threats": "When a neighbour masses a much bigger army on your border, a “threatened border” alert appears and the journal records it. Reinforce that front, or make that neighbour an ally.",
+      "alliance": "Propose an alliance to a neighbour: right click its territory, or use the Diplomacy window in the left rail. Offers you receive appear at the bottom right: K to accept, L to refuse.",
+      "troops": "Let your army regrow before attacking again: reach half of your troop ceiling.",
       "hold": "Hold out until the countdown ends. Reinforce the fronts that give way and renew your alliances."
     },
     "m3": {
       "island": "Start by taking your whole island.",
-      "port": "Build a port (key 2) on your coast.",
-      "landing": "The weakest nation is marked on the map. Click its coast to launch a landing.",
+      "port": "Build a port (key 2) on your coast: it brings sea trade and lets you fit out warships.",
+      "landing": "The weakest nation is marked on the map. Aim at its coast and press B, or right click then Land troops: a transport sails from your nearest shore with the ratio's share of your troops.",
+      "boats": "At most three transports can be at sea at once. They are listed in the panel at the bottom left: the return arrow recalls one, at the cost of a quarter of its troops. Storms slow every ship down.",
+      "warship": "Enemy warships sink transports. Fit out your own: press 7, then click the sea near your port. It escorts your landings and attacks enemy ships.",
       "finish": "Keep going until it is eliminated. Send reinforcements by sea if the attack runs out of steam."
     },
     "m4": {
@@ -1239,28 +1708,57 @@
       "cities": "Build two cities: they will be your first stations.",
       "factory": "Build a factory (key 3) between your cities. The tracks are laid automatically.",
       "port": "Build a port to add sea trade to your income.",
+      "routes": "Trains and merchant ships pay at every stop. Press C to show or hide the trade routes; the Trade window, in the left rail, details your earnings per partner.",
+      "lab": "Build a research centre (key J): it produces research points, even while nothing is being studied.",
+      "research": "Open the Technologies window and click Railways: its prerequisite is queued ahead of it. Add more technologies: they will be studied in order.",
+      "windows": "Windows move by their title bar and resize from their corner; Escape closes the one in front. They stay where you put them.",
       "wait": "Your network is running. Add factories and stations to multiply stops, and avoid wars that cut the lines."
     },
     "m5": {
       "expand": "Expand to build up your economy.",
+      "lab": "Build a research centre (key J): it produces the research points.",
+      "research": "Open the Technologies window and click Nuclear programme: its prerequisites are queued ahead of it. A second research centre would speed up the research.",
       "city": "Build two cities to raise population and income.",
-      "silo": "Build a missile silo (key 5).",
-      "save": "Save up five million gold.",
+      "silo": "Once the nuclear programme is researched, build a missile silo (key 5).",
+      "hbomb": "Now put the thermonuclear bomb under study. Think about SAM batteries too (key 6, once surface-to-air missiles are researched): they shoot down enemy missiles.",
       "launch": "Press 9 then click an enemy target. A possible target is marked on the map."
     },
     "m6": {
       "expand": "Expand as fast as you can.",
       "economy": "Build three cities to sustain the war effort.",
+      "weather": "Watch the sky: storms slow ships and aircraft down, and fog banks halve the range of radars.",
       "clock": "The doomsday clock starts at ten minutes. Get ready to exceed the required share.",
       "push": "Push towards forty percent. A vulnerable nation is marked on the map."
+    },
+    "hint": {
+      "capital": "Our capital has fallen! The country is disorganised for a minute. Choose a new one from the dispatch on the left: “Pick on the map”, or “Safest spot”.",
+      "threat": "Threatened border: a neighbour is massing troops against us. Reinforce that front, or offer it an alliance.",
+      "allyOffer": "A nation is offering us an alliance: its card is at the bottom right. K to accept, L to refuse. An ally cannot attack us.",
+      "boats": "Three transports are at sea: that is the limit. Wait for one to land, or recall one from the panel at the bottom left.",
+      "storm": "A storm lies on our transports' route: ships sail slower inside it. Better to go around it, or wait for it to pass.",
+      "research": "Our research centres are idling: nothing is being studied. Open Technologies and pick a research, or queue several."
     }
   },
   "hover": {
     "ally": "Your ally",
+    "war": "At war with you",
+    "levels": "{n} levels in total",
+    "lv": "lv. {n}",
+    "noTrade": "No trade (embargo)",
     "attackCostTip": "Attacker loss multiplier on this terrain (plains = ×1.00).",
     "tribe": "Tribe",
     "unknown": "Territory out of sight",
-    "you": "Your country"
+    "you": "Your country",
+    "storm": "Storm: ships {ship}% slower, aircraft {air}% slower",
+    "fogBank": "Fog bank: radar and warship range cut by {pct}%",
+    "capital": "Capital",
+    "yourCapital": "Your capital",
+    "disorg": "Disorganised by the loss of its capital ({clock})",
+    "threat": "Army ×{ratio} massed on your border"
+  },
+  "weather": {
+    "stormNear": "A storm is forming near you: ships {pct}% slower.",
+    "fogNear": "A fog bank is forming near you: radar and warship range cut by {pct}% inside it."
   },
   "modeDesc": {
     "ffa": "Free for all: the first to reach the land threshold wins.",
@@ -1271,10 +1769,10 @@
     "battleRoyale": "Every 3 minutes a zone shrinks; land outside it becomes uninhabitable."
   },
   "difficultyDesc": {
-    "easy": "Slow, cautious nations; few betrayals.",
+    "easy": "Small armies; slow, cautious nations; few betrayals.",
     "normal": "Balanced nations: a fair challenge.",
-    "hard": "Richer and more aggressive nations.",
-    "impossible": "Very rich, fast and ruthless nations."
+    "hard": "Nations as strong as you, and more aggressive.",
+    "impossible": "Bigger armies; fast and ruthless nations."
   },
   "ruleDesc": {
     "allowPorts": "Allows ports, warships and sea trade.",
@@ -1284,5 +1782,348 @@
     "waterNukes": "Nuclear blasts over water also leave fallout.",
     "decontamination": "Fallout disappears after 10 minutes instead of staying.",
     "allowSpectators": "Allows spectators to join the game."
+  },
+  "front": {
+    "edition": "Final edition",
+    "open": "Read the front page",
+    "openTip": "The Courier's front page: the story of the game, its turning points and the empire over time.",
+    "fold": "Fold the paper",
+    "results": "Detailed results",
+    "replayAll": "Watch the replay",
+    "replay": "Watch again",
+    "replayAt": "Watch this moment in the replay ({clock})",
+    "seeking": "Fast-forwarding to {clock}…",
+    "dateline": {
+      "duration": "{duration} game",
+      "nations": "{n} nations at the start"
+    },
+    "team": {
+      "n": "Team {n}",
+      "humans": "The humans",
+      "nations": "The nations"
+    },
+    "kicker": {
+      "territory": "Territorial domination",
+      "lastStanding": "Last nation standing",
+      "team": "Team victory",
+      "forfeit": "Surrender",
+      "defeat": "Defeat",
+      "points": "Won on points",
+      "none": "Game over"
+    },
+    "title": {
+      "blitz": "{winner} wins the lightning war",
+      "reign": "{winner} reigns unchallenged",
+      "comeback": "{winner} pulls off the great comeback",
+      "attrition": "{winner} wins the war of attrition",
+      "domination": "The map falls to {winner}",
+      "lastStanding": "{winner}, the last nation standing",
+      "team": "{team} win together",
+      "forfeit": "{winner} wins by forfeit",
+      "finalBlow": "{winner} deals the final blow",
+      "points": "{winner} wins on points",
+      "none": "Game over, and no winner"
+    },
+    "deck": {
+      "territory": "{share}% of the usable land, past the {threshold}% threshold, after {duration} of play.",
+      "lastStanding": "Its {n} rivals all fell within {duration}.",
+      "lastStandingOne": "Its only rival fell within {duration}.",
+      "team": "Members: {list}. Together, {share}% of the usable land.",
+      "forfeit": "Your government laid down its arms at {clock}; the nation then in the lead wins with {share}% of the usable land.",
+      "defeatBy": "Your last lands fell at {clock}. Final blow: {by}.",
+      "defeat": "Your last lands fell at {clock}.",
+      "points": "With no human left in the race, the largest nation wins with {share}% of the usable land.",
+      "none": "The game ends after {duration}."
+    },
+    "lead": {
+      "territory": "The game ends after {duration} on the {map} map: the winner holds {share}% of the usable land, past the {threshold}% threshold.",
+      "lastStanding": "The game ends after {duration} on the {map} map: of the {n} nations at the start, only one is left standing.",
+      "team": "The game ends after {duration} on the {map} map: the winning team holds {share}% of the usable land.",
+      "forfeit": "Your government laid down its arms after {duration} on the {map} map. The nation then in the lead wins with {share}% of the usable land.",
+      "defeat": "Your last lands fell after {duration} on the {map} map. The nation then in the lead wins with {share}% of the usable land.",
+      "points": "The game ends after {duration} on the {map} map: with no human left in the race, the largest nation wins with {share}% of the usable land.",
+      "none": "The game ends after {duration} on the {map} map.",
+      "wire": "The winner led from {clock} and never gave up first place.",
+      "wireStart": "The winner led from the first minutes and never gave up first place.",
+      "comeback": "Long behind, the winner only took the lead at {clock}, and never let go.",
+      "took": "The winner took the lead for good at {clock}.",
+      "fallsNone": "No nation fell along the way.",
+      "fallsOne": "Only one nation fell along the way ({name}, at {clock}).",
+      "fallsMany": "{n} nations fell along the way, the first as early as {clock} ({name}).",
+      "nukesOne": "Nuclear fire struck once, at {clock}.",
+      "nukesMany": "Nuclear fire struck {n} times, first at {clock}.",
+      "betrayalsOne": "One alliance was betrayed.",
+      "betrayalsMany": "{n} alliances were betrayed.",
+      "youWon": "Your nation peaked at {peak}% of the usable land, at {clock}.",
+      "youRank": "Your nation finishes {rank} of {n}, after peaking at {peak}% of the usable land at {clock}.",
+      "youRankOnly": "Your nation finishes {rank} of {n}."
+    },
+    "maps": {
+      "title": "The empire over time",
+      "start": "Start",
+      "end": "End",
+      "alt": "Territories at {clock}",
+      "others": "Other nations",
+      "tribes": "Tribes",
+      "free": "Free land",
+      "you": "{name} (you)"
+    },
+    "chart": {
+      "title": "Share of the usable land",
+      "threshold": "Victory threshold: {n}%",
+      "aria": "Each nation's share of the usable land over the game. Left and right arrows: move through time.",
+      "time": "Game time",
+      "min": "{n} min",
+      "table": "Share of the usable land, in percent",
+      "pct": "{share}%"
+    },
+    "points": {
+      "title": "Turning points",
+      "empty": "The game was too short to have turning points."
+    },
+    "point": {
+      "fallAlone": "Its last lands fell.",
+      "betrayal": "{traitor} betrays {victim}",
+      "betrayalDeck": "The alliance lies in pieces.",
+      "alliance": "{a} and {b} sign an alliance",
+      "allianceDeck": "The two countries end all hostilities.",
+      "allianceBroken": "It would be betrayed at {clock}.",
+      "nuke": {
+        "atom": "{owner} fires the first nuke",
+        "hydrogen": "{owner} drops the first H-bomb",
+        "mirv": "{owner} launches the first MIRV"
+      },
+      "nukeTarget": "Target: {victim}.",
+      "nukeTaboo": "The nuclear taboo is broken.",
+      "nukeWild": "It strikes unclaimed land.",
+      "lead": "{winner} takes the lead for good",
+      "leadTeam": "{team} take the lead for good",
+      "leadDeck": "{share}% of the usable land at that point.",
+      "leadOver": "{share}% of the usable land, overtaking {prev}.",
+      "leadWire": "{share}% of the usable land, and first place never slips away.",
+      "offensive": "{to}'s great offensive",
+      "offensiveDeck": "{share}% of the map's land seized in {span}, from {from}.",
+      "end": "The finale",
+      "endWinner": "Winner: {winner}.",
+      "endNone": "No winner."
+    },
+    "fate": {
+      "title": "Your fate",
+      "podium": "The podium",
+      "won": "Victory",
+      "surrendered": "Surrendered at {clock}",
+      "fell": "Fell at {clock}",
+      "standing": "Still standing at the end",
+      "rank": "Final ranking: {rank} of {n}",
+      "peak": "Peak territory",
+      "peakValue": "{share}% at {clock}",
+      "firstCity": "First city",
+      "firstAlliance": "First alliance",
+      "firstNuke": "First nuclear strike",
+      "kills": "Nations brought down",
+      "betrayedBy": "Betrayed by",
+      "conquered": "Tiles conquered",
+      "at": "{clock}",
+      "with": "{name}, at {clock}",
+      "num": "{n}"
+    }
+  },
+  "news": {
+    "masthead": "The Isoline Courier",
+    "edition": "{clock} edition",
+    "standing": "{n} nations still standing",
+    "standingOne": "1 nation still standing",
+    "minute": "Minute {n}",
+    "minuteFirst": "Minute 1",
+    "inBrief": "In brief",
+    "empty": "Nothing to report yet. News from the front will be printed here.",
+    "emptySection": "No news in this section yet.",
+    "sections": "Sections",
+    "section": {
+      "all": "All",
+      "danger": "Conflict",
+      "warn": "Caution",
+      "good": "Good news"
+    },
+    "goTo": "Show on the map",
+    "min": "{n} min",
+    "sec": "{n} s",
+    "others": "{n} others",
+    "breaking": "Special edition",
+    "readMore": "Read on in the news",
+    "stopPressOne": "Stop press: {list} also falls.",
+    "stopPressMany": "Stop press: {list} also fall.",
+    "fall": {
+      "title": {
+        "conquered": "{name} falls",
+        "surrender": "{name} surrenders",
+        "nuked": "{name} wiped out",
+        "zone": "{name} off the map"
+      },
+      "deck": {
+        "conquered": "Defeated in battle by {by}.",
+        "surrender": "Its government lays down its arms.",
+        "nuked": "{by}'s nuclear fire razed its last lands.",
+        "nukedUnknown": "Nuclear fire razed its last lands.",
+        "zone": "The closing zone swallowed its last lands."
+      },
+      "body": "The {nth} nation to fall, {time} into the game."
+    },
+    "head": {
+      "nuke": "{by} fires a nuclear missile at you",
+      "mirv": "{by} launches a MIRV at you",
+      "betrayal": "{traitor} betrays {victim}",
+      "secession": "Secession: {tiles} tiles revolt",
+      "councilSanctions": "World Council sanctions {target}",
+      "councilNukeBan": "World Council bans nuclear weapons",
+      "councilCeasefire": "World Council imposes a ceasefire",
+      "doomsday": "{share}% of the land now required",
+      "ring": "The zone closes in",
+      "alliance": "Alliance signed with {with}",
+      "gameStart": "Hostilities open",
+      "capitalLost": "Your capital falls to {by}",
+      "capitalRazed": "Your capital is razed",
+      "capitalTaken": "You take {player}'s capital",
+      "capitalFell": "{player}'s capital falls to {by}",
+      "capitalRazedOther": "{player}'s capital is razed"
+    },
+    "deck": {
+      "betrayal": "The alliance is shattered: {traitor} bears the traitor's mark, and {victim} cuts all trade with {traitor} for 5 minutes.",
+      "secession": "Disloyal provinces declare independence.",
+      "councilSanctions": "Its income is halved for 3 minutes.",
+      "councilNukeBan": "No nuclear launches for 3 minutes.",
+      "councilCeasefire": "No new attacks between countries for 60 seconds.",
+      "doomsday": "The doomsday clock ticks on: countries below this share lose troops.",
+      "ring": "Land outside the ring becomes uninhabitable.",
+      "gameStart": "Players are protected by 60 seconds of immunity.",
+      "capitalLost": "{gold} gold of the treasury seized and a minute of disorganisation: choose a new seat of government.",
+      "capitalRazed": "The treasury kept there goes up in smoke; choose a new seat of government.",
+      "capitalTaken": "{gold} gold seized from its treasury; the country is disorganised for a minute.",
+      "capitalFell": "The country is disorganised for a minute and must choose a new seat."
+    },
+    "flash": {
+      "title": "News flash",
+      "since": "Since {clock}",
+      "council": "World Council",
+      "sanction": "Sanctions on {target}",
+      "sanctionDesc": "Its income is halved.",
+      "nukeBan": "Nuclear weapons banned",
+      "nukeBanDesc": "No nuclear launch is possible.",
+      "ceasefire": "General ceasefire",
+      "ceasefireDesc": "No attacks between countries.",
+      "voting": "The Council is voting: {votes} votes, closes in {s} s",
+      "next": "Next Council session in {clock}",
+      "collapse": "Collapse the news flash",
+      "expand": "Expand the news flash",
+      "ends": "Ends at {clock}"
+    },
+    "freshOne": "1 new",
+    "freshMany": "{n} new"
+  },
+  "trade": {
+    "intro": "Merchant ships and trains pay gold to both countries they connect. An embargo cuts that trade.",
+    "earned": "gold earned from trade in 5 minutes",
+    "bySea": "{gold} by sea",
+    "byRail": "{gold} by rail",
+    "boom": "Trade boom under way: earnings are doubled.",
+    "partners": "Partners",
+    "partnersEmpty": "No trade yet. Your ports send merchant ships to foreign ports, and your stations host the trains of countries linked to you by rail.",
+    "goldTip": "Gold earned with this country over the last 5 minutes",
+    "ship1": "1 ship under way",
+    "ships": "{n} ships under way",
+    "train1": "1 train under way",
+    "trains": "{n} trains under way",
+    "embargoes": "Embargoes",
+    "embargoesEmpty": "No embargoes: you can trade with everyone.",
+    "mine": "Your embargo",
+    "theirs": "Embargo against you",
+    "mutual": "Mutual embargo",
+    "mineFor": "You suspend trade after its attack, {clock} left",
+    "theirsFor": "Trade suspended after your attack, {clock} left",
+    "tempTip": "A country that is attacked or betrayed stops trading with the aggressor for 5 minutes.",
+    "others": "Other countries",
+    "noTrade": "No trade right now",
+    "embargo": "Embargo",
+    "lift": "Lift embargo",
+    "embargoAll": "Embargo all but allies",
+    "liftAll": "Lift all my embargoes",
+    "center": "Centre the map on this country",
+    "viaSea": "By sea",
+    "viaRail": "By rail"
+  },
+  "threat": {
+    "tag": "Threatened border",
+    "why": {
+      "war": "it attacked you in the last few minutes",
+      "hostile": "it is hostile to you",
+      "plan": "intelligence marks you as its next target"
+    },
+    "short": {
+      "war": "Attacked you in the last few minutes",
+      "hostile": "Hostile to you",
+      "plan": "Targeting you, intelligence says"
+    }
+  },
+  "capital": {
+    "kickerLost": "Capital lost",
+    "kickerDisorg": "Disorganisation",
+    "titleLost": "The government needs a new seat",
+    "titleMoved": "New capital established",
+    "takenBy": "Taken by {by}.",
+    "razed": "Razed: its treasury went up in smoke.",
+    "disorg": "Reinforcements −25%, income −25%, attacks −20%",
+    "none": "No capital: income −10% until one is established",
+    "how": "Pick a tile of your land more than 5 tiles from any foreign border (allies do not count).",
+    "pick": "Pick on the map",
+    "safest": "Safest spot",
+    "safestTip": "Your largest inland city, or else the heart of the country",
+    "toolHint": "Click your land to establish the capital there (Esc to cancel).",
+    "leftTip": "End of the disorganisation"
+  },
+  "offer": {
+    "title": "Alliance offer",
+    "renewTitle": "Alliance renewal",
+    "terms": "offers you an alliance",
+    "renewTerms": "wants to renew your alliance",
+    "more": "+{n} more offers"
+  },
+  "update": {
+    "title": "Updates",
+    "desc": "Installed version: {version}. New versions come from the game's private GitHub repository",
+    "auto": "Check at launch",
+    "d": {
+      "auto": "A single request to GitHub at start-up, and only once access to the repository is set up.",
+      "token": "Fine-grained, read-only token (Contents: read) on the isoline repository. Kept encrypted in the system keychain, only ever sent to GitHub."
+    },
+    "token": "GitHub access token",
+    "save": "Save",
+    "forget": "Forget the token",
+    "checkNow": "Check now",
+    "download": "Download",
+    "install": "Restart and install",
+    "checking": "Checking…",
+    "upToDate": "You have the latest version.",
+    "downloading": "Downloading… {pct} %",
+    "access": {
+      "saved": "access: saved token",
+      "gh": "access: GitHub CLI login",
+      "env": "access: environment variable",
+      "none": "no access to the repository"
+    },
+    "err": {
+      "no-token": "No access to the repository: save a token or sign in to GitHub CLI (gh auth login).",
+      "unauthorized": "GitHub refused the token (expired or without access to the repository).",
+      "not-found": "No published version found.",
+      "no-asset": "No file for this platform in this version.",
+      "dev": "Installing only works from the installed app (Mac or Windows).",
+      "readonly": "The app's folder is not writable: move Isoline to Applications.",
+      "network": "Could not reach GitHub.",
+      "format": "Unexpected answer from GitHub.",
+      "corrupt": "The download is incomplete or does not match the version.",
+      "signature": "Update refused: it is not signed by Isoline's developer.",
+      "install": "Installation failed.",
+      "bad-token": "This token's format is not valid.",
+      "no-keychain": "The system keychain is unavailable: token not saved."
+    }
   }
 }

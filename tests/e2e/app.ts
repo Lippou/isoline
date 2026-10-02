@@ -8,9 +8,15 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
 export async function launch(
   query = '',
+  /** Optional profile.json written before start (e.g. a chosen flag). */
+  profile?: Record<string, unknown>,
 ): Promise<{ app: ElectronApplication; page: Page; errors: string[] }> {
   const userData = path.join(root, '.cache/e2e-userdata', `${Date.now()}-${Math.round(Math.random() * 1e6)}`);
   fs.mkdirSync(userData, { recursive: true });
+  if (profile) {
+    fs.mkdirSync(path.join(userData, 'profile'), { recursive: true });
+    fs.writeFileSync(path.join(userData, 'profile', 'profile.json'), JSON.stringify(profile));
+  }
   const electronPath = (await import('electron')).default as unknown as string;
   const app = await electron.launch({
     executablePath: electronPath,

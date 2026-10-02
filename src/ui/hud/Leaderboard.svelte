@@ -103,7 +103,7 @@
     font-family: var(--title);
     font-weight: 600;
     font-size: 1.05em;
-    cursor: pointer;
+    cursor: var(--cursor-pointer, pointer);
     padding: 0;
   }
   .all {
@@ -122,9 +122,7 @@
   }
   .cols {
     padding: 5px 10px 3px;
-    font-size: 0.72em;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: 0.8em;
     color: var(--faint);
   }
   .r {
@@ -142,7 +140,7 @@
     border: 0;
     border-radius: 3px;
     color: var(--parchment);
-    cursor: pointer;
+    cursor: var(--cursor-pointer, pointer);
     text-align: left;
   }
   li button:hover {

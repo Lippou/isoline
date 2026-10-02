@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '../icons/Icon.svelte';
+  import { rangeFill } from '../components/rangeFill';
   import { onMount, onDestroy } from 'svelte';
   import { go } from '../stores/app.svelte';
   import { t, i18n } from '../i18n/i18n.svelte';
@@ -10,6 +11,20 @@
   import { toast } from '../stores/game.svelte';
   import { startSolo, playerName } from './launch';
   import { defaultConfig } from '../../core/game/config';
+  import Isolines from '../components/Isolines.svelte';
+
+  // Canvas inks, read from the theme tokens (chart paper in the menus).
+  const ink = { paper: '#e3ecec', text: '#16324a', halo: '#fafcfb', spawn: '#2c6e91', nation: '#b8862a' };
+  function readInks(): void {
+    if (!wrap) return;
+    const cs = getComputedStyle(wrap);
+    const v = (n: string, d: string) => cs.getPropertyValue(n).trim() || d;
+    ink.paper = v('--slate', ink.paper);
+    ink.text = v('--parchment', ink.text);
+    ink.halo = v('--panel-solid', ink.halo);
+    ink.spawn = v('--aurora', ink.spawn);
+    ink.nation = v('--brass', ink.nation);
+  }
 
   let model: EditorModel | null = $state(null);
   let canvas: HTMLCanvasElement;
@@ -69,14 +84,15 @@
       canvas.width = r.width;
       canvas.height = r.height;
     }
-    ctx.fillStyle = '#0b1220';
+    ctx.fillStyle = ink.paper;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.imageSmoothingEnabled = view.z < 1;
     ctx.drawImage(off!, view.x, view.y, model.meta.width * view.z, model.meta.height * view.z);
     const P = (x: number, y: number) => [view.x + (x + 0.5) * view.z, view.y + (y + 0.5) * view.z] as const;
     for (const [x, y] of model.meta.spawnPoints) {
       const [sx, sy] = P(x, y);
-      ctx.strokeStyle = '#4fe3c1';
+      ctx.strokeStyle = ink.spawn;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(sx, sy, 4, 0, Math.PI * 2);
       ctx.stroke();
@@ -86,18 +102,26 @@
       ctx.fillStyle = ['#000', '#d8d0c0', '#9be564', '#f2d06b', '#9ad0f5'][d.type] ?? '#fff';
       ctx.fillRect(sx - 3, sy - 3, 6, 6);
     }
-    ctx.font = '12px "IBM Plex Sans"';
+    ctx.font = '500 12px "IBM Plex Sans"';
+    ctx.lineJoin = 'round';
     for (const n of model.meta.nations) {
       const [sx, sy] = P(n.x, n.y);
-      ctx.fillStyle = '#f2b84b';
+      ctx.fillStyle = ink.nation;
+      ctx.strokeStyle = ink.halo;
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(sx, sy - 6);
       ctx.lineTo(sx + 5, sy);
       ctx.lineTo(sx, sy + 6);
       ctx.lineTo(sx - 5, sy);
+      ctx.closePath();
+      ctx.stroke();
       ctx.fill();
-      ctx.fillStyle = '#eae6da';
-      ctx.fillText(n.name[i18n.lang] || n.name.en, sx + 8, sy + 4);
+      const label = n.name[i18n.lang] || n.name.en;
+      ctx.lineWidth = 3;
+      ctx.strokeText(label, sx + 8, sy + 4);
+      ctx.fillStyle = ink.text;
+      ctx.fillText(label, sx + 8, sy + 4);
     }
   }
 
@@ -218,6 +242,7 @@
     } catch {
       builtins = [];
     }
+    readInks();
     draw();
     void readText;
   });
@@ -228,36 +253,60 @@
 
 <div class="editor" data-testid="editor">
   <header>
-    <button class="btn ghost" onclick={() => go('title')}
+    <button class="btn ghost back" onclick={() => go('title')}
       ><Icon name="back" size={16} />{t('common.back')}</button
     >
     <h1>{t('title.editor')}</h1>
-    <input type="text" bind:value={name} onchange={sync} />
-    <button class="btn" onclick={importFile}>{t('editor.import')}</button>
-    <button class="btn" onclick={exportMap} disabled={!model}>{t('editor.export')}</button>
-    <button class="btn" onclick={save} disabled={!model} data-testid="editor-save">{t('editor.save')}</button>
-    <button class="btn primary" onclick={test} disabled={!model} data-testid="editor-test"
-      >{t('editor.test')}</button
+    <label class="mapname"
+      ><span class="sr-only">{t('editor.mapName')}</span><Icon name="edit" size={14} /><input
+        type="text"
+        bind:value={name}
+        onchange={sync}
+      /></label
     >
+    <div class="acts">
+      <button class="btn" onclick={importFile}><Icon name="upload" size={15} />{t('editor.import')}</button>
+      <button class="btn" onclick={exportMap} disabled={!model}
+        ><Icon name="download" size={15} />{t('editor.export')}</button
+      >
+      <button class="btn" onclick={save} disabled={!model} data-testid="editor-save"
+        ><Icon name="save" size={15} />{t('editor.save')}</button
+      >
+      <button class="btn primary" onclick={test} disabled={!model} data-testid="editor-test"
+        ><Icon name="play" size={15} />{t('editor.test')}</button
+      >
+    </div>
   </header>
   <div class="main">
-    <aside class="tools glass scroll">
+    <aside class="tools scroll">
       {#if !model}
         <h3>{t('editor.new')}</h3>
-        <button class="btn" onclick={() => newMap(800, 500)} data-testid="editor-new">800 × 500</button>
-        <button class="btn" onclick={() => newMap(1200, 800)}>1200 × 800</button>
-        <button class="btn" onclick={() => newMap(2000, 1000)}>2000 × 1000</button>
+        <p class="muted">{t('editor.newHint')}</p>
+        <div class="sizes">
+          <button class="size" onclick={() => newMap(800, 500)} data-testid="editor-new"
+            ><b class="mono">800 × 500</b><small>{t('gen.small')}</small></button
+          >
+          <button class="size" onclick={() => newMap(1200, 800)}
+            ><b class="mono">1200 × 800</b><small>{t('gen.medium')}</small></button
+          >
+          <button class="size" onclick={() => newMap(2000, 1000)}
+            ><b class="mono">2000 × 1000</b><small>{t('gen.huge')}</small></button
+          >
+        </div>
         <h3>{t('editor.fromMap')}</h3>
         <select onchange={(e) => openBuiltin((e.target as HTMLSelectElement).value)}>
-          <option value="">—</option>
+          <option value="">{t('editor.pickMap')}</option>
           {#each builtins as b (b.id)}<option value={b.id}>{b.name[i18n.lang]}</option>{/each}
         </select>
       {:else}
         <h3>{t('editor.brush')}</h3>
         <div class="brushes">
           {#each brushes as b (b)}
-            <button class="chip" class:on={brush === b} onclick={() => (brush = b)}
-              >{t(`editor.b.${b}`)}</button
+            <button
+              class="brush"
+              class:on={brush === b}
+              aria-pressed={brush === b}
+              onclick={() => (brush = b)}>{t(`editor.b.${b}`)}</button
             >
           {/each}
         </div>
@@ -269,6 +318,7 @@
                 class:on={terrainType === k}
                 style="background: rgb({EDITOR_COLORS[k]!.join(',')})"
                 title={t(`terrain.${tr.key}`)}
+                aria-label={t(`terrain.${tr.key}`)}
                 onclick={() => (terrainType = k)}
               ></button>
             {/each}
@@ -286,18 +336,34 @@
             bind:value={nationName}
           />{/if}
         {#if ['terrain', 'raise', 'lower', 'smooth'].includes(brush)}
-          <label>{t('editor.size')} {radius}<input type="range" min="1" max="60" bind:value={radius} /></label
+          <label class="rad"
+            ><span>{t('editor.size')} <b class="mono">{radius}</b></span><input
+              type="range"
+              min="1"
+              max="60"
+              bind:value={radius}
+              use:rangeFill={radius}
+            /></label
           >
         {/if}
-        <button class="btn" onclick={() => model?.autoMarkers()}>{t('editor.auto')}</button>
-        <button class="btn" onclick={fit}>{t('editor.fit')}</button>
-        <p class="muted">
-          {model.meta.width}×{model.meta.height} · {model.meta.spawnPoints.length} spawns · {model.meta
-            .nations.length} nations · {model.meta.deposits.length}
-          {t('editor.depositsShort')}
-        </p>
+        <div class="tool-acts">
+          <button class="btn" onclick={() => model?.autoMarkers()}
+            ><Icon name="sparkles" size={15} />{t('editor.auto')}</button
+          >
+          <button class="btn" onclick={fit}><Icon name="expand" size={15} />{t('editor.fit')}</button>
+        </div>
+        <dl class="facts">
+          <dt>{t('gen.size')}</dt>
+          <dd class="mono">{model.meta.width} × {model.meta.height}</dd>
+          <dt>{t('editor.spawns')}</dt>
+          <dd class="mono">{model.meta.spawnPoints.length}</dd>
+          <dt>{t('lobby.nations')}</dt>
+          <dd class="mono">{model.meta.nations.length}</dd>
+          <dt>{t('editor.deposits')}</dt>
+          <dd class="mono">{model.meta.deposits.length}</dd>
+        </dl>
         <p class="muted">{t('editor.hint')}</p>
-        {#each errors as er (er)}<p class="err">{t(er)}</p>{/each}
+        {#each errors as er (er)}<p class="err"><Icon name="warning" size={14} />{t(er)}</p>{/each}
       {/if}
     </aside>
     <div class="view" bind:this={wrap}>
@@ -310,7 +376,14 @@
         onwheel={wheel}
         oncontextmenu={(e) => e.preventDefault()}
       ></canvas>
-      {#if !model}<p class="empty">{t('editor.empty')}</p>{/if}
+      {#if !model}
+        <div class="empty">
+          <div class="motif">
+            <Isolines mode="static" cx={0.46} cy={0.46} count={6} r0={9} step={8} seed={4} indexEvery={5} />
+          </div>
+          <p>{t('editor.empty')}</p>
+        </div>
+      {/if}
     </div>
   </div>
 </div>
@@ -321,62 +394,169 @@
     inset: 0;
     display: grid;
     grid-template-rows: auto 1fr;
-    gap: 0.8rem;
-    padding: 1rem 1.4rem;
+    gap: 18px;
+    padding: 34px var(--page-pad, 32px) 24px;
     background: var(--abyss);
   }
   header {
     display: flex;
-    gap: 0.6rem;
+    gap: 14px;
     align-items: center;
+    flex-wrap: wrap;
   }
   header h1 {
-    margin-right: auto;
+    font-size: 2em;
+  }
+  .mapname {
+    flex: 1;
+    min-width: 180px;
+    max-width: 380px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+  }
+  .mapname input {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--title);
+    font-size: 1.05em;
+  }
+  .acts {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
   }
   .main {
     display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 0.8rem;
+    grid-template-columns: 280px 1fr;
+    gap: 18px;
     min-height: 0;
   }
   .tools {
-    padding: 0.9rem;
+    padding: 18px;
     display: grid;
-    gap: 0.6rem;
+    gap: 12px;
     align-content: start;
+    background: var(--panel-solid);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+  .tools h3 {
+    font-size: 1.05em;
+  }
+  .sizes {
+    display: grid;
+    gap: 6px;
+  }
+  .size {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 12px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--parchment);
+    cursor: var(--cursor-pointer, pointer);
+    transition:
+      border-color 0.14s,
+      background 0.14s;
+  }
+  .size:hover {
+    border-color: var(--aurora);
+    background: var(--select-bg);
+  }
+  .size small {
+    color: var(--muted);
   }
   .brushes {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.3rem;
+    gap: 4px;
   }
-  .chip {
-    background: none;
-    cursor: pointer;
+  .brush {
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--muted);
+    font-size: 0.9em;
+    cursor: var(--cursor-pointer, pointer);
+    transition:
+      border-color 0.14s,
+      color 0.14s;
   }
-  .chip.on {
+  .brush:hover {
+    color: var(--parchment);
+  }
+  .brush.on {
     color: var(--aurora);
     border-color: var(--aurora);
+    background: var(--select-bg);
+    font-weight: 600;
   }
   .swatches {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 4px;
+    gap: 5px;
   }
   .sw {
     aspect-ratio: 1;
-    border-radius: 6px;
+    border-radius: 4px;
     border: 2px solid transparent;
-    cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(22, 50, 74, 0.15);
+    cursor: var(--cursor-pointer, pointer);
+    transition: transform 0.14s;
+  }
+  .sw:hover {
+    transform: scale(1.08);
   }
   .sw.on {
     border-color: var(--parchment);
   }
+  .rad {
+    display: grid;
+    gap: 4px;
+  }
+  .rad span {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 500;
+  }
+  .rad b {
+    color: var(--aurora);
+  }
+  .tool-acts {
+    display: grid;
+    gap: 6px;
+  }
+  .tool-acts .btn {
+    justify-content: flex-start;
+  }
+  .facts {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    font-size: 0.92em;
+  }
+  .facts dt {
+    color: var(--muted);
+  }
+  .facts dd {
+    margin: 0;
+    text-align: right;
+  }
   .view {
     position: relative;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius);
     overflow: hidden;
+    background: var(--slate);
   }
   canvas {
     display: block;
@@ -388,23 +568,33 @@
     position: absolute;
     inset: 0;
     display: grid;
-    place-items: center;
-    color: var(--faint);
+    place-content: center;
+    justify-items: center;
+    gap: 12px;
+    color: var(--muted);
     pointer-events: none;
   }
-  .muted {
-    color: var(--faint);
-    font-size: 0.82em;
+  .empty p {
     margin: 0;
+  }
+  .motif {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    color: var(--aurora);
+  }
+  .muted {
+    color: var(--muted);
+    font-size: 0.86em;
+    margin: 0;
+    line-height: 1.45;
   }
   .err {
-    color: var(--signal);
-    font-size: 0.85em;
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    color: var(--bad-text);
+    font-size: 0.88em;
     margin: 0;
-  }
-  label {
-    display: grid;
-    gap: 0.2rem;
-    color: var(--muted);
   }
 </style>

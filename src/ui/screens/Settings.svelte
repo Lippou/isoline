@@ -4,26 +4,16 @@
   import PageHeader from '../PageHeader.svelte';
 </script>
 
-<div class="page">
+<div class="page-shell">
   <PageHeader title={t('title.settings')} subtitle={t('settings.subtitle')} />
-  <div class="panel body scroll"><SettingsBody /></div>
+  <div class="page-body body scroll"><SettingsBody /></div>
 </div>
 
 <style>
-  .page {
-    position: fixed;
-    inset: 0;
-    padding: 18px 22px;
-    display: grid;
-    grid-template-rows: auto 1fr;
-    gap: 1rem;
-    background: var(--abyss);
-  }
   .body {
-    padding: 0;
-    min-height: 0;
-    max-width: 1100px;
-    width: 100%;
-    justify-self: center;
+    background: var(--panel-solid);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow-y: auto;
   }
 </style>

@@ -7,27 +7,25 @@ import type { GameConfig } from './config';
 import { DIFFICULTY } from './config';
 import {
   B,
-  BIG_EMPIRE_MAX_MALUS,
-  BIG_EMPIRE_SPAN,
-  BIG_EMPIRE_TILES,
   BUILDING_COUNT,
   CAPTURE_TRANSFER,
   DEFENSE_POST_MAG,
   DEFENSE_POST_RANGE,
   DEFENSE_POST_SPEED,
   HISTORY_EVERY,
+  LARGE_DEFENDER_DEPTH,
   LOYALTY_CONQUERED,
   LOYALTY_MAX,
 } from './constants';
-import type { GameEvent } from './events';
+import type { EliminationCause, GameEvent } from './events';
 import { Player, type PlayerKind } from './player';
 import type { LocalizedName } from '../map/gamemap';
-import { Attack, processAttacks } from '../rules/combat';
+import { Attack, largeTerritoryBonus, processAttacks } from '../rules/combat';
 import { BuildingGrid, type Building } from '../buildings/building';
 import type { Unit } from '../units/unit';
 import type { StampedCommand } from '../net/commands';
 import { applyCommand } from './commands';
-import { updateEconomy } from './economy';
+import { addGold, updateEconomy } from './economy';
 import { setupPlayers, updateSpawnPhase } from './spawn';
 import { updateBuildings, removeBuilding } from '../buildings/buildings';
 import { updateShips } from '../units/ships';
@@ -39,6 +37,7 @@ import { updateVictory, type VictoryState } from '../rules/victory';
 import { updateFeatures, type FeatureState, createFeatureState } from '../rules/features';
 import { updateAI, type AIState, createAIState } from '../npc/ai';
 import { techMagMultiplier, techSpeedMultiplier } from '../rules/tech';
+import { capitalTileTaken, updateCapitals } from '../rules/capital';
 
 export type Phase = 'spawn' | 'playing' | 'ended';
 
@@ -93,6 +92,8 @@ export class Game {
   railsDirty = false;
   /** Incremented on every building add/remove/ownership/completion change. */
   buildingsVersion = 0;
+  /** Capitals taken this tick ([tile, loser, new owner] triples), handled by updateCapitals. */
+  capitalFalls: number[] = [];
 
   /** Optional per-tick work budget for AI (deterministic work units). */
   aiBudget = 6000;
@@ -206,6 +207,7 @@ export class Game {
       p.stats.tilesLost++;
       this.removeBorder(tile, p);
       this.removeCoast(tile, p);
+      if (p.capital === tile) capitalTileTaken(this, tile, old, newOwner);
     }
     this.owner[tile] = newOwner;
     if (newOwner > 0) {
@@ -234,7 +236,7 @@ export class Game {
     if (this.railTiles[tile]) cutRailsAt(this, tile, newOwner);
     if (old > 0) {
       const p = this.players[old]!;
-      if (p.tiles === 0 && p.alive && this.phase === 'playing') this.eliminate(p, newOwner);
+      if (p.tiles === 0 && p.alive && this.phase === 'playing') this.eliminate(p, newOwner, tile);
     }
   }
 
@@ -258,6 +260,11 @@ export class Game {
     this.buildingsDirty = true;
     this.buildingsVersion++;
     this.emit({ k: 'capture', x: b.x, y: b.y, owner: prev, by: newOwner });
+    // Journal: a research centre changes hands with its research output.
+    if (b.type === B.Lab) {
+      if (po?.kind === 'human') this.notify(prev, 'notify.labLost', 'warn', { by: newOwner }, b.tile);
+      if (pn.kind === 'human') this.notify(newOwner, 'notify.labTaken', 'good', { player: prev }, b.tile);
+    }
   }
 
   private refreshBorder(tile: number): void {
@@ -340,12 +347,27 @@ export class Game {
     this.changedFallout.push(tile);
   }
 
-  eliminate(p: Player, by: number): void {
+  /** `tile`: the last tile taken (where the conqueror's loot is shown). */
+  eliminate(p: Player, by: number, tile = -1): void {
     if (!p.alive) return;
     p.alive = false;
     p.eliminatedTick = this.tick;
     p.troops = 0;
     p.workers = 0;
+    // Conquest: the conqueror seizes the treasury (only half of a human's survives).
+    const conqueror = by > 0 && by !== p.id ? this.players[by] : null;
+    if (conqueror && conqueror.alive) {
+      const loot = p.kind === 'human' ? Math.floor(p.gold / 2) : Math.floor(p.gold);
+      p.gold = 0;
+      if (loot > 0) {
+        addGold(conqueror, loot);
+        const w = this.map.width;
+        const [cx, cy] = conqueror.centroid(w);
+        const x = tile >= 0 ? tile % w : Math.round(cx);
+        const y = tile >= 0 ? (tile / w) | 0 : Math.round(cy);
+        this.emit({ k: 'loot', x, y, owner: conqueror.id, amount: loot });
+      }
+    }
     for (const a of this.attacks) if (a.attacker === p.id) a.done = true;
     // Ships at sea sink progressively (handled in ships update: owner dead → hp decay).
     for (const [id, b] of this.buildings)
@@ -354,8 +376,27 @@ export class Game {
       q.allies.delete(p.id);
       q.allyRequests.delete(p.id);
     }
-    this.emit({ k: 'eliminated', player: p.id, by });
-    if (p.kind !== 'tribe') this.notify(-1, 'event.eliminated', 'info', { player: p.id, by });
+    const cause = this.eliminationCause(p, by, tile);
+    this.emit({ k: 'eliminated', player: p.id, by, cause });
+    if (p.kind !== 'tribe') this.notify(-1, 'event.eliminated', 'info', { player: p.id, by, cause });
+  }
+
+  /**
+   * Why `p` fell (the news reports it). A last tile lost to nobody during play is
+   * either the battle royale zone (outside the shrinking ring) or a nuclear blast:
+   * the only other ways a tile goes back to the wilderness.
+   */
+  private eliminationCause(p: Player, by: number, tile: number): EliminationCause {
+    if (p.surrendered) return 'surrender';
+    if (by > 0 && by !== p.id) return 'conquered';
+    const ring = this.victory.ring;
+    if (ring && tile >= 0) {
+      const w = this.map.width;
+      const dx = (tile % w) + 0.5 - ring.cx;
+      const dy = ((tile / w) | 0) + 0.5 - ring.cy;
+      if (dx * dx + dy * dy > ring.nextR * ring.nextR) return 'zone';
+    }
+    return 'nuked';
   }
 
   // ------------------------------------------------------ combat modifiers
@@ -390,12 +431,10 @@ export class Game {
     return found;
   }
 
+  /** How much cheaper attacking p gets because p is huge (OpenFront's large-defender bonus, hover card). */
   bigEmpireMalus(p: Player): number {
-    if (p.tiles <= BIG_EMPIRE_TILES) return 0;
-    return Math.min(
-      BIG_EMPIRE_MAX_MALUS,
-      ((p.tiles - BIG_EMPIRE_TILES) / BIG_EMPIRE_SPAN) * BIG_EMPIRE_MAX_MALUS,
-    );
+    const m = 1 - largeTerritoryBonus(p.tiles, LARGE_DEFENDER_DEPTH);
+    return m >= 0.005 ? m : 0;
   }
 
   techMagMult(attacker: number, terrain: number): number {
@@ -449,6 +488,7 @@ export class Game {
       updateDiplomacy(this);
       updateFeatures(this);
       updateAI(this);
+      updateCapitals(this);
       updateVictory(this);
       if (this.tick % HISTORY_EVERY === 0) this.sampleHistory();
     }

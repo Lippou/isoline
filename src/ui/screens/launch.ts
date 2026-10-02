@@ -2,8 +2,8 @@
 import { app, go } from '../stores/app.svelte';
 import type { GameConfig } from '../../core/game/config';
 import { settings } from '../stores/settings.svelte';
-import { profile } from '../stores/profile.svelte';
-import { MISSIONS, tutorialConfig } from '../campaign/missions';
+import { profile, myFlag } from '../stores/profile.svelte';
+import { MISSIONS } from '../campaign/missions';
 import type { ReplayFile } from '../../engine/replay';
 import { loadSave } from '../game/saves';
 import { t } from '../i18n/i18n.svelte';
@@ -16,27 +16,38 @@ export function playerName(): string {
 
 const randomSeed = () => (Math.random() * 2 ** 31) >>> 0;
 
-export function startSolo(config: GameConfig, customMap?: string): void {
-  audio.ui('confirm');
-  const cfg: GameConfig = { ...config, seed: config.seed || randomSeed() };
-  app.launch = { kind: 'solo', config: cfg, viewer: 1, ...(customMap ? { customMap } : {}) };
-  go('game');
+/**
+ * The profile's flag on the local player's slot (slot 0) of a new solo game. Cosmetic:
+ * the simulation never reads it; it travels in the config, so saves and replays keep it.
+ */
+export function withMyFlag(config: GameConfig): GameConfig {
+  const flag = myFlag();
+  return {
+    ...config,
+    players: config.players.map((s) => {
+      if (s.kind !== 'human' || s.slot !== 0) return s;
+      const { flag: _old, ...rest } = s;
+      return flag ? { ...rest, flag } : rest;
+    }),
+  };
 }
 
-export function startTutorial(): void {
-  app.launch = {
-    kind: 'solo',
-    config: tutorialConfig(randomSeed(), playerName()),
-    viewer: 1,
-    tutorial: true,
-  };
+export function startSolo(config: GameConfig, customMap?: string): void {
+  audio.ui('confirm');
+  const cfg: GameConfig = withMyFlag({ ...config, seed: config.seed || randomSeed() });
+  app.launch = { kind: 'solo', config: cfg, viewer: 1, ...(customMap ? { customMap } : {}) };
   go('game');
 }
 
 export function startMission(id: string): void {
   const m = MISSIONS.find((x) => x.id === id);
   if (!m) return;
-  app.launch = { kind: 'solo', config: m.config(randomSeed(), playerName()), viewer: 1, missionId: id };
+  app.launch = {
+    kind: 'solo',
+    config: withMyFlag(m.config(randomSeed(), playerName())),
+    viewer: 1,
+    missionId: id,
+  };
   go('game');
 }
 
@@ -49,6 +60,26 @@ export function startReplay(file: ReplayFile): void {
     ...(file.customMap ? { customMap: file.customMap } : {}),
   };
   go('game');
+}
+
+/**
+ * Watch a replay from a given moment (the front page's "Revoir"): the replay opens,
+ * fast-forwards to `tick` and the camera goes to `at`. From inside a game, the game
+ * screen is mounted anew (as "Play again" does).
+ */
+export function watchReplayAt(file: ReplayFile, tick: number, at?: [number, number]): void {
+  app.launch = {
+    kind: 'replay',
+    config: file.config,
+    viewer: -1,
+    replay: file,
+    replayAt: { tick, ...(at ? { x: at[0], y: at[1] } : {}) },
+    ...(file.customMap ? { customMap: file.customMap } : {}),
+  };
+  if (app.screen === 'game') {
+    go('replays');
+    setTimeout(() => go('game'), 0);
+  } else go('game');
 }
 
 export async function startFromSave(slot: number): Promise<void> {

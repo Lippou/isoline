@@ -1,21 +1,36 @@
 // Builds every shipped map into assets/maps/:
 //   <id>.png (terrain colours), <id>.elev.png (altitude), <id>.json (meta), <id>.thumb.png
 // Real-world maps are rasterised from Natural Earth (public domain) vector data
-// downloaded into .cache/ne/ (see README). Fictional and arcade maps come from the
-// in-game procedural generator with fixed seeds.
+// downloaded into .cache/ne/ (see README); regional frames, hand-placed nations and
+// extra relief live in catalogue.ts. Fictional and arcade maps come from the in-game
+// procedural generator with fixed seeds, or from hand-drawn shapes (fantasy.ts).
+// `npm run maps -- <id,id…|real|fictional>` rebuilds a subset (index.json is always rewritten).
 import fs from 'node:fs';
 import path from 'node:path';
 import { encode } from 'fast-png';
-import { synthesize, generateDeposits, generateSpawnPoints } from '../../src/core/map/synth';
+import {
+  synthesize,
+  generateDeposits,
+  generateSpawnPoints,
+  softMask,
+  chamferDistance,
+} from '../../src/core/map/synth';
+import { Noise2D } from '../../src/core/noise';
 import { encodeTerrainPng, encodeGreyPng } from '../../src/core/map/format';
 import { generateMapData, generateLabyrinth, markEnclosedLakes } from '../../src/core/map/generator';
 import type { MapMeta, MapCategory, NationSpawn, LocalizedName } from '../../src/core/map/gamemap';
-import { IS_LAND, T, TERRAIN } from '../../src/core/map/terrain';
+import { IS_LAND, IS_WATER, T, TERRAIN } from '../../src/core/map/terrain';
+import { connectRivers } from '../../src/core/map/rivers';
 import { hashString } from '../../src/core/rng';
+import { REGIONS, DESCRIPTIONS, type ExtraNation, type ReliefLine } from './catalogue';
+import { FANTASY, buildFantasy } from './fantasy';
+import { PACKS } from './packs';
+import { buildWorld } from './worlds';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const NE = path.join(ROOT, '.cache/ne');
-const OUT = path.join(ROOT, 'assets/maps');
+// MAPS_OUT redirects the output (e.g. to diff a rebuild against the shipped files).
+const OUT = process.env.MAPS_OUT ? path.resolve(process.env.MAPS_OUT) : path.join(ROOT, 'assets/maps');
 fs.mkdirSync(OUT, { recursive: true });
 
 type Ring = [number, number][];
@@ -173,6 +188,20 @@ interface RealMapDef {
   proj: Projection;
   riverRank: number;
   maxNations: number;
+  /** Natural Earth countries to drop (lower-case ISO code or English NAME). */
+  exclude?: string[];
+  /** Hand-placed nations (default: EXTRA_NATIONS[id]). */
+  extras?: ExtraNation[];
+  /** Extra ranges, added as smooth altitude (synth `relief`). */
+  relief?: ReliefLine[];
+  /** Amplitude of a ridged valley texture inside highlands (fine-scale maps). */
+  rugged?: number;
+  /** Synth moisture shift (negative = fewer forests). */
+  moistureBias?: number;
+  /** Caps the shallow-water band (cosmetic: thumbnails) on fine-scale maps. */
+  maxShallowPx?: number;
+  /** Drops nations whose landmass is smaller than this (tiles): micro-islands. */
+  minLandmass?: number;
 }
 
 const STRAITS: Ring[] = [
@@ -318,10 +347,26 @@ const REAL_MAPS: RealMapDef[] = [
     riverRank: 10,
     maxNations: 16,
   },
+  // Regional maps (scripts/maps/catalogue.ts).
+  ...REGIONS.map((r) => ({
+    id: r.id,
+    name: r.name,
+    category: 'regions' as const,
+    proj: equirect(r.width, ...r.box),
+    riverRank: r.riverRank,
+    maxNations: r.maxNations,
+    exclude: r.exclude,
+    extras: r.extras,
+    relief: r.relief,
+    rugged: r.rugged,
+    moistureBias: r.moistureBias,
+    maxShallowPx: 12,
+    minLandmass: 300,
+  })),
 ];
 
 // Sub-national nations for maps where countries are too few or too big.
-const EXTRA_NATIONS: Record<string, { fr: string; en: string; lon: number; lat: number }[]> = {
+const EXTRA_NATIONS: Record<string, ExtraNation[]> = {
   'black-sea': [
     { fr: 'Crimée', en: 'Crimea', lon: 34.1, lat: 45.0 },
     { fr: 'Anatolie', en: 'Anatolia', lon: 33, lat: 39.8 },
@@ -345,6 +390,90 @@ const EXTRA_NATIONS: Record<string, { fr: string; en: string; lon: number; lat: 
     { fr: 'Cyrénaïque', en: 'Cyrenaica', lon: 21.5, lat: 32.2 },
   ],
 };
+
+/**
+ * Extra altitude for a regional map: hand-drawn ranges (Gaussian ridges broken
+ * into massifs) and, optionally, a ridged valley texture inside highlands so that
+ * fine-scale maps do not show smooth mountain blobs.
+ */
+function reliefField(
+  def: RealMapDef,
+  masks: { mountains: Uint8Array; plateaus: Uint8Array; hills: Uint8Array },
+  seed: number,
+): Float32Array {
+  const { proj } = def;
+  const { width: w, height: h } = proj;
+  const relief = new Float32Array(w * h);
+  const nz = new Noise2D(seed ^ 0x2f6b1d3a);
+  const fMassif = proj.pxKm / 120;
+  for (const r of def.relief ?? []) {
+    const pts = r.pts.map(([lon, lat]) => proj.project(proj.normLon(lon), lat));
+    const sigma = Math.max(2, r.km / proj.pxKm / 2);
+    const amp = r.kind === 'mountains' ? 0.5 : 0.28;
+    const pad = sigma * 3;
+    const x0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p[0])) - pad));
+    const x1 = Math.min(w - 1, Math.ceil(Math.max(...pts.map((p) => p[0])) + pad));
+    const y0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p[1])) - pad));
+    const y1 = Math.min(h - 1, Math.ceil(Math.max(...pts.map((p) => p[1])) + pad));
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        let d = Infinity;
+        for (let k = 1; k < pts.length; k++) {
+          const [ax, ay] = pts[k - 1]!;
+          const [bx, by] = pts[k]!;
+          const dx = bx - ax;
+          const dy = by - ay;
+          const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1)));
+          d = Math.min(d, Math.hypot(x - ax - t * dx, y - ay - t * dy));
+        }
+        if (d > pad) continue;
+        const massif = 0.72 + 0.32 * nz.fbm(x * fMassif, y * fMassif, 3);
+        const i = y * w + x;
+        relief[i] = Math.max(relief[i]!, amp * massif * Math.exp(-((d / sigma) ** 2)));
+      }
+    }
+  }
+  if (def.rugged) {
+    const high = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++)
+      high[i] = masks.mountains[i] || masks.plateaus[i] || masks.hills[i] || relief[i]! > 0.06 ? 1 : 0;
+    const soft = softMask(high, w, h, 8);
+    for (let i = 0; i < w * h; i++) {
+      if (soft[i]! <= 0) continue;
+      const x = i % w;
+      const y = (i / w) | 0;
+      relief[i] = relief[i]! + def.rugged * soft[i]! * (nz.ridged(x / 45, y / 45, 4) - 0.75);
+    }
+  }
+  return relief;
+}
+
+/** Size (tiles) of the passable landmass each tile belongs to (0 for water). */
+function landmassSizes(terrain: Uint8Array, w: number, h: number): Int32Array {
+  const n = w * h;
+  const comp = new Int32Array(n).fill(-1);
+  const out = new Int32Array(n);
+  const stack: number[] = [];
+  const members: number[] = [];
+  for (let s = 0; s < n; s++) {
+    if (comp[s] !== -1 || !IS_LAND[terrain[s]!]) continue;
+    members.length = 0;
+    comp[s] = s;
+    stack.push(s);
+    while (stack.length) {
+      const i = stack.pop()!;
+      members.push(i);
+      const x = i % w;
+      for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w]) {
+        if (j < 0 || j >= n || comp[j] !== -1 || !IS_LAND[terrain[j]!]) continue;
+        comp[j] = s;
+        stack.push(j);
+      }
+    }
+    for (const i of members) out[i] = members.length;
+  }
+  return out;
+}
 
 function buildReal(def: RealMapDef, data: Record<string, Feature[]>): void {
   const t0 = Date.now();
@@ -403,6 +532,7 @@ function buildReal(def: RealMapDef, data: Record<string, Feature[]>): void {
   }
 
   const seed = hashString(def.id);
+  const relief = def.relief || def.rugged ? reliefField(def, masks, seed) : undefined;
   const { terrain, elevation } = synthesize({
     width: w,
     height: h,
@@ -412,12 +542,31 @@ function buildReal(def: RealMapDef, data: Record<string, Feature[]>): void {
     lake,
     latitude: proj.latitude,
     ...masks,
+    ...(relief ? { relief } : {}),
+    ...(def.moistureBias ? { moistureBias: def.moistureBias } : {}),
   });
   for (let i = 0; i < n; i++) if (straits[i]) terrain[i] = T.Shallow;
   markEnclosedLakes(terrain, w, h);
+  if (def.maxShallowPx) {
+    const off = chamferDistance(
+      w,
+      h,
+      (i) => !IS_WATER[terrain[i]!],
+      (i) => IS_WATER[terrain[i]!] === 1,
+    );
+    for (let i = 0; i < n; i++)
+      if (terrain[i] === T.Shallow && off[i]! > def.maxShallowPx) terrain[i] = T.DeepOcean;
+  }
+
+  // Navigable rivers: estuaries and broken centrelines are joined to the sea (≈ 40 km gaps).
+  const riverGap = Math.round(Math.max(4, Math.min(20, 40 / proj.pxKm)));
+  const joined = connectRivers(terrain, w, h, riverGap);
+  if (joined) console.log(`  ${def.id}: ${joined} river tiles carved to reach the sea`);
 
   // Nations from Natural Earth country label points (+ curated regional extras).
   const nations: NationSpawn[] = [];
+  const landmass = def.minLandmass ? landmassSizes(terrain, w, h) : null;
+  const tooSmall = ([x, y]: [number, number]) => !!landmass && landmass[y * w + x]! < def.minLandmass!;
   const snap = (x: number, y: number): [number, number] | null => {
     const xi = Math.round(x),
       yi = Math.round(y);
@@ -441,31 +590,38 @@ function buildReal(def: RealMapDef, data: Record<string, Feature[]>): void {
     const [x, y] = proj.project(lon, lat);
     if (x < 0 || y < 0 || x >= w || y >= h) continue;
     const s = snap(x, y);
-    if (!s) continue;
+    if (!s || tooSmall(s)) continue;
     const pop = Number(p.POP_EST ?? 0);
     const en = String(p.NAME ?? p.NAME_EN);
     const fr = String(p.NAME_FR ?? en);
     if (nations.some((nn) => Math.hypot(nn.x - s[0], nn.y - s[1]) < 6)) continue;
     const iso = String(p.ISO_A2_EH ?? '-99');
+    if (def.exclude && (def.exclude.includes(iso.toLowerCase()) || def.exclude.includes(en))) continue;
+    // Key order (weight before iso) matches the shipped JSON byte for byte.
     nations.push({
       name: { fr, en },
       x: s[0],
       y: s[1],
       flagSeed: hashString(en + def.id),
-      ...(iso !== '-99' ? { iso: iso.toLowerCase() } : {}),
       weight: Math.round(Math.sqrt(pop) + 400),
+      ...(iso !== '-99' ? { iso: iso.toLowerCase() } : {}),
     });
   }
-  for (const e of EXTRA_NATIONS[def.id] ?? []) {
+  for (const e of def.extras ?? EXTRA_NATIONS[def.id] ?? []) {
+    if (e.iso && nations.some((nn) => nn.iso === e.iso)) continue;
     const [x, y] = proj.project(proj.normLon(e.lon), e.lat);
     const s = snap(x, y);
-    if (!s || nations.some((nn) => Math.hypot(nn.x - s[0], nn.y - s[1]) < 10)) continue;
+    if (!s || tooSmall(s) || nations.some((nn) => Math.hypot(nn.x - s[0], nn.y - s[1]) < 10)) {
+      if (def.extras) console.warn(`  ${def.id}: could not place ${e.en}`);
+      continue;
+    }
     nations.push({
       name: { fr: e.fr, en: e.en },
       x: s[0],
       y: s[1],
       flagSeed: hashString(e.en + def.id),
-      weight: 2500,
+      weight: e.weight ?? 2500,
+      ...(e.iso ? { iso: e.iso } : {}),
     });
   }
   nations.sort((a, b) => b.weight - a.weight);
@@ -529,66 +685,73 @@ function writeMap(meta: MapMeta, terrain: Uint8Array, elevation: Uint8Array): vo
   );
 }
 
+const FICTIONAL_DEFS: {
+  id: string;
+  name: LocalizedName;
+  category: MapCategory;
+  gen: Parameters<typeof generateMapData>[0];
+}[] = [
+  {
+    id: 'pangaea',
+    name: { fr: 'Pangée', en: 'Pangaea' },
+    category: 'fictional',
+    gen: {
+      seed: 1912,
+      width: 1600,
+      height: 1000,
+      landRatio: 0.5,
+      islands: 0.1,
+      mountains: 0.55,
+      rivers: 0.7,
+      shape: 'pangaea',
+      nations: 50,
+    },
+  },
+  {
+    id: 'archipelago',
+    name: { fr: 'Archipel', en: 'Archipelago' },
+    category: 'fictional',
+    gen: {
+      seed: 7741,
+      width: 1400,
+      height: 1000,
+      landRatio: 0.33,
+      islands: 0.95,
+      mountains: 0.45,
+      rivers: 0.3,
+      nations: 40,
+      latTop: 35,
+      latBottom: -25,
+    },
+  },
+  {
+    id: 'two-lakes',
+    name: { fr: 'Deux lacs', en: 'Two Lakes' },
+    category: 'fictional',
+    gen: {
+      seed: 2222,
+      width: 1100,
+      height: 700,
+      landRatio: 0.7,
+      islands: 0.1,
+      mountains: 0.4,
+      rivers: 0.6,
+      shape: 'twoLakes',
+      nations: 24,
+      latTop: 56,
+      latBottom: 34,
+    },
+  },
+];
+const FICTIONAL_IDS = [
+  ...FICTIONAL_DEFS.map((d) => d.id),
+  ...FANTASY.map((f) => f.id),
+  ...PACKS.map((p) => p.id),
+];
+
 function buildFictional(): void {
-  const defs: {
-    id: string;
-    name: LocalizedName;
-    category: MapCategory;
-    gen: Parameters<typeof generateMapData>[0];
-  }[] = [
-    {
-      id: 'pangaea',
-      name: { fr: 'Pangée', en: 'Pangaea' },
-      category: 'fictional',
-      gen: {
-        seed: 1912,
-        width: 1600,
-        height: 1000,
-        landRatio: 0.5,
-        islands: 0.1,
-        mountains: 0.55,
-        rivers: 0.7,
-        shape: 'pangaea',
-        nations: 50,
-      },
-    },
-    {
-      id: 'archipelago',
-      name: { fr: 'Archipel', en: 'Archipelago' },
-      category: 'fictional',
-      gen: {
-        seed: 7741,
-        width: 1400,
-        height: 1000,
-        landRatio: 0.33,
-        islands: 0.95,
-        mountains: 0.45,
-        rivers: 0.3,
-        nations: 40,
-        latTop: 35,
-        latBottom: -25,
-      },
-    },
-    {
-      id: 'two-lakes',
-      name: { fr: 'Deux lacs', en: 'Two Lakes' },
-      category: 'fictional',
-      gen: {
-        seed: 2222,
-        width: 1100,
-        height: 700,
-        landRatio: 0.7,
-        islands: 0.1,
-        mountains: 0.4,
-        rivers: 0.6,
-        shape: 'twoLakes',
-        nations: 24,
-        latTop: 56,
-        latBottom: 34,
-      },
-    },
-  ];
-  for (const d of defs) {
+  for (const d of FICTIONAL_DEFS) {
+    if (!wanted(d.id, 'fictional')) continue;
     const t0 = Date.now();
     const out = generateMapData(d.gen);
     out.meta.id = d.id;
@@ -598,20 +761,54 @@ function buildFictional(): void {
     writeMap(out.meta, out.terrain, out.elevation);
     console.log(`${d.id.padEnd(14)} ${d.gen.width}×${d.gen.height} ${Date.now() - t0} ms`);
   }
-  const lab = generateLabyrinth(4242);
-  lab.meta.author = 'Isoline (procedural)';
-  writeMap(lab.meta, lab.terrain, lab.elevation);
-  console.log(`labyrinth      ${lab.meta.width}×${lab.meta.height}`);
+  if (wanted('labyrinth', 'fictional')) {
+    const lab = generateLabyrinth(4242);
+    lab.meta.author = 'Isoline (procedural)';
+    writeMap(lab.meta, lab.terrain, lab.elevation);
+    console.log(`labyrinth      ${lab.meta.width}×${lab.meta.height}`);
+  }
+  // Hand-shaped fantasy worlds (scripts/maps/fantasy.ts).
+  for (const f of FANTASY) {
+    if (!wanted(f.id, 'fictional')) continue;
+    const t0 = Date.now();
+    const out = buildFantasy(f);
+    writeMap(out.meta, out.terrain, out.elevation);
+    const { width: w, height: h } = out.meta;
+    console.log(
+      `${f.id.padEnd(14)} ${w}×${h} (${((w * h) / 1e6).toFixed(2)} M) nations=${out.meta.nations.length} ${Date.now() - t0} ms`,
+    );
+  }
+  // 1.5 packs: arcade, planets, myths & legends (scripts/maps/worlds*.ts).
+  for (const p of PACKS) {
+    if (!wanted(p.id, 'fictional')) continue;
+    const t0 = Date.now();
+    const out = buildWorld(p);
+    writeMap(out.meta, out.terrain, out.elevation);
+    const { width: w, height: h } = out.meta;
+    console.log(
+      `${p.id.padEnd(14)} ${w}×${h} (${((w * h) / 1e6).toFixed(2)} M) nations=${out.meta.nations.length} ${Date.now() - t0} ms`,
+    );
+  }
 }
 
+// Usage: tsx scripts/maps/build-maps.ts [id,id… | fictional | real]  (no argument = every map)
+const filter = process.argv
+  .slice(2)
+  .flatMap((a) => a.split(','))
+  .filter(Boolean);
+const wanted = (id: string, kind: 'fictional' | 'real'): boolean =>
+  filter.length === 0 || filter.includes(id) || filter.includes(kind);
+
 function main(): void {
-  const only = process.argv[2];
-  if (!only || only === 'fictional') buildFictional();
-  if (only !== 'fictional') buildAllReal(only);
+  const known = [...REAL_MAPS.map((d) => d.id), ...FICTIONAL_IDS, 'labyrinth', 'fictional', 'real'];
+  const unknown = filter.filter((f) => !known.includes(f));
+  if (unknown.length) throw new Error(`unknown map id(s): ${unknown.join(', ')}`);
+  buildFictional();
+  if (REAL_MAPS.some((d) => wanted(d.id, 'real'))) buildAllReal();
   writeIndex();
 }
 
-function buildAllReal(only: string | undefined): void {
+function buildAllReal(): void {
   const data = {
     land: loadGeo('ne_10m_land'),
     islands: loadGeo('ne_10m_minor_islands'),
@@ -621,7 +818,7 @@ function buildAllReal(only: string | undefined): void {
     regions: loadGeo('ne_10m_geography_regions_polys'),
     countries: loadGeo('ne_50m_admin_0_countries'),
   };
-  for (const def of REAL_MAPS) if (!only || only === def.id) buildReal(def, data);
+  for (const def of REAL_MAPS) if (wanted(def.id, 'real')) buildReal(def, data);
 }
 
 function writeIndex(): void {
@@ -630,6 +827,7 @@ function writeIndex(): void {
     .filter((f) => f.endsWith('.json') && f !== 'index.json')
     .map((f) => {
       const m = JSON.parse(fs.readFileSync(path.join(OUT, f), 'utf8')) as MapMeta;
+      const desc = DESCRIPTIONS[m.id] ?? PACKS.find((p) => p.id === m.id)?.desc;
       return {
         id: m.id,
         name: m.name,
@@ -637,6 +835,7 @@ function writeIndex(): void {
         width: m.width,
         height: m.height,
         nations: m.nations.length,
+        ...(desc ? { desc } : {}),
       };
     });
   fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(index, null, 1));

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { hud } from '../stores/game.svelte';
+  import { hud, openPanel } from '../stores/game.svelte';
   import { t, short } from '../i18n/i18n.svelte';
   import { settings, keyLabel } from '../stores/settings.svelte';
   import Icon from '../icons/Icon.svelte';
@@ -7,6 +7,8 @@
   import type { GameController } from '../game/controller';
   import { B, BUILD_TICKS, BUILDING_KEYS, N, AIR_COST } from '../../core/game/constants';
   import { currentSession } from '../stores/app.svelte';
+  import { buildingUnlock, lockFor, nukeUnlock, techKey, type Unlock } from '../../core/rules/tech';
+  import ResearchReminder from './ResearchReminder.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   const cfg = currentSession()!.config;
@@ -16,6 +18,7 @@
     { kind: B.City, key: 'buildCity' },
     { kind: B.Port, key: 'buildPort', off: !cfg.allowPorts },
     { kind: B.Factory, key: 'buildFactory', off: !cfg.allowFactories },
+    { kind: B.Lab, key: 'buildLab', off: !cfg.features.tech },
     { kind: B.DefensePost, key: 'buildDefense' },
     { kind: B.Silo, key: 'buildSilo', off: !cfg.allowNukes },
     { kind: B.Sam, key: 'buildSam', off: !cfg.allowNukes && !cfg.features.air },
@@ -38,6 +41,10 @@
       ]
     : [];
   let hovered: string | null = $state(null);
+  // Hovering a button filters the map: matching buildings light up, with their reach.
+  $effect(() => {
+    hud.barHover = hovered;
+  });
 
   function pickBuild(kind: number): void {
     hud.tool = hud.tool.k === 'build' && hud.tool.kind === kind ? { k: 'none' } : { k: 'build', kind };
@@ -49,13 +56,25 @@
   const active = (k: string, kind: number) =>
     hud.tool.k === k && 'kind' in hud.tool && hud.tool.kind === kind;
 
+  // Tech tree: silos, bombs, SAMs, radars, airfields and aircraft wait for their technology.
+  const lockOf = (u: Unlock | null): number => (cfg.features.tech && L ? lockFor(L.tech, u) : -1);
+  const requires = (lock: number): string =>
+    lock < 0 ? '' : t('tech.requiresTech', { tech: t(`${techKey(lock)}.name`) });
+  /** A locked tool opens the technology tree on what it needs. */
+  function openTech(lock: number): void {
+    openPanel('tech');
+    hud.techFocus = lock;
+  }
+
   void ctl;
 </script>
 
-{#snippet tip(title: string, body: string, meta: string[])}
+{#snippet tip(title: string, body: string, meta: string[], req: string = '')}
   <div class="tip panel rise-in">
     <h4>{title}</h4>
     <p>{body}</p>
+    {#if req}<p class="req"><Icon name="lock" size={13} />{req}</p>
+      <p class="reqhint">{t('tech.openTree')}</p>{/if}
     {#if meta.length}<div class="meta">
         {#each meta as m (m)}<span>{m}</span>{/each}
       </div>{/if}
@@ -94,13 +113,15 @@
 
 {#if L}
   <section class="bar panel" data-testid="build-bar">
+    <ResearchReminder {ctl} />
     <div class="group">
       <div class="gtitle">{t('hud.groupBuild')}</div>
       <div class="tools">
         {#each buildings as b (b.kind)}
           {@const cost = L.buildCosts[b.kind] ?? 0}
           {@const name = t(`building.${BUILDING_KEYS[b.kind]}.short`)}
-          <div class="slot">
+          {@const lock = lockOf(buildingUnlock(b.kind))}
+          <div class="slot" class:locked={lock >= 0}>
             {@render tool(
               `b${b.kind}`,
               BUILDING_ICONS[b.kind]!,
@@ -110,9 +131,10 @@
               active('build', b.kind),
               L.gold < cost,
               false,
-              () => pickBuild(b.kind),
+              () => (lock >= 0 ? openTech(lock) : pickBuild(b.kind)),
               `build-${BUILDING_KEYS[b.kind]}`,
             )}
+            {#if lock >= 0}<span class="lock" aria-hidden="true"><Icon name="lock" size={11} /></span>{/if}
             {#if hovered === `b${b.kind}`}
               {@render tip(
                 t(`building.${BUILDING_KEYS[b.kind]}.name`),
@@ -122,6 +144,7 @@
                   t('hud.buildTime', { s: (BUILD_TICKS[b.kind]! / 10).toFixed(0) }),
                   t('hud.ownedN', { n: L.buildingCount[b.kind] ?? 0 }),
                 ],
+                requires(lock),
               )}
             {/if}
           </div>
@@ -159,7 +182,8 @@
         <div class="gtitle">{t('hud.groupNukes')}</div>
         <div class="tools">
           {#each nukes as n (n.kind)}
-            <div class="slot">
+            {@const lock = lockOf(nukeUnlock(n.kind))}
+            <div class="slot" class:locked={lock >= 0}>
               {@render tool(
                 `n${n.kind}`,
                 'nuke',
@@ -169,17 +193,23 @@
                 active('nuke', n.kind),
                 (L.maxLaunch[n.kind] ?? 0) === 0,
                 true,
-                () => pickNuke(n.kind),
+                () => (lock >= 0 ? openTech(lock) : pickNuke(n.kind)),
                 `nuke-${n.key}`,
               )}
+              {#if lock >= 0}<span class="lock" aria-hidden="true"><Icon name="lock" size={11} /></span>{/if}
               {#if active('nuke', n.kind) && hud.tool.k === 'nuke'}<span class="count mono"
                   >×{hud.tool.count}</span
                 >{/if}
               {#if hovered === `n${n.kind}`}
-                {@render tip(t(`nuke.${n.key}.name`), t(`nuke.${n.key}.desc`), [
-                  t('hud.costN', { n: short(L.nukeCosts[n.kind] ?? 0) }),
-                  t('hud.readyN', { n: L.maxLaunch[n.kind] ?? 0 }),
-                ])}
+                {@render tip(
+                  t(`nuke.${n.key}.name`),
+                  t(`nuke.${n.key}.desc`),
+                  [
+                    t('hud.costN', { n: short(L.nukeCosts[n.kind] ?? 0) }),
+                    t('hud.readyN', { n: L.maxLaunch[n.kind] ?? 0 }),
+                  ],
+                  requires(lock),
+                )}
               {/if}
             </div>
           {/each}
@@ -191,7 +221,8 @@
         <div class="gtitle">{t('hud.groupAir')}</div>
         <div class="tools">
           {#each air as a (a.kind)}
-            <div class="slot">
+            {@const lock = lockOf('airfield')}
+            <div class="slot" class:locked={lock >= 0}>
               {@render tool(
                 `a${a.kind}`,
                 'airfield',
@@ -201,9 +232,10 @@
                 active('air', a.kind),
                 L.gold < AIR_COST[a.kind as 0 | 1 | 2] || L.buildingCount[B.Airfield] === 0,
                 false,
-                () => (hud.tool = { k: 'air', kind: a.kind }),
+                () => (lock >= 0 ? openTech(lock) : (hud.tool = { k: 'air', kind: a.kind })),
                 `air-${a.name}`,
               )}
+              {#if lock >= 0}<span class="lock" aria-hidden="true"><Icon name="lock" size={11} /></span>{/if}
               {#if hovered === `a${a.kind}`}
                 {@render tip(
                   t(`unit.${a.name}.name`),
@@ -212,6 +244,7 @@
                     t('hud.costN', { n: short(AIR_COST[a.kind as 0 | 1 | 2]) }),
                     L.buildingCount[B.Airfield] === 0 ? t('hud.needsAirfield') : '',
                   ].filter(Boolean),
+                  requires(lock),
                 )}
               {/if}
             </div>
@@ -250,6 +283,17 @@
             data-tip="{t('hud.view.fog')} ({keyLabel(settings.keys.fogView ?? '')})"
             aria-label={t('hud.view.fog')}><Icon name="fog" size={16} /></button
           >{/if}
+        {#if cfg.allowPorts || cfg.allowFactories}<button
+            class="vt"
+            class:active={settings.game.tradeRoutes}
+            onclick={() => ctl.toggleTradeRoutes()}
+            aria-pressed={settings.game.tradeRoutes}
+            data-testid="view-trade-routes"
+            data-tip="{t('hud.view.tradeRoutes')} ({keyLabel(settings.keys.tradeRoutes ?? '')}). {t(
+              'hud.view.tradeRoutesTip',
+            )}"
+            aria-label={t('hud.view.tradeRoutes')}><Icon name="tradeRoutes" size={16} /></button
+          >{/if}
       </div>
     </div>
   </section>
@@ -284,9 +328,8 @@
     border-left: 1px solid var(--line);
   }
   .gtitle {
-    font-size: 0.66em;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
+    font-size: 0.76em;
+    font-weight: 500;
     color: var(--faint);
     margin: 0 0 5px 2px;
   }
@@ -296,6 +339,20 @@
   }
   .slot {
     position: relative;
+  }
+  .slot.locked .tool {
+    opacity: 0.45;
+  }
+  .slot.locked .tool:hover {
+    opacity: 0.8;
+  }
+  .lock {
+    position: absolute;
+    top: 3px;
+    left: 4px;
+    display: inline-flex;
+    color: var(--parchment);
+    pointer-events: none;
   }
   .tool {
     position: relative;
@@ -402,6 +459,18 @@
     font-size: 0.84em;
     color: var(--muted);
     line-height: 1.45;
+  }
+  .tip .req {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 2px;
+    color: var(--warn-text);
+  }
+  .tip .reqhint {
+    margin: 0 0 6px;
+    font-size: 0.78em;
+    color: var(--faint);
   }
   .meta {
     display: flex;

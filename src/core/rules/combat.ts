@@ -1,41 +1,66 @@
-// Land attacks: a weighted flood-fill frontier per attack (min-heap keyed by
-// "arrival time"), terrain/defence/superiority-dependent losses.
+// Land attacks, ported from OpenFront's AttackExecution and attackLogic: every tick an
+// attack takes the tiles of its front until its tick budget is spent, each tile costing
+// a share of the tick (troop ratio, terrain, length of the front) and troops on both
+// sides. Only the order in which tiles fall is Isoline's own: a weighted flood fill
+// (min-heap keyed by an eikonal "arrival time") that grows rounded fronts.
 import type { Game } from '../game/state';
+import type { Player } from '../game/player';
 import {
-  OVEREXTENSION,
-  FRONT_SPEED_PLAYER,
-  FRONT_SPEED_WILD,
-  ATTACK_MIN_BUDGET,
-  ATTACK_RATE,
-  ATTACK_RATE_VS_PLAYER,
-  CANCEL_PENALTY,
-  DEFENDER_LOSS_DENSITY,
-  ENEMY_LOSS_BASE,
-  ENEMY_LOSS_DENSITY,
-  INFERIORITY_PENALTY,
+  ANNEX_TILES,
+  ATTACKER_LOSS_BASE,
+  ATTACKER_LOSS_PER_DENSITY,
+  BORDER_JITTER,
+  FALLOUT_COMBAT_MULT,
+  FALLOUT_COMBAT_SLOPE,
+  HOPELESS_MAX,
+  HOPELESS_RATIO,
+  LARGE_ATTACKER_DEPTH,
+  LARGE_ATTACKER_SPEED_DEPTH,
+  LARGE_DEFENDER_DEPTH,
+  LARGE_TERRITORY_MIDPOINT,
+  LARGE_TERRITORY_STEEPNESS,
+  LOSS_RATIO_MAX,
+  LOSS_RATIO_MIN,
   MAX_ATTACKS_PER_PLAYER,
-  SUPERIORITY_GAIN,
+  RETREAT_DELAY_TICKS,
+  RETREAT_MALUS,
+  SPEED_COST_DIVISOR,
+  SPEED_RATIO_MAX,
+  SPEED_RATIO_MIN,
+  TERRA_NULLIUS_BUDGET,
+  TERRA_NULLIUS_COST_SCALE,
+  TERRA_NULLIUS_MAX_COST,
+  TERRA_NULLIUS_MIN_COST,
   TRAITOR_DEFENSE_MULT,
   TRAITOR_SPEED_MULT,
-  WILD_LOSS,
+  TRIBE_DEFENDER_LOSS_MULT,
+  WILD_LOSS_DIV,
+  WILD_LOSS_DIV_TRIBE,
+  WILD_REACH,
 } from '../game/constants';
 import { IS_LAND, MAG, SPEED } from '../map/terrain';
 import { hash2 } from '../rng';
 import { addGold } from '../game/economy';
+import { capitalSpeedMult } from './capital';
 
 export class Attack {
   readonly id: number;
   readonly attacker: number;
   readonly target: number;
   troops: number;
+  /** Arrival time of the last tile taken (the front's progress along the eikonal clock). */
   clock = 0;
   /** Clock value at which the attacker's pre-existing border tiles are considered "reached". */
   seedClock = 0;
   createdTick: number;
   heapTiles: number[] = [];
   heapPri: number[] = [];
-  /** Tiles that may be taken without an adjacent attacker tile (amphibious beachheads). */
-  beachhead: number[] = [];
+  /** Target tiles on the attack's front (OpenFront's attack border): queued and not taken yet. */
+  border = new Set<number>();
+  /** Started from a transport's landing tile: kept apart from the other attacks on that target. */
+  boat = false;
+  /** Tick at which an ordered retreat brings the troops home (-1: none); the attack halts meanwhile. */
+  retreatAt = -1;
   conquered = 0;
   done = false;
 
@@ -99,12 +124,119 @@ export class Attack {
 
 const NB = new Int32Array(4);
 
-/** Relative cost of crossing tile i for attack `a` (1 = plains). */
+/** OpenFront's tile cost on plains (terrain SPEED); the front's shape uses costs relative to it. */
+const PLAINS_COST = 16.5;
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/**
+ * OpenFront's big-territory bonus: ~1 for small countries, easing down to
+ * 1 − depth for huge ones, halfway at LARGE_TERRITORY_MIDPOINT tiles (a logistic in log(tiles)).
+ */
+export function largeTerritoryBonus(tiles: number, depth: number): number {
+  return 1 - depth / (1 + Math.pow(LARGE_TERRITORY_MIDPOINT / Math.max(1, tiles), LARGE_TERRITORY_STEEPNESS));
+}
+
+/**
+ * Fallout on the tile multiplies losses and tile cost by 5 − 2 × (share of the land under
+ * fallout), as OpenFront's falloutDefenseModifier (×5 while little land is irradiated).
+ */
+function falloutMult(game: Game, tile: number): number {
+  if (game.fallout[tile] === 0) return 1;
+  const land = Math.max(1, game.map.landCount);
+  return FALLOUT_COMBAT_MULT - (FALLOUT_COMBAT_SLOPE * Math.max(0, land - game.usefulLand)) / land;
+}
+
+/** Relative cost of crossing tile i for the front's shape (1 = plains): terrain, defence posts, fallout. */
 function tileCost(game: Game, tile: number, target: number): number {
   const t = game.map.terrain[tile]!;
-  let speed = SPEED[t]! / 16.5;
-  if (target > 0) speed *= game.defenseSpeedMult(tile, target);
-  return speed;
+  let cost = (SPEED[t]! / PLAINS_COST) * falloutMult(game, tile);
+  if (target > 0) cost *= game.defenseSpeedMult(tile, target);
+  return cost;
+}
+
+/**
+ * Speed of the attacker (general Blitz, technologies, disorganisation after losing its
+ * capital): divides the cost of every tile.
+ */
+function attackSpeedMult(game: Game, p: Player): number {
+  return (p.blitzUntil > game.tick ? 1.3 : 1) * game.techSpeedMult(p.id) * capitalSpeedMult(game, p);
+}
+
+export interface TileOutcome {
+  /** Troops the attack loses taking the tile. */
+  attackerLoss: number;
+  /** Troops the defender loses (its troops per tile). */
+  defenderLoss: number;
+  /** Share of the tick's budget (1) the tile uses up. */
+  tickFraction: number;
+}
+
+/**
+ * OpenFront's attackLogic for attack `a` taking `tile`, with `borderSize` tiles on its
+ * front this tick. mag and tile cost come from the terrain, ×5 / ×3 near an enemy
+ * defence post, ×(5 − 2 × fallout share) on fallout.
+ * - Wilderness: loss mag / 5 (tribes mag / 10); fraction clamp(2,000 × cost / troops, 5, 100) / (2 × border).
+ * - Player: loss mag × clamp(r, 0.6, 2) × (0.463 × bonus(A, 0.7) × bonus(D, 0.3) + 0.0039 × D troops per tile),
+ *   ×0.7 against a tribe, ×0.5 against a traitor; the defender loses its troops per tile;
+ *   fraction clamp(r, 0.82, 7.5) × clamp(r / 20, 1, 50) / 8.55 × cost × bonus(A, 0.73) × bonus(D, 0.3)
+ *   (×0.8 against a traitor) / border.
+ */
+export function attackLogic(game: Game, a: Attack, tile: number, borderSize: number): TileOutcome {
+  const t = game.map.terrain[tile]!;
+  const A = game.players[a.attacker]!;
+  const T = a.target > 0 ? game.players[a.target]! : null;
+  let mag = MAG[t]! * game.techMagMult(a.attacker, t);
+  let cost = SPEED[t]!;
+  if (T) {
+    mag *= game.defenseMagMult(tile, a.target);
+    cost *= game.defenseSpeedMult(tile, a.target);
+  }
+  const fo = falloutMult(game, tile);
+  mag *= fo;
+  cost *= fo;
+  const troops = Math.max(1, a.troops);
+  const border = Math.max(1, borderSize) * attackSpeedMult(game, A);
+  if (!T) {
+    return {
+      attackerLoss: mag / (A.kind === 'tribe' ? WILD_LOSS_DIV_TRIBE : WILD_LOSS_DIV),
+      defenderLoss: 0,
+      tickFraction:
+        clamp((TERRA_NULLIUS_COST_SCALE * cost) / troops, TERRA_NULLIUS_MIN_COST, TERRA_NULLIUS_MAX_COST) /
+        (TERRA_NULLIUS_BUDGET * border),
+    };
+  }
+  if (T.kind === 'tribe' && A.kind !== 'tribe') mag *= TRIBE_DEFENDER_LOSS_MULT;
+  const traitor = T.debuffUntil > game.tick;
+  const bonusD = largeTerritoryBonus(T.tiles, LARGE_DEFENDER_DEPTH);
+  const defenderLoss = T.troops / Math.max(1, T.tiles);
+  const r = T.troops / troops;
+  const attackerLoss =
+    mag *
+    (traitor ? TRAITOR_DEFENSE_MULT : 1) *
+    clamp(r, LOSS_RATIO_MIN, LOSS_RATIO_MAX) *
+    (ATTACKER_LOSS_BASE * largeTerritoryBonus(A.tiles, LARGE_ATTACKER_DEPTH) * bonusD +
+      ATTACKER_LOSS_PER_DENSITY * defenderLoss) *
+    game.eventDefenseMult(a.target);
+  const speedCost =
+    (clamp(r, SPEED_RATIO_MIN, SPEED_RATIO_MAX) * clamp(r / HOPELESS_RATIO, 1, HOPELESS_MAX)) /
+    SPEED_COST_DIVISOR;
+  return {
+    attackerLoss,
+    defenderLoss,
+    tickFraction:
+      (speedCost *
+        cost *
+        largeTerritoryBonus(A.tiles, LARGE_ATTACKER_SPEED_DEPTH) *
+        bonusD *
+        (traitor ? TRAITOR_SPEED_MULT : 1)) /
+      border,
+  };
+}
+
+/** Border size of `a` this tick: its front plus OpenFront's 0–4 jitter (hash-based, deterministic). */
+export function borderSizeOf(game: Game, a: Attack): number {
+  return a.border.size + (hash2(a.id, game.tick, game.config.seed) % BORDER_JITTER);
 }
 
 const FRONT_SHAPE = 0.02;
@@ -124,12 +256,13 @@ function enqueueNeighbors(game: Game, a: Attack, tile: number): void {
   }
 }
 
-/** Queues (or re-queues earlier) frontier tile j at its eikonal arrival time. */
+/** Queues (or re-queues earlier) frontier tile j at its eikonal arrival time; it joins the attack's border. */
 function pushFrontier(game: Game, a: Attack, j: number): void {
   const t = Math.fround(arrivalTime(game, a, j));
-  if (game.queuedBy[j] === a.id && t >= game.frontTime[j]!) return;
+  if (a.border.has(j) && game.queuedBy[j] === a.id && t >= game.frontTime[j]!) return;
   game.queuedBy[j] = a.id;
   game.frontTime[j] = t;
+  a.border.add(j);
   a.push(j, t);
 }
 
@@ -171,17 +304,83 @@ function arrivalTime(game: Game, a: Attack, j: number): number {
   return t - FRONT_SHAPE * (n - 10);
 }
 
+// ------------------------------------------------------------ attack orders
 /**
- * Creates (or reinforces) a land attack with `troops` already taken from the
- * attacker's pool. On failure the troops are returned to the pool (except
- * those consumed by a clash with an opposing attack). Returns the attack or null.
+ * OpenFront's canAttack: a country must share a land border with the attacker; the
+ * wilderness must be linked to the attacker's land by unowned land within WILD_REACH
+ * (Manhattan) of the clicked tile. Anything else needs a transport.
+ */
+export function hasFrontier(game: Game, p: Player, target: number, tile: number): boolean {
+  return target > 0 ? sharesBorder(game, p, game.players[target]!) : wildernessReachable(game, p, tile);
+}
+
+/** Whether p and q touch by land (scans the shorter of the two border lists). */
+export function sharesBorder(game: Game, p: Player, q: Player): boolean {
+  const [a, b] = p.border.length <= q.border.length ? [p, q] : [q, p];
+  const map = game.map;
+  const owner = game.owner;
+  for (const t of a.border) {
+    const n = map.neighbors4(t, NB);
+    for (let k = 0; k < n; k++) {
+      const j = NB[k]!;
+      if (owner[j] === b.id && IS_LAND[map.terrain[j]!] && !game.isDead(j)) return true;
+    }
+  }
+  return false;
+}
+
+function wildernessReachable(game: Game, p: Player, tile: number): boolean {
+  const map = game.map;
+  const owner = game.owner;
+  const w = map.width;
+  const free = (t: number) => owner[t] === 0 && IS_LAND[map.terrain[t]!] === 1 && !game.isDead(t);
+  if (!free(tile)) return false;
+  const x0 = tile % w;
+  const y0 = (tile / w) | 0;
+  const seen = new Set<number>([tile]);
+  const queue = [tile];
+  const nb = new Int32Array(4);
+  for (let qi = 0; qi < queue.length; qi++) {
+    const t = queue[qi]!;
+    const n = map.neighbors4(t, nb);
+    for (let k = 0; k < n; k++) {
+      const j = nb[k]!;
+      if (owner[j] === p.id) return true;
+      if (seen.has(j) || !free(j)) continue;
+      if (Math.abs((j % w) - x0) + Math.abs(((j / w) | 0) - y0) > WILD_REACH) continue;
+      seen.add(j);
+      queue.push(j);
+    }
+  }
+  return false;
+}
+
+/** Whether p may open (or reinforce) a land attack on `target` (at most MAX_ATTACKS_PER_PLAYER at once). */
+export function attackSlotFree(game: Game, attackerId: number, target: number): boolean {
+  let n = 0;
+  for (const x of game.attacks) {
+    if (x.done || x.attacker !== attackerId) continue;
+    if (x.target === target && !x.boat) return true;
+    n++;
+  }
+  return n < MAX_ATTACKS_PER_PLAYER;
+}
+
+/**
+ * OpenFront's AttackExecution.init, `troops` being already taken from the attacker's
+ * pool. The new troops first clash with the target's attacks on the attacker: each
+ * side loses the smaller stack. A land attack then absorbs the attacks already sent at
+ * that target (transport landings included) and fronts on the whole shared border; an
+ * attack from a transport's `landing` tile (already taken) starts apart, from that tile.
+ * Returns the attack, or null when nothing is left to push (troops refunded, except
+ * those lost in the clash).
  */
 export function launchAttack(
   game: Game,
   attackerId: number,
   targetId: number,
   troops: number,
-  beachhead?: number,
+  landing?: number,
 ): Attack | null {
   const p = game.players[attackerId]!;
   if (!p.alive) return null;
@@ -189,39 +388,50 @@ export function launchAttack(
     p.troops += Math.max(0, troops);
     return null;
   }
-  // Reinforce an existing attack against the same target.
-  let a = game.attacks.find((x) => !x.done && x.attacker === attackerId && x.target === targetId) ?? null;
+  const boat = landing !== undefined;
+  let a = boat
+    ? null
+    : (game.attacks.find((x) => !x.done && x.attacker === attackerId && x.target === targetId && !x.boat) ??
+      null);
   const fresh = !a;
   if (!a) {
-    if (game.attacks.filter((x) => !x.done && x.attacker === attackerId).length >= MAX_ATTACKS_PER_PLAYER) {
+    if (!attackSlotFree(game, attackerId, boat ? -1 : targetId)) {
       p.troops += troops;
       return null;
     }
     a = new Attack(game.nextId(), attackerId, targetId, 0, game.tick);
+    a.boat = boat;
   }
-  // Opposing attacks clash and cancel each other's troops first.
+  // Opposing attacks clash: the bigger stack goes on, minus the smaller one.
   if (targetId > 0) {
-    const opp = game.attacks.find((x) => !x.done && x.attacker === targetId && x.target === attackerId);
-    if (opp) {
-      const m = Math.min(opp.troops, troops);
-      opp.troops -= m;
-      troops -= m;
-      if (opp.troops < 1) finishAttack(game, opp, false);
-      if (troops < 1) {
-        if (fresh) return null;
-        return a;
+    for (const opp of game.attacks) {
+      if (opp.done || opp.attacker !== targetId || opp.target !== attackerId) continue;
+      if (opp.troops > troops) {
+        opp.troops -= troops;
+        troops = 0;
+        break;
       }
+      troops -= opp.troops;
+      opp.troops = 0;
+      finishAttack(game, opp, false);
     }
+    if (troops < 1 && fresh) return null;
   }
-  a.troops += troops;
-  if (beachhead !== undefined) {
-    a.beachhead.push(beachhead);
-    a.push(beachhead, a.clock);
+  a.troops += Math.max(0, troops);
+  a.seedClock = a.clock;
+  const owner = game.owner;
+  const map = game.map;
+  if (boat) {
+    enqueueNeighbors(game, a, landing);
   } else {
-    // Seed the frontier from the attacker's border.
-    a.seedClock = a.clock;
-    const owner = game.owner;
-    const map = game.map;
+    // A land attack absorbs the landings already pushing into the same target.
+    for (const x of game.attacks) {
+      if (x === a || x.done || x.attacker !== attackerId || x.target !== targetId) continue;
+      a.troops += x.troops;
+      x.troops = 0;
+      finishAttack(game, x, false);
+    }
+    // Front: every target tile along the attacker's border.
     for (const b of p.border) {
       const n = map.neighbors4(b, NB);
       for (let k = 0; k < n; k++) {
@@ -232,22 +442,32 @@ export function launchAttack(
     }
   }
   if (a.frontierSize === 0) {
-    // Nothing to attack: refund (a fresh attack holds only these troops).
-    p.troops += fresh ? a.troops : troops;
-    if (!fresh) a.troops -= troops;
-    else a.troops = 0;
+    // Nothing to attack: the troops go home.
+    p.troops += a.troops;
+    a.troops = 0;
+    if (!fresh) finishAttack(game, a, false);
     return null;
   }
   if (fresh) game.attacks.push(a);
   return a;
 }
 
+/** OpenFront's RetreatExecution: the attack halts, its troops come home RETREAT_DELAY_TICKS later. */
 export function cancelAttack(game: Game, a: Attack): void {
-  if (a.done) return;
+  if (a.done || a.retreatAt >= 0) return;
+  a.retreatAt = game.tick + RETREAT_DELAY_TICKS;
+}
+
+/** The troops of `a` come home, `malus` of them lost on the way. */
+function retreat(game: Game, a: Attack, malus: number): void {
   const p = game.players[a.attacker]!;
-  p.troops += a.troops * (1 - CANCEL_PENALTY);
+  const deaths = a.troops * malus;
+  if (p.alive) {
+    p.troops += a.troops - deaths;
+    p.stats.troopsLost += deaths;
+  }
   a.troops = 0;
-  a.done = true;
+  finishAttack(game, a, false);
 }
 
 export function finishAttack(game: Game, a: Attack, refund = true): void {
@@ -258,35 +478,121 @@ export function finishAttack(game: Game, a: Attack, refund = true): void {
   a.done = true;
   a.heapTiles.length = 0;
   a.heapPri.length = 0;
+  a.border.clear();
 }
 
-/** Loss (attacker troops) to take tile `tile` from `target` (0 = wilderness). */
-export function conquestLoss(game: Game, a: Attack, tile: number): number {
-  const t = game.map.terrain[tile]!;
-  let mag = MAG[t]! / 80;
-  const fo = game.fallout[tile]!;
-  if (fo > 0) mag *= 5 - 2 * (1 - fo / 255); // fresh fallout ×5 … decaying towards ×3
-  mag *= game.techMagMult(a.attacker, t);
-  if (a.target === 0) return WILD_LOSS * mag;
-  const T = game.players[a.target]!;
-  mag *= game.defenseMagMult(tile, a.target);
-  const density = T.troops / Math.max(1, T.tiles);
-  let loss = mag * (ENEMY_LOSS_BASE + ENEMY_LOSS_DENSITY * density);
-  const ratio = a.troops / Math.max(1, T.troops);
-  if (ratio >= 1) loss *= 1 - SUPERIORITY_GAIN * Math.min(1, ratio - 1);
-  else loss *= 1 + INFERIORITY_PENALTY * (1 - ratio);
-  if (T.debuffUntil > game.tick) loss *= TRAITOR_DEFENSE_MULT;
-  loss *= 1 - game.bigEmpireMalus(T);
-  // Logistics: the larger the attacker's share of the world, the costlier its wars.
-  const A = game.players[a.attacker]!;
-  loss *= 1 + OVEREXTENSION * (A.usefulTiles / Math.max(1, game.usefulLand));
-  loss *= game.eventDefenseMult(a.target);
-  return loss;
+// ------------------------------------------------------------------ ticking
+/** Tiles of p (fewer than ANNEX_TILES), flood-filled from its border and coast, in index order. */
+function tilesOf(game: Game, p: Player): number[] {
+  const owner = game.owner;
+  const seen = new Set<number>([...p.border, ...p.coast]);
+  const stack = [...seen];
+  const nb = new Int32Array(4);
+  while (stack.length) {
+    const t = stack.pop()!;
+    const n = game.map.neighbors4(t, nb);
+    for (let k = 0; k < n; k++) {
+      const j = nb[k]!;
+      if (owner[j] === p.id && !seen.has(j)) {
+        seen.add(j);
+        stack.push(j);
+      }
+    }
+  }
+  return [...seen].sort((x, y) => x - y);
+}
+
+/**
+ * OpenFront's handleDeadDefender: a country cut below ANNEX_TILES tiles is annexed whole.
+ * Pass after pass, its tiles touching the conqueror go to the conqueror, the others to a
+ * neighbour that is not its friend.
+ */
+function annex(game: Game, conqueror: Player, T: Player): void {
+  const owner = game.owner;
+  const tiles = tilesOf(game, T);
+  const nb = new Int32Array(4);
+  for (let pass = 0; pass < 100 && T.tiles > 0; pass++) {
+    let progressed = false;
+    for (const t of tiles) {
+      if (owner[t] !== T.id) continue;
+      const n = game.map.neighbors4(t, nb);
+      let other = 0;
+      let mine = false;
+      for (let k = 0; k < n && !mine; k++) {
+        const o = owner[nb[k]!]!;
+        if (o === conqueror.id) mine = true;
+        else if (other === 0 && o > 0 && o !== T.id && !game.friendly(o, T.id)) other = o;
+      }
+      if (mine || other > 0) {
+        game.setOwner(t, mine ? conqueror.id : other);
+        progressed = true;
+      }
+    }
+    if (!progressed) break;
+  }
+}
+
+/** One tick of attack `a`: take tiles in front order until the tick budget (1) is spent. */
+function advance(game: Game, a: Attack, p: Player, T: Player | null): void {
+  const owner = game.owner;
+  const map = game.map;
+  const borderSize = borderSizeOf(game, a);
+  let budget = 1;
+  let loot = 0;
+  let lootTile = 0;
+  while (budget > 0) {
+    if (a.troops < 1) {
+      // Spent: the last handful of troops dies in the push.
+      p.stats.troopsLost += a.troops;
+      a.troops = 0;
+      finishAttack(game, a, false);
+      break;
+    }
+    if (a.frontierSize === 0 || (T && !T.alive)) {
+      // Nothing left to take: the attack is over and its troops go home.
+      finishAttack(game, a);
+      break;
+    }
+    a.clock = Math.max(a.clock, a.peekPri());
+    const tile = a.pop();
+    a.border.delete(tile);
+    if (owner[tile] !== a.target || !IS_LAND[map.terrain[tile]!] || game.isDead(tile)) continue;
+    let touches = false;
+    const n = map.neighbors4(tile, NB);
+    for (let k = 0; k < n; k++) if (owner[NB[k]!] === a.attacker) touches = true;
+    if (!touches) continue;
+    enqueueNeighbors(game, a, tile);
+    const o = attackLogic(game, a, tile, borderSize);
+    budget -= o.tickFraction;
+    const loss = Math.min(a.troops, o.attackerLoss);
+    a.troops -= loss;
+    p.stats.troopsLost += loss;
+    if (T) {
+      // The defender loses its troops per tile.
+      const kill = Math.min(T.troops, o.defenderLoss);
+      T.troops -= kill;
+      T.stats.troopsLost += kill;
+      p.stats.enemiesKilled += kill;
+      // Tribes hoard gold: each conquered tile yields its share of the treasury.
+      if (T.kind === 'tribe' && T.gold > 0) {
+        const share = T.gold / Math.max(1, T.tiles);
+        T.gold -= share;
+        addGold(p, share);
+        loot += share;
+        lootTile = tile;
+      }
+    }
+    game.setOwner(tile, a.attacker);
+    a.conquered++;
+    if (T && T.alive && T.tiles < ANNEX_TILES) annex(game, p, T);
+  }
+  if (loot >= 1) {
+    const w = map.width;
+    game.emit({ k: 'loot', x: lootTile % w, y: (lootTile / w) | 0, owner: p.id, amount: Math.round(loot) });
+  }
 }
 
 export function processAttacks(game: Game): void {
-  const owner = game.owner;
-  const map = game.map;
   for (const a of game.attacks) {
     if (a.done) continue;
     const p = game.players[a.attacker]!;
@@ -295,63 +601,11 @@ export function processAttacks(game: Game): void {
       finishAttack(game, a);
       continue;
     }
-    let speedMult = 1;
-    if (p.debuffUntil > game.tick) speedMult *= TRAITOR_SPEED_MULT;
-    if (p.blitzUntil > game.tick) speedMult *= 1.3;
-    speedMult *= game.techSpeedMult(a.attacker);
-    a.clock += speedMult * (T ? FRONT_SPEED_PLAYER : FRONT_SPEED_WILD);
-    let budget =
-      Math.max(ATTACK_MIN_BUDGET, ATTACK_RATE * Math.sqrt(a.troops)) *
-      (T ? ATTACK_RATE_VS_PLAYER : 1) *
-      speedMult;
-    let loot = 0;
-    let lootTile = 0;
-    while (budget > 0 && a.frontierSize > 0 && a.peekPri() <= a.clock) {
-      const tile = a.pop();
-      if (owner[tile] !== a.target || !IS_LAND[map.terrain[tile]!] || game.isDead(tile)) continue;
-      // Must touch the attacker (unless it is a beachhead).
-      let touches = false;
-      const n = map.neighbors4(tile, NB);
-      for (let k = 0; k < n; k++) if (owner[NB[k]!] === a.attacker) touches = true;
-      if (!touches) {
-        const bi = a.beachhead.indexOf(tile);
-        if (bi < 0) continue;
-        a.beachhead.splice(bi, 1);
-      }
-      const loss = conquestLoss(game, a, tile);
-      if (a.troops < loss) {
-        // Out of steam: the remaining handful of troops is lost in the push.
-        p.stats.troopsLost += a.troops;
-        a.troops = 0;
-        break;
-      }
-      a.troops -= loss;
-      p.stats.troopsLost += loss;
-      if (T) {
-        const density = T.troops / Math.max(1, T.tiles);
-        const kill = Math.min(T.troops, density * DEFENDER_LOSS_DENSITY);
-        T.troops -= kill;
-        T.stats.troopsLost += kill;
-        p.stats.enemiesKilled += kill;
-      }
-      // Tribes hoard gold: each conquered tile yields its share of the treasury.
-      if (T && T.kind === 'tribe' && T.gold > 0) {
-        const share = T.gold / Math.max(1, T.tiles);
-        T.gold -= share;
-        addGold(p, share);
-        loot += share;
-        lootTile = tile;
-      }
-      game.setOwner(tile, a.attacker);
-      a.conquered++;
-      budget -= tileCost(game, tile, a.target);
-      enqueueNeighbors(game, a, tile);
+    if (a.retreatAt >= 0) {
+      if (game.tick >= a.retreatAt) retreat(game, a, a.target > 0 ? RETREAT_MALUS : 0);
+      continue;
     }
-    if (loot >= 1) {
-      const w = map.width;
-      game.emit({ k: 'loot', x: lootTile % w, y: (lootTile / w) | 0, owner: p.id, amount: Math.round(loot) });
-    }
-    if (a.troops < 1 || a.frontierSize === 0) finishAttack(game, a);
+    advance(game, a, p, T);
   }
   if (game.attacks.some((a) => a.done)) game.attacks = game.attacks.filter((a) => !a.done);
 }

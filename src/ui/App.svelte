@@ -18,9 +18,15 @@
   import Campaign from './screens/Campaign.svelte';
   import LoadGame from './screens/LoadGame.svelte';
   import Modal from './Modal.svelte';
+  import ScreenSweep from './components/ScreenSweep.svelte';
   import { defaultConfig } from '../core/game/config';
+  import { withMyFlag, startMission } from './screens/launch';
 
   let booted = $state(false);
+  // Screen transition: a quick contour sweep, except for the splash and the title's own
+  // opening sequence (which draws its contours from the logo).
+  const sweep = $derived(app.screen !== 'splash' && !(app.screen === 'title' && app.previous === 'splash'));
+  const sweepSeed = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
   onMount(async () => {
     const info = await bridge.info().catch(() => null);
@@ -33,11 +39,10 @@
     audio.voiceLang = settings.lang;
     booted = true;
     autostart();
-    const unlock = () => {
-      audio.ensure();
-      audio.setVolumes(settings.audio);
-      audio.setScene(app.screen === 'game' ? 'game' : 'menu');
-    };
+    // Autoplay policy: the audio context starts on the first gesture (later gestures
+    // only resume it if the system suspended it). The scene is never re-set here: that
+    // restarted the music at every click.
+    const unlock = () => audio.ensure();
     window.addEventListener('pointerdown', unlock, { once: false });
     window.addEventListener('keydown', unlock, { once: true });
     window.addEventListener(
@@ -54,12 +59,17 @@
     if (booted) audio.setVolumes(settings.audio);
   });
 
-  /** Automation hooks (tests, screenshots, media): ?autostart=<map>&nations=&tribes=&spectate&screen=<name> */
+  /** Automation hooks (tests, screenshots, media): ?autostart=<map>&nations=&tribes=&spectate&screen=<name>, ?mission=<id> */
   function autostart(): void {
     const q = new URLSearchParams(location.search);
     const screen = q.get('screen');
     if (screen) {
       app.screen = screen as typeof app.screen;
+      return;
+    }
+    const mission = q.get('mission');
+    if (mission) {
+      startMission(mission);
       return;
     }
     const map = q.get('autostart');
@@ -79,14 +89,16 @@
     cfg.players = spectate
       ? []
       : [{ slot: 0, name: q.get('name') ?? 'Ilse', kind: 'human', team: 1, general: 'blitz' }];
-    app.launch = { kind: 'solo', config: cfg, viewer: spectate ? -1 : 1 };
+    app.launch = { kind: 'solo', config: withMyFlag(cfg), viewer: spectate ? -1 : 1 };
     app.screen = 'game';
   }
 </script>
 
 {#if booted}
+  <!-- Persistent backdrop: screens fade in over paper (menus) or ink (game), never over a flash. -->
+  <div class="stage" class:chart={app.screen !== 'game'}></div>
   {#key app.screen}
-    <div class="screen">
+    <div class="screen" class:chart={app.screen !== 'game'}>
       {#if app.screen === 'splash'}<Splash />
       {:else if app.screen === 'title' || app.screen === 'play'}<Title />
       {:else if app.screen === 'lobby'}<Lobby />
@@ -100,20 +112,35 @@
       {:else if app.screen === 'campaign'}<Campaign />
       {:else if app.screen === 'load'}<LoadGame />
       {/if}
+      {#if sweep}<ScreenSweep seed={sweepSeed(app.screen)} />{/if}
     </div>
   {/key}
   <Modal />
 {/if}
 
 <style>
+  .stage {
+    position: fixed;
+    inset: 0;
+    background: var(--abyss);
+  }
   .screen {
     position: fixed;
     inset: 0;
-    animation: screenIn 0.35s ease-out both;
+    animation: screen-in 0.3s ease-out both;
   }
-  @keyframes screenIn {
+  .screen.chart {
+    animation: screen-rise 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  @keyframes screen-in {
     from {
       opacity: 0;
+    }
+  }
+  @keyframes screen-rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
     }
   }
 </style>

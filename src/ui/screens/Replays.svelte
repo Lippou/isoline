@@ -1,30 +1,54 @@
 <script lang="ts">
   import PageHeader from '../PageHeader.svelte';
   import Icon from '../icons/Icon.svelte';
+  import Isolines from '../components/Isolines.svelte';
   import { onMount } from 'svelte';
-  import { t, date, clock } from '../i18n/i18n.svelte';
-  import { bridge, readText } from '../bridge';
+  import { t, i18n, date, clock } from '../i18n/i18n.svelte';
+  import { bridge, readText, mapsBase } from '../bridge';
   import { parseReplay, type ReplayFile } from '../../engine/replay';
   import { startReplay } from './launch';
   import { toast } from '../stores/game.svelte';
+  import { app, go } from '../stores/app.svelte';
 
   let files: { name: string; size: number; mtime: number }[] = $state([]);
-  let meta = $state<Record<string, ReplayFile['summary'] & { map: string; date: string }>>({});
+  let loading = $state(true);
+  let meta = $state<Record<string, ReplayFile['summary'] & { map: string; date: string; stale: boolean }>>(
+    {},
+  );
+  let mapNames = $state<Record<string, { fr: string; en: string }>>({});
+  // The simulation rules change between minor versions: older replays play out differently.
+  const minor = (v: string) => v.split('.').slice(0, 2).join('.');
+  const mapName = (id: string) => {
+    const n = mapNames[id];
+    return n ? n[i18n.lang] || n.en : id;
+  };
 
   async function refresh(): Promise<void> {
     files = (await bridge.storage.list('replays')).filter((f) => f.name.endsWith('.rpl'));
+    loading = false;
     for (const f of files.slice(0, 40)) {
       const txt = await readText('replays', f.name);
       if (!txt) continue;
       try {
         const r = parseReplay(txt);
-        meta[f.name] = { ...r.summary, map: r.config.mapId, date: r.date };
+        meta[f.name] = {
+          ...r.summary,
+          map: r.config.mapId,
+          date: r.date,
+          stale: minor(r.appVersion ?? '') !== minor(app.version),
+        };
       } catch {
         /* ignore */
       }
     }
   }
-  onMount(refresh);
+  onMount(() => {
+    void refresh();
+    void fetch(`${mapsBase()}index.json`)
+      .then((r) => r.json() as Promise<{ id: string; name: { fr: string; en: string } }[]>)
+      .then((l) => (mapNames = Object.fromEntries(l.map((m) => [m.id, m.name]))))
+      .catch(() => {});
+  });
 
   async function open(name: string): Promise<void> {
     const txt = await readText('replays', name);
@@ -55,85 +79,112 @@
     await bridge.storage.remove('replays', name);
     await refresh();
   }
+  function newGame(): void {
+    app.lobby.lan = false;
+    go('lobby');
+  }
 </script>
 
-<div class="rep" data-testid="replays">
+<div class="page-shell" data-testid="replays">
   <PageHeader title={t('title.replays')} subtitle={t('replay.subtitle')}>
     {#snippet actions()}
       <button class="btn" onclick={importFile}><Icon name="upload" size={15} />{t('replay.import')}</button>
     {/snippet}
   </PageHeader>
-  <section class="panel table">
-    <div class="thead">
-      <span>{t('replay.colMap')}</span><span>{t('replay.colWinner')}</span><span
-        >{t('replay.colDuration')}</span
-      ><span>{t('replay.colDate')}</span><span></span>
-    </div>
-    <ul class="scroll">
-      {#each files as f (f.name)}
-        {@const m = meta[f.name]}
-        <li>
-          <span class="name">{m ? m.map : f.name}</span>
-          <span>{m ? m.winner : '—'}</span>
-          <span class="mono">{m ? clock(m.durationTicks) : ''}</span>
-          <span class="muted">{m ? date(Date.parse(m.date)) : ''}</span>
-          <span class="acts">
-            <button class="btn primary small" onclick={() => open(f.name)} data-testid="replay-open"
-              ><Icon name="play" size={13} />{t('replay.watch')}</button
+  <section class="page-body table">
+    {#if files.length}
+      <div class="thead" aria-hidden="true">
+        <span>{t('replay.colMap')}</span><span>{t('replay.colWinner')}</span><span class="num"
+          >{t('replay.colDuration')}</span
+        ><span>{t('replay.colDate')}</span><span></span>
+      </div>
+      <ul class="scroll">
+        {#each files as f, k (f.name)}
+          {@const m = meta[f.name]}
+          <li style="--k:{Math.min(k, 12)}">
+            <span class="name"
+              >{m ? mapName(m.map) : f.name}{#if m?.stale}<span class="stale" data-tip={t('replay.staleTip')}
+                  ><Icon name="warning" size={13} /></span
+                >{/if}</span
             >
-            <button
-              class="btn small"
-              onclick={() => exportFile(f.name)}
-              aria-label={t('replay.export')}
-              data-tip={t('replay.export')}><Icon name="download" size={14} /></button
+            <span class="winner"
+              >{#if m}<Icon name="leader" size={13} />{m.winner}{:else}—{/if}</span
             >
-            <button
-              class="btn small danger"
-              onclick={() => del(f.name)}
-              aria-label={t('common.delete')}
-              data-tip={t('common.delete')}><Icon name="trash" size={14} /></button
-            >
-          </span>
-        </li>
-      {:else}
-        <li class="empty muted">{t('replay.none')}</li>
-      {/each}
-    </ul>
+            <span class="mono num">{m ? clock(m.durationTicks) : ''}</span>
+            <span class="muted">{m ? date(Date.parse(m.date)) : ''}</span>
+            <span class="racts">
+              <button class="btn primary small" onclick={() => open(f.name)} data-testid="replay-open"
+                ><Icon name="play" size={13} />{t('replay.watch')}</button
+              >
+              <button
+                class="btn small ghost"
+                onclick={() => exportFile(f.name)}
+                aria-label={t('replay.export')}
+                data-tip={t('replay.export')}><Icon name="download" size={14} /></button
+              >
+              <button
+                class="btn small ghost del"
+                onclick={() => del(f.name)}
+                aria-label={t('common.delete')}
+                data-tip={t('common.delete')}><Icon name="trash" size={14} /></button
+              >
+            </span>
+          </li>
+        {/each}
+      </ul>
+    {:else if loading}
+      <div class="wait">
+        <Isolines mode="ripple" count={4} r0={14} step={12} duration={2.2} stagger={0.55} />
+      </div>
+    {:else}
+      <div class="empty-state">
+        <div class="motif">
+          <Isolines mode="static" cx={0.46} cy={0.46} count={5} r0={8} step={7} seed={21} indexEvery={5} />
+        </div>
+        <h3>{t('replay.emptyTitle')}</h3>
+        <p>{t('replay.emptyHint')}</p>
+        <div class="acts">
+          <button class="btn primary" onclick={newGame}
+            ><Icon name="play" size={15} />{t('profile.playFirst')}</button
+          >
+          <button class="btn" onclick={importFile}
+            ><Icon name="upload" size={15} />{t('replay.import')}</button
+          >
+        </div>
+      </div>
+    {/if}
   </section>
 </div>
 
 <style>
-  .rep {
-    position: fixed;
-    inset: 0;
-    padding: 18px 22px;
-    display: grid;
-    grid-template-rows: auto 1fr;
-    background: var(--abyss);
-  }
   .table {
     display: grid;
-    grid-template-rows: auto 1fr;
-    min-height: 0;
-    max-width: 1100px;
-    width: 100%;
-    justify-self: center;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: start;
+    background: var(--panel-solid);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    align-self: start;
+    max-height: 100%;
   }
   .thead,
   li {
     display: grid;
-    grid-template-columns: 1.4fr 1.2fr 6em 12em auto;
-    gap: 12px;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) 6em 13em auto;
+    gap: 16px;
     align-items: center;
-    padding: 9px 14px;
+    padding: 10px 18px;
   }
   .thead {
-    font-size: 0.74em;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--faint);
+    font-size: 0.85em;
+    font-weight: 500;
+    color: var(--muted);
     border-bottom: 1px solid var(--line);
     background: var(--panel-2);
+  }
+  .num {
+    text-align: right;
   }
   ul {
     list-style: none;
@@ -141,29 +192,67 @@
     padding: 0;
     min-height: 0;
   }
+  li {
+    animation: row-in 0.3s calc(var(--k) * 30ms) ease-out both;
+    transition: background 0.14s;
+  }
+  @keyframes row-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
   li + li {
     border-top: 1px solid var(--line);
   }
   li:hover {
     background: var(--panel-2);
   }
-  .empty {
-    display: block;
-    padding: 30px;
-    text-align: center;
-  }
   .muted {
-    color: var(--faint);
+    color: var(--muted);
   }
   .name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-family: var(--title);
     font-weight: 600;
+    font-size: 1.08em;
   }
-  .acts {
+  .winner {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .winner :global(svg) {
+    color: var(--brass-text);
+  }
+  .stale {
+    display: inline-flex;
+    margin-left: 0.4em;
+    color: var(--warn);
+    vertical-align: -2px;
+  }
+  .racts {
     display: flex;
-    gap: 4px;
+    gap: 2px;
     justify-content: flex-end;
+  }
+  .del:hover {
+    color: var(--signal);
+  }
+  .wait {
+    position: relative;
+    height: 220px;
+    color: var(--aurora);
+  }
+  .motif {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    color: var(--aurora);
+    margin-bottom: 4px;
   }
 </style>

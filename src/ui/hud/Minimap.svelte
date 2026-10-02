@@ -7,6 +7,7 @@
   import { UNIT_STRIDE } from '../../engine/protocol';
   import { U } from '../../core/units/unit';
   import { t } from '../i18n/i18n.svelte';
+  import { minimapPalette } from '../../render/worldPalette';
 
   let { ctl }: { ctl: GameController } = $props();
   let canvas: HTMLCanvasElement;
@@ -19,7 +20,7 @@
   let img: ImageData | null = null;
   let collapsed = $state(false);
 
-  const TERRAIN_COLORS: [number, number, number][] = [
+  const EARTH_COLORS: [number, number, number][] = [
     [10, 20, 36],
     [16, 34, 52],
     [22, 46, 66],
@@ -32,6 +33,7 @@
     [140, 150, 156],
     [40, 36, 44],
   ];
+  const TERRAIN_COLORS = minimapPalette(st.meta?.palette) ?? EARTH_COLORS;
 
   function buildBase(ctx: CanvasRenderingContext2D): void {
     base = ctx.createImageData(W, H);
@@ -213,6 +215,6 @@
     border: 1px solid var(--line-strong);
     background: var(--glass-strong);
     color: var(--muted);
-    cursor: pointer;
+    cursor: var(--cursor-pointer, pointer);
   }
 </style>

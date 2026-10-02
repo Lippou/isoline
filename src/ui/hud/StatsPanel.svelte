@@ -50,11 +50,11 @@
     {/each}
   </div>
   <h4>{t('stats.timeline')}</h4>
-  <Chart series={[{ label: t('stats.tiles'), color: '#4FE3C1', values: hud.history.map((h) => h.tiles) }]} />
+  <Chart series={[{ label: t('stats.tiles'), color: '#6FB3D8', values: hud.history.map((h) => h.tiles) }]} />
   <Chart
     series={[
-      { label: t('hud.troops'), color: '#FF5A5F', values: hud.history.map((h) => h.troops) },
-      { label: t('hud.gold'), color: '#F2B84B', values: hud.history.map((h) => h.gold) },
+      { label: t('hud.troops'), color: '#EEF3F2', values: hud.history.map((h) => h.troops) },
+      { label: t('hud.gold'), color: '#D6A53F', values: hud.history.map((h) => h.gold) },
     ]}
   />
 {/if}

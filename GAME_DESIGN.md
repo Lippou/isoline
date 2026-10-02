@@ -3,7 +3,7 @@
 > Conquête territoriale en temps réel sur un atlas vivant.
 > Source de vérité des valeurs : `src/core/game/constants.ts` (ce document en est le miroir commenté).
 
-Sommaire : 1. Vision · 2. Boucle de jeu · 3. Carte et terrain · 4. Apparition · 5. Population et économie · 6. Combat · 7. Bâtiments · 8. Marine · 9. Rail · 10. Nucléaire · 11. Aviation · 12. Diplomatie · 13. Nations et tribus (IA) · 14. Modes et victoire · 15. Fonctionnalités inédites · 16. Interface et contrôles · 17. Réseau et déterminisme · 18. Données · 19. Équilibrage
+Sommaire : 1. Vision · 2. Boucle de jeu · 3. Carte et terrain · 4. Apparition · 5. Troupes et économie · 6. Combat · 7. Bâtiments · 8. Marine · 9. Rail · 10. Nucléaire · 11. Aviation · 12. Diplomatie · 13. Nations et tribus (IA) · 14. Modes et victoire · 15. Fonctionnalités inédites · 16. Interface et contrôles · 17. Réseau et déterminisme · 18. Données · 19. Équilibrage
 
 ---
 
@@ -17,7 +17,7 @@ La direction artistique est **réaliste et sobre** : carte en relief façon vue 
 
 1. **Apparition** (30 s par défaut) : choisir un point de départ.
 2. **Expansion** dans les terres libres et absorption des tribus.
-3. **Économie** : villes (population), ports (commerce), usines (rail), recherche.
+3. **Économie** : villes (plafond de troupes), ports (commerce), usines (rail), centres de recherche (technologies).
 4. **Guerre** contre les nations et les joueurs : fronts terrestres, débarquements, marine, aviation, nucléaire.
 5. **Diplomatie** : alliances temporaires, trahisons, embargos, dons, conseil mondial.
 6. **Victoire** à 80 % des terres utiles (configurable), ou objectif du mode.
@@ -27,7 +27,7 @@ Simulation : **10 ticks/s** (1 tick = 100 ms), déterministe, dans un Web Worker
 ## 3. Carte et terrain
 
 ### 3.1 Grille
-Chaque tuile a un type de terrain (11 types), une altitude (0–255) et un éventuel gisement. Le voisinage est en 4-connexité. Les données dérivées sont calculées au chargement : composantes connexes (étendues d'eau et masses terrestres séparées), distance à la côte (BFS) et graphe naval grossier (A* sur cellules de 3 à 6 tuiles, lissé par ligne de vue).
+Chaque tuile a un type de terrain (11 types), une altitude (0–255) et un éventuel gisement. Le voisinage est en 4-connexité. Les données dérivées sont calculées au chargement : composantes connexes (étendues d'eau et masses terrestres séparées), **étendues navigables** (eau + rivières navigables, §3.2), distance à la côte (BFS) et graphe naval grossier (A* sur cellules de 3 à 6 tuiles ; les tronçons qui quitteraient l'eau — une rivière qui serpente, un cap — sont retracés tuile par tuile, puis lissés par ligne de vue).
 
 ### 3.2 Terrains (valeurs de `terrain.ts`)
 
@@ -43,9 +43,15 @@ Chaque tuile a un type de terrain (11 types), une altitude (0–255) et un éven
 | Toundra / glace | 95 | 22 | 0 | oui |
 | Infranchissable (falaises, glaciers, murs) | – | – | bloque | non |
 
-`mag/80` multiplie les pertes de l'attaquant ; `speed/16,5` multiplie le temps de traversée d'une tuile.
+`mag` est la base des pertes de l'attaquant et `speed` le coût d'une tuile dans le budget de tick (§6.2). Plaine, colline et montagne ont les valeurs d'OpenFront ; les terrains propres à Isoline s'intercalent.
 
-### 3.3 Cartes livrées (14 + générateur)
+**Rivières navigables** (propre à Isoline ; OpenFront n'a pas de rivières). Une rivière reste une tuile de **terre** : elle se possède, se conquiert (et coûte plus cher à franchir, ci-dessus), compte dans le territoire et la victoire, porte des bâtiments. Mais une rivière qui **se jette dans une mer ou un lac** (ses tuiles 4-connexes touchent l'eau) est aussi **navigable** : elle forme une seule étendue navigable avec cette mer et les lacs qu'elle relie.
+- **Tous les navires** (transports, navires de guerre, marchands) y naviguent, **quel que soit le propriétaire des rives** : une rivière est une voie d'invasion vers l'intérieur des terres. Ils y avancent à **0,6 fois** leur vitesse (`RIVER_SAIL_SPEED`), et l'A* y compte chaque cellule 1,6 fois : la haute mer reste préférée quand elle existe.
+- **Débarquement** : toute tuile de terre qui touche une étendue navigable (côte, rive, ou la rivière elle-même) est une côte : un transport peut débarquer sur une rive, loin de la mer. Visant un pays étranger, vos propres rives sont ignorées : le transport accoste sur l'autre bord.
+- **Ports fluviaux** : un port se bâtit sur une rive dès que l'étendue compte 120 tuiles d'eau (mer ou lac, rivières non comptées) ; il commerce avec les ports de la même étendue et lance ses navires de guerre sur la rivière. Une patrouille en mer ne remonte pas les rivières ; postée sur une rivière, elle y reste.
+- Une rivière qui ne rejoint aucune eau (tronçon isolé) n'est pas navigable : elle garde seulement son effet sur le combat. À l'écran, les rivières navigables sont un **ruban bleu** tracé aussi par-dessus les pays ; les autres ne sont teintées que sur les terres libres.
+
+### 3.3 Cartes livrées (41 + générateur)
 
 | Catégorie | Cartes | Taille (tuiles) |
 |---|---|---|
@@ -53,58 +59,91 @@ Chaque tuile a un type de terrain (11 types), une altitude (0–255) et un éven
 | | Monde géant | 3200×1612 (5,16 M) |
 | | Europe, Amérique du Nord, Amérique du Sud, Afrique, Asie, Océanie | 1,5 à 2,5 M |
 | Régions | Méditerranée, Mer Noire | 1,42 M / 0,95 M |
+| | Îles Britanniques (26 nations), Scandinavie & Baltique (28), Balkans (31), Moyen-Orient (36) | 1,96 M / 2,14 M / 2,25 M / 2,23 M |
+| | Sous-continent indien (25), Japon & Corée (19), Asie du Sud-Est (31), Caraïbes (25) | 1,96 M / 1,85 M / 2,30 M / 2,01 M |
 | Fictives | Pangée, Archipel, Deux lacs | 1,6 M / 1,4 M / 0,77 M |
+| | Continents jumeaux (40 nations), Fjords (30), L'Anneau (36) | 1,70 M / 1,65 M / 1,96 M |
+| Légendes | Atlantide (21 nations), Les Neuf Mondes (25), Archipel de l'Olympe (26), Terre du Dragon (22), Mer des Flibustiers (24) | 1,65 M / 1,68 M / 1,65 M / 1,87 M / 1,60 M |
+| Planètes | Mars (30), La Lune (28), Titan (28), Océanide (30) | 1,37 M / 1,55 M / 1,24 M / 1,50 M |
 | Arcade | Labyrinthe (couloirs, murs, canaux) | 960×640 |
+| | Arène hexagonale (24), Damier (34), Spirale (24), Quatre royaumes (24), Duel (16), Arène circulaire (24), Monde 8 bits (28) | 1,44 M / 1,45 M / 1,69 M / 1,69 M / 1,44 M / 1,44 M / 1,57 M |
 | Procédurale | Générateur (graine, taille, terres, îles, montagnes, rivières) | 800×500 à 2000×1000 |
+
+**Cartes régionales** (`scripts/maps/catalogue.ts`) : cadrage équirectangulaire, échelle de 0,8 à 3,1 km par tuile. Les pays réels y gardent leur code ISO (drapeau et couleur nationale) ; les pays dont le point d'étiquette Natural Earth sort du cadre (France sur la carte britannique, Chine, Russie, Mexique…) et des régions historiques (Wessex, Transylvanie, Hedjaz, Deccan, Kantō, Java…) sont placés à la main. Angleterre, Écosse, pays de Galles et Irlande du Nord remplacent le Royaume-Uni, avec leurs drapeaux. Les nations posées sur un îlot de moins de 300 tuiles sont écartées (micro-États des Antilles, Bahreïn, Malte, îles Anglo-Normandes). Des **chaînes tracées à la main** (Highlands, Alpes japonaises, Taebaek, cordillère centraméricaine…) complètent les reliefs absents de Natural Earth, et une texture de vallées casse les massifs trop lisses à ces échelles fines. Points forts : la Manche et la mer d'Irlande ; les fjords norvégiens, le golfe de Botnie et les détroits danois ; les Alpes dinariques, les Carpates et l'archipel égéen ; Suez, Ormuz et Bab-el-Mandeb ; le mur himalayen ; le détroit de Corée ; Malacca et l'Insulinde ; l'isthme centraméricain et le canal de Panama.
+
+**Cartes fictives dessinées** (`scripts/maps/fantasy.ts`) : une forme écrite à la main et du bruit pour les côtes, puis la même chaîne de relief, de rivières et de biomes que le générateur. **Continents jumeaux** : deux continents à péninsules et baies, une chaîne de montagnes percée de trois cols chacun, reliés par un seul isthme étroit. **Fjords** : une côte froide entaillée de 29 fjords (avec bras secondaires), des chapelets d'îles, un mur de montagnes à trois cols, un long golfe et un plateau de lacs. **L'Anneau** : un anneau de terres autour d'une mer intérieure, coupé de trois détroits, une échine montagneuse à cols et une île-citadelle au centre.
+
+**Packs de la 1.5** (`scripts/maps/worlds*.ts`, liste dans `packs.ts`) : même chaîne que les cartes dessinées (forme → relief, rivières et biomes synthétisés), plus des retouches par carte (tampons de terrain : murs, crêtes, cratères, biomes de royaume), des nations nommées placées à la main et, pour les cartes symétriques, une **symétrie exacte** : chaque tuile recopie sa tuile canonique (miroir, demi-tour ou groupe diédral), si bien que tous les joueurs partent sur le même terrain. Les rivières proches de la mer y sont raccordées comme sur les cartes réelles (`connectRivers`), sauf sur les plateaux symétriques. Tout est seedé : une reconstruction redonne les mêmes fichiers.
+- **Arcade** : **Arène hexagonale** (six secteurs identiques séparés par des crêtes à deux cols, un plateau central entouré de douves et de six ponts, trois gisements au centre) ; **Damier** (35 cases carrées alternant sable et forêt, reliées par des chaussées, un donjon de collines et de montagnes au centre) ; **Spirale** (deux bras de terre enroulés autour d'un moyeu, symétrie de demi-tour) ; **Quatre royaumes** (quatre quadrants en miroir séparés par des bras de mer avec une chaussée chacun, un plateau central couronné de montagnes avec un col par royaume et quatre gisements) ; **Duel** (deux moitiés en miroir, un détroit, deux chaussées et un fort central, pour 2 à 4 joueurs) ; **Arène circulaire** (disque à symétrie d'ordre 16 pour la bataille royale : couronne de montagnes à huit cols, huit rivières, anneau de forêts) ; **Monde 8 bits** (blocs de 16 × 16 tuiles, côtes en escalier, rivières en segments, palette de console).
+- **Planètes** (aucune donnée d'altitude libre n'étant disponible hors ligne, les reliefs sont dessinés d'après les grands repères, à peu près à leurs vraies coordonnées ; noms de la nomenclature UAI) : **Mars** au temps de l'océan boréal (dichotomie nord-sud, Tharsis et ses volcans, Olympus Mons, Valles Marineris inondée et reliée à l'océan par Chryse, Hellas et Argyre en mers fermées, calotte australe, cratères) ; **La Lune**, face visible (les mers de basalte sont de l'eau navigable, cratères à remparts et pics centraux, Platon, Grimaldi et Endymion à fond inondé, Apennins, Caucase, Alpes) ; **Titan** (mers de méthane au nord, Kraken, Ligeia et Punga reliées par des détroits, districts lacustres polaires, champs de dunes équatoriaux, hauts plateaux de Xanadu, cryovolcans) ; **Océanide** (arcs d'îles volcaniques, atolls géants à lagon, deux grandes îles).
+- **Légendes** (mythes du domaine public, noms et cartes originaux) : **Atlantide** d'après le *Critias* de Platon (la cité aux anneaux de terre et d'eau, canal vers la mer, ponts au nord, à l'est et à l'ouest, la grande plaine quadrillée de canaux navigables, montagnes au nord, îles alentour et colonnes d'Héraclès ; les dix rois) ; **Les Neuf Mondes** (neuf terres reliées par les branches et les racines d'Yggdrasil, Asgard entourée de murailles et accessible seulement par Bifröst, Niflheim glacé, Muspelheim de feu, Jotunheim montagneux…) ; **Archipel de l'Olympe** (l'Olympe au sommet infranchissable au centre, Cyclades, Crète, deux continents, les îles de l'*Odyssée*) ; **Terre du Dragon** (continent en forme de dragon, crête dorsale et os des ailes en montagnes, lacs des yeux et du Cœur) ; **Mer des Flibustiers** (grandes îles à criques, chapelet de cayes, côte de jungle, l'Île au Trésor et son lagon).
+
+**Palettes de carte** (`palette` dans le JSON de la carte, `src/render/worldPalette.ts`) : visuelles seulement, les terrains gardent leurs règles. `mars` (sol rouille, dunes ocre, givre de CO₂, océan bleu-vert), `moon` (régolithe gris, remparts clairs, mers de basalte sombres), `titan` (plaines orangées, dunes brunes, Xanadu clair, mers de méthane presque noires), `pixel` (aplats de console, côtes nettes, eau par paliers). Le shader de la carte (`uWorld`) et la minicarte en tiennent compte ; les aperçus du lobby gardent le style carte marine commun.
+
+**Rythme** (`npx tsx scripts/pacing.ts <id> normal 90`, 30 nations au plus et 40 tribus, trois graines) : toutes les parties se terminent entre 28 et 55 minutes sur ces cartes.
+
+Régénération : `npm run maps` (toutes les cartes), ou `npm run maps -- british-isles,ring` (identifiants, `real` ou `fictional`). La sortie est déterministe et les cartes existantes ressortent identiques à l'octet près. `index.json` porte aussi une courte description FR/EN (`desc`) de chaque carte.
 
 Les **cartes réelles** sont rastérisées depuis Natural Earth (domaine public) : terres, îles mineures, lacs, glaciers, fleuves, chaînes de montagnes, plateaux, déserts, toundra. L'altitude est **synthétisée** à partir des masques régionaux, de bruit fractal et de bruit « ridgé ». Les biomes sortent d'un petit modèle climatique : la température dépend de la latitude et de l'altitude, l'humidité de la distance à la mer et des bandes de latitude.
 
 Les **détroits et canaux** sont creusés explicitement : Bosphore, Dardanelles, Gibraltar, Suez, Panama, Kertch, Øresund, Grand Belt, Bab-el-Mandeb, Messine, Singapour. Les eaux enclavées deviennent des lacs.
+
+Les **fleuves** sont tracés en 4-connexité (un pas à la fois, jamais en diagonale). Les tracés Natural Earth s'arrêtent souvent quelques tuiles avant la côte (estuaires dessinés comme terre) ou se coupent en tronçons : après la rastérisation, `connectRivers` (`src/core/map/rivers.ts`) relie à la mer chaque tronçon situé à moins de **≈ 40 km** (4 à 20 tuiles selon l'échelle) de l'eau ou d'une rivière qui l'atteint déjà, par le plus court chemin à terre (il peut traverser une flaque d'estuaire). Deux réseaux qui atteignent déjà l'eau ne sont jamais reliés entre eux (pas de canal inventé entre deux mers). Résultat : 77 à 82 % des tuiles de rivière navigables en Europe, en mer Noire et sur le Monde (47 à 56 % avant). Les rivières des cartes générées (procédurales, fictives) suivent la plus grande pente jusqu'à la mer : elles sont presque toutes navigables (81 à 100 %, sauf l'Archipel aux îles trop petites). Sur une carte de l'éditeur, est navigable toute rivière qui touche l'eau.
 
 **Fichiers** (`assets/maps/`) : `<id>.png` (couleur = terrain), `<id>.elev.png` (altitude), `<id>.json` (nom FR/EN, taille, points de spawn, nations avec nom, position et graine de drapeau, gisements), `<id>.thumb.png` (miniature). Les cartes personnalisées sont des fichiers `.isomap` (JSON contenant les deux PNG en base64 et les métadonnées).
 
 ## 4. Apparition (spawn)
 
 - **La partie commence dès que tous les joueurs humains ont posé leur capitale.** Le minuteur (30 s par défaut, 15 à 90 s dans le lobby) ne sert qu'à borner l'attente : à son terme, les retardataires sont placés automatiquement.
-- Un clic revendique un **disque de rayon 8** sur la terre libre de la même masse terrestre. En réseau, tant qu'un autre joueur n'a pas choisi, on peut encore déplacer sa capitale.
+- Un clic revendique le **disque de départ d'OpenFront** : les tuiles dont la position relative au clic, décalée d'une demi-tuile, `(dx + ½, dy + ½)`, tient dans un rayon de 4, soit un disque de 8 × 8 de **52 tuiles** (terre libre de la même masse terrestre). **Nations et tribus** reçoivent le même disque (avant : rayon 8, ~200 tuiles, et rayon 5 pour les tribus). En réseau, tant qu'un autre joueur n'a pas choisi, on peut encore déplacer sa capitale.
 - Les joueurs qui n'ont pas choisi reçoivent un point de spawn aléatoire. Les nations sont placées **avant** les joueurs, à leur position prédéfinie. Les tribus occupent des points réservés, à au moins 14 tuiles de toute terre déjà prise.
 - **Immunité** : 60 s pour les humains après le début. Personne ne peut les attaquer ; un bouclier s'affiche dans le HUD.
-- Troupes de départ : humain 25 000, nation 25 000 × multiplicateur de difficulté, tribu 9 000. Les tribus démarrent avec un trésor de 60 000 or.
+- Troupes de départ : humain 12 500 ; nation 6 250 / 9 375 / 12 500 / 15 625 (Facile / Normal / Difficile / Impossible) ; tribu 5 000, soit **la moitié des valeurs d'OpenFront** (25 000 ; 12 500 à 31 250 ; 10 000, §5). Les tribus démarrent avec un trésor de 60 000 or.
 
-## 5. Population et économie
+## 5. Troupes et économie
 
-### 5.1 Plafond de population
-```
-plafond = 100 000 + 150 000 × niveaux_de_villes + 4 000 × tuiles_utiles^0,5
-```
-Le terme territorial est à rendement décroissant. Les terres fertiles ajoutent +6 % de croissance par gisement (maximum 40 %), et le plafond augmente de la moitié de ce bonus. Les tuiles irradiées ne comptent pas.
+L'économie reprend celle d'OpenFront : une seule réserve de troupes, sans ouvriers, et un revenu d'or fixe. La richesse vient du commerce, des trains et de la conquête ; elle se transforme en troupes par les villes.
 
-### 5.2 Croissance (courbe en cloche, pic à 42 %)
-```
-x = troupes / plafond
-cloche(x) = exp(−((x − 0,42) / σ)²),  σ = 0,34 si x < 0,42, sinon 0,30
-croissance/tick = 0,0024 × plafond × cloche(x) × (1 − population / plafond)
-```
-- Nations : × multiplicateur de troupes de la difficulté.
-- **Tribus** : elles grossissent comme une nation, puis cessent de croître à **60 000 troupes**. Elles ne construisent rien, mais thésaurisent **600 or/s** : chaque tuile conquise sur une tribu rapporte à l'assaillant `trésor / tuiles_restantes` (le dernier lopin livre le reste). Le joueur entend un bruit de pièces et voit le montant s'afficher.
-- Au-dessus du plafond, la population décroît de 1 % de l'excédent par tick.
-- La croissance se répartit selon la **part des troupes** (curseur 5 à 100 %, défaut 60 %). Un **rééquilibrage** progressif (0,4 % de la population par tick) ramène la répartition vers le curseur. En **mode simple** (option), la part est automatique : les troupes restent près de 42 % du plafond.
+**Écart voulu avec OpenFront** (retours de test, 5ᵉ lot : « en 20 minutes on peut monter à 17 millions de troupes, ça ne devrait pas être possible », « on a trop d'or trop vite ») : mêmes formules, termes plus petits. Mesures à 20 min (IA seules, Europe / Mer Noire / Monde, graines 1234 et 42, médianes des 6 parties) : avec les valeurs d'OpenFront, le meneur avait 9,5 M de troupes (plafond 18 M) en Normal et 16 M (plafond 24 M) en Difficile, une nation moyenne 2,8 et 3,8 M, et chaque nation avait gagné 65 à 68 M d'or, presque tout par le commerce et les trains (le meneur en tirait 230 à 270 000 or/s). Désormais : meneur 2,9 M (plafond 3,4 M) en Normal et 3 M (plafond 4,2 M) en Difficile, nation moyenne 0,9 et 1 M (plafond 1,5 et 1,8 M), 29 et 35 M d'or gagnés par nation (−55 % et −49 %). Une tuile d'Isoline couvre environ 2,5 tuiles d'OpenFront (Europe : 0,93 M de tuiles de terre contre 2,35 M) : la même géographie y donne 2,5^0,6 ≈ 1,7 fois moins de troupes territoriales mais coûte 2,5 fois moins de tuiles à conquérir ; un terme territorial de ~700 au lieu de 1 000 retrouverait le rapport armée/terres d'OpenFront, et une ville vaudrait 100 000 au lieu de 250 000. Isoline va un peu plus loin sur les villes (60 000) pour que l'or ne s'empile plus en dizaines de millions de troupes.
 
-### 5.3 Malus des grands empires (anti-boule de neige)
-Au-delà de 60 000 tuiles, les assaillants subissent moins de pertes contre l'empire :
-`malus = min(45 %, (tuiles − 60 000) / 400 000 × 45 %)`. Il est affiché dans la carte de survol.
+### 5.1 Plafond de troupes
+```
+max_troupes = 2 × (tuiles_utiles^0,6 × 800 + 25 000) + 60 000 × niveaux_de_villes_achevées
+```
+- OpenFront : `2 × (tuiles^0,6 × 1 000 + 50 000) + 250 000 × niveaux`. Au départ (52 tuiles), le plafond passe de 121 000 à 67 000 ; à 30 000 tuiles, de 1,07 M à 0,83 M ; une ville à 1 M d'or n'ajoute plus que 60 000 troupes.
+- Tribus : ÷ 3. Nations : × 0,5 (Facile), × 0,75 (Normal), × 1 (Difficile, comme un humain), × 1,25 (Impossible).
+- Une ville en chantier ne compte pas encore ; les tuiles irradiées non plus. Le terme territorial est à rendement décroissant : en fin de partie, les villes (construites ou capturées) pèsent autant que les terres.
+
+### 5.2 Régénération (pic vers 42 % du plafond)
+```
+ajout/tick = (10 + troupes^0,73 / 5) × (1 − troupes / max_troupes)
+troupes    = min(troupes + ajout, max_troupes)
+```
+- La régénération est la plus rapide vers 42 % du plafond et s'annule au plafond : une armée qui dort au plafond ne rapporte plus rien. Au-dessus du plafond (terres perdues), l'armée y est ramenée.
+- OpenFront divise par 4 : la croissance est 20 % plus lente en plus d'armées plus petites. Sans expansion, 12 500 → ~60 000 troupes en 30 s (OpenFront : 25 000 → ~111 000).
+- Tribus × 0,5 ; nations × 0,9 / 0,95 / 1 / 1,05 selon la difficulté.
+- Terres fertiles (+6 % par gisement, maximum 40 %) et pandémie (×0,5) ne modifient que les gains.
+- **Tribus** : elles ne construisent rien mais thésaurisent **500 or/s** : chaque tuile conquise sur une tribu rapporte à l'assaillant `trésor / tuiles_restantes` (le dernier lopin livre le reste). Le joueur entend un bruit de pièces et voit le montant s'afficher.
+- Il n'y a ni ouvriers ni curseur de répartition : le seul curseur est le **ratio d'attaque**.
+
+### 5.3 Grands territoires (repris d'OpenFront)
+Les très grands territoires sont plus faciles à attaquer, et attaquent eux-mêmes plus vite et à moindre coût, pour que les fins de partie restent mobiles (§6.2) :
+`bonus(tuiles, profondeur) = 1 − profondeur / (1 + (300 000 / tuiles)^2,5)`, soit ×1 pour un petit pays, ×(1 − profondeur/2) à 300 000 tuiles et ×(1 − profondeur) pour un géant. Côté défenseur (profondeur 0,3), la réduction est affichée dans la carte de survol dès 0,5 %.
 
 ### 5.4 Or
-- Revenu de base : **1 000/s** (humain), **500/s** (nation × multiplicateur de revenu de la difficulté). Les tribus n'ont pas d'or.
-- Ouvriers : **0,007 or/s par ouvrier** (+10 % et +15 % avec les technologies Économie 1 et 3).
-- Commerce maritime et trains (§8, §9). Pétrole : **+400 or/s par gisement**.
-- Multiplicateurs globaux : option « multiplicateur d'or » du lobby (×0,5 à ×4), crise économique (−25 %), sanctions du conseil (−50 %).
-- Affichage abrégé (125k, 1,2M) avec la valeur exacte et la décomposition au survol.
+- Revenu fixe : **100 or par tick** (1 000/s) pour les humains et les nations, **50 par tick** (500/s) pour les tribus, quelle que soit la taille du territoire. Aucun bonus de difficulté.
+- Technologies Comptoirs et Banque centrale (§15.3) : +10 % et +15 % sur ce revenu de base ; Bourse +10 % et Prospérité +2 % par niveau sur tous les revenus (base, commerce, trains). Pétrole : **+400 or/s par gisement**.
+- Multiplicateurs globaux : option « multiplicateur d'or » du lobby (×0,5 à ×4, appliqué aussi au commerce et aux trains), crise économique (−25 %), sanctions du conseil (−50 %).
+- Les grandes sources d'or sont le **commerce maritime** (§8.3) et les **trains** (§9), qui rapportent **la moitié** des montants d'OpenFront. Le revenu fixe, le trésor des tribus et les prix restent ceux d'OpenFront.
+- **Conquête** : qui élimine une nation ou une tribu s'empare de tout son trésor ; un joueur humain éliminé perd tout son or et le vainqueur en touche la moitié (montant affiché avec le bruit de pièces). Le pillage tuile par tuile des tribus n'est pas compté deux fois.
+- Affichage abrégé (125k, 1,2M) ; le revenu affiché ajoute au revenu fixe la moyenne glissante du commerce et des trains, avec le détail et la valeur exacte au survol.
 
 ## 6. Combat et expansion
 
 ### 6.1 Attaques terrestres
-Un clic sur une tuile ennemie ou libre lance une attaque avec **ratio × troupes actuelles** (défaut 20 %). Ratio : touches T/Y, Maj + molette, curseur.
+Un clic sur une tuile ennemie ou libre lance une attaque avec **ratio × troupes actuelles** (défaut 20 %, soit le `troupes / 5` d'OpenFront). Ratio : touches T/Y, Maj + molette, curseur.
+
+Comme dans OpenFront, une attaque terrestre exige une **frontière terrestre commune** : un pays que l'on ne touche pas ne s'atteint que par un **débarquement** explicite (touche B ou menu du clic droit, §8.1). Un clic sur un pays lointain affiche « Aucune frontière commune » et n'a **aucun effet** : ni trahison, ni embargo, ni troupes engagées. Les terres libres sont attaquables quand la tuile cliquée est reliée à votre territoire par des terres libres à moins de 200 tuiles (distance de Manhattan) ; l'attaque part alors de toute votre frontière avec les terres libres.
 
 Chaque attaque maintient un **front** : un tas binaire de tuiles cibles adjacentes au territoire de l'assaillant, indexé par un **temps d'arrivée** calculé comme dans un « fast marching » (équation eikonale) :
 ```
@@ -115,28 +154,40 @@ T   = min(th, tv) + c                          si un seul voisin, ou |th − tv|
 T   = (th + tv + √(2c² − (th − tv)²)) / 2      sinon
 priorité = T − 0,02 × (tuiles de l'assaillant dans la fenêtre 5×5 − 10)
 ```
-Une tuile est réinsérée plus tôt quand elle gagne un deuxième voisin conquis. Une vague 4-voisins naïve avance selon la distance de Manhattan et fait pousser des **losanges**. La mise à jour eikonale fait avancer les fronts diagonaux à la même vitesse euclidienne que les fronts droits : les territoires sont **arrondis** (rapport diagonale/axe ≈ 0,95, contre 0,71 pour un losange ; test de non-régression). Le terme 5×5 vaut 10 derrière tout bord droit, quelle que soit son orientation. Il comble les poches concaves et freine les pointes : l'encre se propage de façon organique. La gigue est déterministe (hash de la tuile). À chaque tick, l'horloge avance de 1 × multiplicateurs de vitesse, et l'attaque conquiert les tuiles prêtes dans la limite d'un **budget** :
-```
-budget/tick = max(1,2 ; 0,28 × √troupes_engagées) × (0,3 contre un joueur)
-```
+Une tuile est réinsérée plus tôt quand elle gagne un deuxième voisin conquis. Une vague 4-voisins naïve avance selon la distance de Manhattan et fait pousser des **losanges**. La mise à jour eikonale fait avancer les fronts diagonaux à la même vitesse euclidienne que les fronts droits : les territoires sont **arrondis** (rapport diagonale/axe ≈ 0,95, contre 0,71 pour un losange ; test de non-régression). Le terme 5×5 vaut 10 derrière tout bord droit, quelle que soit son orientation. Il comble les poches concaves et freine les pointes : l'encre se propage de façon organique. La gigue est déterministe (hash de la tuile).
 
-### 6.2 Pertes
-- Terres libres : `12 × mag/80` par tuile.
-- Contre un joueur : `mag/80 × (30 + 2,4 × densité_défenseur) × supériorité × logistique × modificateurs`, avec densité = troupes/tuiles du défenseur.
-- **Logistique** (anti-boule de neige) : `× (1 + 2,5 × part_des_terres_de_l'attaquant)`. Un empire qui tient 40 % du monde paie ses guerres deux fois plus cher qu'une petite nation.
-- **Supériorité numérique** (ratio r = engagés / troupes du défenseur) : si r ≥ 1, ×(1 − 0,2 × min(1, r − 1)), donc jusqu'à −20 % de pertes, plafonné à 2:1. Si r < 1, ×(1 + 0,5 × (1 − r)).
-- Le défenseur perd `0,6 × densité` troupes par tuile perdue.
-- **Vitesse des fronts** : l'horloge d'une attaque avance de 0,5 par tick en terre libre et de **0,2 contre un pays**. Un front progresse donc d'environ 5 tuiles/s en terre libre et 2 tuiles/s face à une défense (moins en montagne). Une guerre se compte en minutes, pas en secondes.
-- **Postes de défense** : ×5 sur les pertes et ×3 sur la lenteur dans un rayon de 30 tuiles (×10 sur les pertes pendant le général Rempart).
-- **Traître** : la défense du traître est ×0,5, sa vitesse ×0,8 pendant 300 ticks.
-- **Retombées** sur la tuile : `mag × (5 − 2 × (1 − intensité/255))`, soit ×5 pour des retombées fraîches et ×3 quand elles s'estompent.
-- Technologies militaires (§15.3), malus des grands empires (§5.3).
+Ce temps d'arrivée ne fixe que l'**ordre** dans lequel les tuiles tombent. La **quantité** prise par tick est celle d'OpenFront : à chaque tick, l'attaque prend les tuiles de son front dans cet ordre jusqu'à épuiser un **budget de 1**, chaque tuile en consommant une fraction (§6.2) divisée par la **taille de la bordure** (tuiles cibles du front de l'attaque, plus 0 à 4 au hasard, tirage déterministe). Les tuiles prises par tick sont donc proportionnelles à la longueur du front. Une attaque dont les troupes tombent sous 1 disparaît (la dernière tuile est prise même si elle coûte plus que ce qui reste) ; une attaque qui n'a plus de tuile à prendre s'arrête et **toutes** ses troupes reviennent à la réserve.
+
+### 6.2 Rapport de forces, pertes et vitesse (`attackLogic` d'OpenFront)
+Le combat reprend l'`attackLogic` d'OpenFront, valeurs comprises. Tout dépend du **rapport r = troupes du défenseur (toute son armée, pas seulement celles de la frontière) / troupes restant dans l'attaque**. Une attaque écrasante balaie un pays faible vite et pour presque rien ; une attaque contre plus fort est lente et sanglante.
+
+Chaque terrain donne une base `mag` (pertes) et un coût `speed` (§3.2 : plaine 80 / 16,5, colline 100 / 20, montagne 120 / 25, comme OpenFront ; forêt, rivière, toundra et désert s'intercalent). Près d'un **poste de défense** ennemi (30 tuiles) : `mag` ×5 et coût ×3 (`mag` ×10 pendant le général Rempart). Sur une tuile à **retombées** : `mag` et coût × (5 − 2 × part des terres sous retombées).
+
+**Pertes par tuile** :
+```
+terres libres  : assaillant mag / 5 (tribus : mag / 10)
+contre un pays : assaillant mag × clamp(r ; 0,6 ; 2) × (0,463 × bonus(A ; 0,7) × bonus(D ; 0,3) + 0,0039 × densité_D)
+                 défenseur  densité_D = troupes du défenseur / ses tuiles
+```
+- **Tribus en défense** contre une nation ou un humain : mag × 0,7 (le « bot » d'OpenFront). **Traître** en défense : mag × 0,5.
+- `bonus(X ; p) = 1 − p / (1 + (300 000 / tuiles_X)^2,5)` : grands territoires de l'assaillant et du défenseur (§5.3).
+
+**Fraction du budget par tuile** (un tick = 100 ms ; `B` = taille de la bordure) :
+```
+terres libres  : clamp(2 000 × coût / troupes_de_l'attaque ; 5 ; 100) / (2 × B)
+contre un pays : clamp(r ; 0,82 ; 7,5) × clamp(r / 20 ; 1 ; 50) / 8,55 × coût × bonus(A ; 0,73) × bonus(D ; 0,3) / B
+                 (× 0,8 contre un traître)
+```
+- Terres libres : 4 rangées de plaine par seconde dès 6 600 troupes engagées, moins pour une petite poussée.
+- Contre un pays : environ **5 rangées de plaine par seconde à égalité**, 6,3 dès 1,22 contre 1 (plancher), 0,7 à 1 contre 7,5, puis de plus en plus lent au-delà de 1 contre 20 (deux fois moins à 1 contre 40). Général Blitz ×1,3 et technologies militaires (§15.3) accélèrent d'autant.
+- Exemples (tests de non-régression, plaine, front de 60 tuiles) : à 1 contre 1, ~31 tuiles par tick ; 100 000 contre 100 000 s'épuisent en prenant ~40 % d'un pays de 3 000 tuiles ; 20 000 contre 200 000 n'avancent que de quelques rangées ; 3 millions contre une nation de 100 000 troupes sur 3 000 tuiles l'éliminent en ~7 s pour ~3 % de pertes ; une tribu à son plafond tombe en ~6 s devant 20 % d'une armée de milieu de partie.
 
 ### 6.3 Règles diverses
-- Plusieurs ordres contre la même cible **renforcent** l'attaque en cours. Des attaques opposées se **neutralisent** d'abord (soustraction mutuelle des effectifs).
-- **Annulation** : les troupes reviennent avec 10 % de pénalité.
+- Un nouvel ordre contre la même cible **renforce** l'attaque terrestre en cours et absorbe les attaques parties de débarquements contre ce pays ; un débarquement, lui, attaque à part depuis sa tête de pont (§8.1).
+- **Choc des attaques opposées** (OpenFront) : les troupes d'un nouvel ordre affrontent d'abord les attaques que la cible mène contre vous ; la plus grosse continue, diminuée de la plus petite, qui disparaît.
+- **Annulation** (retraite d'OpenFront) : l'attaque s'arrête aussitôt et ses troupes rentrent **2 s plus tard**, avec **25 % de pertes** contre un pays (aucune depuis les terres libres).
+- **Annexion** (OpenFront) : un pays réduit à **moins de 100 tuiles** par une attaque est annexé d'un coup : ses tuiles qui touchent l'assaillant lui reviennent, les autres à un voisin qui n'est pas son ami, passe après passe.
 - 12 attaques simultanées au maximum par joueur.
-- Un clic au-delà de l'eau (pas de front commun) déclenche automatiquement un **débarquement** (§8.1).
 - **Mort** d'un joueur à 0 tuile : ses navires coulent progressivement (−5 à −8 PV par tick) et ses bâtiments disparaissent.
 - **Capture des bâtiments** : villes, ports, usines, silos, SAM et aérodromes sont transférés ; postes de défense et radars sont détruits.
 - **Vue terrain** (Espace) : carte thermique des coûts d'attaque.
@@ -145,77 +196,95 @@ budget/tick = max(1,2 ; 0,28 × √troupes_engagées) × (0,3 contre un joueur)
 
 | Bâtiment | Coût | Construction | Rôle | Capture |
 |---|---|---|---|---|
-| Ville | `125 000 × 1,32^niveaux_de_villes` (sans plafond) | 20 ticks | +150 000 de plafond par niveau, recherche, gare. Améliorable sans limite (construire sur la ville = +1 niveau) | transférée |
-| Port | compteur commun avec l'usine : `125 000 × 1,4^niveaux` | 50 ticks | sur la côte d'une mer de 120 tuiles ou plus ; navires marchands ; gare. **Rayon d'action 60 tuiles (+10 par niveau)** : les navires de guerre y sont construits et réparés ; affiché au survol, au placement et avec l'outil « navire de guerre ». Niveau max 5 | transféré |
-| Usine | même compteur | 20 ticks | rails automatiques et trains. Niveau max 5 | transférée |
-| Poste de défense | `min(250 000, 50 000 × (n + 1))` | 50 ticks | ×5 pertes, ×3 lenteur dans 30 tuiles | détruit |
-| Silo | 1 000 000 (amélioration 1 M) | 100 ticks | lance A, H et MIRV ; +1 tube par niveau ; rechargement `150 / (1 + 0,5 × (niveau − 1))` ticks | transféré |
-| Batterie SAM | 1 500 000, amélioration 3 000 000 | 300 ticks | portée `150 − 480/(niveau + 5)` (70 → 118 au niveau 10) ; recharge 90 ticks ; intercepte aussi les bombardiers | transférée |
-| Tour radar | 300 000 | 40 ticks | révèle le brouillard sur 60 tuiles (+20 par niveau) ; aveuglée par les tempêtes solaires | détruite |
-| Aérodrome | 800 000 | 80 ticks | 4 avions par niveau (§11) | transféré |
+| Ville | `min(1 000 000, 125 000 × 2^n)` : 125k, 250k, 500k, puis 1 M | 20 ticks | +60 000 de plafond de troupes par niveau une fois achevée (OpenFront : 250 000, §5.1), gare. Niveaux illimités | transférée |
+| Port | `min(1 000 000, 125 000 × 2^n)`, n commun avec l'usine | 50 ticks | sur la côte d'une mer de 120 tuiles ou plus, ou sur la rive d'une rivière navigable qui s'y jette (port fluvial, §3.2) ; navires marchands ; gare. **Rayon d'action 60 tuiles (+10 par niveau)** : les navires de guerre y sont construits ; ils s'y réparent en s'amarrant (§8.2) ; affiché au survol, au placement et avec l'outil « navire de guerre ». Niveaux illimités | transféré |
+| Usine | même échelle que le port (n commun) | 20 ticks | rails automatiques et trains. Niveaux illimités | transférée |
+| Poste de défense | `min(250 000, 50 000 × (n + 1))` | 50 ticks | ×5 pertes, ×3 lenteur dans 30 tuiles. Non améliorable | détruit |
+| Silo | 1 000 000 (amélioration 1 M), niveaux illimités | 100 ticks | lance A, H et MIRV ; +1 tube par niveau ; rechargement `150 / (1 + 0,5 × (niveau − 1))` ticks | transféré |
+| Batterie SAM | `min(3 000 000, 1 500 000 × (n + 1))` : 1,5 M puis 3 M, niveaux illimités | 300 ticks | portée `0,7 × (150 − 480/(niveau + 5))`, celle d'OpenFront à l'échelle des cartes d'Isoline (49 au niveau 1, 71 au niveau 5, 83 au niveau 10, jamais plus de 105) ; recharge 90 ticks ; intercepte aussi les bombardiers | transférée |
+| Tour radar | 300 000 (3 niveaux) | 40 ticks | révèle le brouillard sur 60 tuiles (+20 par niveau), moitié moins dans un banc de brouillard (§15.1) ; aveuglée par les tempêtes solaires | détruite |
+| Aérodrome | 800 000 (3 niveaux) | 80 ticks | 4 avions par niveau (§11) | transféré |
+| Centre de recherche (arbre technologique activé seulement) | `min(2 000 000, 250 000 × 2^n)` : 250k, 500k, 1 M, puis 2 M | 60 ticks | **1,5 point de recherche par seconde et par niveau** une fois achevé (§15.3). Niveaux illimités. Touche J | transféré |
 
 Règles communes :
+- **prix (règle d'OpenFront)** : `n = Σ min(niveaux possédés, niveaux construits)` sur le ou les types concernés (ville ; port + usine ; poste ; SAM ; centre de recherche). Un bâtiment en chantier compte pour 1 et chaque amélioration ajoute un niveau ; un bâtiment capturé ne fait pas monter vos prix au-delà de ce que vous avez construit, un bâtiment perdu ou démoli les fait redescendre ;
+- une **amélioration** coûte exactement le prix d'un nouveau bâtiment du même type (et fait donc monter le suivant) ; construire sur un de ses bâtiments du même type, ou à moins de 15 tuiles, l'améliore ;
 - placement sur son territoire uniquement ;
-- espacement minimal de 4 tuiles ;
+- espacement minimal de **15 tuiles** (distance euclidienne) entre deux bâtiments ; un clic trop proche est déplacé vers l'emplacement libre le plus proche (rayon 14) ;
 - les ports se « collent » automatiquement à la côte la plus proche (rayon 8) ;
 - aperçu fantôme vert/rouge et portée affichée au survol ;
 - démolition volontaire : **remboursement de 25 %** de l'or investi ;
-- coûts réduits par les métaux rares (−5 % par gisement, maximum −30 %) et par les technologies Économie 4 et Défense 3.
+- coûts réduits par les métaux rares (−5 % par gisement, maximum −30 %) et par les technologies Industrie lourde, Automatisation et Robotique (−10 % chacune) puis Productivité (−1 % par niveau, §15.3) ; Grands travaux : constructions deux fois plus rapides. Arbre technologique activé, silos, SAM, radars et aérodromes doivent d'abord être recherchés.
 
 ## 8. Marine
 
 ### 8.1 Transports
-- Ils partent de la côte la plus proche du joueur sur la même étendue d'eau ; l'itinéraire est calculé par A* sur le graphe naval.
-- Vitesse **1,5 tuile/tick** ; tempêtes ×0,6 ; 300 PV ; **4 transports** au maximum en mer.
-- Ils emportent ratio × troupes.
-- À l'arrivée : une **tête de pont** est conquise puis l'attaque se poursuit normalement. Si la cible est devenue amie, les troupes rentrent.
+- Ils partent de la côte (ou de la rive) la plus proche du joueur sur la même étendue navigable ; l'itinéraire est calculé par A* sur le graphe naval et remonte les rivières navigables (§3.2), à 0,6 fois la vitesse.
+- Vitesse d'OpenFront : **une tuile d'itinéraire par tick**, l'itinéraire étant compté en pas 4-connexes (chaque tronçon coûte |dx| + |dy| : 1 tuile/tick le long d'un axe, 0,71 en diagonale) ; tempêtes ×0,6 ; 300 PV ; **3 transports** au maximum en mer, y compris ceux qui rentrent (OpenFront).
+- **À portée d'une bombe A** : la bombe vole à 10 tuiles/tick et détruit toute unité dans son rayon extérieur (30 tuiles). Visée sur un transport, elle le coule tant que le vol dure moins de 30 ticks, c'est-à-dire depuis un silo à moins de ~250 tuiles ; au-delà, il faut viser devant lui.
+- Ils emportent ratio × troupes (le curseur d'attaque : 20 % par défaut, le `troupes / 5` d'OpenFront), 50 au moins. Le débarquement n'est lancé que par la commande explicite (B ou menu du clic droit) ; envoyer un transport chez un allié est une trahison.
+- À l'arrivée : la **tête de pont** est prise d'office, puis une attaque distincte part de cette tuile (§6.3) ; c'est seulement alors que le défenseur suspend son commerce avec l'assaillant et lui en veut (§12). Si la cible est devenue amie, les troupes rentrent intégralement.
+- **Demi-tour** (commande `boatRetreat`, comme le BoatRetreatExecution d'OpenFront) : le transport repart vers votre côte la plus proche sur cette mer ; en y accostant, ses troupes rejoignent la réserve avec **25 % de pertes**. Sans côte (ni route) où rentrer, elles reviennent aussitôt, en entier.
 - Ils peuvent être coulés par les navires de guerre et les chasseurs ; les troupes sont alors perdues.
 
 ### 8.2 Navires de guerre
-- Coût **250 000 → 500 000 → 1 000 000** (selon le nombre possédé). Nécessite un port sur la même mer.
-- 1 000 PV ; 250 dégâts par obus (vitesse 9) toutes les 18 ticks ; **portée 130**.
-- Priorité de ciblage : **transports > navires de guerre > marchands**. Les marchands ne sont pas coulés mais **capturés** (piraterie, à 4 tuiles).
-- **Patrouille** autour d'un point (touche 7 puis clic, ou ordre « Déplacer ») dans un rayon de 40 tuiles.
+- Coût `min(1 000 000, 250 000 × (n + 1))`, n = min(navires de guerre à flot, navires construits) : 250k, 500k, 750k, puis 1 M. Nécessite un port sur la même mer.
+- 1 000 PV ; 250 dégâts par obus (vitesse 3 tuiles/tick, autoguidé) toutes les 30 ticks (3 s, ralenti à la demande des testeurs) ; **portée 90** autour du navire : les 130 tuiles d'OpenFront ramenées à l'échelle des cartes d'Isoline, environ 0,7 fois plus grossières pour la même géographie (tuiles de terre : Europe 0,93 M contre 2,35 M, mer Noire 0,67 M contre 1,17 M).
+- Vitesse **1 tuile d'itinéraire/tick** (comme les transports), **2** quand il prend un marchand en chasse (OpenFront) ; ×0,6 dans un orage.
+- **Banc de brouillard** (§15.1) : quand le navire ou sa cible s'y trouve, il ne la repère (et ne la canonne) qu'à **45 tuiles** au lieu de 90.
+- Priorité de ciblage (OpenFront) : **transports > navires de guerre > marchands**, puis le plus proche. Transports et navires de guerre sont canonnés **sans poursuite** : le navire continue sa patrouille. Les marchands ne sont pas coulés mais **pris en chasse puis capturés** (piraterie, à 4 tuiles), seulement s'ils naviguent à moins de 70 tuiles du point de patrouille, vers un port qui n'est ni le vôtre ni celui d'un ami, et si vous avez un port sur cette mer.
+- **Patrouille** autour d'un point (touche 7 puis clic, ou ordre « Déplacer ») : étapes tirées dans un carré de ±35 tuiles (zone de 70 tuiles, les 100 d'OpenFront à la même échelle).
 - **Vétérance** à 2, 5 et 9 victoires : +20 % de PV max et +20 % de dégâts par niveau.
-- **Construction** : uniquement sur l'eau, dans le rayon d'action d'un de vos ports.
-- **Réparation** : 3 PV/tick dans le rayon d'action d'un port allié.
+- **Construction** : uniquement sur l'eau ou une rivière navigable, dans le rayon d'action d'un de vos ports.
+- **Réparation** (OpenFront) : 1 PV/tick à moins de 105 tuiles d'un de vos ports (les 150 d'OpenFront à la même échelle). Sous **la moitié de ses PV** (75 % dans OpenFront : en test, les navires partaient dès le premier obus), le navire rompt le combat et rejoint votre port le plus proche sur sa mer (il change pour un port libre, ou nettement plus proche) : en route il **ne tire plus** mais **peut être pris pour cible**. À moins de 5 tuiles du port il s'amarre (un navire par niveau de port ; amarré, il ne peut plus être visé) et regagne en plus **5 PV/tick par niveau du port**, partagés entre les navires amarrés, jusqu'à être réparé ; il reprend alors sa patrouille. Un ordre de déplacement annule le retour au port et le bloque 5 s.
 - **F** sélectionne tous ses navires de guerre ; **Maj + glisser** sélectionne par rectangle.
 
 ### 8.3 Navires marchands
-- Chaque port en émet un toutes les `600 / (1 + 0,5 × (niveau − 1)) × (1 + marchands_en_mer / 80)` ticks (amortissement global), vers un port étranger aléatoire de la même mer, sans embargo.
-- Revenu à l'arrivée : `(3 000 + 55 × distance) × (1 + 25 % × (niveau − 1))` pour l'armateur, plus 50 % pour le port d'accueil.
-- Boom commercial ×2 ; technologie Marine 4 : +30 %.
-- Un marchand capturé décharge chez le pirate.
+- **Départs** : tous les 10 ticks, chaque port fait `niveau` tirages ; un tirage réussit avec la probabilité 1/taux, `taux = max(1, ⌊100 / (échecs + 1) / saturation(marchands_en_mer)⌋)`. « échecs » compte les tirages ratés depuis le dernier départ du port (minuterie de pitié, sauvegardée avec le port) : un port de niveau 1 lance un marchand toutes les 10 s environ.
+- `saturation(n) = (1 + 0,45·e^(−n/120)) × max(1 − σ(n ; ln2/50 ; 330), 0,25 × (1 − σ(n ; ln2/100 ; 800)))`, avec `σ(x ; k ; m) = 1 / (1 + e^(−k(x − m)))` : léger bonus tant que peu de marchands naviguent, freinage au-delà de ~330, plateau à 25 %, arrêt au-delà de ~800.
+- **Destination** : un port d'un autre joueur sur la même étendue d'eau, sans embargo dans un sens ni dans l'autre. Poids = niveau du port ; les ports les plus proches (le tiers, au moins 4) comptent une fois de plus, et les ports amis (alliés, coéquipiers) encore une fois, sauf ceux à moins de 300 tuiles (Manhattan).
+- **Valeur à l'arrivée** : `⌊(37 500 / (1 + e^(−0,03 × (d − 300))) + 25 × d) × multiplicateur d'or⌋`, la moitié de celle d'OpenFront (75 000 et 50 × d), d = tuiles d'itinéraire réellement parcourues (|dx| + |dy|, le compteur d'OpenFront ; vitesse 1 tuile/tick) : ~2 600 à 100 tuiles, 26 250 à 300, ~49 900 à 500. **Le port de départ et le port d'arrivée touchent chacun la totalité.**
+- Un embargo décrété en cours de route, la perte ou la capture du port d'arrivée annulent le voyage : le navire disparaît.
+- Boom commercial ×2 ; technologies Compagnies maritimes (+25 %) et Marchés mondiaux (+20 %) pour qui les a recherchées.
+- Un marchand capturé décharge la cargaison entière chez le pirate.
+- Vitesse 1 tuile d'itinéraire/tick, ×0,6 dans un orage (la valeur de la cargaison ne change pas : elle dépend des tuiles parcourues).
+- **Sur la carte** : les routes commerciales (§16) tracent l'itinéraire réellement suivi entre deux ports.
 
 ## 9. Rail et trains
 
 - Une usine terminée (ou une gare construite près d'une usine) relie automatiquement par A* terrestre jusqu'à **8 gares** (villes, ports, usines) entre **15 et 110 tuiles**.
 - Segment de 155 tuiles au maximum (×1,3 de tolérance de tracé). Les tuiles traversées doivent appartenir au propriétaire, à la gare cible ou à leurs alliés et coéquipiers.
-- **Fréquence** par usine : `(usines_du_propriétaire + 10) × 15 × (1 + trains_en_circulation / 500)` ticks, divisée par `1 + 0,15 × (niveau − 1)`.
+- **Départs** : à chaque tick, chaque usine fait `niveau` tirages ; un tirage réussit avec la probabilité 1/taux, `taux = max(1, ⌊(niveaux_d'usines_du_propriétaire + 10) × 15 / saturation(unités)⌋)`, avec au moins 10 ticks entre deux départs d'une même usine. Un train compte pour 7 unités (locomotive, 5 wagons, fourgon) ; `saturation(n) = (1 + 0,5·e^(−n/30)) × max(1 − σ(n ; ln2/100 ; 560), 0,25 × (1 − σ(n ; ln2/150 ; 900)))`.
 - Trains : 2 tuiles/tick, 16 arrêts au maximum. Ils ne reviennent pas sur leurs pas sauf impasse et évitent les gares sous embargo.
-- **Paiement par arrêt** : 10 000 (propre gare), 25 000 (gare d'un autre joueur ou d'un coéquipier), 35 000 (gare alliée). À partir du **10ᵉ arrêt**, −5 000 par arrêt, avec un plancher de 5 000. Le propriétaire d'une gare étrangère reçoit **40 %** du paiement. Technologie Économie 2 : +10 %.
+- **Paiement à chaque ville ou port** (les usines sont des aiguillages et ne paient pas) : 5 000 (propre gare), 12 500 (gare d'un autre joueur ou d'un coéquipier), 17 500 (gare alliée), × multiplicateur d'or, la moitié des montants d'OpenFront (10 000 / 25 000 / 35 000). Au-delà du **10ᵉ arrêt payant**, −2 500 par arrêt, avec un plancher de 2 500 (OpenFront : 5 000 et 5 000). Le propriétaire d'une gare étrangère reçoit **le même montant** que le propriétaire du train. Technologies Chemins de fer (+10 %), Marchés mondiaux (+20 %), Grands travaux (+10 %), Mondialisation (+20 %), Bourse (+10 %) et Prospérité (+2 % par niveau) ; boom commercial ×2.
 - **Destruction** : une voie est coupée si une de ses tuiles est prise par un tiers hostile. Une bombe ou un bombardier sur la voie la détruit aussi, avec les trains qui y roulent. Le général **Sabotage** détruit un train ou un marchand.
-- Rendu : courbes quadratiques lissées, visibles à partir d'un zoom moyen ; trains visibles en zoom rapproché.
+- Rendu : courbes quadratiques lissées, visibles à partir d'un zoom moyen ; trains visibles en zoom rapproché. Avec la vue « routes commerciales » (§16), les voies fréquentées s'éclairent d'un halo (laiton pour les vôtres, encre du propriétaire pour les autres), plus large et plus vif selon le nombre de trajets des 5 dernières minutes.
 
 ## 10. Armes nucléaires
 
-| Arme | Coût | Destruction | Retombées | Interceptable |
-|---|---|---|---|---|
-| Bombe A | 750 000 | 12 tuiles | 30 tuiles | oui |
-| Bombe H | 5 000 000 | 80 tuiles | 100 tuiles | oui |
-| MIRV | 25 M + 15 M × MIRV déjà lancés dans la partie (tous joueurs) | porteur → **8 à 12 ogives** (+2 avec Nucléaire 4) de 12/18 tuiles, réparties sur 70 tuiles autour de la cible | | ogives oui, porteur non |
+Mécanique calquée sur OpenFront.
 
-- Uranium : −8 % par gisement (maximum −40 %). Technologies : −10 % (Nucléaire 1), −15 % (Nucléaire 3), rechargement +25 % (Nucléaire 2).
-- **Vol** : 10 tuiles/tick, 10 ticks au minimum, arc parabolique avec traînée, point d'impact projeté (cercles de destruction et de retombées). Le MIRV se sépare à 72 % du trajet.
-- **Lancement** : touche 8 (une deuxième pression passe à ×5), 9 (H), 0 (MIRV). Menu contextuel ×1/×2/×5/×Max, plafonné par l'or, les tubes chargés et 50 bombes par ordre. Un même silo tire en file à 1 tick d'intervalle ; plusieurs silos tirent ensemble. Après un MIRV, le silo a 900 ticks de recharge.
-- **Interception SAM** : chaque SAM (ni ami ni allié du tireur) cherche le premier tick k où le missile sera dans sa portée et atteignable par un intercepteur (22 tuiles/tick) avant l'impact, c'est-à-dire une **prédiction de trajectoire**. Il tire 1 missile par salve (+1 avec Défense 2 et +1 avec Défense 4), puis recharge 90 ticks.
-- **Détonation** :
-  - Dans le rayon de destruction : les tuiles terrestres perdent leur propriétaire et reçoivent des retombées maximales (bord irrégulier, ou cercle lisse sur l'eau avec l'option *Water Nukes*). Bâtiments, unités et rails y sont détruits.
-  - Entre destruction et retombées : des retombées probabilistes, d'intensité décroissante.
-  - Pertes de population : fraction de territoire détruite × 1,4, appliquée aux troupes et aux ouvriers.
+| Arme | Coût | Rayon intérieur (tout est rasé) | Rayon extérieur (la moitié des terres rasée, bâtiments et unités détruits) | Vitesse | Interceptable |
+|---|---|---|---|---|---|
+| Bombe A | 750 000 | 12 tuiles | 30 tuiles | 10 tuiles/tick | oui |
+| Bombe H | 5 000 000 | 80 tuiles | 100 tuiles | 10 tuiles/tick | oui |
+| MIRV | 25 M + 15 M × MIRV déjà lancés dans la partie (tous joueurs) | porteur → jusqu'à **350 ogives** de 12/18 tuiles sur **tout le pays visé** | | porteur 15, ogives 22 à 26 | ogives oui, porteur non |
+
+- Uranium : −8 % par gisement (maximum −40 %). Arbre technologique activé (§15.3), le silo et la bombe A exigent le Programme nucléaire, la bombe H la Bombe thermonucléaire et le MIRV les Têtes multiples ; Miniaturisation : −20 % sur le coût des bombes, rechargement +25 % ; Production de masse : −25 % ; Cadence de tir : rechargement +5 % par niveau. Abris antiatomiques (défense) : −30 % de troupes tuées par les bombes du pays qui les a.
+- **Silos** : un tube par niveau, chaque tube se recharge en **9 s** (90 ticks) après un tir. Le tir part du silo chargé le plus proche de la cible ; un même silo tire en file à 1 tick d'intervalle.
+- **Trajectoire** : courbe de Bézier cubique bombée le long de l'axe vertical de la carte, de hauteur `max(distance / 3, 50)` tuiles, parcourue à vitesse constante (10 ticks au minimum). Elle est **simulée** : c'est elle que les SAM interceptent. **Arc haut** (par défaut) ou **arc bas** (effet miroir) : touche **U**, bouton du panneau de lancement. Le MIRV monte toujours en arc haut.
+- **Panneau de lancement** (pendant la visée) : salve ×1/×2/×5/Max, choix de l'arc, verdict de l'aperçu (trajectoire dégagée, interception prévue, silos en rechargement, trahison), légende.
+- **Aperçu** : trajectoire depuis le silo qui tirerait, en tirets blancs, en pointillés fins là où aucun SAM ne peut l'atteindre (plus de 105 tuiles du silo et de la cible), rouge après le **point d'interception prévu** (croix rouge) ; cercles de souffle (rouges si le tir romprait une alliance). Les **portées de tous les SAM connus** s'affichent : les vôtres en vert, ceux des alliés en jaune, les autres en rouge, en contours pointillés fusionnés. Elles apparaissent aussi au survol des boutons nucléaires, silo et SAM et au placement d'un silo ou d'un SAM.
+- **MIRV** : le porteur grimpe jusqu'à un point de séparation (à mi-chemin, 450 tuiles au-dessus de la cible) en ~14 ticks (vols longs compressés), puis se sépare en ogives visant des tuiles du pays ciblé (dans un rayon de 1 500 tuiles, espacées d'au moins 55 tuiles en distance de Manhattan), lâchées sur 0 à 15 ticks.
+- **Interception SAM** (missiles d'un niveau par SAM, chacun rechargé en 9 s ; jamais ceux des alliés et coéquipiers) : un missile n'est atteignable qu'à moins de **105 tuiles de son silo ou de sa cible** (les 150 d'OpenFront ramenées à l'échelle des cartes d'Isoline, comme la portée des navires de guerre), le milieu d'un long vol est hors de portée. Le SAM vise le premier point futur de la trajectoire situé dans sa portée `0,7 × (150 − 480/(niveau + 5))` (49 tuiles au niveau 1, 71 au niveau 5, 105 au plus) et qu'un intercepteur (12 tuiles/tick) peut rejoindre à temps ; il tire au dernier moment pour arriver en même temps que le missile (à défaut, s'il couvre la cible, juste avant l'impact). L'interception est certaine. Priorité : bombe H, puis cibles proches du SAM, puis impacts imminents.
+- **Détonation** : rayon intérieur entièrement rasé, une tuile sur deux entre les deux rayons (disque lisse avec l'option *Water Nukes*). Les tuiles rasées deviennent des retombées sans propriétaire. Tous les bâtiments, unités et rails dans le rayon extérieur sont détruits.
+- **Pertes** : bombes A et H, `troupes × ((tuiles − perdues) / tuiles)^5` pour chaque pays touché ; ogive de MIRV, `−500 × (1 − e^(−2 · max(0, troupes − 3 % du plafond) / plafond))` par tuile perdue. Les attaques en cours et les transports du pays perdent la même proportion.
 - Les **retombées** ne comptent pas dans les terres utiles et rendent l'attaque coûteuse. Elles sont permanentes par défaut ; l'option *Décontamination* les efface en 10 minutes.
-- **Alertes** : les joueurs dont le territoire est sous la trajectoire ou dans la zone d'impact reçoivent une sirène, un sous-titre, un compte à rebours d'impact cliquable et une entrée au journal.
-- Nucléariser un allié est une **trahison**. Le Conseil mondial peut **interdire** le nucléaire pendant 3 minutes.
+- **Alertes** : seuls les pays dont les terres sont **dans le souffle** (le pays visé pour un MIRV) entendent la sirène (au plus une toutes les 4 s) et reçoivent l'alerte avec compte à rebours. Le bruit de lancement ne s'entend que pour ses propres tirs, ceux qui vous visent ou ceux à l'écran. En vol, chaque missile affiche ses cercles d'impact aux couleurs du lanceur (vous en vert, allié en jaune, autres en rouge) ; il est dessiné plus pâle hors de portée des SAM.
+- **Trahison** : un tir rompt l'alliance avec un allié dont il toucherait plus de 100 tuiles pondérées (intérieur ×1, extérieur ×0,5) ou un bâtiment ; un MIRV sur un allié la rompt toujours. Le Conseil mondial peut **interdire** le nucléaire pendant 3 minutes.
+- **Viser ses propres terres** : permis pour les bombes A et H (briser un envahisseur au prix de ses propres terres), après une confirmation (désactivable avec les autres confirmations) ; jamais un coéquipier ; un MIRV sur son propre pays est refusé.
+- **Portée affichée des SAM** : celle de la simulation, bonus de recherche compris (radar de tir +10, bouclier +15, bouclier antimissile +10, interception +1 par niveau), dans les zones, au survol, au placement et dans la prévision d'interception.
+- **IA** : les nations évitent les cibles couvertes par un SAM et, selon leur difficulté, inversent l'arc quand il passe sur un SAM ennemi.
 
 ## 11. Aviation (inédit)
 
@@ -225,96 +294,206 @@ Règles communes :
 | Bombardier | 900 000 | 2,6 | 700 | rayon de 6 tuiles : pertes = min(35 % des troupes, densité × tuiles touchées × 4 + 2 % des troupes) ; détruit trains et voies ; pas de retombées ; abattu par SAM et chasseurs |
 | Reconnaissance | 150 000 | 5 | 150 | révèle 40 tuiles pendant 40 s (brouillard de guerre) |
 
-Un aérodrome porte 4 avions par niveau. Bombarder un allié est une trahison.
+Un aérodrome porte 4 avions par niveau. Bombarder un allié est une trahison. Dans un orage, les avions volent à ×0,75 de leur vitesse ; dans un banc de brouillard, leur vision (brouillard de guerre) passe de 25 à 12,5 tuiles.
 
 ## 12. Diplomatie
 
-- **Alliance** : demande par le menu contextuel ou le panneau Diplomatie, acceptation K / refus L. Des demandes croisées valent acceptation. Durée **3 000 ticks (5 min)**. Renouvellement par consentement mutuel dans les 30 dernières secondes. L'expiration est sans pénalité. Les alliés ne peuvent pas s'attaquer : les attaques en cours entre eux sont annulées et remboursées.
-- **Trahison** (attaquer, débarquer, bombarder ou nucléariser un allié) : alliance rompue, défense ×0,5 et vitesse ×0,8 pendant 300 ticks, marque publique de traître 💔 pendant 5 min, **embargo automatique de 5 min** avec la victime, annonce à tous. Aucune pénalité si la victime est inactive. Une confirmation est demandée (désactivable).
-- **Embargo** : coupe commerce maritime et trains entre les deux joueurs. Il existe aussi un « embargo général sauf équipe » et une levée globale.
+- **Alliance** : demande par le menu contextuel ou le panneau Diplomatie, acceptation K / refus L. Des demandes croisées valent acceptation. Durée **3 000 ticks (5 min)**. Renouvellement par consentement mutuel dans les 30 dernières secondes. L'expiration est sans pénalité. Les alliés ne peuvent pas s'attaquer : les attaques en cours entre eux sont annulées et remboursées, les missiles en vol entre eux sont rappelés et les embargos temporaires levés.
+- **Trahison** (rompre l'alliance, attaquer, débarquer, bombarder ou nucléariser un allié) : alliance rompue, **marque de traître pendant 30 s** (comme OpenFront : les attaques contre le traître perdent ×0,5 troupes et prennent ses tuiles ×1/0,8 plus vite), **embargo automatique de 5 min** avec la victime, annonce à tous. Les autres alliances du traître ne sont pas rompues, mais son camp s'affaiblit (ci-dessous). Aucune pénalité si la victime est inactive ou déjà traître. Une confirmation est demandée (désactivable). Seule une attaque ou un débarquement réellement lancé trahit : un ordre refusé (pas de frontière commune, par exemple) ne fait rien.
+- **Relations** (OpenFront, de −100 à +100, revenant vers 0 de 0,05 par tick, soit 0,5/s) : la victime d'une trahison passe à **−100** (hostile) envers le traître, et tous les autres voisins terrestres du traître à **−40** (méfiants), sauf les coéquipiers de la victime. Un pays attaqué (sur terre, ou au débarquement) baisse sa relation envers l'agresseur de **60 / 70 / 80 / 100** selon la difficulté (facile, normal, difficile, impossible) et refuse la demande d'alliance qu'il avait pu lui envoyer. Les nations s'en servent :
+  - **refus** de toute alliance avec un pays envers lequel leur relation est négative, et de 90 % des demandes d'un traître ;
+  - **attaque** du traître voisin le plus faible tant qu'il n'a pas plus de 1,2 fois leurs troupes, sans attendre la fin de leur délai entre deux guerres — y compris s'il est leur allié (sauf en facile) : l'alliance est alors rompue sans faire d'elles des traîtres. Les pays hostiles (relation < −50) sont des cibles privilégiées (×1,5) ;
+  - les **tribus** voisines d'un traître l'attaquent une réflexion sur trois.
+- **Embargo** : coupe commerce maritime et trains entre les deux joueurs. **Embargo temporaire** : tout pays attaqué (hors tribus) refuse de commercer avec son agresseur pendant 5 min, dès que l'attaque part (ou que le débarquement touche terre). Il existe aussi un « embargo général sauf équipe » et une levée globale.
+- **Guerre** : un pays est « en guerre » avec vous tant qu'une attaque, un débarquement ou un missile vous oppose, et 10 s après.
+- **Sur la carte** (comme OpenFront) : au-dessus du nom de chaque pays, une rangée de badges : couronne (le plus grand), bouclier brisé (traître ; clignote les 15 dernières secondes), lune (inactif), poignée de main (allié ; clignote les 30 dernières secondes), enveloppe (demande d'alliance reçue), épée (en guerre contre vous), dollar barré (pas de commerce), symbole radioactif (missile en vol ; rouge s'il vise vos terres). Le **nom** est **vert** pour un allié, **rouge** en guerre, **jaune** pour un traître. Les **frontières** des alliés sont teintées de vert, celles des pays en guerre de rouge (pulsé), celles des pays sous embargo de rouge pâle, et la frontière commune avec un voisin menaçant d'ambre (§15.16). Les noms ont un contour sombre et restent visibles plus loin pour les alliés et les ennemis.
 - **Dons** : or et troupes, aux alliés et coéquipiers uniquement (10 % / 25 % dans le radial, montant libre via commande).
 - **Communication** : 16 signaux tactiques illustrés (Alt + clic : attaquer ici, défendre, à l'aide, alliance ?, cible prioritaire…), 8 messages rapides traduits, chat par canal (tous / équipe / alliés) avec filtre d'injures et masquage par joueur, signaux sur la carte.
-- **Panneau Diplomatie** : joueurs, relation (allié et chronomètre / en guerre / neutre / embargo), personnalité, historique des trahisons.
+- **Panneau Diplomatie** et **carte de survol** : relation (allié et chronomètre / en guerre / neutre), embargo, traître et compte à rebours, personnalité, historique des trahisons.
 
 ## 13. Nations et tribus (IA)
 
 L'IA tourne **dans la simulation**. Elle utilise uniquement le PRNG seedé et un **budget de travail déterministe** (6 000 unités par tick, chaque réflexion coûtant de 30 à 400 unités) : tous les pairs du lockstep calculent donc exactement les mêmes décisions. Un budget en temps réel aurait brisé le déterminisme.
 
-- **Tribus** : s'étendent en terres libres (ratio 12 %), toutes les 4 à 7 s, et attaquent parfois un voisin non humain deux fois plus faible. Elles ne construisent pas, plafonnent à 60 000 troupes et gardent un trésor qui revient à qui les conquiert (§5.2).
-- **Nations** réfléchissent toutes les **3 à 6 s** (× facteur de difficulté) ; elles laissent au moins 4 s entre deux ordres d'expansion, **30 s entre deux offensives contre un pays** (÷ agressivité) et 12 s entre deux constructions (÷ goût pour la construction). Elles n'attaquent un pays que si elles ont au moins **1,4 ×** le seuil de force de leur personnalité :
-  1. rééquilibrage troupes/ouvriers selon la personnalité (+15 % de troupes sous attaque) ;
-  2. recherche technologique selon la personnalité ;
+- **Tribus** : s'étendent en terres libres (ratio 12 %), toutes les 4 à 7 s, et attaquent parfois un voisin non humain deux fois plus faible, ou un traître voisin (une réflexion sur trois, §12). Elles ne construisent pas, plafonnent au tiers du plafond d'un joueur et gardent un trésor qui revient à qui les conquiert (§5.2).
+- **Nations** réfléchissent toutes les **3 à 6 s** (× facteur de difficulté) ; elles laissent au moins 4 s entre deux ordres d'expansion, **100 s entre deux offensives contre un pays** (÷ agressivité ; 130 s avant la baisse des plafonds de troupes) et 12 s entre deux constructions (÷ goût pour la construction). Elles n'attaquent un pays que si elles ont au moins le seuil de force de leur personnalité ; une armée oisive (au-delà de 85 % de son plafond, où elle ne se régénère presque plus) se contente d'être plus forte que sa cible et attaque 1,5 fois plus souvent :
+  1. (supprimé avec les ouvriers) ;
+  2. recherche technologique selon un plan propre à la personnalité, l'économie d'abord ; une nation bombardée vise aussitôt les SAM (§15.3). Elle construit des centres de recherche dont les niveaux suivent ses niveaux de villes selon sa personnalité (bâtisseur 0,55 par niveau de ville … expansionniste 0,3) et la difficulté (×0,8 en Facile à ×1,3 en Impossible) ;
   3. **évaluation des fronts** par échantillonnage de 80 tuiles frontalières (voisins, contact) ;
-  4. **riposte** contre le plus gros assaillant si possible, sinon **défense des goulots** (poste de défense près du contact) ;
-  5. expansion vers les terres libres, puis choix d'une cible : force relative × contact, tribus ×2,5, rancune, traîtres ×1,5 ;
-  6. **ratio d'attaque adaptatif** `clamp(1,1 × troupes_cible / mes_troupes, 12 %, 40 %) × agressivité`, plafonné à 45 % ;
-  7. constructions par **priorités pondérées** : premier port (×2,2 × goût du commerce) et première usine (×1,9) avant la n-ième ville ; silos, SAM (×3 après un tir nucléaire subi), radar, aérodrome selon la personnalité ;
+  4. **riposte** contre le plus gros assaillant si possible, dimensionnée pour anéantir l'attaque entrante dans le choc (1,1 × ses troupes), plus l'armée de l'assaillant si on la domine de 50 % (au plus 60 % de ses troupes) ; sinon **défense des goulots** (poste de défense près du contact) ;
+  5. expansion vers les terres libres, puis choix d'une cible : force relative × contact, tribus ×2,5, rancune, traîtres ×1,5, pays hostiles (relation < −50) ×1,5. Un traître voisin qui n'a pas plus de 1,2 fois leurs troupes est attaqué en priorité, même pendant le délai entre deux guerres (§12) ;
+  6. **ratio d'attaque adaptatif** `clamp(0,75 × troupes_cible / mes_troupes, 12 %, 50 %) × min(1,2 ; agressivité)`, plafonné à 55 % : avec les pertes d'OpenFront, une attaque aussi grosse que toute l'armée de la cible la balaie ; une offensive « mord » donc un cinquième à un quart du pays, et une guerre dure plusieurs offensives. Avec la baisse des plafonds, le facteur est passé de 0,5 à 0,75 et les bornes de 40 / 45 % à 50 / 55 % : les pertes par tuile ne diminuent pas avec les armées, et la même part de l'armée adverse prenait moins de terres (les fins de partie entre grands empires s'enlisaient au-delà de 80 min) ;
+  7. constructions par **priorités pondérées** : les villes d'abord (+60 000 troupes par niveau), le premier port (×2,2 × goût du commerce) et la première usine (×1,9), puis ports et usines au rythme des niveaux de villes ; silos, SAM (×3 après un tir nucléaire subi), radar, aérodrome selon la personnalité. Comme dans OpenFront, au-delà d'un bâtiment pour 1 500 tuiles, ou faute de place, elles **améliorent** un bâtiment existant plutôt que d'en construire un ;
   8. débarquements quand aucun voisin terrestre n'est attaquable ;
-  9. alliances avec les voisins forts sans rancune, renouvellements, dons aux alliés attaqués ;
-  10. réponses aux demandes après un délai : la probabilité dépend de la personnalité, de la taille relative, de la rancune, de l'historique de trahison et de la difficulté ;
+  9. alliances avec les voisins forts sans rancune ni relation négative (§12), renouvellements, dons aux alliés attaqués. Une nation à l'armée oisive entourée uniquement d'alliés laisse expirer l'alliance avec le plus faible (sans trahison) pour pouvoir combattre ;
+  10. réponses aux demandes après un délai : refus si leur relation envers le demandeur est négative, et de 90 % des demandes d'un traître (OpenFront) ; sinon la probabilité dépend de la personnalité, de la taille relative, de la rancune, de l'historique de trahison et de la difficulté ;
   11. **nucléaire** : vengeance d'abord, puis plus forte rancune, puis le leader pour les bellicistes. Cibles : grappes de villes et silos, en évitant les zones couvertes par des SAM selon la qualité de ciblage ;
   12. vote au conseil.
-- **Personnalités** (ratio de troupes / agressivité / seuil de force) : Expansionniste 62 % / 1,2 / 1,0 ; Bâtisseur 50 % / 0,7 / 1,4 ; Marchand 45 % / 0,6 / 1,5 ; Diplomate 55 % / 0,6 / 1,3 ; Isolationniste 60 % / 0,5 / 1,6 ; Belliciste 75 % / 1,6 / 0,85. Elles sont affichées discrètement dans la carte de survol et le panneau Diplomatie.
+- **Personnalités** (agressivité / seuil de force) : Expansionniste 1,2 / 1,0 ; Bâtisseur 0,7 / 1,4 ; Marchand 0,6 / 1,5 ; Diplomate 0,6 / 1,3 ; Isolationniste 0,5 / 1,6 ; Belliciste 1,6 / 0,85. Elles sont affichées discrètement dans la carte de survol et le panneau Diplomatie.
 - **Difficultés** :
 
-| | Revenu | Agressivité | Ciblage | Trahison | Troupes | Réflexion |
+| | Plafond et troupes de départ | Régénération | Agressivité | Ciblage | Trahison | Réflexion |
 |---|---|---|---|---|---|---|
-| Facile | ×0,7 | ×0,6 | 40 % | 5 % | ×0,85 | ×1,6 |
-| Normal | ×1 | ×1 | 70 % | 12 % | ×1 | ×1 |
-| Difficile | ×1,35 | ×1,3 | 90 % | 20 % | ×1,15 | ×0,8 |
-| Impossible | ×1,9 | ×1,6 | 100 % | 30 % | ×1,35 | ×0,6 |
+| Facile | ×0,5 | ×0,9 | ×0,6 | 40 % | 5 % | ×1,6 |
+| Normal | ×0,75 | ×0,95 | ×1 | 70 % | 12 % | ×1 |
+| Difficile | ×1 | ×1 | ×1,3 | 90 % | 20 % | ×0,8 |
+| Impossible | ×1,25 | ×1,05 | ×1,6 | 100 % | 30 % | ×0,6 |
+
+Le revenu d'or est le même à toutes les difficultés (§5.4).
 
 ## 14. Modes et fin de partie
 
 | Mode | Règle |
 |---|---|
-| Chacun pour soi | 80 % des terres utiles (lobby : 50 à 100 %). **Prolongation** après 30 min : seuil 80 → 70 → 60 → 50 %, un palier toutes les 5 min (affiché dans le HUD) |
+| Chacun pour soi | 80 % des terres utiles (lobby : 50 à 100 %). **Prolongation** après 30 min : seuil 80 → 70 → 60 → 50 → 45 → 40 → 35 %, un palier toutes les 5 min (affiché dans le HUD) ; OpenFront continue de baisser sans plancher, Isoline s'arrête à 35 % (atteint à 60 min) pour finir les impasses entre continents |
 | Équipes | 2 à 8 équipes ; part cumulée de l'équipe ; une encre par équipe |
 | Humains contre nations | humains équipe 1, nations équipe 2 |
 | Solo contre tribus | aucune nation, entraînement |
 | Horloge de l'apocalypse | 10 min de grâce, puis seuils croissants toutes les 2 min : 2, 4, 7, 11, 17, 25, 35 % (FFA) ou 5, 10, 16, 24, 33, 45, 60 % (équipes). Sous le seuil : avertissement, puis −2 % de troupes par seconde (plancher 5 % du plafond) et −2 % de PV pour les navires |
 | Battle Royale | toutes les 3 min, l'anneau se resserre (rayon × 0,8, minimum 8 % du petit côté) ; les tuiles hors zone deviennent inhabitables (hachures rouges) |
-| Campagne | 6 missions à objectifs (§15.11) |
-| Didacticiel | 9 étapes guidées (§15.11) |
+| Campagne | 6 missions à objectifs, qui servent aussi de didacticiel (§15.11) |
 
 Fins de partie supplémentaires : **dernier survivant** (si la partie a commencé avec au moins deux prétendants) et « tous les humains éliminés » (le leader gagne).
 
-**Écran de fin** : classement, courbes de territoire dans le temps (échantillon toutes les 5 s) et or/troupes du joueur, statistiques, **export CSV**, accès aux replays, « continuer à regarder », « rejouer ». Le replay est enregistré automatiquement.
+**Fin de partie : l'édition finale du Courrier** (`src/ui/hud/FinalEdition.svelte`). Toute fin de partie (solo, LAN, spectateur, fin d'un replay, capitulation, mission de campagne) ouvre un seul et même journal, « Le Courrier des Isolignes — Édition finale », sur papier journal à deux encres (bleu marine, magenta des cartes marines ; `BRAND.md` §4). Il n'y a plus d'autre écran de fin.
+- **Pages** : page 1, **la une** (ci-dessous) ; après une mission de campagne, le **communiqué de mission** la remplace. Page 2, **résultats et statistiques**. Une partie de moins d'une minute et demie n'a pas de une : elle s'ouvre directement sur les résultats, coiffés du bandeau complet du journal. On tourne la page avec les folios du pied de page (« 1 La une », « 2 Résultats »), les flèches ← → ou le renvoi « Suite en page 2 » ; la nouvelle page pivote depuis la pliure (0,5 s, coupé par « Réduire les animations » et `prefers-reduced-motion`). Échap ou un clic à côté replie le journal : on regarde la carte, et un onglet « Rouvrir le journal » au-dessus de la barre de construction le rouvre.
+- **Actions** (pied de page, sur toutes les pages) : revoir la partie (replay depuis le début), regarder la carte (replier), **continuer à jouer** (après la fin, joueur encore en vie, hors mission et replay), **rejouer** (solo : mêmes réglages, nouveau monde), menu principal ; en mission : **recommencer**, **mission suivante** (si elle est débloquée), campagne.
+- **Résultats** (`ResultsPage.svelte`, logique pure dans `results.ts`) : titre selon le lecteur (Victoire, Défaite, « X : la victoire » pour un spectateur), sort et rang final ; **classement final** de toutes les nations (drapeau, territoire avec barre à l'échelle du premier, troupes et or à la fin, ennemis tués, bâtiments, bombes, sort : vainqueur, debout, chute à mm:ss), trié par colonne au clic, 12 lignes plus la vôtre puis « Afficher les N autres » ; **votre bilan** (courbe du territoire si la partie dépasse une minute, 14 statistiques, score du classement du profil ; pour un spectateur, le bilan du vainqueur) ; **distinctions** : les succès débloqués par cette partie ; **la partie en bref** (carte, mode, difficulté, seuil, nations, tribus, vitesse, revenus, durée, fin, date) ; **archives** : replay enregistré automatiquement, export du replay (`.rpl`) et des statistiques (CSV), liste des replays.
+- **Communiqué de mission** (`MissionReport.svelte`) : « Mission accomplie » ou « Mission échouée » (magenta), étoiles gagnées et meilleur résultat, mot de la conseillère, objectifs un à un (atteint / manqué, ceux qui rapportent une étoile marqués d'une étoile, bonus signalé), compte rendu chiffré et prochaine mission. **API** (`src/ui/game/missionResult.ts`) : la campagne appelle `ctl.endMission(result: MissionResult)` (titre, réussite, étoiles, objectifs, mot de fin, numéro, mission suivante, actions de remplacement facultatives) ou simplement `ctl.endMission(id, étoiles)` : les objectifs sont alors lus dans la liste du HUD. Le contrôleur enregistre les étoiles, relève les succès débloqués, récupère les statistiques finales et ouvre le journal sur le communiqué.
+- **Chute en cours de partie** (LAN, d'autres humains encore en jeu) : une dépêche (`FallNotice.svelte`) dit qui vous a pris et quand, et propose de suivre la partie jusqu'au bout (le journal paraît à la fin) ou de la quitter. En solo, la partie s'arrête aussitôt et le journal la remplace.
+
+**La une** (page 1, hors campagne) : le récit de la partie, écrit d'après sa chronique.
+- **Enregistrement** côté client, jamais dans la simulation (`src/ui/game/chronicle.ts`) : toutes les 30 s de jeu, la part des terres utiles de chaque nation, la position de son étiquette et une petite carte des possessions (240 px de côté au plus, un indice de palette par pixel : 0 terres libres, 1 à 254 une nation, 255 les tribus), et les terres passées d'une nation à une autre depuis l'échantillon précédent. Au-delà de 40 cartes, une sur deux est retirée (environ 2 Mo pour une heure). S'y ajoutent les faits : chutes (cause et auteur, celui d'un tir nucléaire retrouvé d'après les missiles en vol), trahisons, premières alliances de chaque paire, premier missile de chaque type, événements mondiaux, première ville du joueur.
+- **Titre** selon la fin (`src/ui/hud/frontPage.ts`) : domination (« guerre éclair » sous 15 min, « grand retournement » si le vainqueur ne prend la tête que dans la seconde moitié, « règne sans partage » s'il mène dès les deux premières minutes, « victoire à l'usure » au-delà de 45 min), dernière nation debout, victoire d'équipe, victoire par forfait (le joueur a capitulé), coup de grâce (le vainqueur l'a abattu) ou victoire aux points. En français, le nom du pays sert d'étiquette (« Italie : la chute ») et la prose dit « la nation victorieuse », pour ne jamais buter sur l'article.
+- **Page** : chapeau, paragraphe d'ouverture (durée, carte, prise de tête, chutes, feu nucléaire, trahisons, résultat du joueur), « L'empire au fil du temps » (4 à 6 cartes du début à la fin, vainqueur et joueur à pleine encre, autres nations estompées, tribus à l'encre neutre), part des terres utiles (vainqueur et joueur en couleur, principaux rivaux en gris, seuil de victoire, curseur au clavier, tableau pour les lecteurs d'écran), **grands tournants** (8 au plus, choisis par poids : chutes des grandes nations, plus grande offensive, prise de tête, premier tir nucléaire, trahisons, alliances qui comptent, événements mondiaux, puis le dénouement) et encadré « Votre sort » (ou le podium pour un spectateur).
+- **Revoir** : chaque tournant, chaque carte et chaque ligne de l'encadré ouvrent le replay de la partie 8 s avant le moment (avance rapide, caméra sur les lieux) ; dans le replay, le bouton journal de la barre de lecture rouvre la même une. Sans fichier de replay, pas de bouton.
+
+**Continuer à jouer** : une fois la partie finie, n'importe quel joueur humain (même éliminé, en solo comme en LAN) peut la relancer avec la commande `{ t: 'continue' }`. La partie repasse en phase de jeu comme un **bac à sable** : plus aucune condition de victoire (territoire, dernier survivant, humains éliminés) ; les pressions du mode (horloge de l'apocalypse, anneau du Battle Royale) continuent. Le vainqueur, l'équipe, la raison et l'instant de la fin (`victory.endTick`) restent enregistrés ; `victory.continued` passe à vrai et l'événement `gameContinued` est émis. La commande passe par le journal des commandes : replays, sauvegardes et LAN restent déterministes.
 
 **Lobby** : carte (6 catégories), mode, équipes, difficulté, nations (0 à 100), tribus (0 à 200), seuil (au-delà de 100 % : bac à sable sans victoire ni prolongation, via le paramètre de lancement `threshold`), durée du spawn, multiplicateur d'or, or de départ des joueurs (bac à sable, 0 à 50 M), vitesse de jeu, ports, nucléaire, dons, usines, Water Nukes, décontamination, spectateurs, 10 fonctionnalités inédites activables. En LAN : code d'invitation et chat.
 
 ## 15. Fonctionnalités inédites
 
-Chacune est implémentée, testée (`tests/unit/rules.test.ts`, `units.test.ts`) et activable dans le lobby (sauf 15.9 à 15.12, qui sont des fonctions de l'application).
+Chacune est implémentée, testée (`tests/unit/rules.test.ts`, `units.test.ts`) et activable dans le lobby (sauf 15.9 à 15.12, qui sont des fonctions de l'application, et 15.15 et 15.16, toujours actives).
 
-1. **Météo et jour/nuit** : cycle de 8 min. La nuit (deuxième moitié du cycle) réduit la vision de 20 % (rayon 24 au lieu de 30), assombrit la carte et allume les villes. **Tempêtes** : ×0,6 sur la vitesse des navires dans la zone, nuages tourbillonnants et éclairs. **Brouillards** : voile clair qui masque les transports. Les cellules sont générées par le PRNG toutes les 45 à 100 s, durent de 90 à 180 s et dérivent. Rendu par shader.
+1. **Météo et jour/nuit** : cycle de 8 min. La nuit (deuxième moitié du cycle) réduit la vision de 20 % (rayon 24 au lieu de 30), assombrit la carte et allume les villes. Des **cellules météo** dérivent sur la carte (`src/core/rules/weather.ts`, déterministe : PRNG de la partie, aucune horloge) :
+   - **Formation** : une nouvelle cellule toutes les **40 à 80 s** (la première après 40 s), qui dure **150 à 240 s**, **6 au plus** à la fois (environ 3 en moyenne) ; rayon 40 à 95 tuiles × √(surface de la carte)/1 400 ; dérive lente (≈ 1,2 tuile/s à l'échelle 1). 60 % d'**orages**, qui se forment au-dessus de l'eau (jusqu'à 6 tirages pour trouver un centre en mer) ; 40 % de **bancs de brouillard**, n'importe où.
+   - **Orage** : navires (transports, navires de guerre, marchands) **×0,6** de vitesse, avions **×0,75**, tant qu'ils sont dans la cellule.
+   - **Banc de brouillard** : la vue y est **divisée par deux**. Une tour radar dans le banc ne révèle que la moitié de son rayon ; navires et avions qui s'y trouvent ne voient plus qu'à 12,5 tuiles (brouillard de guerre) ; un navire de guerre ne repère et ne canonne une cible qu'à 45 tuiles (au lieu de 90) dès que lui **ou** sa cible est dans le banc. Les transports ennemis y restent invisibles à l'écran.
+   - **À l'écran**, à toutes les qualités (motif moins coûteux en mode performance) et par-dessus le brouillard de guerre (la météo est publique) : l'orage assombrit la mer de bandes de pluie qui s'enroulent autour de l'œil, avec des stries de pluie qui tombent et des éclairs de temps à autre ; le banc de brouillard est un voile pâle et plat, peigné en longues traînées par le vent, qui atténue les couleurs sans masquer frontières ni pays. Chaque cellule a un **contour en pointillés discret** et une icône (nuage d'orage, nuage de brouillard) en son centre ; elle apparaît et s'efface en fondu. Les nuages décoratifs (vue éloignée) s'écartent des cellules pour ne pas être confondus avec elles. **Réduire les animations** fige la pluie et supprime les éclairs.
+   - **Infos** : la carte de survol indique l'effet (« Orage : navires ralentis de 40 %, avions de 25 % », « Banc de brouillard : portée des radars et des navires de guerre réduite de 50 % ») ; le journal signale, au plus une fois toutes les 90 s, un orage ou un banc qui se forme près de vos terres ou de votre flotte (avec un bouton pour y aller).
 2. **Brouillard de guerre** : visibilité calculée à basse résolution (cellules 4×4) par une distance chamfer 8-voisins (vision circulaire de 30 tuiles, 24 la nuit) depuis le territoire du joueur, de ses alliés et coéquipiers, plus des disques pour les radars (60), navires et avions (25) et la reconnaissance (40). Hors vue, la **géographie reste lisible** (atlas sépia assombri, un peu plus clair pour les zones déjà vues), mais les possessions, unités, bâtiments et étiquettes des autres joueurs sont masqués. La minimap applique le même masque. Le brouillard ne se lève qu'en spectateur ou en replay.
-3. **Arbre technologique** : 5 branches × 4 niveaux. Coûts 60 / 150 / 300 / 500 points. Production `0,5 + 0,5 × niveaux_de_villes` points/s. Effets :
-   - Économie : +10 % ouvriers ; +10 % trains ; +15 % ouvriers ; −10 % bâtiments.
-   - Militaire : −10 % de pertes en collines et montagnes ; +10 % de vitesse ; −10 % de pertes partout ; +15 % de vitesse.
-   - Marine : +20 % PV ; +20 % dégâts ; +25 % vitesse ; +30 % commerce.
-   - Nucléaire : −10 % coût ; +25 % rechargement ; −15 % coût ; MIRV +2 ogives.
-   - Défense : portée SAM +10 ; SAM +1 cible ; −5 % bâtiments ; SAM +1 cible et portée +15.
-4. **Ressources stratégiques** : environ 1 gisement pour 9 000 tuiles de terre (10 à 180), espacés, avec des probabilités selon le terrain. Pétrole : +400 or/s. Uranium : −8 % sur le coût des bombes (maximum −40 %). Terres fertiles : +6 % de croissance (maximum 40 %). Métaux rares : −5 % sur le coût des bâtiments (maximum −30 %). Il faut posséder la tuile centrale du gisement. Icônes sur la carte (calque R) et panneau Statistiques.
+3. **Arbre technologique** (`src/core/rules/tech.ts`, testé dans `tests/unit/tech.test.ts`) : 6 branches × 6 technologies sur 6 paliers, plus **une recherche sans fin par branche** (rangée ∞), pour qu'il reste toujours quelque chose à chercher. **L'économie d'abord** : les technologies avancées des branches de guerre exigent des niveaux d'économie ou d'industrie, et le programme nucléaire passe par la Physique atomique, la Banque centrale et l'Industrie lourde. Arbre activé, **silos et bombes, SAM, radars, aérodromes et avions sont verrouillés** jusqu'à leur recherche (y compris pour améliorer ou utiliser un bâtiment capturé ; les SAM capturés tirent toujours). Arbre désactivé, rien n'est verrouillé et il n'y a pas de centres de recherche : règles d'OpenFront. Les navires de guerre restent libres : dès les premières minutes, ils sont la seule riposte aux transports et aux pillages de marchands.
+   - **Points de recherche : les centres de recherche** (bâtiment propre à Isoline, §7, touche J). `(0,5 + 1,5 × niveaux de centres achevés) × (1 + bonus)` par seconde ; bonus : Universités +25 %, Physique atomique +10 %. **Les villes n'en produisent plus** : sans centre, 0,5 point/s (le premier palier prend plusieurs minutes, le programme nucléaire près d'une heure). Le centre coûte `min(2 M, 250 000 × 2^n)` (250k, 500k, 1 M, puis 2 M, règle de prix d'OpenFront) : chaque niveau de recherche se paie au lieu d'une ville, d'un port ou d'un navire. Capturé, il passe au vainqueur avec sa production (message au journal des deux côtés). Les points s'accumulent même sans recherche en cours.
+   - **Coût par palier** : I 150, II 400, III 1 500, IV 3 800, V 7 000, VI 11 000 points (143 100 pour les 36 technologies, contre 17 300 pour l'ancien arbre de 24). **Recherches sans fin** : `10 000 × 1,15^k` points pour le niveau k + 1, 20 niveaux au plus ; chacune s'ouvre quand sa branche est complète.
+   - **Recherche et file d'attente** : un clic vise n'importe quelle technologie, ses prérequis manquants sont étudiés d'abord, dans l'ordre (niveau précédent de la branche, puis prérequis des autres branches). **Maj+clic** (ou « Ajouter à la file ») la met en file d'attente derrière l'objectif en cours (12 objectifs au plus) ; l'objectif atteint, le suivant prend le relais ; une croix retire un objectif. Une recherche sans fin visée sans rien derrière continue niveau après niveau. Changer de cible ne coûte rien, les points restant en réserve. Ordre `research { tech, op? }` (`op` : `queue` / `unqueue`), validé et rejoué comme les autres.
+   - **Ne pas oublier de chercher** : tant que rien n'est recherché alors qu'on le pourrait (un centre en service, ou assez de points pour la technologie la moins chère), un point bleu pulse sur le bouton Technologies du dock et un rappel « Recherche à l'arrêt · n points en attente — choisir » s'affiche au-dessus de la barre de construction (un clic ouvre l'arbre) ; le journal note aussi « Plus aucune recherche en cours ». Option du panneau **« Continuer automatiquement »** (désactivée par défaut, mémorisée dans les paramètres) : file vide, l'interface lance la technologie disponible la moins chère.
+
+   | Branche | Palier | Technologie | Effet | Prérequis (outre le niveau précédent) |
+   |---|---|---|---|---|
+   | Économie | I | Comptoirs | +10 % de revenu de base | — |
+   | | II | Banque centrale | +15 % de revenu de base | — |
+   | | III | Universités | +25 % de vitesse de recherche | — |
+   | | IV | Marchés mondiaux | +20 % de revenus du commerce et des trains | — |
+   | | V | Bourse | +10 % sur tous les revenus (base, commerce, trains) | Automatisation |
+   | | VI | Mondialisation | +20 % de revenus du commerce et des trains | Compagnies maritimes |
+   | | ∞ | Prospérité | +2 % sur tous les revenus par niveau | Mondialisation |
+   | Industrie | I | Chemins de fer | +10 % de revenus des trains | Comptoirs |
+   | | II | Industrie lourde | −10 % sur le coût des bâtiments | Banque centrale |
+   | | III | Aérospatiale | **débloque aérodromes et avions** ; mène au MIRV | Universités |
+   | | IV | Automatisation | −10 % sur le coût des bâtiments | Marchés mondiaux |
+   | | V | Grands travaux | constructions deux fois plus rapides, +10 % de revenus des trains | Bourse |
+   | | VI | Robotique | −10 % sur le coût des bâtiments | Bourse |
+   | | ∞ | Productivité | −1 % sur le coût des bâtiments par niveau | Robotique |
+   | Militaire | I | Chasseurs alpins | −10 % de pertes en collines et montagnes | — |
+   | | II | Logistique | +10 % de vitesse d'attaque | Chemins de fer |
+   | | III | Doctrine interarmes | −10 % de pertes partout | Industrie lourde |
+   | | IV | Guerre éclair | +15 % de vitesse d'attaque | Aérospatiale |
+   | | V | Conscription | +10 % de troupes maximales | Automatisation |
+   | | VI | Forces spéciales | −10 % de pertes partout | Grands travaux |
+   | | ∞ | Entraînement | −1 % de pertes par niveau | Forces spéciales |
+   | Marine | I | Blindage | +20 % de points de vie des navires de guerre | — |
+   | | II | Artillerie navale | +20 % de dégâts des navires de guerre | Industrie lourde |
+   | | III | Turbines | +25 % de vitesse des navires | Aérospatiale |
+   | | IV | Compagnies maritimes | +25 % de revenu commercial | Marchés mondiaux |
+   | | V | Chantiers navals | −25 % sur le coût des navires de guerre | Automatisation |
+   | | VI | Porte-conteneurs | +25 % de revenu commercial | Bourse |
+   | | ∞ | Fret | +3 % de revenu commercial par niveau | Porte-conteneurs |
+   | Défense | I | Missiles sol-air | **débloque les batteries SAM** | Comptoirs |
+   | | II | Radars de tir | **débloque les tours radar** ; portée des SAM +10 | Banque centrale |
+   | | III | Salves | SAM : +1 cible simultanée | Industrie lourde |
+   | | IV | Bouclier | SAM : +1 cible, portée +15 | Aérospatiale |
+   | | V | Abris antiatomiques | −30 % de troupes tuées par les bombes (A, H, ogives) | Bombe thermonucléaire |
+   | | VI | Bouclier antimissile | SAM : +1 cible, portée +10 | Grands travaux |
+   | | ∞ | Interception | SAM : portée +1 par niveau | Bouclier antimissile |
+   | Nucléaire | I | Physique atomique | +10 % de vitesse de recherche | Comptoirs |
+   | | II | Programme nucléaire | **débloque silos et bombe A** | Banque centrale, Industrie lourde |
+   | | III | Bombe thermonucléaire | **débloque la bombe H** | Universités |
+   | | IV | Miniaturisation | −20 % sur le coût des bombes, rechargement des silos +25 % | — |
+   | | V | Têtes multiples | **débloque le MIRV** | Automatisation |
+   | | VI | Production de masse | −25 % sur le coût des bombes | Bourse |
+   | | ∞ | Cadence de tir | rechargement des silos +5 % par niveau | Production de masse |
+
+   - **Chemins** depuis zéro : SAM 300 points ; radars 1 100 ; programme nucléaire 1 650 (Comptoirs, Physique atomique, Banque centrale, Chemins de fer, Industrie lourde, programme) ; aérodromes 4 100 ; bombe H 4 650 ; MIRV 24 550. Le SAM est toujours plus proche que la bombe qu'il arrête.
+   - **Rythme visé** pour un joueur qui investit raisonnablement (un centre vers 4 à 5 min, trois à cinq niveaux vers 20 min) : palier II vers 10 à 15 min, palier III vers 20 à 30 min, palier V seulement en fin de partie (45 à 60 min), palier VI et recherches sans fin rarement.
+   - **Rythme mesuré** (IA seules, 30 nations, 40 tribus, Europe / Mer Noire / Monde, graines 1234, 42 et 7, plafond 60 min ; `.cache/qa/research/research-pacing.ts`) : la moitié des nations atteint le palier II vers 10 min, le III vers 15 à 20 min, le IV vers 25 à 35 min, le V vers 40 à 55 min (quand la partie dure) ; la nation la plus avancée (souvent un meneur qui a capturé des centres) atteint le V vers 22 à 34 min et le VI vers 32 à 52 min. Premières bombes entre 12,6 et 17,1 min dans chaque partie (44 à 232 bombes lancées par partie). Niveaux de centres d'une nation médiane à 20 min : 2 à 5 en Normal, 3 à 12 en Difficile. Durée des parties : Normal 36,6 / 45 / plus de 60, 45 / 50 / 43,8, 35 / 45 / 41,9 min ; Difficile 33,6 / 32,4 / 45, 44,1 / 28 / 50, 45 / 40 / 45 min (17 parties sur 18 entre 25 et 60 min).
+   - **IA** : un plan de recherche par personnalité, l'économie d'abord ; programme nucléaire et SAM figurent dans les dix premières technologies de chaque plan, puis la nation prend la moins chère (recherches sans fin comprises). Une nation bombardée vise aussitôt les SAM. Elle construit des centres de recherche : niveaux voulus = niveaux de villes × 0,3 (expansionniste) à 0,55 (bâtisseur), × 0,8 en Facile, 1,15 en Difficile, 1,3 en Impossible (au moins un dès sa première ville).
+   - **Interface** : panneau Technologies en arbre (branches en colonnes, paliers en lignes, rangée ∞ pour les recherches sans fin), lisible dans la fenêtre par défaut (640 px) en 1280×800 comme en 1920×1080 : en haut, les points/s et leur origine (base, niveaux de centres, bonus), la réserve, la recherche en cours avec sa barre et sa durée, la file d'attente (durée estimée jusqu'à chaque objectif) et l'option « Continuer automatiquement » ; sans centre, « Aucun centre de recherche » et un bouton « Construire un centre » ; en bas, toujours visible, la fiche de la technologie survolée (effet, ce qu'elle débloque, prérequis, coût et durée du chemin, Rechercher / Ajouter à la file / Retirer de la file). États acquise / en cours / en attente / disponible / verrouillée, ordre d'étude numéroté sur tout le plan, liens de prérequis. Barre de construction et panneau de lancement : cadenas et « Nécessite la recherche : … » ; un clic sur un outil verrouillé ouvre l'arbre sur la technologie requise. Construire sans la technologie : message « Recherche nécessaire : … ».
+   - **Sauvegardes** (instantané version 3) : celles d'avant 1.4.0 se chargent sans centre ni file ; leur branche nucléaire est décalée d'un niveau (la Physique atomique la précède désormais) et l'objectif en cours est conservé.
+4. **Ressources stratégiques** : environ 1 gisement pour 9 000 tuiles de terre (10 à 180), espacés, avec des probabilités selon le terrain. Pétrole : +400 or/s. Uranium : −8 % sur le coût des bombes (maximum −40 %). Terres fertiles : +6 % de régénération des troupes (maximum 40 %). Métaux rares : −5 % sur le coût des bâtiments (maximum −30 %). Il faut posséder la tuile centrale du gisement. Icônes sur la carte (calque R) et panneau Statistiques.
 5. **Loyauté et sécessions** : une tuile conquise à un joueur démarre à 70/255, à 200 si elle vient des terres libres. Elle gagne +4 par balayage (6 s), +12 près d'une ville ou d'un poste de défense (25 tuiles), ×1,5 sous Propagande. Toutes les 15 s, un joueur de plus de 400 tuiles avec une densité inférieure à 6 troupes par tuile peut voir une poche de loyauté basse (moins de 60) **faire sécession**. La zone (jusqu'à 12 % du territoire et 3 000 tuiles) devient une nouvelle tribu dotée de 80 % des troupes locales.
-6. **Événements mondiaux** toutes les 4 à 6 min : crise (−25 % d'or, 2 min), pandémie (croissance ×0,5, −3 à −5 % de population), boom commercial (commerce et trains ×2), tempête solaire (radars aveugles 90 s), sommet de paix (trêve forcée de 60 s).
+6. **Événements mondiaux** toutes les 4 à 6 min : crise (−25 % d'or, 2 min), pandémie (régénération ×0,5, −3 % de troupes), boom commercial (commerce et trains ×2), tempête solaire (radars aveugles 90 s), sommet de paix (trêve forcée de 60 s).
 7. **Généraux** (choisis au lobby, touche E, recharge 5 min) : Blitz (+30 % de vitesse d'attaque, 30 s), Rempart (postes de défense ×2, 30 s), Sabotage (détruit le train ou le marchand ennemi le plus proche du point visé, dans 40 tuiles), Propagande (loyauté ×1,5 et aucune sécession, 60 s).
 8. **Aviation et radars** : voir §11 et §7.
 9. **Replays et mode spectateur** : seed, configuration et commandes de chaque tour non vide, au format `.rpl` (JSON). Lecture ×0,5 à ×8, frise temporelle (le retour arrière re-simule depuis le début), caméra libre ou vue d'un joueur (avec son brouillard), import et export de fichiers.
 10. **Éditeur de cartes** : pinceaux de terrain (11 types), d'altitude (élever, abaisser, lisser), import d'un PNG quelconque (couleur la plus proche et luminance comme altitude) ou d'un `.isomap`. Placement des spawns, nations et gisements, génération automatique, validation, **test immédiat**, enregistrement dans les cartes personnalisées, export pour partage.
-11. **Campagne** : 6 missions, objectif principal, bonus et temps de référence (1 étoile pour la réussite, +1 sous le temps, +1 pour le bonus). Missions : Premières lignes (15 % des terres), Tenir la ligne (survivre 20 min), L'île (éliminer une nation), Rail et fortune (3 M via commerce et trains), Le soleil artificiel (lancer une bombe H), Minuit moins une (40 % en Apocalypse). Une mission se débloque quand la précédente est réussie. **Guidage** : un briefing lu par la conseillère (la partie attend qu'on clique sur « Commencer »), puis un guide pas à pas de 4 à 6 étapes par mission ; chaque étape reste affichée jusqu'à ce qu'elle soit accomplie et passe d'elle-même à la suivante. Les objectifs ont une jauge de progression, et un repère pulsant désigne sur la carte la cible utile (nation la plus faible pour un débarquement ou une frappe). **Didacticiel** interactif en 10 étapes (environ 6 min), sur le même principe.
+11. **Campagne** (`src/ui/campaign/`), qui est aussi **le didacticiel du jeu** (il n'y en a plus d'autre) : 6 missions, des **objectifs obligatoires** (tous doivent être atteints ; un objectif atteint le reste), un bonus et un temps de référence (1 étoile pour la réussite, +1 sous le temps, +1 pour le bonus). Une mission se débloque quand la précédente est réussie ; elle est perdue si votre pays tombe.
+
+   | Mission | Carte | Objectifs | Bonus | Ce qu'elle enseigne |
+   |---|---|---|---|---|
+   | 1 Premières lignes | Deux lacs, facile | 15 % des terres **et** une ville | 2 villes | capitale, caméra (glisser, molette, H), expansion, ratio d'attaque (T / Y, Maj + molette), villes, tribus et leur or, perte de la capitale |
+   | 2 Tenir la ligne | Europe, difficile | survivre 20 min | 3 postes de défense | postes de défense, alerte « frontière menacée », alliances (clic droit ou Diplomatie ; offres reçues en bas à droite, K / L), régénération des troupes |
+   | 3 L'île | Archipel | débarquer sur une autre île **et** éliminer une nation (les tribus ne comptent pas) | couler 2 navires | ports, débarquements (B ou clic droit), 3 transports au plus, rappel d'un transport (−25 % des troupes), navires de guerre (7), orages |
+   | 4 Rail et fortune | Pangée | 1,5 M d'or par le commerce et les trains **et** les Chemins de fer recherchés | 3 usines | usines et trains, ports et commerce, routes commerciales (C) et fenêtre Commerce, centre de recherche (J), arbre et file d'attente de recherche, fenêtres déplaçables |
+   | 5 Le soleil artificiel | Méditerranée, or ×1,5 | lancer une bombe H | intercepter un missile avec un SAM | centre de recherche, programme nucléaire (prérequis mis en file), silo, bombe thermonucléaire, SAM |
+   | 6 Minuit moins une | Monde, Apocalypse | 40 % du territoire | en moins de 45 min | tout, plus la météo (orages, brouillard qui divise par deux la portée des radars) |
+
+   **Guidage** : un briefing lu par la conseillère (la partie attend « Commencer la mission »), puis un guide pas à pas de 5 à 10 étapes ; chaque étape reste affichée jusqu'à ce qu'elle soit accomplie (les étapes d'explication passent d'elles-mêmes après 15 à 45 s de jeu). **Une étape qui demande de construire attend que ce soit possible** : tant que l'or manque, le guide affiche « Il vous faut X d'or (encore Y s) » avec une jauge, puis donne l'ordre (et la voix le lit) quand le trésor suffit ; l'or de départ des missions 1 à 5 (125 000, 50 000, 125 000, 250 000, 250 000, humain seul, par la configuration) paie la première construction demandée. **Conseils** ponctuels, une fois par mission, quand la situation se présente : capitale perdue (la désigner à nouveau), frontière menacée, proposition d'alliance reçue, 3 transports en mer, orage sur la route d'un transport, centres de recherche à l'arrêt. Un repère pulsant désigne sur la carte la cible utile (nation la plus faible pour un débarquement ou une frappe). **Disposition** : objectifs (en une ligne, avec jauges, repliables) et guide forment le dock de mission en bas au centre, au-dessus de la barre de construction, entre le panneau de ressources et les propositions d'alliance ; les fenêtres s'ouvrent au-dessus de lui (`wm.bottomReserve`), la colonne de cartes de gauche s'arrête plus haut. La fin d'une mission ouvre le communiqué de mission du Courrier (« Fin de partie » ci-dessus). Les règles des missions sont des fonctions pures testées (`tests/unit/campaign.test.ts`).
 12. **Progression locale** : profil, statistiques cumulées, **30 succès**, 6 titres débloqués selon le nombre de succès, classement local des 20 meilleurs scores.
+   - **Drapeau du joueur** (Profil → « Changer de drapeau », ou le drapeau à gauche du nom dans le lobby solo / « Changer de drapeau » dans le lobby LAN) : au choix un **drapeau réel** (270 drapeaux de `flag-icons`, grille avec recherche par nom français ou anglais, sans accents), un **drapeau créé** dans l'éditeur, ou celui **tiré du nom** (graine `nom + emplacement`, comportement d'avant 1.4 et choix par défaut). **Éditeur** : 16 dispositions (uni, 2 ou 3 bandes horizontales ou verticales, rayures, croix, croix scandinave, sautoir, diagonale, bande diagonale, canton, bordure, disque, triangle à la hampe, écartelé), jusqu'à 3 couleurs de champ plus celle de l'emblème (palette de 20 couleurs ou sélecteur libre), 10 emblèmes dessinés pour le jeu (étoile, soleil, croissant, rose des vents, ancre, montagne, vagues, sapin, couronne, isoligne) au centre, à la hampe ou au canton, aperçu en direct aux tailles du jeu, « Au hasard » (couleurs voisines distinctes, emblème contrasté) et « Réinitialiser » ; avertissement si l'emblème se voit mal sur son fond (contraste < 1,8).
+   - **Format** (`src/core/data/flagSpec.ts`) : `{ iso: "fr" }` ou `{ spec: { layout, colors: [3 × "#rrggbb"], emblem, emblemColor, emblemAt } }`, environ 150 octets en JSON. Le profil garde le choix (`flagChoice`), le dernier pays (`flagIso`) et le dernier dessin (`customFlag`). Rendu en SVG côté client (`src/render/flagSvg.ts`, champ 60 × 40).
+   - **Transport** : le drapeau va dans l'emplacement du joueur de la configuration (`PlayerSlot.flag`), donc dans les sauvegardes et les replays ; en LAN, il part avec le `hello` (et le message `profile` quand on le change au lobby), l'hôte le **nettoie** (`sanitizeFlag` : dispositions et emblèmes connus seulement, couleurs `#rrggbb`, code pays court) puis l'écrit dans la configuration envoyée à tous ; le simulateur le renettoie avant de le copier dans les vues (`PlayerView.flag`). Purement cosmétique : la simulation ne le lit jamais (même empreinte avec ou sans, testé). Une sauvegarde ou un replay plus ancien n'en a pas : drapeau tiré du nom.
+   - **Affichage** : partout où paraît le drapeau d'un joueur (classement, carte de survol, alliances, diplomatie, commerce, journal, bandeau de pacte, propositions, flash info, une de fin de partie, écran de fin, replays) et **sur la carte, devant le nom de chaque pays** : à 74 % de la taille du nom, centré avec lui, liseré sombre ; masqué sous 13 px de police ; les tribus n'en portent pas (nombreuses et petites, leurs noms restent discrets). Une texture par drapeau distinct (64 px de haut, mipmaps), chargée une fois ; aucun coût mesurable (Monde, 100 nations, sans limite d'images : 210 à 240 images/s au zoom moyen avec ou sans les drapeaux sur la machine de test chargée).
 13. **Battle Royale** : voir §14.
 14. **Conseil mondial** toutes les 10 min : 30 s de vote entre trois options (sanctions contre le leader : revenus /2 pendant 3 min ; interdiction nucléaire 3 min ; cessez-le-feu général 60 s). Le poids d'un vote vaut √population. L'IA vote selon sa situation.
+
+15. **Capitale** (règle propre à Isoline, OpenFront n'en a pas ; `src/core/rules/capital.ts`, testée dans `tests/unit/capital.test.ts`) : chaque humain et chaque nation gouverne depuis sa **tuile de départ** (les tribus n'en ont pas).
+   - **Perte** : dès que la tuile change de mains, quelle qu'en soit la cause (attaque terrestre, débarquement, annexion d'un pays réduit à moins de 100 tuiles, bombe ou zone du Battle Royale qui la rend aux terres libres), le pays est **désorganisé pendant 60 s** : régénération des troupes ×0,75 (sur les gains), revenu passif d'or ×0,75 (revenu de base et gisements ; commerce et trains intacts) et vitesse d'attaque ×0,8 (chaque tuile prise coûte 1,25 fois plus du budget du tick). **10 % du trésor**, gardé dans la capitale, est perdu : saisi par le conquérant (affiché comme un butin), parti en fumée si la tuile est rasée. Un pays éliminé dans le même tick ne subit rien de plus (sa chute fait la une). Pourquoi ces valeurs : la minute coûte environ 15 s de régénération et 15 000 or de revenu de base, plus le dixième du trésor, et ralentit la riposte au moment où le pays en a besoin ; cela compte sans décider seul d'une partie. **Rythme** (`scripts/pacing.ts`, IA seules, Normal, 90 min au plus) : 15 parties sur 17 entre 25 et 60 min — Europe 30,5 à 45 min et Monde 31,9 à 45 min (graines 1234, 77, 2024), mer Noire 23,5 à 41,5 min, moyenne 33,1 sur 11 graines contre 35,0 sans capitale (16 sur 17 dans la fourchette sans capitale) ; une capitale tombe 21 à 42 fois par partie sur la mer Noire (15 nations), 63 à 72 fois en Europe et dans le Monde (30 nations).
+   - **Nouveau siège** (le joueur décide) : commande `moveCapital` — clic droit « Établir la capitale ici » (mis en avant tant qu'il n'y a pas de capitale ; « Déplacer la capitale ici » sinon), bouton « Choisir sur la carte » de la dépêche « Capitale perdue » (outil : étoile et carré de dégagement verts ou rouges sous le curseur), ou « Au plus sûr ». Seulement sur ses propres terres, hors retombées, à **plus de 5 tuiles** (anneaux carrés) de toute terre étrangère, alliés et coéquipiers exceptés (les terres libres ne comptent pas). Rétablir une capitale perdue est immédiat ; **déplacer** celle qu'on tient est possible une fois toutes les **5 minutes** (le premier déplacement après le départ est libre). Erreurs : « doit être sur vos terres », « terre irradiée », « trop près d'une frontière », « déplacée récemment : encore N s ». La tuile de la capitale est toujours loyale (pas de sécession). La désorganisation court jusqu'au bout même si une nouvelle capitale est établie.
+   - **Sans capitale** une fois la minute écoulée : revenu passif ×0,9 tant qu'aucune n'est établie (non cumulé avec la désorganisation).
+   - **Nations** : elles rétablissent leur capitale **10 s** après sa chute (puis toutes les 5 s si aucun emplacement ne convient) : parmi leurs 12 plus grandes villes achevées, leur centre, leur tuile de départ et 16 points entre leur frontière et leur centre, l'emplacement valide le plus profond (distance à la terre étrangère, plafonnée à 40 tuiles), avec un bonus de 3 tuiles par niveau de ville. Le bouton « Au plus sûr » du joueur propose le même emplacement.
+   - **Sauvegardes, réseau** : capitale, fin de désorganisation, instant et auteur de la chute, dernier déplacement sont sauvegardés ; le hachage de synchronisation inclut capitale et désorganisation. Une sauvegarde 1.2 sans capitale en reçoit une au chargement (plus grande ville, sinon centre du pays, sinon tuile de départ). Les replays re-simulent : la commande y est rejouée comme les autres.
+   - **Carte et interface** : une **étoile** à l'encre du pays, cernée de papier et de bleu nuit, 28 à 42 px à l'écran à tous les zooms (silhouette distincte des insignes ronds des bâtiments et de la couronne du premier, posée au-dessus de l'insigne d'un bâtiment sur la même tuile), masquée par le brouillard comme le reste. Carte de survol : « Capitale » / « Votre capitale », « Désorganisé … (0:42) ». Chute : deux anneaux magenta, **cor de guerre** pour le perdant, **lame tirée** pour le conquérant, notification et une du journal (« Votre capitale tombe aux mains de X », « La capitale de X tombe aux mains de Y »). Nouvelle capitale : anneau à l'encre du pays. Dépêche (papier journal) dans la colonne de gauche : bandeau magenta « Capitale perdue » et minute qui s'écoule, auteur de la prise, malus, explication et deux boutons ; puis « Désorganisation / Nouvelle capitale établie » jusqu'à la fin de la minute.
+16. **Frontière menacée** (renseignement d'affichage calculé dans le worker, sans effet sur la simulation ; `src/engine/threats.ts`, `tests/unit/threats.test.ts`) : les troupes forment une réserve nationale, l'armée « massée » d'un voisin est donc toute son armée. Un voisin terrestre qui n'est ni allié, ni coéquipier, ni une tribu devient une menace quand **ses troupes valent au moins 1,75 fois les vôtres** **et** qu'il montre une intention hostile : il vous a attaqué, a débarqué chez vous ou visé d'un missile (ou l'inverse) dans les **3 dernières minutes** ; ou sa relation envers vous est négative ; ou, pour une nation IA, son état la trahit (rancune envers vous d'au moins 5, ou armée oisive au-delà de 85 % de son plafond dont vous êtes le voisin le plus faible). **Hystérésis** : l'alerte tient tant que le rapport reste au-dessus de ×1,4 et jusqu'à 30 s après la fin de l'intention, et reste affichée au moins 20 s ; la frontière est balayée une fois par seconde.
+   - **Carte** : seule la portion de frontière commune s'éclaire en **ambre**, des deux côtés, un peu plus épaisse, d'une pulsation lente (4 s) ; la guerre ouverte (rouge pulsé) reste prioritaire. Carte de survol du voisin : triangle ambre, « Armée ×2,4 massée à votre frontière » et la raison (« Vous a attaqué ces dernières minutes », « Vous est hostile », « Vous vise, selon nos renseignements »).
+   - **Journal** : une brève dans la rubrique **Vigilance** (avec « Aller à » sur la frontière) et un toast discret quand la menace apparaît, au plus une fois toutes les 4 minutes de jeu par voisin, et jamais pendant une guerre ouverte avec lui.
 
 ## 16. Interface et contrôles
 
 - **HUD** :
   - en haut : barre de territoire, chronomètre, mode, seuil, alertes (événement, cessez-le-feu, interdiction, immunité, traître, apocalypse) ;
-  - en bas à gauche : population avec courbe, troupes et ouvriers, or avec détail au survol, ratio d'attaque, part des troupes, général, attaques en cours (annulables) ;
+  - en bas à gauche : troupes / plafond avec courbe et régénération par seconde, or et revenu par seconde avec détail au survol (base, gisements, commerce, trains), ratio d'attaque, général, attaques en cours (annulables) ;
   - en bas à droite : minimap interactive (combats récents, missiles, navires) et barre de construction (coûts, raccourcis, infobulles riches) ;
   - à droite : classement (top 10 + soi, clic pour centrer) ;
-  - à gauche : dock des panneaux (diplomatie, technologies, statistiques, journal, messages).
+  - à gauche : **dock** en rail vertical le long du bord, centré dans la place au-dessus du panneau de ressources (Diplomatie, Commerce, Technologies, Statistiques, Journal, Messages, Menu ; icône et libellé court, point laiton ou magenta sur Journal pour les nouvelles non lues). À côté du rail, la colonne de cartes : vote du Conseil, alertes nucléaires, capitale perdue, édition spéciale, flash info, alliances en cours.
+- **Fenêtres** : chaque panneau du dock s'ouvre dans une fenêtre flottante, et **plusieurs** peuvent être ouvertes en même temps (Technologies et Journal côte à côte, par exemple). On la déplace en la saisissant par sa barre de titre (le Journal : par son en-tête de une), on la redimensionne par son coin inférieur droit ; elle reste toujours entière à l'écran. Un clic la passe au premier plan ; **Échap** ferme celle de devant, puis la suivante, et n'ouvre le menu qu'ensuite. Un bouton du dock ouvre sa fenêtre, ramène devant celle qui est cachée sous une autre, ferme celle qui est devant. Position et taille choisies sont **mémorisées** par fenêtre d'une partie à l'autre ; double-clic sur la barre de titre : retour à sa place ; menu Échap → « Replacer les fenêtres » : toutes. Place par défaut : contre le rail, sous la barre du haut, au-dessus du panneau de ressources ; les suivantes à droite des fenêtres déjà ouvertes, en cascade quand l'écran est plein (sans chevauchement à deux fenêtres en 1280×800 comme en 1920×1080). La colonne de cartes se range à droite des fenêtres posées contre le rail tant qu'il reste de la place avant la fenêtre suivante et le classement ; sinon elle reste dessous (le flash info se cache, l'édition spéciale attend). Les fenêtres ne captent la souris que sur leur surface : la carte reste jouable autour. Le menu Échap reste une fenêtre modale.
+- **Propositions d'alliance reçues** : une petite carte glisse en bas à droite, au-dessus de la minimap, dans le langage du pacte (vos deux drapeaux autour du sceau, nom du pays, « vous propose une alliance » ou « souhaite renouveler votre alliance »), avec **Accepter (K)** / **Refuser (L)** et une barre qui se vide sur les 20 s de la proposition. Plusieurs propositions s'empilent (trois visibles, « +N autres propositions » au-delà) ; K et L répondent à la plus ancienne, la plus proche de la minimap, seule à afficher ses touches. La carte s'efface dès que la proposition expire ou reçoit une réponse ailleurs (menu contextuel, Diplomatie, clavier). Un froissement de papier discret annonce chaque nouvelle proposition (au plus une fois toutes les 2,5 s) ; plus de toast en double.
+- **Retour sonore** : chaque ordre donné depuis Diplomatie (proposer, renouveler, accepter, refuser, rompre, donner, embargo, embargo général), Commerce (embargos) et Messages (message, message rapide) joue le son de confirmation ; « Proposer une alliance » devient « Proposée… » pendant les 20 s de la proposition.
+- **Insignes des bâtiments sur la carte** : disque sombre, anneau à l'encre du propriétaire, pictogramme blanc et niveau en laiton ; **24 px à l'écran au moins** (zoom éloigné ou moyen), grossissant doucement jusqu'à 36 px de près (`badgePx`, `src/render/badgeSize.ts` ; 10 à 30 px avant la 1.5). Pour ne pas couvrir la carte d'un tapis d'icônes, chaque image (quand la vue change) les classe — les vôtres d'abord, puis villes, silos, ports, SAM, aérodromes, centres de recherche, usines, radars, postes de défense, le niveau départageant — et n'affiche un insigne que s'il ne chevauche pas un insigne déjà placé : 1,9 diamètre d'écart en vue éloignée, 0,85 de près. Sous le zoom 1,1 seuls villes, ports, silos et SAM s'affichent ; les postes de défense attendent le zoom 2. Les bâtiments mis en avant par la barre de construction passent toujours. Les lumières des villes la nuit restent, même sous un insigne voisin. Le survol suit exactement l'insigne affiché ; l'étoile des capitales (28 à 42 px) se pose au-dessus.
+- **Barre de construction** : au survol d'un bouton (ou outil actif), les bâtiments de ce type s'illuminent sur la carte et les autres s'estompent ; la portée des vôtres est tracée (défense 30, usine 110, port, radar, aérodrome) et celle de tous les SAM connus par relation. Missiles : silos et SAM ; navire de guerre : ports.
+- **Unités** : taille réelle de près, minimum lisible et discret de loin (navires 26 à 36 px, avions 24 à 30 px) ; trains articulés (locomotive et wagons suivent la voie).
+- **Routes commerciales** (vue activée par défaut, bouton du groupe « Vues » en bas à droite, touche **C**, réglage mémorisé) : chaque paire de ports qui commerce est reliée par l'itinéraire que suivent vraiment ses marchands. Vos routes sont des **tirets laiton** sur un liseré sombre, partant de votre port ; celles des autres, de **fins traits clairs**, seulement là où vous voyez (brouillard de guerre). L'épaisseur suit l'or rapporté sur les 5 dernières minutes (les deux ports compris) ; une route sans navire ni livraison s'estompe à partir d'une minute et disparaît après 5 minutes. Les voies ferrées fréquentées s'éclairent (§9). **Lisibilité** : de loin, seules vos routes principales et les 8 routes étrangères les plus riches restent (30 au zoom moyen, toutes de près). **Embargo** : une de vos routes (maritime ou ferroviaire) coupée par un embargo s'affiche 10 s en **tirets magenta brisés**, avec une croix à mi-parcours, puis s'efface en fondu. Les données viennent du simulateur (`src/engine/tradeRoutes.ts`, hors état déterministe) toutes les 2 s ; le tracé (`src/render/tradeRoutes.ts`) est regroupé en trois `Graphics`, reconstruit au plus une fois par seconde, à chaque palier de zoom de 18 % ou quand la vue quitte la zone dessinée (la vue plus 60 % de marge), sans coût mesurable (Monde, 100 nations, ~700 routes : 150 à 180 images/s avec ou sans la vue).
+- **Pacte d'alliance** : bandeau (drapeaux scellés, signature tracée) et arc vert entre les capitales ; son de plume sur parchemin.
 - **Menu contextuel** au clic droit : en-tête (pays, drapeau, terrain), actions groupées avec icône, coût ou raccourci, sous-menus en volet latéral, quantités ×1/×2/×5/×Max.
 - **Raccourcis** : remappables dans Paramètres → Contrôles. Ils sont stockés par position physique (`KeyboardEvent.code`), donc ZQSD sur AZERTY et WASD sur QWERTY.
 
@@ -323,12 +502,13 @@ Chacune est implémentée, testée (`tests/unit/rules.test.ts`, `units.test.ts`)
 | Attaque / débarquement sur la cible survolée | G / B |
 | Ratio − / + | T / Y, Maj + molette |
 | Ville, port, usine, poste, silo, SAM | 1 à 6 |
-| Radar / aérodrome | U / I |
+| Radar / aérodrome | O / I |
+| Inverser la trajectoire des missiles (arc haut / bas) | U |
 | Navire de guerre | 7 |
 | Bombe A (×5 à la deuxième pression), H, MIRV | 8, 9, 0 |
 | Accepter / refuser une alliance | K / L |
 | Sélectionner les navires de guerre | F |
-| Vue terrain / brouillard / ressources / loyauté | Espace / V / R / N |
+| Vue terrain / brouillard / ressources / loyauté / routes commerciales | Espace / V / R / N / C |
 | Caméra | ZQSD/WASD, flèches, glisser (gauche ou milieu), +/−, molette, pincement |
 | Centrer sur son territoire | H |
 | Signaux tactiques | Alt + clic |
@@ -362,11 +542,12 @@ Dossier utilisateur standard (`~/Library/Application Support/Isoline`, `%APPDATA
 ## 19. Équilibrage — notes
 
 - **Rythme visé : un jeu posé**, où la gestion compte autant que la guerre. Une partie FFA dure **au moins 25 minutes** sur une carte régionale, et 40 à 60 minutes sur un continent.
-- Mesures (`npm run pacing`, IA seules, difficulté Normale, 30 nations, 40 tribus) : Europe 48 min, Mer Noire 40 min, Méditerranée 44 min, Monde plus de 45 min ; en Difficile 29 à 32 min, en Impossible 26 à 33 min. Avant ce réglage, Europe se terminait en 8 minutes.
-- Garde-fous contre l'emballement exponentiel : prix des villes et des ports sans plafond (l'or ne peut plus acheter de la population à coût constant), coût logistique des guerres pour les grands empires, vitesse de progression des fronts limitée, IA qui espace ses offensives, malus des grands empires, prolongation après 30 minutes.
+- Mesures (`npm run pacing`, IA seules, 30 nations, 40 tribus, plafond 90 min) avec le combat d'OpenFront (§6.2), Europe / Mer Noire / Monde, graines 1234 puis 42 : Normal 35,5 / 26,6 / 30,1 et 27,1 / 25,4 / 40 min ; Facile 31,3 / 43,3 / 40 et 45 / 40 / 40 min ; Difficile 28,2 / 29,9 / 40 et 36,1 / 32,8 / 41 min ; Impossible 17,9 / 36,8 / 45,8 et 35,4 / 13,9 / 45 min. Avant (anciennes pertes, fronts à 2 tuiles/s quel que soit le rapport de forces, graine 1234) : Normal 53,1 / 40 / 45 ; Facile 49,3 / 45 / 58,4 ; Difficile 59,2 / 45 / 50,6 ; Impossible 35 / 36,9 / 41,9 min. Les tribus tombent désormais vers 6 à 9 min (avant : vers 15 min).
+- Avec les prix d'OpenFront (villes plafonnées à 1 M), l'or achète des troupes à coût constant. Avec les plafonds et les gains d'OpenFront, les armées atteignaient des dizaines de millions en fin de partie, surtout faites de villes ; avec ceux d'Isoline (§5 : plafond `2 × (tuiles^0,6 × 800 + 25 000) + 60 000 par niveau de ville`, régénération ÷ 5, commerce et trains à moitié prix), le meneur d'une partie IA a ~3 M de troupes à 20 min et 4 à 6 M à 30 min (avant : 9,5 à 16 M et 20 à 32 M). Le combat d'OpenFront ne freine pas les grands empires (il les accélère, §5.3) : le rythme vient de l'IA, qui espace (100 s) et dose ses offensives (les trois quarts de l'armée de la cible, au plus la moitié de la sienne) et proportionne ses ripostes, et de la prolongation après 30 minutes.
+- Rythme après la baisse des troupes et de l'or (IA seules, Europe / Mer Noire / Monde, plafond 90 min) : Normal, 8 graines, 21 parties sur 24 entre 25 et 60 min (31,9 à 55 min, médiane 45) ; Difficile, 12 graines, 32 sur 36 (27,6 à 57 min, médiane 40,4). Hors bornes : quelques parties sur la carte Monde (73 min, et trois sans fin à 90 min : chaque survivant tient un continent, le meneur plafonne vers 40 à 47 %) et une Mer Noire et une Europe à 61 à 65 min ; aucune partie de moins de 25 min. Sur les graines 1234, 42, 7 et 99, juste avant ce changement (capitale comprise) : Normal 10 sur 12 (médiane 34 min, une à 23,5), Difficile 9 sur 12 (médiane 36, trois de 22,5 à 24,5 min). Sans l'ajustement de l'IA (offensives toutes les 110 s, bornes 40 / 45 %), 4 parties sur 58 s'enlisaient au-delà de 80 min (3 sur la carte Monde).
 
 ## 20. Audio
 
-- **Bruitages** : enregistrements réels (Freesound, licence CC0) : explosions, sirène, lancement de missile, canon, cornes de brume, sifflet de train, pièces, cloche, fanfare d'alliance, coup d'orchestre de trahison, timbale de défaite, épée tirée quand on attaque. Chaque lecture varie légèrement en hauteur et en volume pour éviter l'effet mécanique ; les sons fréquents sont espacés (pièces : 350 ms, trains : 8 s).
+- **Bruitages** : enregistrements réels (Freesound, licence CC0) : explosions, sirène, lancement de missile, canon, cornes de brume, sifflet de train, pièces, cloche, stylo qui signe le pacte d'alliance, coup d'orchestre de trahison, timbale de défaite, épée tirée quand on attaque. Chaque lecture varie légèrement en hauteur et en volume pour éviter l'effet mécanique ; les sons fréquents sont espacés (pièces : 350 ms, trains : 8 s).
 - **Musique** : bande-son orchestrale (Kevin MacLeod, CC BY 4.0) en quatre humeurs. *Calme* en paix, *Tension* quand les fronts s'animent, *Guerre* pendant les grandes offensives ou sous la menace nucléaire, plus *Victoire* et *Défaite*. Les transitions se font en fondu enchaîné (4 s) : l'escalade est rapide (3 s de stabilité), l'apaisement lent (15 s), et un morceau n'est jamais coupé avant 25 s.
-- **Voix** : la conseillère Ilse lit les briefings et chaque étape du guide de la campagne et du didacticiel (synthèse vocale neuronale Kokoro, générée hors ligne, en français et en anglais). La musique s'atténue pendant qu'elle parle. Voix désactivable, volume réglable.
+- **Voix** : la conseillère Ilse lit les briefings, chaque étape du guide de la campagne et ses conseils (synthèse vocale neuronale Kokoro, générée hors ligne, en français et en anglais). La musique s'atténue pendant qu'elle parle. Voix désactivable, volume réglable.

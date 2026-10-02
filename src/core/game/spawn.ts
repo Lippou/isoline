@@ -8,6 +8,7 @@ import { IS_LAND } from '../map/terrain';
 import { inventTribeName } from '../names';
 import { hashString } from '../rng';
 import { GENERALS } from './config';
+import { assignCapitals } from '../rules/capital';
 
 export function setupPlayers(game: Game): void {
   const cfg = game.config;
@@ -72,7 +73,7 @@ export function setupPlayers(game: Game): void {
     p.flagSeed = rng.nextU32();
     p.troops = START_TROOPS.tribe;
     p.gold = START_GOLD.tribe;
-    claimDisc(game, p, tile, SPAWN_RADIUS - 3);
+    claimDisc(game, p, tile);
     tribes++;
   }
 }
@@ -92,7 +93,10 @@ function nearOwned(game: Game, tile: number, r: number): boolean {
   return false;
 }
 
-/** Claims a land disc around `tile` for player p (free tiles only). */
+/**
+ * Claims OpenFront's spawn disc around `tile` for player p (free tiles only): the tiles
+ * whose offset from `tile` shifted by half a tile lies within `radius` (52 tiles at 4).
+ */
 export function claimDisc(game: Game, p: Player, tile: number, radius = SPAWN_RADIUS): void {
   const w = game.map.width;
   const x0 = tile % w;
@@ -100,7 +104,7 @@ export function claimDisc(game: Game, p: Player, tile: number, radius = SPAWN_RA
   const r2 = radius * radius;
   for (let dy = -radius; dy <= radius; dy++) {
     for (let dx = -radius; dx <= radius; dx++) {
-      if (dx * dx + dy * dy > r2) continue;
+      if ((dx + 0.5) ** 2 + (dy + 0.5) ** 2 > r2) continue;
       const x = x0 + dx;
       const y = y0 + dy;
       if (!game.map.inBounds(x, y)) continue;
@@ -176,5 +180,7 @@ export function updateSpawnPhase(game: Game): void {
     if (p.kind === 'human') p.immuneUntil = game.tick + SPAWN_IMMUNITY_TICKS;
     p.generalReadyTick = game.tick + 600;
   }
+  // Every human and nation governs from its spawn tile (rules/capital.ts).
+  assignCapitals(game);
   game.notify(-1, 'event.gameStart', 'good');
 }

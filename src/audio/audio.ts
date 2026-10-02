@@ -6,6 +6,10 @@ export type Sfx =
   | 'coin'
   | 'coinSmall'
   | 'conquest'
+  | 'torn'
+  | 'stamp'
+  | 'rejected'
+  | 'tribeFall'
   | 'attack'
   | 'build'
   | 'siren'
@@ -22,6 +26,7 @@ export type Sfx =
   | 'train'
   | 'alliance'
   | 'allianceEnd'
+  | 'allyOffer'
   | 'betrayal'
   | 'event'
   | 'victory'
@@ -54,6 +59,11 @@ const FILE: Record<Sfx | UiSound, string | null> = {
   train: 'train',
   alliance: 'alliance',
   allianceEnd: 'paper',
+  allyOffer: 'paper',
+  torn: 'torn',
+  stamp: 'stamp',
+  rejected: 'rejected',
+  tribeFall: 'tribeFall',
   betrayal: 'betrayal',
   event: 'event',
   victory: 'victory',
@@ -68,19 +78,32 @@ const FILE: Record<Sfx | UiSound, string | null> = {
 };
 
 /** Minimum delay between two plays of the same sound (ms). */
+// Generous: repeated sounds quickly become irritating.
 const THROTTLE: Partial<Record<Sfx | UiSound, number>> = {
-  coin: 350,
-  coinSmall: 350,
-  conquest: 1500,
-  attack: 600,
-  build: 400,
-  train: 8000,
-  cannon: 150,
-  intercept: 200,
-  blast: 120,
-  explosionSmall: 120,
-  sunk: 300,
+  coin: 3000,
+  coinSmall: 3000,
+  conquest: 4000,
+  attack: 3000,
+  build: 1200,
+  train: 20000,
+  cannon: 1500,
+  intercept: 1000,
+  blast: 800,
+  explosionSmall: 800,
+  sunk: 1500,
   click: 40,
+  confirm: 150,
+  open: 200,
+  error: 600,
+  alliance: 1500,
+  allyOffer: 2500,
+  torn: 1500,
+  stamp: 1500,
+  rejected: 1500,
+  tribeFall: 2500,
+  siren: 4000,
+  launch: 150,
+  explosionMirv: 250,
 };
 
 const PLAYLISTS: Record<Mood, string[]> = {
@@ -94,9 +117,16 @@ const PLAYLISTS: Record<Mood, string[]> = {
 
 const BASE = './audio';
 
+/** Seconds before a piece ends at which the next one starts fading in (no silence, no seam). */
+const HANDOFF_SECONDS = 5;
+
 class MusicDeck {
   readonly el: HTMLAudioElement;
   readonly gain: GainNode;
+  /** The hand-off to the next piece has been triggered for the current track. */
+  handedOff = false;
+  /** Bumped at each new track: a stale "pause after the fade" timer leaves it alone. */
+  generation = 0;
   constructor(ctx: AudioContext, out: AudioNode) {
     this.el = new Audio();
     this.el.preload = 'auto';
@@ -123,6 +153,11 @@ class AudioEngine {
   private wantMood: Mood = 'calm';
   private wantSince = 0;
   private trackIdx: Record<string, number> = {};
+  /** No new crossfade before this time (performance.now()): overlapping fades cut tracks. */
+  private fadingUntil = 0;
+  /** A change asked for during a crossfade, played once that fade is over. */
+  private pending: { track: string; seconds: number } | null = null;
+  private pendingTimer: ReturnType<typeof setTimeout> | null = null;
   private intensity = 0;
   private volumes = { master: 0.8, music: 0.6, sfx: 0.8, ui: 0.6 };
   private focusMul = 1;
@@ -153,7 +188,10 @@ class AudioEngine {
     this.uiBus = ctx.createGain();
     for (const b of [this.musicBus, this.sfxBus, this.uiBus]) b.connect(this.master);
     this.decks = [new MusicDeck(ctx, this.musicBus), new MusicDeck(ctx, this.musicBus)];
-    for (const d of this.decks) d.el.addEventListener('ended', () => this.onTrackEnded(d));
+    for (const d of this.decks) {
+      d.el.addEventListener('timeupdate', () => this.onTimeUpdate(d));
+      d.el.addEventListener('ended', () => this.onTrackEnded(d));
+    }
     this.applyVolumes();
     window.addEventListener('blur', () => this.setFocus(false));
     window.addEventListener('focus', () => this.setFocus(true));
@@ -238,8 +276,11 @@ class AudioEngine {
 
   // -------------------------------------------------------------------- music
   setScene(scene: Scene): void {
+    const same = scene === this.scene && this.mood !== null;
     this.scene = scene;
     if (!this.ctx) return;
+    // Already there: the piece goes on (menus changing page, a game resuming).
+    if (same) return;
     const mood: Mood | null =
       scene === 'menu'
         ? 'menu'
@@ -261,16 +302,26 @@ class AudioEngine {
 
   private updateMood(): void {
     if (this.scene !== 'game') return;
-    const want: Mood = this.intensity > 0.55 ? 'war' : this.intensity > 0.22 ? 'tension' : 'calm';
+    // Hysteresis: a mood is entered above one threshold and left below a lower one,
+    // so a front that flickers does not toss the music back and forth.
+    const i = this.intensity;
+    const cur = this.mood;
+    const want: Mood =
+      i > 0.6 || (cur === 'war' && i > 0.4)
+        ? 'war'
+        : i > 0.3 || (cur === 'tension' && i > 0.15)
+          ? 'tension'
+          : 'calm';
     const now = performance.now();
     if (want !== this.wantMood) {
       this.wantMood = want;
       this.wantSince = now;
     }
-    // Escalate quickly, calm down slowly; never cut a track that just started.
-    const stable = now - this.wantSince > (want === 'war' ? 3000 : 15000);
-    const played = now - this.moodSince > 25000;
-    if (want !== this.mood && stable && played) this.switchMood(want);
+    // Escalate to war quickly; anything else waits until the piece has had its time.
+    const escalate = want === 'war' && cur !== 'war';
+    const stable = now - this.wantSince > (escalate ? 4000 : 20000);
+    const played = now - this.moodSince > (escalate ? 12000 : 60000);
+    if (want !== cur && stable && played && now > this.fadingUntil) this.switchMood(want);
   }
 
   private nextTrack(mood: Mood): string {
@@ -284,27 +335,47 @@ class AudioEngine {
     if (!this.ctx) return;
     this.mood = mood;
     this.moodSince = performance.now();
-    this.crossfadeTo(this.nextTrack(mood), mood === 'victory' || mood === 'defeat' ? 1.5 : 4);
+    this.crossfadeTo(this.nextTrack(mood), mood === 'victory' || mood === 'defeat' ? 1.5 : 5);
   }
 
+  /**
+   * Fades the playing piece out while `track` fades in on the other deck. Only two
+   * pieces ever sound together: a change asked for during a fade waits for its end
+   * (the latest request wins), so no piece is ever cut off in the middle of a fade.
+   */
   private crossfadeTo(track: string, seconds: number): void {
+    const wait = this.fadingUntil - performance.now();
+    if (wait > 0) {
+      this.pending = { track, seconds };
+      if (!this.pendingTimer)
+        this.pendingTimer = setTimeout(() => {
+          this.pendingTimer = null;
+          const p = this.pending;
+          this.pending = null;
+          if (p && this.mood) this.crossfadeTo(p.track, p.seconds);
+        }, wait + 50);
+      return;
+    }
     const ctx = this.ctx!;
     const t = ctx.currentTime;
+    this.fadingUntil = performance.now() + seconds * 1000 + 200;
     const out = this.decks[this.active]!;
     const into = this.decks[1 - this.active]!;
     this.active = 1 - this.active;
     out.gain.gain.cancelScheduledValues(t);
     out.gain.gain.setValueAtTime(out.gain.gain.value, t);
     out.gain.gain.linearRampToValueAtTime(0, t + seconds);
-    const old = out.el;
+    const gen = out.generation;
     setTimeout(
       () => {
-        if (this.decks[this.active] !== out) old.pause();
+        if (this.decks[this.active] !== out && out.generation === gen) out.el.pause();
       },
       seconds * 1000 + 100,
     );
+    into.generation++;
     into.el.src = `${BASE}/music/${track}.ogg`;
-    into.el.loop = this.mood === 'menu';
+    into.el.loop = false; // pieces chain by crossfading (native looping leaves a seam)
+    into.handedOff = false;
     into.el.currentTime = 0;
     void into.el.play().catch(() => undefined);
     into.gain.gain.cancelScheduledValues(t);
@@ -312,16 +383,32 @@ class AudioEngine {
     into.gain.gain.linearRampToValueAtTime(1, t + seconds);
   }
 
+  /** A few seconds before the end of the playing piece, the next one fades in over it. */
+  private onTimeUpdate(deck: MusicDeck): void {
+    if (this.decks[this.active] !== deck || deck.handedOff || !this.mood) return;
+    const left = deck.el.duration - deck.el.currentTime;
+    if (!Number.isFinite(left) || left > HANDOFF_SECONDS) return;
+    deck.handedOff = true;
+    this.continueMood(HANDOFF_SECONDS);
+  }
+
+  /** Fallback if a piece ends without a hand-off (very short file, missed event). */
   private onTrackEnded(deck: MusicDeck): void {
-    if (this.decks[this.active] !== deck || !this.mood) return;
-    // Same mood, next piece (victory/defeat fall back to calm music).
-    const mood = this.mood === 'victory' || this.mood === 'defeat' ? 'calm' : this.mood;
+    if (this.decks[this.active] !== deck || deck.handedOff || !this.mood) return;
+    deck.handedOff = true;
+    this.continueMood(2);
+  }
+
+  /** Same mood, next piece (victory and defeat give way to calm music). */
+  private continueMood(seconds: number): void {
+    const mood = this.mood === 'victory' || this.mood === 'defeat' ? 'calm' : this.mood!;
     this.mood = mood;
-    this.crossfadeTo(this.nextTrack(mood), 2);
+    this.crossfadeTo(this.nextTrack(mood), seconds);
   }
 
   private fadeAll(): void {
     if (!this.ctx) return;
+    this.pending = null;
     const t = this.ctx.currentTime;
     for (const d of this.decks) {
       d.gain.gain.cancelScheduledValues(t);

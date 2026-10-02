@@ -7,8 +7,10 @@ import type {
   WorldView,
   BuildingView,
   RailView,
+  TradeRoutesView,
 } from './protocol';
 import { UNIT_STRIDE } from './protocol';
+import { samRange } from '../core/game/constants';
 import type { MapMeta } from '../core/map/gamemap';
 import type { GameEvent } from '../core/game/events';
 
@@ -42,6 +44,9 @@ export class ClientState {
   fogVersion = 0;
   loyalty: { w: number; h: number; data: Uint8Array } | null = null;
   loyaltyVersion = 0;
+  /** Trade lanes and rail traffic (the map's trade-route view). */
+  routes: TradeRoutesView | null = null;
+  routesVersion = 0;
 
   /** Units: current and previous packed buffers + time of arrival for interpolation. */
   units: Float32Array = new Float32Array(0);
@@ -132,6 +137,10 @@ export class ClientState {
       this.loyalty = u.loyalty;
       this.loyaltyVersion++;
     }
+    if (u.routes) {
+      this.routes = u.routes;
+      this.routesVersion++;
+    }
     if (u.hash !== undefined) this.lastHash = u.hash;
     return u.events;
   }
@@ -144,6 +153,11 @@ export class ClientState {
   ownerAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return 0;
     return this.owner[y * this.width + x]!;
+  }
+
+  /** A SAM's true reach, research bonus included (the same as the simulation's samRangeOf). */
+  samReach(owner: number, level: number): number {
+    return samRange(level) + (this.players.get(owner)?.samBonus ?? 0);
   }
 
   name(id: number, lang: 'fr' | 'en'): string {

@@ -1,12 +1,15 @@
 // Mouse / trackpad / keyboard → camera moves and game commands.
-import { audio } from '../../audio/audio';
 import type { GameRenderer } from '../../render/renderer';
 import type { Session } from '../../engine/session';
 import { hud } from '../stores/game.svelte';
+import { confirmModal } from '../stores/app.svelte';
+import { t } from '../i18n/i18n.svelte';
 import { settings } from '../stores/settings.svelte';
 import { B, N } from '../../core/game/constants';
 import { U } from '../../core/units/unit';
-import { IS_LAND } from '../../core/map/terrain';
+import { IS_LAND, T } from '../../core/map/terrain';
+import { UNIT_STRIDE } from '../../engine/protocol';
+import { capitalPx } from '../../render/badgeSize';
 
 export interface InputHooks {
   onAction: (tile: number, ev: PointerEvent) => void;
@@ -128,6 +131,11 @@ export class InputController {
     const tile = this.r.tileAtScreen(x, y);
     if (tile < 0) return;
     if (d.button === 2) {
+      // Right click first drops whatever is selected (building, missile, ships…).
+      if (hud.tool.k !== 'none' || hud.selection.length) {
+        this.hooks.onKey('escape', new KeyboardEvent('keydown', { code: 'Escape' }));
+        return;
+      }
       this.hooks.onRadial(tile, x, y);
       return;
     }
@@ -194,7 +202,7 @@ export class InputController {
       const ids: number[] = [];
       const s = this.session.state;
       for (let i = 0; i < s.unitCount; i++) {
-        const o = i * 15;
+        const o = i * UNIT_STRIDE;
         if (s.units[o + 1] === U.Warship && s.units[o + 2] === this.session.viewer) ids.push(s.units[o]!);
       }
       this.setSelection(ids);
@@ -210,13 +218,27 @@ export class InputController {
     const w = s.width;
     const x = tile % w;
     const y = (tile / w) | 0;
+    // The badge under the pointer, as drawn (badges cover several tiles when zoomed out);
+    // else a building on the hovered tile or right next to it (one whose badge gave way).
     let building: { type: number; level: number; owner: number } | null = null;
-    for (const b of s.buildings) {
-      if (Math.abs(b.x - x) <= 1 && Math.abs(b.y - y) <= 1) {
-        building = { type: b.type, level: b.level, owner: b.owner };
+    const hit = this.r.buildingAtScreen(sx, sy);
+    if (hit) building = { type: hit.type, level: hit.level, owner: hit.owner };
+    else
+      for (const b of s.buildings) {
+        if (Math.abs(b.x - x) <= 1 && Math.abs(b.y - y) <= 1) {
+          building = { type: b.type, level: b.level, owner: b.owner };
+          break;
+        }
+      }
+    // A capital marker under the pointer (it covers a few tiles when zoomed out).
+    let capital = 0;
+    const zoom = Math.max(0.05, this.r.camera.zoom);
+    const reach = Math.max(1.2, capitalPx(zoom, this.r.settings.uiScale || 1) / 2 / zoom);
+    for (const p of s.playerList)
+      if (p.alive && p.capital >= 0 && Math.hypot((p.capital % w) - x, ((p.capital / w) | 0) - y) <= reach) {
+        capital = p.id;
         break;
       }
-    }
     hud.hover = {
       tile,
       owner: s.owner[tile]!,
@@ -228,6 +250,7 @@ export class InputController {
       building,
       fallout: s.fallout[tile]!,
       resource: s.resource[tile]!,
+      capital,
     };
   }
 
@@ -243,14 +266,29 @@ export class InputController {
       case 'build':
         session.cmd({ t: 'build', kind: tool.kind, tile });
         return;
-      case 'nuke':
-        session.cmd({ t: 'nuke', kind: tool.kind, tile, count: tool.count });
+      case 'nuke': {
+        if (hud.launch?.teammate) return;
+        const fire = () =>
+          session.cmd({ t: 'nuke', kind: tool.kind, tile, count: tool.count, up: hud.nukeArcUp });
+        // Our own land: allowed (a scorched front can be strategic), after a confirmation.
+        if (s.owner[tile] === session.viewer && tool.kind !== N.Mirv && settings.game.confirmations)
+          confirmModal(
+            t('confirm.selfNukeTitle'),
+            t('confirm.selfNukeBody'),
+            fire,
+            t('confirm.selfNukeYes'),
+            t('common.cancel'),
+          );
+        else guardBetrayal(session, tile, fire);
         return;
+      }
       case 'warship':
         session.cmd({ t: 'warship', tile });
         return;
       case 'air':
-        session.cmd({ t: 'air', kind: tool.kind, tile });
+        // A bomber over an ally betrays it; fighters and reconnaissance do not.
+        if (tool.kind === 1) guardBetrayal(session, tile, () => session.cmd({ t: 'air', kind: 1, tile }));
+        else session.cmd({ t: 'air', kind: tool.kind, tile });
         return;
       case 'general':
         session.cmd({ t: 'general', tile });
@@ -258,8 +296,12 @@ export class InputController {
       case 'ping':
         session.cmd({ t: 'ping', tile, kind: 0 });
         return;
+      case 'capital':
+        session.cmd({ t: 'moveCapital', tile });
+        return;
       case 'shipMove':
-        if (!IS_LAND[s.terrain[tile]!]) {
+        // Warships sail the sea and the navigable rivers (the sim checks the route).
+        if (!IS_LAND[s.terrain[tile]!] || s.terrain[tile] === T.River) {
           session.cmd({ t: 'shipMove', ids: hud.selection, tile, patrol: true });
           return;
         }
@@ -268,10 +310,26 @@ export class InputController {
     if (!IS_LAND[s.terrain[tile]!]) return;
     const owner = s.owner[tile]!;
     if (owner === session.viewer) return;
-    session.cmd({ t: 'attack', tile, ratio });
-    // A drawn blade for attacks on a country; marching feet when expanding.
-    audio.sfx(owner > 0 ? 'attack' : 'conquest', owner > 0 ? 0.6 : 0.5);
+    guardBetrayal(session, tile, () => session.cmd({ t: 'attack', tile, ratio }));
   }
+}
+
+/**
+ * Runs `fn` at once, or — when it would strike an ally (betrayal: traitor mark,
+ * embargo) and confirmations are on — after the same confirmation as the radial menu.
+ */
+export function guardBetrayal(session: Session, tile: number, fn: () => void): void {
+  const owner = session.state.owner[tile] ?? 0;
+  const allied = owner > 0 && !!hud.local?.allies.some((a) => a.id === owner);
+  if (allied && settings.game.confirmations)
+    confirmModal(
+      t('confirm.betrayTitle'),
+      t('confirm.betrayBody'),
+      fn,
+      t('confirm.betrayYes'),
+      t('common.cancel'),
+    );
+  else fn();
 }
 
 export const BUILD_KEYS: Record<string, number> = {
@@ -283,6 +341,7 @@ export const BUILD_KEYS: Record<string, number> = {
   buildSam: B.Sam,
   buildRadar: B.Radar,
   buildAirfield: B.Airfield,
+  buildLab: B.Lab,
 };
 
 export const NUKE_KEYS: Record<string, number> = { nukeA: N.Atom, nukeH: N.Hydrogen, nukeMirv: N.Mirv };

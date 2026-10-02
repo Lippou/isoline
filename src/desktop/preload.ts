@@ -5,7 +5,19 @@ const api = {
   info: () => ipcRenderer.invoke('app:info'),
   smokeReady: () => ipcRenderer.send('app:smoke-ready'),
   quit: () => ipcRenderer.send('app:quit'),
-  checkUpdate: (url: string) => ipcRenderer.invoke('app:checkUpdate', url),
+  update: {
+    status: () => ipcRenderer.invoke('update:status'),
+    check: () => ipcRenderer.invoke('update:check'),
+    download: () => ipcRenderer.invoke('update:download'),
+    install: () => ipcRenderer.invoke('update:install'),
+    setToken: (token: string) => ipcRenderer.invoke('update:setToken', token),
+    clearToken: () => ipcRenderer.invoke('update:clearToken'),
+    onStatus: (cb: (s: unknown) => void) => {
+      const h = (_e: unknown, s: unknown) => cb(s);
+      ipcRenderer.on('update:status', h);
+      return () => ipcRenderer.removeListener('update:status', h);
+    },
+  },
   openExternal: (url: string) => ipcRenderer.send('app:openExternal', url),
   setFullscreen: (on: boolean) => ipcRenderer.send('app:fullscreen', on),
   screenshot: () => ipcRenderer.invoke('app:screenshot'),

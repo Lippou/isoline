@@ -28,8 +28,9 @@ export interface LaunchRequest {
   priorTurns?: ReplayFile['turns'];
   customMap?: string;
   missionId?: string;
-  tutorial?: boolean;
   lanUrl?: string;
+  /** Replays: start at this tick (fast-forward), the camera on (x, y). */
+  replayAt?: { tick: number; x?: number; y?: number };
 }
 
 export const app = $state({

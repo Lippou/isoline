@@ -1,9 +1,14 @@
-// Coarse naval navigation graph. The water grid is split in C×C cells; each
-// (cell, water body) pair is a node whose representative is the water tile
-// closest to the cell centre. A* runs on nodes (8-connected, no corner cutting)
-// and the result is string-pulled with fine-grid line-of-sight checks.
+// Coarse naval navigation graph. The navigable grid (water, plus the rivers that flow
+// into it) is split in C×C cells; each (cell, naval body) pair is a node whose
+// representative is the navigable tile closest to the cell centre. A* runs on nodes
+// (8-connected, no corner cutting); legs that leave the water (a river winding through
+// a cell, a cape) are retraced tile by tile, and the result is string-pulled with
+// fine-grid line-of-sight checks.
 import type { GameMap } from './gamemap';
-import { IS_WATER } from './terrain';
+import { T } from './terrain';
+
+/** A* cost factor of a river cell: ships keep to open water when they have the choice. */
+export const RIVER_PATH_COST = 1.6;
 
 const DIRS: readonly [number, number][] = [
   [1, 0],
@@ -91,8 +96,8 @@ export class NavGrid {
         for (let y = y0; y < y1; y++) {
           for (let x = x0; x < x1; x++) {
             const i = y * W + x;
-            if (IS_WATER[map.terrain[i]!] !== 1) continue;
-            const body = map.component[i]!;
+            const body = map.navBody[i]!;
+            if (body <= 0) continue;
             const c = cy * cw + cx;
             let n = this.cellFirst[c]!;
             while (n !== -1 && this.nodeBody[n] !== body) n = this.nodeNext[n]!;
@@ -163,7 +168,7 @@ export class NavGrid {
       for (let y = cy * C; y < Math.min(map.height, cy * C + C); y++) {
         const a = y * W + xa;
         const b = y * W + xb;
-        if (map.component[a] === body && map.component[b] === body && IS_WATER[map.terrain[a]!]) return true;
+        if (map.navBody[a] === body && map.navBody[b] === body) return true;
       }
     } else {
       const ya = dy > 0 ? Math.min(map.height - 1, cy * C + C - 1) : cy * C;
@@ -172,7 +177,7 @@ export class NavGrid {
       for (let x = cx * C; x < Math.min(map.width, cx * C + C); x++) {
         const a = ya * W + x;
         const b = yb * W + x;
-        if (map.component[a] === body && map.component[b] === body && IS_WATER[map.terrain[a]!]) return true;
+        if (map.navBody[a] === body && map.navBody[b] === body) return true;
       }
     }
     return false;
@@ -187,23 +192,23 @@ export class NavGrid {
 
   nodeOfTile(tile: number): number {
     const W = this.map.width;
-    const body = this.map.component[tile]!;
+    const body = this.map.navBody[tile]!;
     return this.nodeAt(((tile % W) / this.cell) | 0, (((tile / W) | 0) / this.cell) | 0, body);
   }
 
   /**
-   * Water path from tile `from` to tile `to` (both water, same body).
+   * Naval path from tile `from` to tile `to` (both navigable, same naval body).
    * Returns a list of waypoint tiles (including both ends) or null when unreachable.
    * `maxExpand` bounds the search effort.
    */
   findPath(from: number, to: number, maxExpand = 400_000): number[] | null {
     const map = this.map;
-    if (!map.isWater(from) || !map.isWater(to)) return null;
-    if (map.component[from] !== map.component[to]) return null;
+    if (!map.isNavigable(from) || !map.isNavigable(to)) return null;
+    if (map.navBody[from] !== map.navBody[to]) return null;
     const s = this.nodeOfTile(from);
     const g = this.nodeOfTile(to);
     if (s === -1 || g === -1) return null;
-    if (s === g) return [from, to];
+    if (s === g) return this.smooth(this.refine([from, to]));
 
     const gen = ++this.gen;
     const cw = this.cw;
@@ -282,10 +287,11 @@ export class NavGrid {
         const [dx, dy] = DIRS[d]!;
         const m = this.nodeAt(cx + dx, cy + dy, body);
         if (m === -1 || this.closed[m] === gen) continue;
-        // Mild penalty near coasts keeps ships in open water.
+        // Mild penalty near coasts keeps ships in open water; rivers are slow going.
         const rep = this.nodeRep[m]!;
-        const coastPenalty = this.map.coastDist[rep]! < 2 ? 0.35 : 0;
-        const cost = gn + (d < 4 ? 1 : 1.41421356) + coastPenalty;
+        const river = this.map.terrain[rep] === T.River;
+        const coastPenalty = !river && this.map.coastDist[rep]! < 2 ? 0.35 : 0;
+        const cost = gn + (d < 4 ? 1 : 1.41421356) * (river ? RIVER_PATH_COST : 1) + coastPenalty;
         if (this.stamp[m] !== gen || cost < this.gScore[m]!) {
           this.stamp[m] = gen;
           this.gScore[m] = cost;
@@ -301,7 +307,89 @@ export class NavGrid {
     const raw: number[] = [from];
     for (let k = 1; k < nodes.length - 1; k++) raw.push(this.nodeRep[nodes[k]!]!);
     raw.push(to);
-    return this.smooth(raw);
+    return this.smooth(this.refine(raw));
+  }
+
+  /**
+   * Legs between consecutive waypoints that would cross land (a river meandering through
+   * its cells, a headland) are replaced by the tile route found by a small BFS around them.
+   */
+  private refine(path: number[]): number[] {
+    const out: number[] = [path[0]!];
+    for (let k = 1; k < path.length; k++) {
+      const a = path[k - 1]!;
+      const b = path[k]!;
+      if (!this.lineOfWater(a, b)) {
+        const leg = this.localRoute(a, b, this.cell * 2) ?? this.localRoute(a, b, this.cell * 8);
+        if (leg) for (let j = 1; j < leg.length - 1; j++) out.push(leg[j]!);
+      }
+      out.push(b);
+    }
+    return out;
+  }
+
+  // Local BFS scratch (generation-stamped).
+  private bfsSeen = new Uint32Array(0);
+  private bfsPrev = new Int32Array(0);
+  private bfsQueue = new Int32Array(0);
+  private bfsGen = 0;
+
+  /** 4-connected route over the naval body between a and b inside their bounding box ± margin. */
+  private localRoute(a: number, b: number, margin: number): number[] | null {
+    const map = this.map;
+    const W = map.width;
+    const ax = a % W;
+    const ay = (a / W) | 0;
+    const bx = b % W;
+    const by = (b / W) | 0;
+    const x0 = Math.max(0, Math.min(ax, bx) - margin);
+    const y0 = Math.max(0, Math.min(ay, by) - margin);
+    const x1 = Math.min(W - 1, Math.max(ax, bx) + margin);
+    const y1 = Math.min(map.height - 1, Math.max(ay, by) + margin);
+    const bw = x1 - x0 + 1;
+    const n = bw * (y1 - y0 + 1);
+    if (this.bfsSeen.length < n) {
+      this.bfsSeen = new Uint32Array(n);
+      this.bfsPrev = new Int32Array(n);
+      this.bfsQueue = new Int32Array(n);
+      this.bfsGen = 0;
+    }
+    const gen = ++this.bfsGen;
+    const seen = this.bfsSeen;
+    const prev = this.bfsPrev;
+    const q = this.bfsQueue;
+    const body = map.navBody[a]!;
+    const local = (t: number) => (((t / W) | 0) - y0) * bw + ((t % W) - x0);
+    let qh = 0;
+    let qt = 0;
+    seen[local(a)] = gen;
+    prev[local(a)] = -1;
+    q[qt++] = a;
+    let found = false;
+    while (qh < qt) {
+      const t = q[qh++]!;
+      if (t === b) {
+        found = true;
+        break;
+      }
+      const x = t % W;
+      const y = (t / W) | 0;
+      for (let d = 0; d < 4; d++) {
+        const nx = x + DIRS[d]![0];
+        const ny = y + DIRS[d]![1];
+        if (nx < x0 || ny < y0 || nx > x1 || ny > y1) continue;
+        const j = ny * W + nx;
+        const lj = (ny - y0) * bw + (nx - x0);
+        if (seen[lj] === gen || map.navBody[j] !== body) continue;
+        seen[lj] = gen;
+        prev[lj] = t;
+        q[qt++] = j;
+      }
+    }
+    if (!found) return null;
+    const route: number[] = [];
+    for (let t = b; t !== -1; t = prev[local(t)]!) route.push(t);
+    return route.reverse();
   }
 
   /** Greedy string pulling with water line-of-sight (bounded look-ahead). */
@@ -318,7 +406,7 @@ export class NavGrid {
     return out;
   }
 
-  /** Bresenham walk: true if every tile between a and b is water. */
+  /** Bresenham walk: true if every tile between a and b is navigable. */
   lineOfWater(a: number, b: number): boolean {
     const W = this.map.width;
     let x0 = a % W;
@@ -330,9 +418,9 @@ export class NavGrid {
     const sx = x0 < x1 ? 1 : -1;
     const sy = y0 < y1 ? 1 : -1;
     let err = dx + dy;
-    const terrain = this.map.terrain;
+    const nav = this.map.navBody;
     while (true) {
-      if (IS_WATER[terrain[y0 * W + x0]!] !== 1) return false;
+      if (nav[y0 * W + x0]! <= 0) return false;
       if (x0 === x1 && y0 === y1) return true;
       const e2 = 2 * err;
       if (e2 >= dy) {

@@ -4,29 +4,35 @@ import type { Game } from './state';
 import type { Command } from '../net/commands';
 import { isWellFormed } from '../net/commands';
 import { handleSpawnCommand } from './spawn';
-import { cancelAttack, launchAttack } from '../rules/combat';
+import { attackSlotFree, cancelAttack, hasFrontier, launchAttack } from '../rules/combat';
 import { IS_LAND } from '../map/terrain';
 import { B, BUILDING_COUNT, N } from './constants';
 import {
+  MAX_LEVEL,
+  buildingToUpgrade,
   checkPlacement,
   demolishBuilding,
   placeBuilding,
+  snapBuildTile,
   snapPortTile,
   upgradeBuilding,
 } from '../buildings/buildings';
-import { buildWarship, findLanding, launchBoat, orderShips } from '../units/ships';
+import { buildWarship, launchBoat, orderShips, retreatTransport } from '../units/ships';
 import { launchNukes } from '../units/nukes';
 import { launchAircraft } from '../units/air';
 import {
   answerAlliance,
   betray,
-  breakAlliance,
   donate,
+  openHostilities,
   requestAlliance,
   setEmbargo,
   setEmbargoAll,
 } from '../rules/diplomacy';
 import { castVote, useGeneral } from '../rules/features';
+import { continueAfterVictory } from '../rules/victory';
+import { buildingLock, setResearch, techKey } from '../rules/tech';
+import { capitalCooldown, moveCapital } from '../rules/capital';
 import type { A } from './constants';
 
 export function applyCommand(game: Game, pid: number, c: Command): void {
@@ -35,6 +41,11 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
   if (!p) return;
   if (c.t === 'setInactive') {
     p.inactive = c.inactive;
+    return;
+  }
+  if (c.t === 'continue') {
+    // Any human, even one eliminated, may resume a finished match.
+    if (p.kind === 'human') continueAfterVictory(game, p.id);
     return;
   }
   if (!p.alive && c.t !== 'emoji' && c.t !== 'quick' && c.t !== 'ping') return;
@@ -46,38 +57,32 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       return;
 
     case 'attack': {
+      // A land attack needs a shared land border (OpenFront's canAttack): a country across
+      // the sea is reached with the explicit 'boat' command, never by this one. Nothing
+      // (betrayal, embargo, relations) happens unless the attack really starts.
       if (!inMap(c.tile) || game.phase !== 'playing') return;
-      if (!IS_LAND[game.map.terrain[c.tile]!]) return;
+      if (!IS_LAND[game.map.terrain[c.tile]!] || game.isDead(c.tile)) return;
       const target = game.owner[c.tile]!;
       if (target === p.id) return;
-      if (target > 0 && p.allies.has(target)) betray(game, p, game.players[target]!);
-      if (!game.attackAllowed(p.id, target, true)) {
+      if (!game.attackAllowed(p.id, target, true) || !attackSlotFree(game, p.id, target)) {
         game.notify(p.id, 'error.cannotAttack', 'warn');
+        return;
+      }
+      if (!hasFrontier(game, p, target, c.tile)) {
+        game.notify(p.id, 'error.noFrontier', 'warn');
         return;
       }
       const troops = p.troops * c.ratio;
       if (troops < 1) return;
+      if (target > 0) openHostilities(game, p, game.players[target]!);
       p.troops -= troops;
-      if (!launchAttack(game, p.id, target, troops)) {
-        // No land frontier: the click was across water → send a transport instead.
-        const res = launchBoat(game, p, c.tile, c.ratio);
-        if (res !== 'ok')
-          game.notify(
-            p.id,
-            res === 'noPath' || res === 'noCoast' ? 'error.noFrontier' : `error.boat.${res}`,
-            'warn',
-          );
-      }
+      launchAttack(game, p.id, target, troops);
       return;
     }
 
     case 'boat': {
+      // Betrayal and refused requests happen in launchBoat, only once a transport sails.
       if (!inMap(c.tile)) return;
-      const landing = findLanding(game, c.tile);
-      if (landing >= 0) {
-        const o = game.owner[landing]!;
-        if (o > 0 && p.allies.has(o)) betray(game, p, game.players[o]!);
-      }
       const res = launchBoat(game, p, c.tile, c.ratio);
       if (res !== 'ok') game.notify(p.id, `error.boat.${res}`, 'warn');
       return;
@@ -89,22 +94,32 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       return;
     }
 
+    case 'boatRetreat':
+      retreatTransport(game, p, c.id);
+      return;
+
     case 'build': {
       if (!inMap(c.tile) || c.kind < 0 || c.kind >= BUILDING_COUNT) return;
+      const kind = c.kind as B;
+      // Building on (or next to) one of your own buildings of that type upgrades it.
+      const existing = buildingToUpgrade(game, p, kind, c.tile);
+      if (existing && existing.level < MAX_LEVEL[kind]) {
+        if (existing.buildLeft === 0 && !upgradeBuilding(game, p, existing))
+          game.notify(p.id, 'error.build.gold', 'warn');
+        return;
+      }
       let tile = c.tile;
-      const existing = game.buildings.get(game.buildingAt[tile]!);
-      if (existing && existing.owner === p.id && existing.type === c.kind) {
-        upgradeBuilding(game, p, existing);
-        return;
-      }
-      if (c.kind === B.Port && !game.map.isCoastalLand(tile)) tile = snapPortTile(game, p, tile);
+      if (kind === B.Port && !game.map.isCoastalLand(tile)) tile = snapPortTile(game, p, tile);
       if (tile < 0) return;
-      const err = checkPlacement(game, p, c.kind as B, tile);
+      // Structures stand MIN_BUILDING_SPACING apart: snap the click to the nearest free spot.
+      const spot = snapBuildTile(game, p, kind, tile);
+      const err = checkPlacement(game, p, kind, spot >= 0 ? spot : tile);
       if (err !== 'ok') {
-        game.notify(p.id, `error.build.${err}`, 'warn');
+        const lock = err === 'locked' ? { tech: techKey(buildingLock(game, p, kind)) } : undefined;
+        game.notify(p.id, `error.build.${err}`, 'warn', lock);
         return;
       }
-      placeBuilding(game, p, c.kind as B, tile);
+      placeBuilding(game, p, kind, spot);
       return;
     }
 
@@ -131,17 +146,25 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
     case 'nuke': {
       if (!inMap(c.tile) || c.kind < N.Atom || c.kind > N.Mirv) return;
       const o = game.owner[c.tile]!;
-      if (o > 0 && game.sameTeam(p.id, o)) return;
-      if (o > 0 && p.allies.has(o)) betray(game, p, game.players[o]!);
-      if (launchNukes(game, p, c.kind as N, c.tile, c.count) === 0) game.notify(p.id, 'error.nuke', 'warn');
+      // Never at a teammate. Your own land is a legitimate target (scorching an invader's
+      // front), but a MIRV would rain on your whole country: refused.
+      if (o > 0 && o !== p.id && game.sameTeam(p.id, o)) return;
+      if (o === p.id && c.kind === N.Mirv) {
+        game.notify(p.id, 'error.nukeSelfMirv', 'warn');
+        return;
+      }
+      // Betraying allies under the blast is decided by launchNukes, once a missile flies.
+      if (launchNukes(game, p, c.kind as N, c.tile, c.count, c.up ?? true) === 0)
+        game.notify(p.id, 'error.nuke', 'warn');
       return;
     }
 
     case 'air': {
       if (!inMap(c.tile) || c.kind < 0 || c.kind > 2) return;
       const o = game.owner[c.tile]!;
-      if (c.kind === 1 && o > 0 && p.allies.has(o)) betray(game, p, game.players[o]!);
       if (!launchAircraft(game, p, c.kind as A, c.tile)) game.notify(p.id, 'error.air', 'warn');
+      // Bombing an ally betrays it — once the bomber has taken off.
+      else if (c.kind === 1 && o > 0 && p.allies.has(o)) betray(game, p, game.players[o]!);
       return;
     }
 
@@ -156,8 +179,9 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       return;
     }
     case 'allyBreak': {
+      // Breaking an alliance makes you a traitor, exactly like attacking an ally.
       const q = game.player(c.target);
-      if (q) breakAlliance(game, p, q);
+      if (q) betray(game, p, q);
       return;
     }
     case 'embargo': {
@@ -182,11 +206,8 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
     case 'ping':
       if (inMap(c.tile)) game.emit({ k: 'ping', from: p.id, tile: c.tile, kind: c.kind });
       return;
-    case 'troopRatio':
-      p.troopRatio = c.ratio;
-      return;
     case 'research':
-      if (c.tech >= 0 && c.tech < 5 && p.tech[c.tech]! < 4) p.researching = c.tech;
+      setResearch(p, c.tech, c.op);
       return;
     case 'general':
       if (inMap(c.tile) && !useGeneral(game, p, c.tile)) game.notify(p.id, 'error.general', 'warn');
@@ -194,6 +215,17 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
     case 'vote':
       castVote(game, p, c.option);
       return;
+    case 'moveCapital': {
+      if (!inMap(c.tile)) return;
+      const res = moveCapital(game, p, c.tile);
+      if (res === 'notOwned' || res === 'fallout' || res === 'front')
+        game.notify(p.id, `error.capital.${res}`, 'warn');
+      else if (res === 'cooldown')
+        game.notify(p.id, 'error.capital.cooldown', 'warn', {
+          s: Math.ceil(capitalCooldown(game, p) / 10),
+        });
+      return;
+    }
     case 'surrender': {
       p.surrendered = true;
       for (let i = 0; i < game.owner.length; i++) if (game.owner[i] === p.id) game.setOwner(i, 0);

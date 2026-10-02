@@ -20,6 +20,14 @@ test('menu → lobby → solo game → surrender → end screen → menu', async
   await expect(page.getByTestId('clock')).toBeVisible({ timeout: 40_000 });
   await expect(page.getByTestId('resource-panel')).toBeVisible();
   await expect(page.getByTestId('build-bar')).toBeVisible();
+  // Dock windows: several open side by side, Escape closes the one in front, then the next.
+  await page.getByTestId('panel-diplomacy').click();
+  await page.getByTestId('panel-log').click();
+  await expect(page.getByTestId('panel-open')).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-window=log]')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('panel-open')).toHaveCount(0);
   // Open the in-game menu and surrender.
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('game-menu')).toBeVisible();
@@ -28,7 +36,15 @@ test('menu → lobby → solo game → surrender → end screen → menu', async
     .first()
     .click();
   await page.locator('.box .btn.primary').click();
+  // The end of the game is the Courier's final edition: a game this short has no front
+  // page, it opens straight on the results (ranking, figures, actions at its foot).
   await expect(page.getByTestId('end-screen')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('end-screen').locator('table tbody tr').first()).toBeVisible();
+  // Folded, the map is watched and a button opens the paper again.
+  await page.getByTestId('end-spectate').click();
+  await expect(page.getByTestId('end-screen')).toHaveCount(0);
+  await page.getByTestId('end-reopen').click();
+  await expect(page.getByTestId('end-screen')).toBeVisible();
   await page.getByTestId('end-menu').click();
   await expect(page.getByTestId('title-screen')).toBeVisible();
   expect(errors).toEqual([]);
@@ -81,7 +97,18 @@ test('LAN: host a game, a second instance joins by address + code, both play the
   const port = (await host.page.getByTestId('lobby-address').textContent())!.trim().split(':').pop()!;
   expect(code).toMatch(/^[A-Z0-9]{6}$/);
 
-  const guest = await launch();
+  // The guest carries a custom flag from its profile: the host must show it.
+  const guest = await launch('', {
+    name: 'Guest',
+    flagChoice: 'custom',
+    customFlag: {
+      layout: 'saltire',
+      colors: ['#0055a4', '#ffffff', '#ffffff'],
+      emblem: 'anchor',
+      emblemColor: '#fcd116',
+      emblemAt: 'center',
+    },
+  });
   await expect(guest.page.getByTestId('title-screen')).toBeVisible({ timeout: 20_000 });
   await guest.page.getByTestId('menu-play').click();
   await guest.page.getByTestId('menu-lan').click();
@@ -90,6 +117,13 @@ test('LAN: host a game, a second instance joins by address + code, both play the
   await guest.page.locator('.manual .btn').click();
   await expect(guest.page.getByTestId('lobby')).toBeVisible({ timeout: 15_000 });
   await expect(guest.page.getByTestId('lobby-start')).toBeDisabled();
+  // Host side: the guest's row shows its custom flag (an SVG design), the host's own a generated one.
+  const flags = host.page.locator('.plist img.pflag');
+  await expect(flags).toHaveCount(2);
+  await expect(host.page.locator('.plist img.pflag[data-custom="1"]')).toHaveCount(1);
+  expect(await host.page.locator('.plist img.pflag[data-custom="1"]').getAttribute('src')).toMatch(
+    /^data:image\/svg\+xml/,
+  );
 
   await host.page.getByRole('button', { name: /Régions|Regions/ }).click();
   await host.page.getByTestId('map-black-sea').click();
@@ -100,6 +134,8 @@ test('LAN: host a game, a second instance joins by address + code, both play the
     await expect(s.page.getByTestId('game-screen')).toBeVisible({ timeout: 30_000 });
     await expect(s.page.getByTestId('clock')).toBeVisible({ timeout: 60_000 });
   }
+  // In game, the host's leaderboard carries the guest's custom flag.
+  await expect(host.page.locator('img[src^="data:image/svg+xml"]').first()).toBeAttached({ timeout: 15_000 });
   // Both clients advance the same lockstep simulation.
   const clock = async (p: typeof host.page) => (await p.getByTestId('clock').textContent())!.trim();
   await host.page.waitForTimeout(3000);
@@ -120,6 +156,8 @@ test('campaign: briefing pauses the game, then the guide advances as steps are c
   const { app, page, errors } = await launch();
   await expect(page.getByTestId('title-screen')).toBeVisible({ timeout: 20_000 });
   await page.getByTestId('menu-play').click();
+  // The campaign is the tutorial: there is no separate one any more.
+  await expect(page.getByTestId('menu-tutorial')).toHaveCount(0);
   await page.getByTestId('menu-campaign').click();
   await page.getByTestId('mission-m1').click();
   await expect(page.getByTestId('briefing')).toBeVisible({ timeout: 30_000 });
@@ -143,6 +181,14 @@ test('campaign: briefing pauses the game, then the guide advances as steps are c
   }
   await expect(page.getByTestId('clock')).toBeVisible({ timeout: 20_000 });
   await expect(guide).toContainText(/Étape 2|Step 2/, { timeout: 20_000 });
+  // The journal and the diplomacy window open above the objectives, never over them.
+  await page.getByTestId('panel-log').click();
+  await page.getByTestId('panel-diplomacy').click();
+  const objectives = (await page.getByTestId('objectives').boundingBox())!;
+  for (const id of ['log', 'diplomacy']) {
+    const win = (await page.locator(`[data-window=${id}]`).boundingBox())!;
+    expect(win.y + win.height <= objectives.y || win.x + win.width <= objectives.x).toBe(true);
+  }
   expect(errors).toEqual([]);
   await app.close();
 });

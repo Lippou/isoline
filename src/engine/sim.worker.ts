@@ -9,11 +9,12 @@ import { restoreSnapshot, takeSnapshot } from '../core/net/snapshot';
 import { hashGame } from '../core/net/hash';
 import { B, BUILDING_COUNT, HASH_EVERY, N, RADAR_RANGE } from '../core/game/constants';
 import { buildCost, checkPlacement } from '../core/buildings/buildings';
-import { warshipCost, planBoat } from '../core/units/ships';
+import { warshipCost, planBoat, TRANSPORT_RETREATING } from '../core/units/ships';
 import { maxLaunchable, nukeCost } from '../core/units/nukes';
-import { nextTechCost, researchRate } from '../core/rules/tech';
+import { nextTechCost, researchRate, researchSources, techSam } from '../core/rules/tech';
 import { resourceBonus } from '../core/rules/resources';
 import { isNight } from '../core/rules/features';
+import { sightAt } from '../core/rules/weather';
 import { U } from '../core/units/unit';
 import type { Player } from '../core/game/player';
 import type {
@@ -29,7 +30,12 @@ import type {
   WorldView,
 } from './protocol';
 import { UNIT_STRIDE } from './protocol';
+import { sanitizeFlag, type PlayerFlag } from '../core/data/flagSpec';
 import type { Turn } from '../core/net/commands';
+import { TradeLedger, embargoesOf } from './tradeLedger';
+import { TradeRoutes } from './tradeRoutes';
+import { ThreatWatch } from './threats';
+import { bestCapitalSpot, capitalCooldown } from '../core/rules/capital';
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 let game: Game | null = null;
@@ -40,6 +46,12 @@ let seen: Uint8Array | null = null;
 let labels = new Map<number, [number, number, number]>();
 let unitBuf = new Float32Array(UNIT_STRIDE * 256);
 let lastBuildingSend = -1;
+const ledger = new TradeLedger();
+const routes = new TradeRoutes();
+/** Threatened borders of the viewer (view-only intelligence). */
+const threats = new ThreatWatch();
+/** Safest spot for a new capital while the viewer has none (recomputed every 2 s). */
+let capitalHint = { tick: -1, tile: -1 };
 
 function post(msg: FromWorker, transfer: Transferable[] = []): void {
   ctx.postMessage(msg, transfer);
@@ -67,6 +79,10 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
         seen = null;
         labels = new Map();
         lastBuildingSend = -1;
+        ledger.reset();
+        routes.reset();
+        threats.reset();
+        capitalHint = { tick: -1, tile: -1 };
         computeLabels(game);
         const ready: FromWorker = {
           type: 'ready',
@@ -106,6 +122,10 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
         viewer = msg.viewer;
         fogEnabled = msg.fogEnabled;
         seen = null;
+        ledger.reset();
+        routes.resetViewer();
+        threats.reset();
+        capitalHint = { tick: -1, tile: -1 };
         if (game) sendUpdate(game, [], [], 0, true);
         break;
       case 'layers':
@@ -135,6 +155,8 @@ function stepTurns(turns: Turn[]): void {
   for (const turn of turns) {
     if (turn.tick !== g.tick) continue; // out-of-order / duplicate turn
     g.step(turn.cmds);
+    ledger.track(g.events, viewer, g.tick);
+    routes.track(g, g.events);
     stepped++;
     for (const t of g.changedTiles) changed.add(t);
     for (const t of g.changedFallout) state.add(t);
@@ -185,7 +207,13 @@ function sendUpdate(
     full ||
     tick % 5 === 0 ||
     events.some(
-      (e) => e.k === 'eliminated' || e.k === 'alliance' || e.k === 'secession' || e.k === 'betrayal',
+      (e) =>
+        e.k === 'eliminated' ||
+        e.k === 'alliance' ||
+        e.k === 'secession' ||
+        e.k === 'betrayal' ||
+        e.k === 'capitalLost' ||
+        e.k === 'capitalMoved',
     )
   ) {
     up.players = playerViews(g);
@@ -216,6 +244,7 @@ function sendUpdate(
   }
   if (fogEnabled && (full || tick % 5 === 0)) up.fog = computeFog(g);
   if (loyaltyLayer && (full || tick % 10 === 0)) up.loyalty = computeLoyalty(g);
+  if (full || tick % 20 === 0) up.routes = routes.view(g, viewer);
   if (tick % HASH_EVERY === 0) up.hash = hashGame(g);
   const transfer: Transferable[] = [
     changed.buffer,
@@ -255,10 +284,35 @@ function packUnits(g: Game): number {
     unitBuf[o + 11] = u.ty;
     unitBuf[o + 12] = u.t0;
     unitBuf[o + 13] = u.t1;
-    unitBuf[o + 14] = u.type === U.Transport ? u.troops : u.type === U.Train ? u.dir : 0;
+    unitBuf[o + 14] =
+      u.type === U.Transport
+        ? u.troops
+        : u.type === U.Train || u.type === U.Nuke || u.type === U.Interceptor
+          ? u.dir
+          : 0;
+    unitBuf[o + 15] = u.type === U.Nuke ? u.dest : -1;
     n++;
   }
   return n;
+}
+
+/**
+ * Flags chosen by the human slots, sanitised once per config (saves, replays and LAN
+ * configs come from outside). Cosmetic: only copied into the views.
+ */
+let flagConfig: Game['config'] | null = null;
+let flagBySlot = new Map<number, PlayerFlag>();
+function slotFlag(g: Game, p: Player): PlayerFlag | undefined {
+  if (p.kind !== 'human' || p.slot < 0) return undefined;
+  if (flagConfig !== g.config) {
+    flagConfig = g.config;
+    flagBySlot = new Map();
+    for (const s of g.config.players ?? []) {
+      const f = sanitizeFlag(s.flag);
+      if (f) flagBySlot.set(s.slot, f);
+    }
+  }
+  return flagBySlot.get(p.slot);
 }
 
 function playerViews(g: Game): PlayerView[] {
@@ -274,14 +328,15 @@ function playerViews(g: Game): PlayerView[] {
       color: p.color,
       flagSeed: p.flagSeed,
       iso: p.iso,
+      flag: slotFlag(g, p),
       alive: p.alive,
       spawned: p.spawned,
       tiles: p.tiles,
       usefulTiles: p.usefulTiles,
       troops: Math.round(p.troops),
-      workers: Math.round(p.workers),
       gold: Math.round(p.gold),
       traitor: p.isTraitor(g.tick),
+      traitorFor: Math.max(0, p.traitorUntil - g.tick),
       inactive: p.inactive,
       immune: p.immuneUntil > g.tick,
       allies: [...p.allies.keys()],
@@ -289,9 +344,125 @@ function playerViews(g: Game): PlayerView[] {
       general: p.general,
       label: labels.get(p.id) ?? [0, 0, 0],
       bigMalus: g.bigEmpireMalus(p),
+      samBonus: g.config.features.tech ? techSam(p).range : 0,
+      capital: p.capital,
+      disorgFor: Math.max(0, p.disorgUntil - g.tick),
     });
   }
   return out;
+}
+
+/**
+ * Attacks involving the viewer and, for each, one point per separate stretch of its
+ * front: frontier tiles are bucketed on a coarse grid, touching cells form a stretch,
+ * and its point is the frontier tile closest to the stretch's centre (on the line).
+ */
+const FRONT_CELL = 24;
+const FRONT_SAMPLES = 240;
+const FRONT_MAX_STRETCHES = 4;
+
+function frontsOf(g: Game, p: Player): LocalView['fronts'] {
+  const w = g.map.width;
+  const out: LocalView['fronts'] = [];
+  for (const a of g.attacks) {
+    if (a.done || a.troops < 1 || (a.attacker !== p.id && a.target !== p.id)) continue;
+    const heap = a.heapTiles;
+    const n = Math.min(heap.length, FRONT_SAMPLES);
+    if (n === 0) continue;
+    const step = heap.length / n;
+    const cells = new Map<number, number[]>();
+    const cw = Math.ceil(w / FRONT_CELL);
+    for (let k = 0; k < n; k++) {
+      const t = heap[Math.floor(k * step)]!;
+      const c = Math.floor(((t / w) | 0) / FRONT_CELL) * cw + Math.floor((t % w) / FRONT_CELL);
+      const list = cells.get(c);
+      if (list) list.push(t);
+      else cells.set(c, [t]);
+    }
+    // Touching cells (8-neighbourhood) form one stretch of front.
+    const seen = new Set<number>();
+    const stretches: number[][] = [];
+    for (const c0 of [...cells.keys()].sort((x, y) => x - y)) {
+      if (seen.has(c0)) continue;
+      const tiles: number[] = [];
+      const stack = [c0];
+      seen.add(c0);
+      while (stack.length) {
+        const c = stack.pop()!;
+        tiles.push(...cells.get(c)!);
+        const cx = c % cw;
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) {
+            const d = c + dy * cw + dx;
+            if ((dx || dy) && cx + dx >= 0 && cx + dx < cw && cells.has(d) && !seen.has(d)) {
+              seen.add(d);
+              stack.push(d);
+            }
+          }
+      }
+      stretches.push(tiles);
+    }
+    stretches.sort((x, y) => y.length - x.length);
+    const points: [number, number][] = [];
+    for (const tiles of stretches.slice(0, FRONT_MAX_STRETCHES)) {
+      if (points.length > 0 && tiles.length < 3) break; // stray tiles are not a front
+      let cx = 0;
+      let cy = 0;
+      for (const t of tiles) {
+        cx += t % w;
+        cy += (t / w) | 0;
+      }
+      cx /= tiles.length;
+      cy /= tiles.length;
+      let best = tiles[0]!;
+      let bd = Infinity;
+      for (const t of tiles) {
+        const d = ((t % w) - cx) ** 2 + (((t / w) | 0) - cy) ** 2;
+        if (d < bd) {
+          bd = d;
+          best = t;
+        }
+      }
+      points.push([(best % w) + 0.5, ((best / w) | 0) + 0.5]);
+    }
+    out.push({ id: a.id, attacker: a.attacker, target: a.target, troops: Math.round(a.troops), points });
+  }
+  return out;
+}
+
+/** Last tick each country was seen fighting the viewer (attacks, landings, missiles). */
+const warContact = new Map<number, number>();
+const WAR_LINGER = 100;
+
+function warsOf(g: Game, p: Player): number[] {
+  const t = g.tick;
+  const touch = (id: number) => {
+    if (id > 0 && id !== p.id) warContact.set(id, t);
+  };
+  for (const a of g.attacks) {
+    if (a.done) continue;
+    if (a.attacker === p.id) touch(a.target);
+    else if (a.target === p.id) touch(a.attacker);
+  }
+  for (const u of g.units) {
+    if (!u.alive) continue;
+    if (u.type === U.Transport) {
+      const o = u.dest; // the landing's owner at launch
+      if (u.owner === p.id) touch(o);
+      else if (o === p.id) touch(u.owner);
+    } else if (u.type === U.Nuke && u.dest >= 0) {
+      const o = g.owner[u.dest]!;
+      if (u.owner === p.id) touch(o);
+      else if (o === p.id) touch(u.owner);
+    }
+  }
+  const out: number[] = [];
+  for (const [id, last] of warContact) {
+    const q = g.players[id];
+    if (t - last > WAR_LINGER || last > t || !q?.alive || p.allies.has(id)) warContact.delete(id);
+    else out.push(id);
+  }
+  return out.sort((a, b) => a - b);
 }
 
 function localView(g: Game): LocalView | undefined {
@@ -308,29 +479,48 @@ function localView(g: Game): LocalView | undefined {
     alive: p.alive,
     gold: p.gold,
     troops: p.troops,
-    workers: p.workers,
     popCap: p.popCap,
     growth: p.lastGrowth,
     income: p.income,
     incomeBreakdown: { ...p.incomeBreakdown },
-    troopRatio: p.troopRatio,
     attacks: g.attacks
       .filter((a) => a.attacker === p.id && !a.done)
-      .map((a) => ({ id: a.id, target: a.target, troops: a.troops })),
+      .map((a) => ({ id: a.id, target: a.target, troops: a.troops, retreating: a.retreatAt >= 0 })),
     boats,
     tech: [...p.tech],
     researching: p.researching,
     researchPoints: p.researchPoints,
     researchCost: p.researching >= 0 ? nextTechCost(p, p.researching) : 0,
     researchRate: researchRate(p) * 10,
+    research: researchSources(p),
+    researchQueue: [...(p.researchQueue ?? [])],
     generalReadyIn: Math.max(0, p.generalReadyTick - t),
     general: p.general,
     immuneFor: Math.max(0, p.immuneUntil - t),
     traitorFor: Math.max(0, p.traitorUntil - t),
     debuffFor: Math.max(0, p.debuffUntil - t),
     allyRequests: [...p.allyRequests.keys()],
+    allyRequestsIn: [...p.allyRequests.values()].map((exp) => Math.max(0, exp - t)),
     allies: [...p.allies].map(([id, exp]) => ({ id, expiresIn: exp - t })),
     embargo: [...p.embargo],
+    fronts: frontsOf(g, p),
+    transports: g.units
+      .filter((u) => u.alive && u.type === U.Transport && u.owner === p.id)
+      .map((u) => ({
+        id: u.id,
+        troops: Math.round(u.troops),
+        x: u.x,
+        y: u.y,
+        tx: u.target >= 0 ? (u.target % g.map.width) + 0.5 : u.x,
+        ty: u.target >= 0 ? Math.floor(u.target / g.map.width) + 0.5 : u.y,
+        retreating: u.kind === TRANSPORT_RETREATING,
+      })),
+    wars: warsOf(g, p),
+    noTrade: g.players
+      .filter((q) => q && q.alive && q.id !== p.id && p.hasEmbargoWith(q, t))
+      .map((q) => q!.id),
+    trade: ledger.partners(g, p),
+    embargoes: embargoesOf(g, p),
     buildCosts: costs,
     warshipCost: warshipCost(g, p),
     nukeCosts: [nukeCost(g, p, N.Atom), nukeCost(g, p, N.Hydrogen), nukeCost(g, p, N.Mirv)],
@@ -341,7 +531,22 @@ function localView(g: Game): LocalView | undefined {
     blitzFor: Math.max(0, p.blitzUntil - t),
     rampartFor: Math.max(0, p.rampartUntil - t),
     propagandaFor: Math.max(0, p.propagandaUntil - t),
+    capital: p.capital,
+    capitalLostBy: p.capitalLostBy,
+    disorgFor: Math.max(0, p.disorgUntil - t),
+    capitalCooldown: capitalCooldown(g, p),
+    capitalHint: capitalHintOf(g, p),
+    threats: threats.update(g, p),
   };
+}
+
+/** While the viewer has no capital: the spot a nation would choose (the prompt's « safest » button). */
+function capitalHintOf(g: Game, p: Player): number {
+  if (p.capital >= 0 || !p.alive || p.kind === 'tribe' || g.phase !== 'playing') return -1;
+  const t = g.tick;
+  if (capitalHint.tick < 0 || t < capitalHint.tick || t - capitalHint.tick >= 20)
+    capitalHint = { tick: t, tile: bestCapitalSpot(g, p) };
+  return capitalHint.tile;
 }
 
 function worldView(g: Game): WorldView {
@@ -359,6 +564,8 @@ function worldView(g: Game): WorldView {
     council: f.council
       ? { closes: f.council.closes, votes: f.council.votes.size, myVote: f.council.votes.get(viewer) ?? -1 }
       : null,
+    councilNext: g.config.features.council ? g.startTick + f.nextCouncilTick : -1,
+    sanction: f.sanction ? { ...f.sanction } : null,
     ceasefireUntil: f.ceasefireUntil,
     nukeBanUntil: f.nukeBanUntil,
     radarsOffUntil: f.radarsOffUntil,
@@ -529,12 +736,14 @@ function computeFog(g: Game): { w: number; h: number; data: Uint8Array } {
   const radarsOn = g.features.radarsOffUntil <= g.tick;
   for (const b of g.buildings.values()) {
     if (!friends.has(b.owner)) continue;
-    if (b.type === B.Radar && b.buildLeft === 0 && radarsOn) disc(b.x, b.y, RADAR_RANGE + 20 * (b.level - 1));
+    // Weather: a radar (or a ship, a plane) inside a fog bank sees half as far.
+    if (b.type === B.Radar && b.buildLeft === 0 && radarsOn)
+      disc(b.x, b.y, sightAt(g, b.x + 0.5, b.y + 0.5, RADAR_RANGE + 20 * (b.level - 1)));
   }
   for (const u of g.units) {
     if (!u.alive || !friends.has(u.owner)) continue;
     if (u.type === U.Warship || u.type === U.Transport || u.type === U.Fighter || u.type === U.Bomber)
-      disc(u.x, u.y, 25);
+      disc(u.x, u.y, sightAt(g, u.x, u.y, 25));
   }
   for (const r of g.features.reveals) if (friends.has(r.owner)) disc(r.x, r.y, r.r);
   for (let i = 0; i < w * h; i++) {
@@ -590,6 +799,7 @@ function answer(g: Game, q: import('./protocol').Query): unknown {
             color: p.color,
             flagSeed: p.flagSeed,
             iso: p.iso,
+            flag: slotFlag(g, p),
             team: p.team,
             alive: p.alive,
             tiles: p.tiles,

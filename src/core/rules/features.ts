@@ -18,20 +18,13 @@ import {
   sec,
 } from '../game/constants';
 import { recountResources, type ResourceBonus } from './resources';
-import { updateResearch } from './tech';
+import { NODES, repeatCount, techKey, updateResearch } from './tech';
 import { sabotageNear } from '../units/trains';
 import { inventTribeName } from '../names';
 import { IS_LAND } from '../map/terrain';
+import { shipSpeedAt, updateWeather, type WeatherCell } from './weather';
 
-export interface WeatherCell {
-  x: number;
-  y: number;
-  r: number;
-  vx: number;
-  vy: number;
-  until: number;
-  kind: 0 | 1; // 0 storm, 1 fog bank
-}
+export type { WeatherCell } from './weather';
 
 export interface Reveal {
   owner: number;
@@ -43,6 +36,14 @@ export interface Reveal {
 
 export const WORLD_EVENTS = ['crisis', 'pandemic', 'boom', 'solarStorm', 'peaceSummit'] as const;
 export type WorldEventId = (typeof WORLD_EVENTS)[number];
+/** How long each world event lasts (the news shows when it began and what is left). */
+export const WORLD_EVENT_TICKS: Record<WorldEventId, number> = {
+  crisis: min(2),
+  pandemic: min(2),
+  boom: min(2),
+  solarStorm: sec(90),
+  peaceSummit: sec(60),
+};
 export const COUNCIL_OPTIONS = ['sanctions', 'nukeBan', 'ceasefire'] as const;
 
 export interface FeatureState {
@@ -89,11 +90,7 @@ export function createFeatureState(game: Game): FeatureState {
     secessionCandidates: new Map(),
     shipSpeedAt: () => 1,
   };
-  fs.shipSpeedAt = (x, y) => {
-    if (!game.config.features.weather) return 1;
-    for (const c of fs.weather) if (c.kind === 0 && (c.x - x) ** 2 + (c.y - y) ** 2 < c.r * c.r) return 0.6;
-    return 1;
-  };
+  fs.shipSpeedAt = (x, y) => shipSpeedAt(game, x, y);
   return fs;
 }
 
@@ -116,39 +113,32 @@ export function updateFeatures(game: Game): void {
   if (cfg.loyalty) updateLoyalty(game);
   if (cfg.council) updateCouncil(game, rel);
   if (cfg.tech) {
+    countLabLevels(game);
     for (const p of game.alivePlayers()) {
       if (p.kind === 'tribe') continue;
       const done = updateResearch(p);
-      if (done) game.notify(p.id, 'notify.researchDone', 'good', { tech: done });
+      if (done < 0) continue;
+      const n = NODES[done]!;
+      if (n.repeat)
+        game.notify(p.id, 'notify.researchRepeat', 'good', {
+          tech: techKey(done),
+          level: repeatCount(p.tech, n.branch),
+        });
+      else game.notify(p.id, 'notify.researchDone', 'good', { tech: techKey(done) });
+      // Nothing left to study: say so (nations always pick their next goal themselves).
+      if (p.researching < 0 && p.kind === 'human') game.notify(p.id, 'notify.researchIdle', 'info');
     }
   }
   if (f.sanction && f.sanction.until <= game.tick) f.sanction = null;
 }
 
-// ---------------------------------------------------------------- weather
-function updateWeather(game: Game): void {
-  const f = game.features;
-  const { width, height } = game.map;
-  for (const c of f.weather) {
-    c.x += c.vx;
-    c.y += c.vy;
-  }
-  f.weather = f.weather.filter((c) => c.until > game.tick);
-  if (game.tick >= f.nextWeatherTick) {
-    const rng = game.rng;
-    const kind = rng.chance(0.6) ? 0 : 1;
-    const scale = Math.sqrt(width * height) / 1400;
-    const angle = rng.next() * Math.PI * 2;
-    f.weather.push({
-      x: rng.range(0.1, 0.9) * width,
-      y: rng.range(0.1, 0.9) * height,
-      r: rng.range(40, 95) * scale,
-      vx: Math.cos(angle) * 0.25 * scale,
-      vy: Math.sin(angle) * 0.25 * scale,
-      until: game.tick + rng.int(sec(90), sec(180)),
-      kind,
-    });
-    f.nextWeatherTick = game.tick + rng.int(sec(45), sec(100));
+/** Levels of each player's completed research centres (their research output). */
+function countLabLevels(game: Game): void {
+  for (const p of game.players) if (p) p.labLevels = 0;
+  for (const b of game.buildings.values()) {
+    if (b.type !== B.Lab || b.buildLeft > 0) continue;
+    const p = game.players[b.owner];
+    if (p) p.labLevels += b.level;
   }
 }
 
@@ -164,27 +154,22 @@ function updateWorldEvents(game: Game, rel: number): void {
   if (rel < f.nextEventTick) return;
   const rng = game.rng;
   const id = WORLD_EVENTS[rng.int(0, WORLD_EVENTS.length - 1)]!;
-  let until = game.tick + min(2);
+  const until = game.tick + WORLD_EVENT_TICKS[id];
   switch (id) {
     case 'crisis':
       f.incomeMult = 0.75;
       break;
     case 'pandemic':
       f.growthMult = 0.5;
-      for (const p of game.alivePlayers()) {
-        p.workers *= 0.95;
-        p.troops *= 0.97;
-      }
+      for (const p of game.alivePlayers()) p.troops *= 0.97;
       break;
     case 'boom':
       f.tradeMult = 2;
       break;
     case 'solarStorm':
-      until = game.tick + sec(90);
       f.radarsOffUntil = until;
       break;
     case 'peaceSummit':
-      until = game.tick + sec(60);
       f.ceasefireUntil = Math.max(f.ceasefireUntil, until);
       break;
   }

@@ -1,0 +1,104 @@
+/*
+ * The final edition of the Courier: pieces shared by its pages (front page, mission
+ * communiqué, results) and the elimination dispatch. Two inks on newsprint: navy for
+ * the text, chart magenta for what hurts (`.newsprint` tokens in global.css).
+ */
+
+/* Section heads: a title on a rule. */
+.newsprint .np-rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 9px;
+  font-family: var(--title);
+  font-weight: 600;
+  font-size: 1.02em;
+  color: var(--np-ink);
+}
+.newsprint .np-rule::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--np-rule);
+}
+
+/* A boxed item, as papers print them. */
+.newsprint .np-box {
+  padding: 10px 14px 12px;
+  border: 1px solid var(--np-ink);
+  box-shadow: 3px 3px 0 var(--np-paper-2);
+}
+.newsprint .np-box > h3 {
+  margin: 0 0 6px;
+  font-family: var(--title);
+  font-weight: 600;
+  font-size: 1em;
+  color: var(--np-ink-2);
+}
+
+/* Buttons printed on the paper. */
+.newsprint .np-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--np-ink-2);
+  border-radius: 2px;
+  background: transparent;
+  font-family: var(--text);
+  font-size: 0.86em;
+  font-weight: 500;
+  color: var(--np-ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.newsprint .np-btn:hover,
+.newsprint .np-btn:focus-visible {
+  background: var(--np-paper-2);
+  border-color: var(--np-ink);
+}
+.newsprint .np-btn.ink {
+  background: var(--np-ink);
+  border-color: var(--np-ink);
+  color: var(--np-paper);
+}
+.newsprint .np-btn.ink:hover,
+.newsprint .np-btn.ink:focus-visible {
+  background: #24405a;
+}
+.newsprint .np-btn.quiet {
+  border-color: transparent;
+  color: var(--np-ink-2);
+}
+.newsprint .np-btn.quiet:hover,
+.newsprint .np-btn.quiet:focus-visible {
+  border-color: var(--np-rule);
+  color: var(--np-ink);
+}
+
+/* Flags printed in the paper's inks. */
+.newsprint .np-flag {
+  object-fit: cover;
+  border: 1px solid rgba(23, 42, 60, 0.35);
+  mix-blend-mode: multiply;
+}
+
+/* Figures: definition lists of label / value. */
+.newsprint .np-figures {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  margin: 0;
+  font-family: var(--text);
+  font-size: 0.82em;
+}
+.newsprint .np-figures dt {
+  color: var(--np-ink-2);
+}
+.newsprint .np-figures dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--np-ink);
+}

@@ -1,5 +1,9 @@
 // Access to the Electron preload bridge, with a localStorage fallback so the UI
 // also runs in a plain browser (dev server, tests).
+import type { UpdateStatus } from '../desktop/updater';
+export type { UpdateStatus };
+
+const WEB_UPDATE: UpdateStatus = { state: 'idle', current: '', access: 'none', installable: false };
 export interface Bridge {
   info(): Promise<{
     version: string;
@@ -11,9 +15,16 @@ export interface Bridge {
   }>;
   smokeReady(): void;
   quit(): void;
-  checkUpdate(
-    url: string,
-  ): Promise<{ latest: string; url: string; notes: string; newer: boolean } | { error: string }>;
+  /** In-app updates from the game's GitHub releases (desktop only). */
+  update: {
+    status(): Promise<UpdateStatus>;
+    check(): Promise<UpdateStatus>;
+    download(): Promise<UpdateStatus>;
+    install(): Promise<UpdateStatus>;
+    setToken(token: string): Promise<UpdateStatus>;
+    clearToken(): Promise<UpdateStatus>;
+    onStatus(cb: (s: UpdateStatus) => void): () => void;
+  };
   openExternal(url: string): void;
   setFullscreen(on: boolean): void;
   screenshot(): Promise<string | null>;
@@ -70,7 +81,15 @@ const fallback: Bridge = {
   }),
   smokeReady: () => {},
   quit: () => window.close(),
-  checkUpdate: async () => ({ error: 'unavailable' }),
+  update: {
+    status: async () => WEB_UPDATE,
+    check: async () => WEB_UPDATE,
+    download: async () => WEB_UPDATE,
+    install: async () => WEB_UPDATE,
+    setToken: async () => WEB_UPDATE,
+    clearToken: async () => WEB_UPDATE,
+    onStatus: () => () => {},
+  },
   openExternal: (url) => void window.open(url, '_blank', 'noopener'),
   setFullscreen: (on) => {
     if (on) void document.documentElement.requestFullscreen?.();

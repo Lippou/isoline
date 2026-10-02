@@ -3,7 +3,7 @@ import { readJson, writeJson } from '../bridge';
 import { i18n, type Lang } from '../i18n/i18n.svelte';
 import type { ColorVision } from '../../render/colors';
 
-export const SETTINGS_VERSION = 2;
+export const SETTINGS_VERSION = 3;
 
 export const DEFAULT_KEYS: Record<string, string> = {
   attackHover: 'KeyG',
@@ -27,6 +27,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   fogView: 'KeyV',
   resourcesView: 'KeyR',
   loyaltyView: 'KeyN',
+  tradeRoutes: 'KeyC',
   home: 'KeyH',
   chat: 'Enter',
   pause: 'KeyP',
@@ -39,8 +40,12 @@ export const DEFAULT_KEYS: Record<string, string> = {
   panRight: 'KeyD',
   zoomIn: 'Equal',
   zoomOut: 'Minus',
-  buildRadar: 'KeyU',
+  buildRadar: 'KeyO',
   buildAirfield: 'KeyI',
+  buildLab: 'KeyJ',
+  flipArc: 'KeyU',
+  speedDown: 'BracketLeft',
+  speedUp: 'BracketRight',
 };
 
 export interface Settings {
@@ -68,14 +73,15 @@ export interface Settings {
   };
   game: {
     confirmations: boolean;
-    simpleMode: boolean;
     fontSize: number;
     wheel: 'zoom' | 'trackpad';
     edgePan: boolean;
-    tutorialDone: boolean;
-    checkUpdates: boolean;
-    /** HTTPS URL of the update manifest (JSON); empty = no check. */
-    updateUrl: string;
+    /** Check the game's GitHub releases at launch (only once access is configured). */
+    autoUpdate: boolean;
+    /** Map view: trade lanes between ports and busy railways. */
+    tradeRoutes: boolean;
+    /** Tech tree: when the research queue runs dry, study the cheapest available technology. */
+    autoResearch: boolean;
   };
   keys: Record<string, string>;
   access: { vision: ColorVision; highContrast: boolean; reducedMotion: boolean; subtitles: boolean };
@@ -99,13 +105,12 @@ export function defaultSettings(): Settings {
     audio: { master: 0.8, music: 0.6, sfx: 0.8, ui: 0.6, voice: 0.9, voiceOn: true, muteUnfocused: true },
     game: {
       confirmations: true,
-      simpleMode: false,
       fontSize: 1,
       wheel: navigator.platform.toLowerCase().includes('mac') ? 'trackpad' : 'zoom',
       edgePan: false,
-      tutorialDone: false,
-      checkUpdates: false,
-      updateUrl: '',
+      autoUpdate: true,
+      tradeRoutes: true,
+      autoResearch: false,
     },
     keys: { ...DEFAULT_KEYS },
     access: { vision: 'none', highContrast: false, reducedMotion: false, subtitles: true },
@@ -128,6 +133,13 @@ export function migrateSettings(raw: Partial<Settings> & { version?: number }): 
   // v1 → v2: "colorblind: boolean" became access.vision.
   const legacy = raw as unknown as { colorblind?: boolean };
   if ((raw.version ?? 1) < 2 && legacy.colorblind) s.access.vision = 'deuteranopia';
+  // v2 → v3: U flips the missile arc (as in OpenFront); the radar tower moves to O.
+  if ((raw.version ?? 1) < 3 && s.keys.buildRadar === 'KeyU') {
+    s.keys.buildRadar = 'KeyO';
+    s.keys.flipArc = 'KeyU';
+  }
+  // The separate tutorial is gone (the campaign teaches the game): its flag goes too.
+  delete (s.game as Partial<Record<string, unknown>>).tutorialDone;
   return s;
 }
 

@@ -8,7 +8,6 @@ import {
   RAIL_MAX_SEGMENT,
   RAIL_MIN_GAP,
   STATION_TYPES,
-  TRAIN_HOST_SHARE,
   TRAIN_MAX_STOPS,
   TRAIN_PAY_ALLY,
   TRAIN_PAY_DECAY,
@@ -16,14 +15,18 @@ import {
   TRAIN_PAY_FLOOR,
   TRAIN_PAY_OTHER,
   TRAIN_PAY_OWN,
-  TRAIN_SATURATION_MID,
+  TRAIN_SPAWN_BASE,
+  TRAIN_SPAWN_COOLDOWN,
+  TRAIN_SPAWN_MULT,
   TRAIN_SPEED,
+  TRAIN_UNITS,
 } from '../game/constants';
 import { IS_LAND, SPEED } from '../map/terrain';
 import { U, makeUnit, type Unit } from './unit';
 import { addGold } from '../game/economy';
 import { addUnit } from './ships';
 import { techTrainBonus } from '../rules/tech';
+import type { Player } from '../game/player';
 
 export interface Rail {
   id: number;
@@ -267,27 +270,44 @@ function railsAt(game: Game, stationId: number): Rail[] {
   return game.rails.filter((r) => r.alive && (r.a === stationId || r.b === stationId));
 }
 
+/**
+ * Gold of a city/port stop: base by relation (own / team or other / ally), minus
+ * TRAIN_PAY_DECAY per paying stop beyond the first TRAIN_PAY_DECAY_FROM, floored.
+ */
+export function trainStopGold(base: number, paidStops: number): number {
+  return Math.max(
+    TRAIN_PAY_FLOOR,
+    base - TRAIN_PAY_DECAY * Math.max(0, paidStops - (TRAIN_PAY_DECAY_FROM - 1)),
+  );
+}
+
+function payTrain(game: Game, p: Player, amount: number, station: Building): void {
+  const gold = amount * (game.config.features.tech ? techTrainBonus(p) : 1);
+  addGold(p, gold);
+  p.stats.trainGold += gold;
+  p.incomeBreakdown.trains += gold;
+  game.emit({ k: 'trainPay', x: station.x, y: station.y, owner: p.id, amount: Math.round(gold) });
+}
+
+/** Cities and ports pay the train owner AND (the same amount) the station owner; factories are junctions. */
 function payStop(game: Game, train: Unit, station: Building): void {
+  if (station.type !== B.City && station.type !== B.Port) return;
   const p = game.players[train.owner]!;
   const host = game.players[station.owner]!;
   if (!p.alive || !host.alive || p.hasEmbargoWith(host, game.tick)) return;
-  train.stops++;
-  let pay =
-    station.owner === p.id ? TRAIN_PAY_OWN : p.allies.has(station.owner) ? TRAIN_PAY_ALLY : TRAIN_PAY_OTHER;
-  if (train.stops >= TRAIN_PAY_DECAY_FROM) {
-    pay = Math.max(TRAIN_PAY_FLOOR, pay - TRAIN_PAY_DECAY * (train.stops - TRAIN_PAY_DECAY_FROM + 1));
-  }
-  pay *= (game.config.features.tech ? techTrainBonus(p) : 1) * game.features.tradeMult;
-  addGold(p, pay);
-  p.stats.trainGold += pay;
-  p.incomeBreakdown.trains += pay;
-  if (station.owner !== p.id) {
-    const share = pay * TRAIN_HOST_SHARE;
-    addGold(host, share);
-    host.stats.trainGold += share;
-    host.incomeBreakdown.trains += share;
-  }
-  game.emit({ k: 'trainPay', x: station.x, y: station.y, owner: p.id, amount: Math.round(pay) });
+  const base =
+    station.owner === p.id
+      ? TRAIN_PAY_OWN
+      : game.sameTeam(p.id, station.owner)
+        ? TRAIN_PAY_OTHER
+        : p.allies.has(station.owner)
+          ? TRAIN_PAY_ALLY
+          : TRAIN_PAY_OTHER;
+  const amount =
+    Math.floor(trainStopGold(base, train.level) * game.config.goldMultiplier) * game.features.tradeMult;
+  train.level++;
+  payTrain(game, p, amount, station);
+  if (station.owner !== p.id) payTrain(game, host, amount, station);
 }
 
 function startOnRail(train: Unit, r: Rail, fromStation: number): void {
@@ -310,27 +330,58 @@ function chooseNext(game: Game, train: Unit, stationId: number, cameFrom: number
   return pool[game.rng.int(0, pool.length - 1)]!;
 }
 
+const sigmoid = (x: number, k: number, mid: number) => 1 / (1 + Math.exp(-k * (x - mid)));
+
+/**
+ * OpenFront's global train throttle for `n` train units in the world (a train
+ * weighs TRAIN_UNITS): a boost on small networks, damping past ~560 units onto
+ * a 25 % plateau, and a hard cap far beyond (~900).
+ */
+export function trainSaturation(n: number): number {
+  const boost = 1 + 0.5 * Math.exp(-n / 30);
+  const damping = 1 - sigmoid(n, Math.LN2 / 100, 560);
+  const plateau = 0.25 * (1 - sigmoid(n, Math.LN2 / 150, 900));
+  return boost * Math.max(damping, plateau);
+}
+
+/** One spawn roll of a factory succeeds with probability 1 / rate. */
+export function trainSpawnRate(ownerFactoryLevels: number, trainUnits: number): number {
+  return Math.max(
+    1,
+    Math.floor(((ownerFactoryLevels + TRAIN_SPAWN_BASE) * TRAIN_SPAWN_MULT) / trainSaturation(trainUnits)),
+  );
+}
+
+// Scratch buffer: factory levels per player id, rebuilt every tick.
+let factoryLevelsBuf = new Float64Array(0);
+
 export function updateRails(game: Game): void {
   if (!game.config.allowFactories) return;
   let trains = 0;
   for (const u of game.units) if (u.alive && u.type === U.Train) trains++;
-  const saturation = 1 + trains / TRAIN_SATURATION_MID;
+  if (factoryLevelsBuf.length < game.players.length)
+    factoryLevelsBuf = new Float64Array(game.players.length * 2);
+  const factoryLevels = factoryLevelsBuf;
+  factoryLevels.fill(0);
+  for (const b of game.buildings.values()) if (b.type === B.Factory) factoryLevels[b.owner]! += b.level;
   const w = game.map.width;
-  // Spawn trains at factories.
+  // Spawn trains at factories: one roll per level every tick, TRAIN_SPAWN_COOLDOWN apart.
   for (const f of game.buildings.values()) {
-    if (f.type !== B.Factory || f.buildLeft > 0) continue;
+    if (f.type !== B.Factory || f.buildLeft > 0 || game.tick < f.timer) continue;
     const p = game.players[f.owner]!;
     if (!p.alive) continue;
-    f.timer++;
-    const interval = ((p.buildingCount[B.Factory]! + 10) * 15 * saturation) / (1 + 0.15 * (f.level - 1));
-    if (f.timer < interval) continue;
-    f.timer = 0;
+    const rate = trainSpawnRate(factoryLevels[p.id]!, trains * TRAIN_UNITS);
+    let go = false;
+    for (let k = 0; k < f.level && !go; k++) go = game.rng.chance(1 / rate);
+    if (!go) continue;
     const r = chooseNext(game, makeUnit(0, U.Train, p.id, 0, 0), f.id, -1);
     if (!r) continue;
+    f.timer = game.tick + TRAIN_SPAWN_COOLDOWN;
     const t = makeUnit(game.nextId(), U.Train, p.id, f.x + 0.5, f.y + 0.5);
     t.speed = TRAIN_SPEED;
     t.home = f.id;
     t.stops = 0;
+    t.level = 0;
     startOnRail(t, r, f.id);
     addUnit(game, t);
     trains++;
@@ -360,6 +411,7 @@ export function updateRails(game: Game): void {
       t.alive = false;
       continue;
     }
+    t.stops++;
     payStop(game, t, station);
     if (t.stops >= TRAIN_MAX_STOPS) {
       t.alive = false;

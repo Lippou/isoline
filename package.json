@@ -1,7 +1,7 @@
 {
   "name": "isoline",
   "productName": "Isoline",
-  "version": "1.1.0",
+  "version": "1.5.0",
   "description": "Isoline — real-time territorial conquest on a living night atlas.",
   "author": "Isoline Team",
   "license": "MIT",
@@ -35,7 +35,8 @@
     "audio:sfx": "node scripts/audio/fetch-sfx.mjs",
     "audio:music": "node scripts/audio/fetch-music.mjs",
     "audio:voice": ".tools/venv/bin/python scripts/audio/gen-voice.py",
-    "pacing": "tsx scripts/pacing.ts"
+    "pacing": "tsx scripts/pacing.ts",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

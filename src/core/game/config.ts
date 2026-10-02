@@ -1,9 +1,10 @@
 // Lobby options for one match. Everything the simulation needs to be reproduced
 // (together with the seed and the command log) lives in GameConfig.
 import type { GenParams } from '../map/generator';
+import type { PlayerFlag } from '../data/flagSpec';
 
 export type GameMode =
-  'ffa' | 'teams' | 'humansVsNations' | 'tribes' | 'doomsday' | 'battleRoyale' | 'campaign' | 'tutorial';
+  'ffa' | 'teams' | 'humansVsNations' | 'tribes' | 'doomsday' | 'battleRoyale' | 'campaign';
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'impossible';
 export type GeneralType = 'blitz' | 'rampart' | 'sabotage' | 'propaganda';
 export const GENERALS: readonly GeneralType[] = ['blitz', 'rampart', 'sabotage', 'propaganda'];
@@ -17,6 +18,8 @@ export interface PlayerSlot {
   general: GeneralType;
   color?: number;
   spectator?: boolean;
+  /** Chosen flag (cosmetic: shown by the interface, never read by the rules). */
+  flag?: PlayerFlag;
 }
 
 export interface FeatureToggles {
@@ -104,9 +107,14 @@ export function defaultConfig(seed: number): GameConfig {
   };
 }
 
+/**
+ * Nation handicaps (OpenFront: easy / medium / hard / impossible). `troops` scales
+ * their troop ceiling and starting troops, `regen` their troop regeneration; gold
+ * income is the same for everyone.
+ */
 export const DIFFICULTY = {
-  easy: { income: 0.7, aggression: 0.6, targeting: 0.4, betrayal: 0.05, troops: 0.85, think: 1.6 },
-  normal: { income: 1, aggression: 1, targeting: 0.7, betrayal: 0.12, troops: 1, think: 1 },
-  hard: { income: 1.35, aggression: 1.3, targeting: 0.9, betrayal: 0.2, troops: 1.15, think: 0.8 },
-  impossible: { income: 1.9, aggression: 1.6, targeting: 1, betrayal: 0.3, troops: 1.35, think: 0.6 },
+  easy: { troops: 0.5, regen: 0.9, aggression: 0.6, targeting: 0.4, betrayal: 0.05, think: 1.6 },
+  normal: { troops: 0.75, regen: 0.95, aggression: 1, targeting: 0.7, betrayal: 0.12, think: 1 },
+  hard: { troops: 1, regen: 1, aggression: 1.3, targeting: 0.9, betrayal: 0.2, think: 0.8 },
+  impossible: { troops: 1.25, regen: 1.05, aggression: 1.6, targeting: 1, betrayal: 0.3, think: 0.6 },
 } as const satisfies Record<Difficulty, Record<string, number>>;

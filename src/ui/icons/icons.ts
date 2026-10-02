@@ -29,7 +29,6 @@ import {
   FlaskConical,
   Gift,
   Globe,
-  Hammer,
   Handshake,
   Info,
   Key,
@@ -40,6 +39,7 @@ import {
   MapPin,
   Maximize2,
   Menu,
+  Microscope,
   MessageSquare,
   Minimize2,
   Minus,
@@ -58,6 +58,7 @@ import {
   Rocket,
   Save,
   ScrollText,
+  Search,
   Send,
   Settings,
   Shield,
@@ -88,14 +89,48 @@ import {
   Hourglass,
   Sailboat,
   Siren,
+  Sword,
+  Mail,
+  Moon,
+  ArrowUpDown,
+  ArrowRightLeft,
+  Newspaper,
+  TrendingDown,
+  Biohazard,
+  Sun,
+  CloudLightning,
+  CloudFog,
+  Route,
   type IconNode,
 } from 'lucide';
+
+// Diplomatic status glyphs drawn for the map labels (Lucide shapes, modified).
+const SHIELD =
+  'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z';
+const BrokenShield: IconNode = [
+  ['path', { d: SHIELD }],
+  ['path', { d: 'm12.3 2.6-1.8 5.2 3.2 3.2-2.6 4 1.1 6.6' }],
+];
+const NoTrade: IconNode = [
+  ['line', { x1: '12', x2: '12', y1: '2', y2: '22' }],
+  ['path', { d: 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' }],
+  ['path', { d: 'm3 3 18 18' }],
+];
+const ArcUp: IconNode = [
+  ['path', { d: 'M3 19C6 5 18 5 21 19' }],
+  ['circle', { cx: '3', cy: '19', r: '1.5' }],
+  ['path', { d: 'm17.5 16 3.5 3 1.5-4.3' }],
+];
+const ArcDown: IconNode = [
+  ['path', { d: 'M3 5c3 14 15 14 18 0' }],
+  ['circle', { cx: '3', cy: '5', r: '1.5' }],
+  ['path', { d: 'm17.5 8 3.5-3 1.5 4.3' }],
+];
 
 export const ICONS = {
   // resources & stats
   gold: Coins,
   troops: Swords,
-  workers: Hammer,
   population: Users,
   territory: MapIcon,
   income: TrendingUp,
@@ -110,6 +145,7 @@ export const ICONS = {
   sam: Crosshair,
   radar: Radar,
   airfield: Plane,
+  lab: Microscope,
   // units & weapons
   warship: Ship,
   transport: Sailboat,
@@ -127,6 +163,8 @@ export const ICONS = {
   renew: Repeat,
   council: Landmark,
   leader: Crown,
+  /** The seat of government (map: a paper star in the owner's ring). */
+  capital: Star,
   eliminated: Skull,
   traitor: ShieldAlert,
   immune: Shield,
@@ -134,6 +172,16 @@ export const ICONS = {
   // features
   tech: FlaskConical,
   event: Zap,
+  trade: ArrowRightLeft,
+  news: Newspaper,
+  // world events
+  crisis: TrendingDown,
+  pandemic: Biohazard,
+  solarStorm: Sun,
+  // weather and trade lanes on the map
+  storm: CloudLightning,
+  fogBank: CloudFog,
+  tradeRoutes: Route,
   general: Star,
   oil: Droplet,
   fertile: Wheat,
@@ -173,6 +221,8 @@ export const ICONS = {
   network: Network,
   globe: Globe,
   dice: Dices,
+  search: Search,
+  flag: Flag,
   edit: Pencil,
   trash: Trash2,
   save: Save,
@@ -192,6 +242,17 @@ export const ICONS = {
   chevronRight: ChevronRight,
   dot: Circle,
   sparkles: Sparkles,
+  // diplomacy on the map
+  crown: Crown,
+  sword: Sword,
+  mail: Mail,
+  inactive: Moon,
+  brokenShield: BrokenShield,
+  noTrade: NoTrade,
+  // missile launch
+  arcUp: ArcUp,
+  arcDown: ArcDown,
+  flip: ArrowUpDown,
 } satisfies Record<string, IconNode>;
 
 export type IconName = keyof typeof ICONS;
@@ -230,6 +291,7 @@ export const BUILDING_ICONS: readonly IconName[] = [
   'sam',
   'radar',
   'airfield',
+  'lab',
 ];
 
 /**

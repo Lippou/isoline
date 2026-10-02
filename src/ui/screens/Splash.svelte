@@ -17,7 +17,7 @@
 </script>
 
 <div class="splash" data-testid="splash">
-  <Logo animated size={220} />
+  <Logo animated tone="light" size={220} />
 </div>
 
 <style>
@@ -26,6 +26,6 @@
     inset: 0;
     display: grid;
     place-items: center;
-    background: radial-gradient(circle at 50% 50%, #142441, var(--abyss) 70%);
+    background: radial-gradient(circle at 50% 46%, var(--panel-solid), var(--abyss) 60%);
   }
 </style>

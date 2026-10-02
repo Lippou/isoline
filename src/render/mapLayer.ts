@@ -10,7 +10,9 @@ import {
   type WebGLRenderer,
 } from 'pixi.js';
 import { MAP_FRAGMENT, MAP_VERTEX } from './shaders';
+import { navigableRivers } from '../core/map/rivers';
 import type { ClientState } from '../engine/clientState';
+import { worldCode } from './worldPalette';
 
 const BANDS = 32;
 
@@ -27,8 +29,13 @@ export interface MapUniforms {
   pattern: boolean;
   contrast: boolean;
   loyaltyView: boolean;
+  /** 8 cells × (x, y, radius, code): -1 none, 0…1 storm intensity, 2…3 fog bank (2 + intensity). */
   weather: Float32Array;
+  /** 1: animated weather (lightning flashes); 0 with reduced motion. */
+  motion: number;
   ring: [number, number, number, number];
+  /** 0…1: drifting cloud cover, shown when zoomed far out. */
+  clouds: number;
 }
 
 function makeSource(
@@ -66,6 +73,15 @@ export class MapLayer {
   private readonly terrainSrc: BufferImageSource;
   private readonly reliefSrc: BufferImageSource;
   private dirtyBands = new Uint8Array(BANDS);
+  /**
+   * Tiles whose conquest ink is still diffusing, with the tick they changed. The
+   * texture only keeps that tick modulo 256: once the fade is over the previous owner
+   * is overwritten by the current one, otherwise the fade would replay every 256 ticks
+   * (25.6 s) as waves sweeping across old conquests.
+   */
+  private settleTiles: number[] = [];
+  private settleTicks: number[] = [];
+  private settleHead = 0;
   private dirtyAny = false;
   private readonly bandRows: number;
   private readonly shader: Shader;
@@ -84,6 +100,8 @@ export class MapLayer {
     const terrain = new Uint8Array(n * 4);
     const relief = new Uint8Array(n * 4);
     const smoothCoast = chamferCoast(state.coastDist, w, h);
+    // Navigable rivers (they reach a sea or a lake): drawn as blue ribbons, even across countries.
+    const navRiver = navigableRivers(state.terrain, w, h);
     for (let i = 0; i < n; i++) {
       terrain[i * 4] = state.terrain[i]!;
       terrain[i * 4 + 1] = state.elevation[i]!;
@@ -93,7 +111,7 @@ export class MapLayer {
       relief[i * 4 + 1] = smoothCoast[i]!;
       // Land mask (bilinear-filtered in the shader → smooth coastlines).
       relief[i * 4 + 2] = state.terrain[i]! > 2 ? 255 : 0;
-      relief[i * 4 + 3] = 255;
+      relief[i * 4 + 3] = navRiver[i] ? 255 : 0;
     }
     this.ownerData = new Uint8Array(n * 4);
     this.stateData = new Uint8Array(n * 4);
@@ -146,7 +164,10 @@ export class MapLayer {
           uContrast: { value: 0, type: 'f32' },
           uLoyaltyView: { value: 0, type: 'f32' },
           uWeather: { value: new Float32Array(32).fill(-1), type: 'vec4<f32>', size: 8 },
+          uMotion: { value: 1, type: 'f32' },
           uRing: { value: new Float32Array(4), type: 'vec4<f32>' },
+          uClouds: { value: 0, type: 'f32' },
+          uWorld: { value: worldCode(state.meta?.palette), type: 'f32' },
         },
       },
     });
@@ -166,10 +187,13 @@ export class MapLayer {
   /** Apply ownership/state changes accumulated in the client state. */
   consumeChanges(): void {
     const s = this.state;
+    this.settle(s.tick);
     if (s.pendingTiles.length === 0 && s.pendingState.length === 0) return;
     const tick = s.tick & 255;
     const w = this.w;
     for (const t of s.pendingTiles) {
+      this.settleTiles.push(t);
+      this.settleTicks.push(s.tick);
       const o = s.owner[t]!;
       const k = t * 4;
       // previous owner ← current displayed owner
@@ -189,6 +213,29 @@ export class MapLayer {
     s.pendingTiles.length = 0;
     s.pendingState.length = 0;
     this.dirtyAny = true;
+  }
+
+  /** Ends the conquest fade of tiles changed 12+ ticks ago (or before a replay seek). */
+  private settle(now: number): void {
+    const tiles = this.settleTiles;
+    const ticks = this.settleTicks;
+    let i = this.settleHead;
+    while (i < tiles.length) {
+      const age = now - ticks[i]!;
+      if (age >= 0 && age < 12) break;
+      const k = tiles[i]! * 4;
+      this.ownerData[k + 2] = this.ownerData[k]!;
+      this.ownerData[k + 3] = this.ownerData[k + 1]!;
+      this.dirtyBands[Math.floor(tiles[i]! / this.w / this.bandRows)] = 1;
+      this.dirtyAny = true;
+      i++;
+    }
+    this.settleHead = i;
+    if (i > 4096 && i * 2 > tiles.length) {
+      this.settleTiles = tiles.slice(i);
+      this.settleTicks = ticks.slice(i);
+      this.settleHead = 0;
+    }
   }
 
   /** Upload dirty bands of the owner/state textures. */
@@ -263,7 +310,12 @@ export class MapLayer {
     this.dirtyBands.fill(0);
   }
 
-  setPalette(colors: Map<number, [number, number, number]>): void {
+  /**
+   * Ink colour per owner; the alpha channel carries the owner's relation to the viewer
+   * (0 neutral, 1 ally / teammate, 2 at war, 3 no trade, 4 threatening our border),
+   * which tints its borders.
+   */
+  setPalette(colors: Map<number, [number, number, number]>, relations?: Map<number, number>): void {
     this.paletteData.fill(0);
     for (const [id, [r, g, b]] of colors) {
       if (id < 0 || id >= 65536) continue;
@@ -271,7 +323,7 @@ export class MapLayer {
       this.paletteData[k] = r;
       this.paletteData[k + 1] = g;
       this.paletteData[k + 2] = b;
-      this.paletteData[k + 3] = 255;
+      this.paletteData[k + 3] = 255 - 50 * (relations?.get(id) ?? 0);
     }
     this.paletteSrc.update();
   }
@@ -321,7 +373,9 @@ export class MapLayer {
     g.uContrast = u.contrast ? 1 : 0;
     g.uLoyaltyView = u.loyaltyView ? 1 : 0;
     (g.uWeather as Float32Array).set(u.weather);
+    g.uMotion = u.motion;
     (g.uRing as Float32Array).set(u.ring);
+    g.uClouds = u.clouds;
   }
 
   destroy(): void {

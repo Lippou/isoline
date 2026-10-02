@@ -4,7 +4,17 @@
     size = 120,
     animated = false,
     wordmark = true,
-  }: { size?: number; animated?: boolean; wordmark?: boolean } = $props();
+    tone = 'dark',
+    row = false,
+  }: {
+    size?: number;
+    animated?: boolean;
+    wordmark?: boolean;
+    /** 'light' = the symbol-light.svg tints, for chart paper. */
+    tone?: 'dark' | 'light';
+    /** Symbol beside the logotype instead of above it. */
+    row?: boolean;
+  } = $props();
 
   function contour(cx: number, cy: number, r: number, harm: [number, number, number][]): string {
     const n = 72;
@@ -40,10 +50,13 @@
       HARM.map(([a, f, p]) => [a * (1 - i * 0.18), f, p + i * 0.35] as [number, number, number]),
     );
   });
-  const colors = ['#2A8F7C', '#3BC2A5', '#4FE3C1'];
+  const colors = $derived(
+    tone === 'light' ? ['#7FB8AC', '#2E8C79', '#0E6B5A'] : ['#2A8F7C', '#3BC2A5', '#4FE3C1'],
+  );
+  const summit = $derived(tone === 'light' ? '#C98A16' : '#F2B84B');
 </script>
 
-<div class="logo" class:animated style="--s:{size}px">
+<div class="logo" class:animated class:row style="--s:{size}px">
   <svg viewBox="150 150 724 724" width={size} height={size} aria-label="Isoline">
     {#each rings as d, i (i)}
       <path
@@ -56,7 +69,7 @@
         style="animation-delay:{i * 0.22}s"
       />
     {/each}
-    <path class="summit" d="M471,428 L508,474 L471,520 L434,474 Z" fill="#F2B84B" />
+    <path class="summit" d="M471,428 L508,474 L471,520 L434,474 Z" fill={summit} />
   </svg>
   {#if wordmark}<div class="word">ISOLINE</div>{/if}
 </div>
@@ -66,6 +79,17 @@
     display: grid;
     justify-items: center;
     gap: calc(var(--s) * 0.08);
+  }
+  .row {
+    grid-auto-flow: column;
+    align-items: center;
+    gap: calc(var(--s) * 0.16);
+  }
+  .row .word {
+    font-size: calc(var(--s) * 0.42);
+    letter-spacing: 0.2em;
+    padding-left: 0;
+    line-height: 1;
   }
   .word {
     font-family: var(--title);

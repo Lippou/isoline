@@ -15,8 +15,10 @@ export interface Building {
   cooldown: number;
   /** Silo tube reload timers (ticks until loaded, 0 = ready). */
   tubes: number[];
-  /** Production timers (merchant ships, trains, aircraft). */
+  /** Factory: first tick at which it may launch its next train. */
   timer: number;
+  /** Port: consecutive failed merchant spawn rolls (OpenFront's pity timer). */
+  rejections: number;
   createdTick: number;
   alive: boolean;
   /** Gold actually paid (for the 25 % demolition refund). */

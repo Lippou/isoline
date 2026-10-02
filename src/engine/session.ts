@@ -103,15 +103,23 @@ export class Session {
       this.source?.ack(u.tick);
       if (u.hash !== undefined) for (const f of this.hashListeners) f(u.tick, u.hash);
       for (const f of this.listeners) f(u, events);
-      if (u.phase === 'ended' && !this.ended) this.ended = true;
+      // 'ended' can switch back to 'playing' when the players choose to carry on.
+      this.ended = u.phase === 'ended';
     };
-    const ready = await this.sim.init(this.config, src, this.viewer, this.opts.snapshot);
+    // A save arrives through the app state as a reactive proxy, which the worker cannot
+    // receive either (DataCloneError): hand it a plain copy (saves are plain JSON).
+    const snapshot = this.opts.snapshot
+      ? (JSON.parse(JSON.stringify(this.opts.snapshot)) as Snapshot)
+      : undefined;
+    const ready = await this.sim.init(this.config, src, this.viewer, snapshot);
     this.loadMs = performance.now() - t0;
     this.state.init(ready);
     for (const f of this.readyListeners) f(ready);
     // Turn source.
     if (this.kind === 'replay' && this.opts.replay) {
-      const rp = new ReplayPlayer(this.opts.replay);
+      // Plain copy too: a replay handed over by the UI's launch state is a reactive proxy,
+      // and its commands could not be posted to the worker.
+      const rp = new ReplayPlayer(JSON.parse(JSON.stringify(this.opts.replay)) as ReplayFile);
       rp.onTurns = (turns) => this.sim.turns(turns);
       this.replay = rp;
       this.source = rp;

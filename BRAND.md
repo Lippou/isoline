@@ -66,7 +66,53 @@ de 185 px, ombre portée douce et liseré intérieur. Le `.icns` contient les 10
 **Zone de protection** : un quart de la hauteur du symbole autour du logo. **Taille minimale** du
 logo complet : 120 px de large.
 
-## 4. Palette
+## 4. Direction artistique 1.2 : « Levé hydrographique »
+
+**Idée.** Isoline est un levé cartographique **en plein jour**. La référence n'est pas le vieux
+parchemin, mais la **carte marine moderne** : papier blanc froid, bleus de hauts-fonds, encre marine,
+terres chamois, et le **magenta**, que les cartes marines réservent aux dangers. Il marque ici le
+nucléaire, la guerre et les alertes. Le laiton reste la couleur de l'or.
+
+**Une seule signature : les isolignes qui se tracent.** Des courbes de niveau, celles du logo,
+se dessinent d'elles-mêmes. Elles s'ouvrent autour du sommet du logo à l'accueil, balaient l'écran
+pendant les transitions et ondulent pendant les chargements. Ce motif, qui donne son nom au jeu, n'a
+qu'un rôle de signature. Tout le reste reste calme : pas de dégradés décoratifs, pas d'ombres
+partout, pas d'animation gratuite.
+
+### 4.1 Deux thèmes, une même encre
+
+| Rôle | Menus (thème « carte », clair) | Jeu (thème « encre », sombre, lisible sur la carte) |
+|---|---|---|
+| Fond | Papier `#EEF3F2` | Encre profonde `#0C1A26` |
+| Panneaux | `#FAFCFB` / `#E8F0F0` / `#DCE8EA` | `#0E1D2A` / `#142636` / `#1B3044` |
+| Filets | `#C9D8DC` / `#9DB4BC` | `#253D52` / `#3A5770` |
+| Texte | Encre marine `#16324A` | Papier `#EEF3F2` |
+| Texte secondaire | `#4B6478` / `#7D93A2` | `#9FB3C2` / `#6B8394` |
+| Sélection, focus | Brasse `#2C6E91` | Haut-fond `#6FB3D8` |
+| Or, action principale | Laiton `#B8862A` | Laiton `#D6A53F` |
+| Danger, nucléaire, guerre | Magenta `#B3245F` | Magenta `#E0456F` |
+| Succès, alliance | Vert sonde `#2F7D55` | `#5BC98A` |
+
+Les jetons CSS gardent leurs noms historiques (`--parchment` est la couleur du texte, `--aurora`
+celle de la sélection). Le thème « carte » s'applique à tous les écrans hors partie (classe `chart`).
+
+### 4.2 Règles
+
+- **Casse normale partout** : plus d'étiquettes en capitales espacées. La hiérarchie passe par la
+  taille, la graisse et l'espace.
+- **Chiffres** en IBM Plex Sans à chasse fixe des chiffres (`tabular-nums`), pas en police
+  monospace.
+- **Légendes plutôt que cartes** : les listes d'actions et d'options suivent une légende de carte
+  (pictogramme, libellé, explication courte), alignées à gauche.
+- **Cartouche** : le seul cadre décoratif est le cartouche du titre (double filet fin et épais,
+  comme le cadre d'une carte). Il n'apparaît que sur l'écran d'accueil.
+- **Mouvement** : un moment orchestré par écran au plus, plus des réponses aux actions (survol,
+  sélection, confirmation). `prefers-reduced-motion` et le réglage « Réduire les animations »
+  coupent tout.
+- **Carte de jeu claire** : ombrage du relief adouci, mers plus claires, cycle jour/nuit réduit à un
+  crépuscule léger.
+
+## 4 bis. Palette 1.1 (historique)
 
 Version 1.1 : l'interface passe à une palette sobre d'« état-major ». Les noms historiques des jetons
 CSS sont conservés.
@@ -141,12 +187,15 @@ résumés). Signaux tactiques illustrés à la place des emojis.
 
 | Rôle | Police | Graisses | Source |
 |---|---|---|---|
-| Titres, noms de pays sur la carte | **IBM Plex Serif** | 500, 600 | `@fontsource/ibm-plex-serif` (OFL 1.1) |
-| Logotype | **Fraunces** (Undercase Type) | 600 | `@fontsource/fraunces` (OFL 1.1) |
-| Interface, texte | **IBM Plex Sans** | 400, 500, 600 | `@fontsource/ibm-plex-sans` (OFL 1.1) |
-| Nombres, compteurs | **IBM Plex Mono** | 400, 600 | `@fontsource/ibm-plex-mono` (OFL 1.1) |
+| Logotype, titres d'écran, noms de missions | **Fraunces** (Undercase Type) | 400, 600, 700 | `@fontsource/fraunces` (OFL 1.1) |
+| Lignes d'ambiance, noms d'eaux, slogan | **Fraunces italique** | 400 | idem |
+| Interface, texte, chiffres (`tabular-nums`) | **IBM Plex Sans** | 400, 500, 600 | `@fontsource/ibm-plex-sans` (OFL 1.1) |
+| Noms de pays sur la carte de jeu | **IBM Plex Serif** | 500, 600 | `@fontsource/ibm-plex-serif` (OFL 1.1) |
+| Code (outils de développement uniquement) | IBM Plex Mono | 400, 600 | `@fontsource/ibm-plex-mono` (OFL 1.1) |
 
-Les fichiers WOFF2 sont intégrés au bundle de l'application par Vite : aucun chargement réseau.
+Depuis la version 1.2, les chiffres de l'interface utilisent IBM Plex Sans à chasse fixe des chiffres
+plutôt qu'une police monospace (§4.2). Les fichiers WOFF2 sont intégrés au bundle de l'application
+par Vite : aucun chargement réseau.
 
 ## 7. Écrans de marque
 

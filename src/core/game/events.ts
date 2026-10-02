@@ -2,6 +2,13 @@
 
 export type NotifyLevel = 'info' | 'good' | 'warn' | 'danger';
 
+/**
+ * How a country fell: its last tile was taken by `by` ('conquered'), it gave up
+ * ('surrender'), a nuclear blast razed it ('nuked') or the battle royale zone
+ * closed on it ('zone').
+ */
+export type EliminationCause = 'conquered' | 'surrender' | 'nuked' | 'zone';
+
 export type GameEvent =
   | {
       k: 'notify';
@@ -33,13 +40,20 @@ export type GameEvent =
   | { k: 'ping'; from: number; tile: number; kind: number }
   | { k: 'built'; owner: number; kind: number; tile: number }
   | { k: 'alliance'; a: number; b: number; on: boolean }
+  /** `by` turned down `from`'s alliance offer (`silent`: left unanswered until it lapsed). */
+  | { k: 'allyRefused'; from: number; by: number; silent: boolean }
   | { k: 'betrayal'; traitor: number; victim: number }
   | { k: 'worldEvent'; id: string; until: number }
   | { k: 'council'; phase: 'open' | 'result'; option: number; options: number[] }
-  | { k: 'eliminated'; player: number; by: number }
+  | { k: 'eliminated'; player: number; by: number; cause: EliminationCause }
   | { k: 'secession'; from: number; tribe: number; tile: number }
   | { k: 'general'; player: number; ability: string; tile: number }
   | { k: 'trainPay'; x: number; y: number; owner: number; amount: number }
   | { k: 'tradePay'; x: number; y: number; owner: number; amount: number }
   | { k: 'loot'; x: number; y: number; owner: number; amount: number }
-  | { k: 'gameOver'; winner: number; team: number; reason: string };
+  /** `player`'s capital fell to `by` (0: razed by a nuke or the zone); `gold`: treasury seized or burnt. */
+  | { k: 'capitalLost'; player: number; by: number; tile: number; gold: number }
+  | { k: 'capitalMoved'; player: number; tile: number }
+  | { k: 'gameOver'; winner: number; team: number; reason: string }
+  /** A human resumed the match after its end (sandbox, no further victory). */
+  | { k: 'gameContinued'; by: number };

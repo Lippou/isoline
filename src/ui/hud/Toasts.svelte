@@ -45,7 +45,7 @@
     text-align: center;
   }
   .toast.link {
-    cursor: pointer;
+    cursor: var(--cursor-pointer, pointer);
   }
   .toast.good {
     border-left-color: var(--verdant);

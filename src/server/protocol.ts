@@ -2,6 +2,7 @@
 import type { GameConfig, GeneralType } from '../core/game/config';
 import type { Command, Turn } from '../core/net/commands';
 import type { Snapshot } from '../core/net/snapshot';
+import type { PlayerFlag } from '../core/data/flagSpec';
 
 export const NET_VERSION = 1;
 
@@ -16,6 +17,8 @@ export interface LobbyPlayer {
   host: boolean;
   playerId: number; // assigned at start (-1 before / spectators)
   ping: number;
+  /** Flag chosen in the player's profile (sanitised by the host). */
+  flag?: PlayerFlag;
 }
 
 export interface LobbyState {
@@ -28,9 +31,17 @@ export interface LobbyState {
 }
 
 export type ClientMsg =
-  | { t: 'hello'; name: string; version: number; spectator: boolean; code: string; token?: string }
+  | {
+      t: 'hello';
+      name: string;
+      version: number;
+      spectator: boolean;
+      code: string;
+      token?: string;
+      flag?: PlayerFlag;
+    }
   | { t: 'ready'; ready: boolean }
-  | { t: 'profile'; team: number; general: GeneralType }
+  | { t: 'profile'; team: number; general: GeneralType; flag?: PlayerFlag | null }
   | { t: 'cmd'; c: Command }
   | { t: 'hash'; tick: number; hash: number }
   | { t: 'chat'; channel: 'all' | 'team' | 'allies'; text: string }

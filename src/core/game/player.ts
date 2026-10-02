@@ -1,7 +1,7 @@
 // Player state. Plain data + small helpers; systems live in their own modules.
 import type { GeneralType } from './config';
 import type { LocalizedName } from '../map/gamemap';
-import { BUILDING_COUNT, DEFAULT_TROOP_RATIO } from './constants';
+import { BUILDING_COUNT } from './constants';
 
 export type PlayerKind = 'human' | 'nation' | 'tribe';
 export type Personality = 'expansionist' | 'builder' | 'merchant' | 'diplomat' | 'isolationist' | 'warmonger';
@@ -59,16 +59,19 @@ export class Player {
   surrendered = false;
 
   troops = 0;
+  /** Always 0: troops are the whole population (field kept for older code paths and saves). */
   workers = 0;
-  troopRatio = DEFAULT_TROOP_RATIO;
   gold = 0;
   tiles = 0;
-  /** Tiles that do not carry fallout (victory / territory bonus). */
+  /** Tiles that do not carry fallout (victory / troop ceiling). */
   usefulTiles = 0;
+  /** Troop ceiling (maxTroops), refreshed every tick by the economy. */
   popCap = 0;
+  /** Troops gained (or lost above the ceiling) during the last tick. */
   lastGrowth = 0;
-  income = 0; // gold per tick (last computed)
-  incomeBreakdown = { base: 0, workers: 0, trade: 0, trains: 0, resources: 0 };
+  income = 0; // passive gold per tick (last computed)
+  /** Per second for base/resources; trade and trains are decaying averages of the payouts. */
+  incomeBreakdown = { base: 0, trade: 0, trains: 0, resources: 0 };
 
   /** Dense list of owned tiles that touch a different-owner land tile. */
   border: number[] = [];
@@ -79,12 +82,11 @@ export class Player {
   sumY = 0;
 
   buildingCount = new Int32Array(BUILDING_COUNT);
+  /** Levels of owned cities (under construction included). */
   cityLevels = 0;
-  /** Shared port/factory purchase counter. */
-  portFactoryBought = 0;
-  cityBought = 0;
-  defenseBought = 0;
-  warshipsBought = 0;
+  /** Levels ever built per building type (placements + upgrades): caps the price ladders. */
+  levelsBuilt = new Int32Array(BUILDING_COUNT);
+  warshipsBuilt = 0;
   mirvLaunched = 0;
 
   allies = new Map<number, number>(); // ally id → expiry tick
@@ -95,17 +97,35 @@ export class Player {
   debuffUntil = -1;
   immuneUntil = -1;
   betrayedBy = new Map<number, number>(); // who betrayed me (id → tick)
+  /** OpenFront's relations: my feeling towards each player, −100 … 100 (absent = 0), easing back to 0. */
+  relations = new Map<number, number>();
 
-  // Tech tree (5 branches × 4 levels) and research.
-  tech = new Uint8Array(5);
+  // Tech tree (rules/tech.ts): level reached in each of the 6 branches (beyond 6: levels of
+  // the branch's repeatable technology), banked research points, the technology aimed at
+  // (-1: none; its prerequisites are studied first) and the goals queued after it.
+  tech = new Uint8Array(6);
   researchPoints = 0;
   researching = -1;
+  researchQueue: number[] = [];
+  /** Levels of completed research centres (refreshed every tick when the tree is on). */
+  labLevels = 0;
 
   // Generals.
   generalReadyTick = 0;
   blitzUntil = -1;
   rampartUntil = -1;
   propagandaUntil = -1;
+
+  // Capital (rules/capital.ts): the seat of government, set on the spawn tile at the start.
+  /** Capital tile, -1 when there is none (lost and not re-established yet, or a tribe). */
+  capital = -1;
+  /** The loss of the capital disorganises the country until this tick. */
+  disorgUntil = -1;
+  /** When the capital fell (-1: one is held, or there never was one), and who took it (0: razed). */
+  capitalLostTick = -1;
+  capitalLostBy = 0;
+  /** When the capital was last established or moved (voluntary moves wait CAPITAL_MOVE_COOLDOWN). */
+  capitalSetTick = -1;
 
   // Doomsday warnings.
   doomsdayWarned = false;
@@ -144,6 +164,15 @@ export class Player {
 
   isTraitor(tick: number): boolean {
     return this.traitorUntil > tick;
+  }
+
+  relation(other: number): number {
+    return this.relations.get(other) ?? 0;
+  }
+
+  updateRelation(other: number, delta: number): void {
+    if (other === this.id) return;
+    this.relations.set(other, Math.max(-100, Math.min(100, this.relation(other) + delta)));
   }
 
   hasEmbargoWith(other: Player, tick: number): boolean {

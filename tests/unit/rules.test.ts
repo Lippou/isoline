@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { asciiMap, testGame, startWith, cmd, makeGame, run, invariants } from '../helpers';
 import {
   ALLIANCE_TICKS,
+  ATTACK_RELATION,
+  RELATION_BETRAYED,
+  RELATION_TRAITOR_NEIGHBOR,
+  TEMP_EMBARGO_TICKS,
+  TRAITOR_MARK_TICKS,
   B,
   OVERTIME_START,
   DOOMSDAY_GRACE,
@@ -12,7 +17,7 @@ import {
 } from '../../src/core/game/constants';
 import { currentThreshold } from '../../src/core/rules/victory';
 import { placeBuilding, buildCost } from '../../src/core/buildings/buildings';
-import { nextTechCost, techSam, techSpeedMultiplier, TECH_COST } from '../../src/core/rules/tech';
+import { nextTechCost, techId, techSam, techSpeedMultiplier, TIER_COST } from '../../src/core/rules/tech';
 import { recountResources, resourceBonus } from '../../src/core/rules/resources';
 import { Resource } from '../../src/core/map/terrain';
 import { hashGame } from '../../src/core/net/hash';
@@ -85,17 +90,149 @@ describe('diplomacy', () => {
     expect(a.embargo.has(2)).toBe(true);
     g.step([cmd(1, { t: 'allyBreak', target: 2 })]);
     expect(a.allies.has(2)).toBe(false);
+    // Breaking an alliance is a betrayal (as in OpenFront): traitor for 30 s.
+    expect(a.isTraitor(g.tick)).toBe(true);
+    for (let k = 0; k < TRAITOR_MARK_TICKS; k++) g.step([]);
     expect(a.isTraitor(g.tick)).toBe(false);
+  });
+
+  it('an attacked country stops trading with its attacker and resents it; an alliance lifts the embargo', () => {
+    const g = testGame(asciiMap(FIELD, 6), 2);
+    startWith(g, [
+      [25, 20],
+      [45, 20],
+    ]);
+    // They touch (and player 2 is big enough not to be annexed on the first tile it loses).
+    for (let y = 6; y < 36; y++) for (let x = 6; x < 80; x++) g.setOwner(g.map.idx(x, y), x < 41 ? 1 : 2);
+    const [a, b] = [g.players[1]!, g.players[2]!];
+    a.troops = 80_000;
+    expect(a.hasEmbargoWith(b, g.tick)).toBe(false);
+    g.step([cmd(1, { t: 'attack', tile: g.map.idx(45, 20), ratio: 0.3 })]);
+    expect(b.embargoUntil.get(1)).toBe(g.tick - 1 + TEMP_EMBARGO_TICKS);
+    expect(a.hasEmbargoWith(b, g.tick)).toBe(true);
+    expect(b.relation(1)).toBe(ATTACK_RELATION.normal); // OpenFront: −70 on medium
+    g.step([cmd(1, { t: 'allyRequest', target: 2 })]);
+    g.step([cmd(2, { t: 'allyAnswer', target: 1, accept: true })]);
+    expect(a.hasEmbargoWith(b, g.tick)).toBe(false);
   });
 
   it('validates command shapes', () => {
     expect(isWellFormed({ t: 'attack', tile: 3, ratio: 0.5 })).toBe(true);
     expect(isWellFormed({ t: 'attack', tile: 3, ratio: 2 })).toBe(false);
     expect(isWellFormed({ t: 'nuke', kind: 0, tile: 1, count: 99 })).toBe(false);
+    expect(isWellFormed({ t: 'nuke', kind: 0, tile: 1, count: 2, up: false })).toBe(true);
+    expect(isWellFormed({ t: 'nuke', kind: 0, tile: 1, count: 2, up: 'down' })).toBe(false);
     expect(isWellFormed({ t: 'bogus' })).toBe(false);
     expect(isWellFormed(null)).toBe(false);
     expect(isWellFormed({ t: 'shipMove', ids: [1, 2], tile: 4, patrol: true })).toBe(true);
-    expect(isWellFormed({ t: 'troopRatio', ratio: 0 })).toBe(true);
+    expect(isWellFormed({ t: 'boatRetreat', id: 12 })).toBe(true);
+    expect(isWellFormed({ t: 'boatRetreat', id: 1.5 })).toBe(false);
+    expect(isWellFormed({ t: 'boatRetreat' })).toBe(false);
+  });
+});
+
+describe('betrayal (OpenFront)', () => {
+  /** Player 1 (west) betrays its ally 2 (far east); 3 and 4 border player 1, 4 is 2's teammate. */
+  function betrayal() {
+    const g = testGame(asciiMap(FIELD, 6), 4);
+    startWith(g, [
+      [25, 20],
+      [95, 20],
+      [48, 12],
+      [48, 28],
+    ]);
+    const own = (pid: number, x0: number, y0: number, x1: number, y1: number) => {
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) g.setOwner(g.map.idx(x, y), pid);
+    };
+    own(1, 6, 6, 40, 36);
+    own(3, 40, 6, 60, 21);
+    own(4, 40, 21, 60, 36);
+    const [p1, p2, p3, p4] = [1, 2, 3, 4].map((id) => g.players[id]!);
+    p2!.team = p4!.team = 1;
+    g.step([cmd(1, { t: 'allyRequest', target: 2 }), cmd(2, { t: 'allyRequest', target: 1 })]);
+    expect(p1!.allies.has(2)).toBe(true);
+    return { g, p1: p1!, p2: p2!, p3: p3!, p4: p4! };
+  }
+
+  it('the traitor is marked 30 s; the victim turns hostile (−100), its other neighbours distrustful (−40)', () => {
+    const { g, p1, p2, p3, p4 } = betrayal();
+    g.step([cmd(1, { t: 'allyBreak', target: 2 })]);
+    expect(p1.isTraitor(g.tick)).toBe(true);
+    expect(p1.traitorUntil - g.tick + 1).toBe(TRAITOR_MARK_TICKS);
+    expect(p1.debuffUntil).toBe(p1.traitorUntil);
+    expect(p2.relation(1)).toBe(RELATION_BETRAYED);
+    expect(p3.relation(1)).toBe(RELATION_TRAITOR_NEIGHBOR);
+    expect(p4.relation(1)).toBe(0); // the victim's teammate is spared the neighbour malus
+    expect(p2.hasEmbargoWith(p1, g.tick)).toBe(true);
+    // Relations ease back to neutral by 0.05 a tick.
+    const t0 = g.tick;
+    while (g.tick < t0 + 100) g.step([]);
+    expect(p2.relation(1)).toBeCloseTo(-95, 9);
+    expect(p3.relation(1)).toBeCloseTo(-35, 9);
+    run(g, 2000);
+    expect(p2.relations.has(1)).toBe(false);
+    expect(p1.isTraitor(g.tick)).toBe(false);
+  });
+
+  it('nations distrust a traitor: they refuse its alliances, drop it as an ally and attack it', () => {
+    const { g, p1 } = betrayal();
+    // Player 3's land goes to a nation allied with the future traitor, player 4's and the
+    // west of player 1's to four tribes.
+    const n = g.addPlayer({ fr: 'N', en: 'N' }, 'nation');
+    const tribes = [0, 1, 2, 3].map((k) => g.addPlayer({ fr: `T${k}`, en: `T${k}` }, 'tribe'));
+    for (let y = 6; y < 36; y++) {
+      for (let x = 40; x < 60; x++) g.setOwner(g.map.idx(x, y), y < 21 ? n.id : tribes[0]!.id);
+      for (let x = 6; x < 20; x++) g.setOwner(g.map.idx(x, y), tribes[1 + Math.floor((y - 6) / 10)]!.id);
+    }
+    for (const q of [n, ...tribes]) {
+      q.spawned = true;
+      q.alive = true;
+      q.troops = 1_000_000; // (cut back to their ceilings by the economy)
+    }
+    n.personality = 'diplomat';
+    g.step([cmd(1, { t: 'allyRequest', target: n.id }), cmd(n.id, { t: 'allyRequest', target: 1 })]);
+    expect(p1.allies.has(n.id)).toBe(true);
+    p1.troops = 100_000; // under ×1.2 the nation's army: fair game
+    g.step([cmd(1, { t: 'allyBreak', target: 2 })]);
+    expect(p1.isTraitor(g.tick)).toBe(true);
+    expect(n.relation(1)).toBe(RELATION_TRAITOR_NEIGHBOR);
+    let nationAttack = false;
+    let tribeAttack = false;
+    const t0 = g.tick;
+    while (g.tick < t0 + TRAITOR_MARK_TICKS) {
+      g.step([]);
+      for (const a of g.attacks) {
+        if (a.target !== 1) continue;
+        if (a.attacker === n.id) nationAttack = true;
+        if (tribes.some((q) => q.id === a.attacker)) tribeAttack = true; // one think in three
+      }
+    }
+    expect(nationAttack).toBe(true);
+    expect(tribeAttack).toBe(true);
+    // The nation dropped its traitor ally without becoming a traitor itself.
+    expect(n.allies.has(1)).toBe(false);
+    expect(n.isTraitor(g.tick)).toBe(false);
+  });
+
+  it('a nation that resents the traitor turns down its alliance requests', () => {
+    const { g, p1 } = betrayal();
+    const n = g.addPlayer({ fr: 'N', en: 'N' }, 'nation');
+    for (let y = 6; y < 21; y++) for (let x = 40; x < 60; x++) g.setOwner(g.map.idx(x, y), n.id);
+    n.spawned = true;
+    n.alive = true;
+    n.personality = 'diplomat';
+    p1.troops = 200_000; // too strong for the nation to fall on it
+    g.step([cmd(1, { t: 'allyBreak', target: 2 })]);
+    expect(n.relation(1)).toBe(RELATION_TRAITOR_NEIGHBOR);
+    g.step([cmd(1, { t: 'allyRequest', target: n.id })]);
+    let refused = false;
+    for (let k = 0; k < 150 && !refused; k++) {
+      g.step([]);
+      refused = g.events.some((e) => e.k === 'notify' && e.to === 1 && e.key === 'notify.allianceRefused');
+    }
+    expect(refused).toBe(true);
+    expect(p1.allies.has(n.id)).toBe(false);
+    expect(g.attacks.some((a) => a.attacker === n.id && a.target === 1)).toBe(false);
   });
 });
 
@@ -111,8 +248,10 @@ describe('victory & modes', () => {
     expect(currentThreshold(g)).toBe(80);
     g.startTick = g.tick - OVERTIME_START - 5 * 600 - 1;
     expect(currentThreshold(g)).toBe(70);
-    g.startTick = g.tick - OVERTIME_START - 60 * 600;
+    g.startTick = g.tick - OVERTIME_START - 3 * 5 * 600 - 1;
     expect(currentThreshold(g)).toBe(50);
+    g.startTick = g.tick - OVERTIME_START - 120 * 600;
+    expect(currentThreshold(g)).toBe(35); // floor: 35 % from 60 min on
     g.startTick = g.tick;
     const p = g.players[1]!;
     for (let i = 0; i < g.map.size; i++)
@@ -125,18 +264,20 @@ describe('victory & modes', () => {
   });
 
   it('doomsday clock drains players below the threshold', () => {
-    const g = testGame(asciiMap(FIELD, 6), 2, { mode: 'doomsday' });
+    const g = testGame(asciiMap(FIELD, 12), 2, { mode: 'doomsday' });
     startWith(g, [
       [25, 20],
       [80, 20],
     ]);
     g.startTick = g.tick - DOOMSDAY_GRACE - 1;
     const p = g.players[2]!;
-    p.troops = 100_000;
+    g.step([]);
+    p.troops = p.popCap; // at the troop ceiling: no regeneration to offset the drain
+    const troops = p.troops;
     for (let k = 0; k < 40; k++) g.step([]);
     expect(g.victory.doomsday).toBe(2);
-    // ~1.7 % share each: both under 2 % → troops drain.
-    expect(p.troops).toBeLessThan(100_000);
+    // ~1.5 % share each: both under 2 % → troops drain.
+    expect(p.troops).toBeLessThan(troops);
   });
 
   it('battle royale shrinks the ring and kills outer tiles', () => {
@@ -150,16 +291,74 @@ describe('victory & modes', () => {
     expect(g.usefulLand).toBeLessThan(land);
     expect(g.isDead(g.map.idx(7, 7))).toBe(true);
   });
+
+  it('a human can keep playing after the end: no further victory, the result is kept', () => {
+    /** Player 1 wins on territory; `extra` commands are then applied tick by tick. */
+    const play = (extra: (tick: number) => StampedCommand[]) => {
+      const g = testGame(asciiMap(FIELD, 4), 2, { victoryThreshold: 80 });
+      startWith(g, [
+        [10, 10],
+        [70, 10],
+      ]);
+      g.addPlayer({ fr: 'Nation', en: 'Nation' }, 'nation');
+      // Asked while the match is running: nothing happens.
+      g.step([cmd(1, { t: 'continue' })]);
+      expect(g.victory.continued).toBeUndefined();
+      for (let i = 0; i < g.map.size; i++)
+        if (g.map.isLand(i) && g.owner[i] === 0 && g.map.x(i) < 68) g.setOwner(i, 1);
+      for (let k = 0; k < 10; k++) g.step([]);
+      expect(g.phase).toBe('ended');
+      const end = g.tick;
+      for (let k = 0; k < 120; k++) g.step(extra(g.tick - end));
+      return g;
+    };
+    expect(isWellFormed({ t: 'continue' })).toBe(true);
+    const script = (k: number): StampedCommand[] =>
+      k === 3
+        ? [cmd(3, { t: 'continue' })] // not a human: ignored
+        : k === 5
+          ? [cmd(1, { t: 'continue' })]
+          : k === 40
+            ? [cmd(2, { t: 'surrender' })] // the last rival falls: still no end
+            : [];
+    const g = play(script);
+    expect(g.phase).toBe('playing');
+    expect(g.victory.continued).toBe(true);
+    expect(g.victory.winner).toBe(1);
+    expect(g.victory.reason).toBe('territory');
+    expect(g.victory.endTick).toBeLessThan(g.tick - 100);
+    expect(g.players[2]!.alive).toBe(false);
+    // The simulation runs again: the economy pays, attacks can be launched.
+    const p = g.players[1]!;
+    const gold = p.gold;
+    g.step([cmd(1, { t: 'attack', tile: g.map.idx(75, 10), ratio: 0.5 })]);
+    expect(g.attacks.length).toBe(1);
+    for (let k = 0; k < 20; k++) g.step([]);
+    expect(p.gold).toBeGreaterThan(gold);
+    expect(g.phase).toBe('playing');
+    // The command goes through the log: replays and snapshots stay deterministic.
+    expect(hashGame(play(script))).toBe(hashGame(play(script)));
+    const r = restoreSnapshot(g.map, snapshotFromJson(snapshotToJson(takeSnapshot(g))));
+    expect(r.phase).toBe('playing');
+    expect(r.victory.continued).toBe(true);
+    for (let k = 0; k < 20; k++) [g, r].forEach((x) => x.step([]));
+    expect(hashGame(r)).toBe(hashGame(g));
+    // Without the command, the match stays over.
+    const idle = play(() => []);
+    expect(idle.phase).toBe('ended');
+  });
 });
 
 describe('original features', () => {
-  it('research progresses with cities and applies effects', () => {
+  it('research progresses with research centres and applies effects', () => {
     const g = testGame(asciiMap(FIELD, 6), 1, { victoryThreshold: 101 });
+    g.config.features.tech = true;
     startWith(g, [[30, 20]]);
     const p = g.players[1]!;
-    p.cityLevels = 9;
-    g.step([cmd(1, { t: 'research', tech: 1 })]);
-    expect(nextTechCost(p, 1)).toBe(TECH_COST[0]);
+    placeBuilding(g, p, B.Lab, g.map.idx(30, 20), true)!.level = 5;
+    const logistics = techId('military.2'); // prerequisites studied on the way
+    g.step([cmd(1, { t: 'research', tech: logistics })]);
+    expect(nextTechCost(p, logistics)).toBe(TIER_COST[0]);
     for (let k = 0; k < 2000; k++) g.step([]);
     expect(p.tech[1]).toBeGreaterThanOrEqual(2);
     expect(techSpeedMultiplier(p)).toBeGreaterThan(1);
@@ -225,7 +424,6 @@ describe('original features', () => {
     for (let i = 0; i < g.map.size; i++) if (g.map.isLand(i) && g.owner[i] === 0) g.setOwner(i, 1);
     g.loyalty.fill(10);
     p.troops = 100;
-    p.troopRatio = 0.05; // keep the garrison thin
     let seceded = false;
     for (let k = 0; k < 400 && !seceded; k++) {
       g.step([]);
@@ -246,6 +444,20 @@ describe('original features', () => {
 });
 
 describe('determinism & snapshots', () => {
+  it('migrates 1.1.0 snapshots: build counters are rebuilt from the buildings held', () => {
+    const g = testGame(asciiMap(FIELD, 6), 1);
+    startWith(g, [[25, 20]]);
+    g.config.features.resources = false;
+    g.config.features.tech = false;
+    placeBuilding(g, g.players[1]!, B.City, g.map.idx(25, 20), true);
+    const old = JSON.parse(snapshotToJson(takeSnapshot(g))) as ReturnType<typeof takeSnapshot>;
+    old.version = 1;
+    delete (old.players[1] as Record<string, unknown>).levelsBuilt;
+    const r = restoreSnapshot(g.map, old);
+    expect(r.players[1]!.levelsBuilt[B.City]).toBe(1);
+    expect(buildCost(r, r.players[1]!, B.City)).toBe(250_000);
+  });
+
   const script = (tick: number): StampedCommand[] => {
     if (tick === 5) return [{ p: 1, c: { t: 'spawn', tile: 0 } }];
     return [];
@@ -301,7 +513,7 @@ describe('sandbox threshold', () => {
     );
     for (const [th, expected] of [
       [101, 101],
-      [80, 50],
+      [80, 35], // 60 min in: the overtime floor
     ] as const) {
       const g = testGame(map, 2, { victoryThreshold: th });
       startWith(g, [

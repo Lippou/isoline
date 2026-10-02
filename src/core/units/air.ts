@@ -13,7 +13,6 @@ import {
   FIGHTER_RANGE,
   RECON_RADIUS,
   RECON_TICKS,
-  SAM_COOLDOWN,
   samRange,
   sec,
 } from '../game/constants';
@@ -21,6 +20,9 @@ import { U, makeUnit, type Unit } from './unit';
 import { addUnit, unitById } from './ships';
 import type { Building } from '../buildings/building';
 import { destroyRailsInRadius } from './trains';
+import { samFire, samLoaded } from './nukes';
+import { airLock } from '../rules/tech';
+import { airSpeedAt } from '../rules/weather';
 
 const TYPE_OF: Record<number, U> = { [A.Fighter]: U.Fighter, [A.Bomber]: U.Bomber, [A.Recon]: U.Recon };
 
@@ -43,6 +45,7 @@ function airfieldFor(game: Game, p: Player, tx: number, ty: number): Building | 
 
 export function launchAircraft(game: Game, p: Player, kind: A, tile: number): boolean {
   if (!game.config.features.air || game.phase !== 'playing') return false;
+  if (airLock(game, p) >= 0) return false; // tech tree: Aerospace (even from a captured airfield)
   const cost = AIR_COST[kind];
   if (p.gold < cost) return false;
   const w = game.map.width;
@@ -70,17 +73,18 @@ export function launchAircraft(game: Game, p: Player, kind: A, tile: number): bo
   return true;
 }
 
-function flyTo(u: Unit, tx: number, ty: number): boolean {
+/** Fly one tick towards (tx, ty) at `speed` (storms slow aircraft); true on arrival. */
+function flyTo(u: Unit, tx: number, ty: number, speed: number): boolean {
   const dx = tx - u.x;
   const dy = ty - u.y;
   const d = Math.hypot(dx, dy);
-  if (d <= u.speed) {
+  if (d <= speed) {
     u.x = tx;
     u.y = ty;
     return true;
   }
-  u.x += (dx / d) * u.speed;
-  u.y += (dy / d) * u.speed;
+  u.x += (dx / d) * speed;
+  u.y += (dy / d) * speed;
   return false;
 }
 
@@ -127,13 +131,15 @@ export function updateAir(game: Game): void {
   if (planes.length === 0) return;
   // SAMs also shoot down bombers in range.
   for (const sam of game.buildings.values()) {
-    if (sam.type !== B.Sam || sam.buildLeft > 0 || sam.cooldown > 0) continue;
+    if (sam.type !== B.Sam || sam.buildLeft > 0) continue;
+    const slot = samLoaded(game, sam);
+    if (slot < 0) continue;
     const r = samRange(sam.level);
     for (const u of planes) {
       if (!u.alive || u.type !== U.Bomber || game.friendly(u.owner, sam.owner)) continue;
       if ((u.x - sam.x) ** 2 + (u.y - sam.y) ** 2 > r * r) continue;
       u.alive = false;
-      sam.cooldown = SAM_COOLDOWN;
+      samFire(sam, slot);
       game.emit({ k: 'intercept', x: u.x, y: u.y, owner: sam.owner });
       game.notify(u.owner, 'notify.planeLost', 'warn');
       break;
@@ -146,15 +152,16 @@ export function updateAir(game: Game): void {
       u.alive = false;
       continue;
     }
+    const speed = u.speed * airSpeedAt(game, u.x, u.y);
     if (u.type === U.Bomber) {
-      if (u.kind === 0 && flyTo(u, u.tx, u.ty)) {
+      if (u.kind === 0 && flyTo(u, u.tx, u.ty, speed)) {
         bomb(game, u);
         u.kind = 1; // returning
-      } else if (u.kind === 1 && flyTo(u, u.sx, u.sy)) {
+      } else if (u.kind === 1 && flyTo(u, u.sx, u.sy, speed)) {
         u.alive = false;
       }
     } else if (u.type === U.Recon) {
-      if (u.kind === 0 && flyTo(u, u.tx, u.ty)) {
+      if (u.kind === 0 && flyTo(u, u.tx, u.ty, speed)) {
         u.kind = 1;
         game.features.reveals.push({
           owner: u.owner,
@@ -190,7 +197,7 @@ export function updateAir(game: Game): void {
       if (tgt) {
         if (Math.hypot(tgt.x - u.sx, tgt.y - u.sy) > FIGHTER_RANGE) {
           u.target = -1;
-        } else if (flyTo(u, tgt.x, tgt.y) || Math.hypot(tgt.x - u.x, tgt.y - u.y) < 3) {
+        } else if (flyTo(u, tgt.x, tgt.y, speed) || Math.hypot(tgt.x - u.x, tgt.y - u.y) < 3) {
           tgt.hp -= 60;
           if (tgt.hp <= 0) {
             tgt.alive = false;
@@ -201,7 +208,7 @@ export function updateAir(game: Game): void {
         }
       } else {
         const a = (game.tick - u.t0) * 0.06;
-        flyTo(u, u.tx + Math.cos(a) * 14, u.ty + Math.sin(a) * 14);
+        flyTo(u, u.tx + Math.cos(a) * 14, u.ty + Math.sin(a) * 14, speed);
       }
     }
   }

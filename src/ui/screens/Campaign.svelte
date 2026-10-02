@@ -1,149 +1,465 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { go } from '../stores/app.svelte';
   import { t } from '../i18n/i18n.svelte';
   import { MISSIONS } from '../campaign/missions';
   import { profile } from '../stores/profile.svelte';
-  import { startMission, startTutorial } from './launch';
+  import { startMission } from './launch';
   import { mapsBase } from '../bridge';
   import Icon from '../icons/Icon.svelte';
+  import ChartMap from '../components/ChartMap.svelte';
+  import { nationsOfMap, type MapNation } from '../components/chartRender';
+  import { contourFamily } from '../components/contours';
 
   const unlocked = (k: number) => k === 0 || (profile.campaign[MISSIONS[k - 1]!.id] ?? 0) > 0;
   const totalStars = $derived(MISSIONS.reduce((s, m) => s + (profile.campaign[m.id] ?? 0), 0));
-  let sel = $state(0);
-  const m = $derived(MISSIONS[sel]!);
+  // Open on the first mission still to win (the frontier of the route).
+  const frontier = $derived(
+    Math.max(
+      0,
+      MISSIONS.findIndex((mi, k) => unlocked(k) && !(profile.campaign[mi.id] ?? 0)),
+    ),
+  );
+  let sel = $state(-1);
+  const at = $derived(sel < 0 ? frontier : sel);
+  const m = $derived(MISSIONS[at]!);
+  const lastOpen = $derived(MISSIONS.reduce((a, _, k) => (unlocked(k) ? k : a), 0));
+
+  // The route: stations on a chart, each mission a summit wrapped in its own contours.
+  // Laid out in the panel's own pixels, so the chart fills it without distortion.
+  let W = $state(0);
+  let H = $state(0);
+  const STATIONS: [number, number][] = [
+    [0.12, 0.74],
+    [0.28, 0.38],
+    [0.44, 0.7],
+    [0.6, 0.28],
+    [0.75, 0.6],
+    [0.88, 0.2],
+  ];
+  const pts = $derived(STATIONS.map(([x, y]) => [x * W, y * H] as [number, number]));
+  function routeTo(n: number): string {
+    const p = (i: number) => pts[Math.max(0, Math.min(n, i))]!;
+    let d = `M${p(0)[0]},${p(0)[1]}`;
+    for (let i = 0; i < n; i++) {
+      const [p0, p1, p2, p3] = [p(i - 1), p(i), p(i + 1), p(i + 2)];
+      d += `C${p1[0] + (p2[0] - p0[0]) / 6},${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6},${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]},${p2[1]}`;
+    }
+    return d;
+  }
+  const scale = $derived(Math.max(0.7, Math.min(1.3, Math.min(W / 1000, H / 620))));
+  const summits = $derived(
+    pts.map(([x, y], k) =>
+      contourFamily({
+        cx: x,
+        cy: y,
+        count: 5,
+        r0: 22 * scale,
+        step: 14 * scale,
+        growth: 1.12,
+        seed: k * 13 + 5,
+        wobble: 1.3,
+      }),
+    ),
+  );
+  const grid = $derived({
+    x: Array.from({ length: Math.floor(W / 160) }, (_, k) => (k + 1) * (W / (Math.floor(W / 160) + 1))),
+    y: Array.from({ length: Math.floor(H / 160) }, (_, k) => (k + 1) * (H / (Math.floor(H / 160) + 1))),
+  });
+
+  // Mission maps: sizes (index) and nations (the mission config keeps the first N).
+  let sizes = $state<Record<string, [number, number]>>({});
+  let nations = $state<MapNation[]>([]);
+  const missionNations = MISSIONS.map((mi) => {
+    try {
+      return mi.config(1, '').nations;
+    } catch {
+      return 0;
+    }
+  });
+  onMount(() => {
+    void fetch(`${mapsBase()}index.json`)
+      .then((r) => r.json() as Promise<{ id: string; width: number; height: number }[]>)
+      .then((l) => (sizes = Object.fromEntries(l.map((x) => [x.id, [x.width, x.height]]))))
+      .catch(() => {});
+  });
+  $effect(() => {
+    const id = m.mapId;
+    let live = true;
+    nationsOfMap(id).then(
+      (n) => live && (nations = n),
+      () => live && (nations = []),
+    );
+    return () => {
+      live = false;
+    };
+  });
 </script>
 
-<div class="camp" data-testid="campaign">
-  <header>
-    <button class="btn ghost" onclick={() => go('play')}
+<div class="camp page-shell" data-testid="campaign">
+  <header class="top">
+    <button class="btn ghost back" onclick={() => go('play')}
       ><Icon name="back" size={16} />{t('common.back')}</button
     >
     <div class="htitle">
       <h1>{t('campaign.title')}</h1>
-      <span class="hint">{t('campaign.intro')}</span>
+      <p class="sub">{t('campaign.intro')}</p>
     </div>
-    <span class="chip big"><Icon name="star" size={14} />{totalStars} / {MISSIONS.length * 3}</span>
-    <button class="btn" onclick={startTutorial}><Icon name="help" size={15} />{t('title.tutorial')}</button>
+    <div class="acts">
+      <span
+        class="stars-total"
+        aria-label={t('campaign.starsTotal', { n: totalStars, total: MISSIONS.length * 3 })}
+        ><Icon name="star" size={16} /><b class="mono">{totalStars}</b><span class="mono"
+          >/ {MISSIONS.length * 3}</span
+        ></span
+      >
+    </div>
   </header>
 
   <div class="body">
-    <ol class="list panel">
-      {#each MISSIONS as mi, k (mi.id)}
-        {@const stars = profile.campaign[mi.id] ?? 0}
-        <li>
-          <button class="row" class:on={sel === k} class:locked={!unlocked(k)} onclick={() => (sel = k)}>
-            <span class="num mono">{k + 1}</span>
-            <span class="name">{t(`campaign.${mi.id}.title`)}</span>
-            {#if unlocked(k)}
-              <span class="stars"
-                >{#each [1, 2, 3] as s (s)}<span class:got={s <= stars}><Icon name="star" size={13} /></span
-                  >{/each}</span
-              >
-            {:else}
-              <span class="lock"><Icon name="lock" size={14} /></span>
-            {/if}
-          </button>
-        </li>
-      {/each}
-    </ol>
-
-    <section class="detail panel">
-      <img src="{mapsBase()}{m.mapId}.thumb.png" alt="" />
-      <div class="dtxt">
-        <span class="section-title">{t('campaign.missionN', { n: sel + 1 })}</span>
-        <h2>{t(`campaign.${m.id}.title`)}</h2>
-        <p class="brief">{t(`campaign.${m.id}.brief`)}</p>
-        <div class="objs">
-          <div><Icon name="target" size={15} /><b>{t('campaign.objective')}</b> {t(m.main.key)}</div>
-          <div class="bonus">
-            <Icon name="star" size={15} /><b>{t('campaign.bonusLabel')}</b>
-            {t(m.bonus.key)}
-          </div>
-          <div class="muted">
-            <Icon name="time" size={15} /><b>{t('campaign.parTime')}</b>
-            {Math.round(m.parTicks / 600)} min
-          </div>
-        </div>
-        <p class="hint">{t('campaign.starsRule')}</p>
-        <div class="act">
-          {#if unlocked(sel)}
-            <button class="btn primary" onclick={() => startMission(m.id)} data-testid="mission-{m.id}"
-              ><Icon name="play" size={16} />{t('campaign.play')}</button
+    <section class="route" aria-label={t('campaign.routeLabel')} bind:clientWidth={W} bind:clientHeight={H}>
+      {#if W && H}
+        <svg viewBox="0 0 {W} {H}" width={W} height={H} aria-hidden="true">
+          <defs>
+            <mask id="route-all" maskUnits="userSpaceOnUse">
+              <path class="reveal" d={routeTo(pts.length - 1)} pathLength="1" />
+            </mask>
+            <mask id="route-done" maskUnits="userSpaceOnUse">
+              <path class="reveal late" d={routeTo(lastOpen)} pathLength="1" />
+            </mask>
+          </defs>
+          <g class="grat">
+            {#each grid.x as x (x)}<line x1={x} y1="0" x2={x} y2={H} />{/each}
+            {#each grid.y as y (y)}<line x1="0" y1={y} x2={W} y2={y} />{/each}
+          </g>
+          {#each summits as rings, k (k)}
+            <g class="summit" class:open={unlocked(k)}>
+              {#each rings as r, j (j)}<path d={r.d} />{/each}
+            </g>
+          {/each}
+          <path class="track" d={routeTo(pts.length - 1)} mask="url(#route-all)" />
+          <path class="progress" d={routeTo(pts.length - 1)} mask="url(#route-done)" />
+        </svg>
+      {/if}
+      <ol class="stations">
+        {#each MISSIONS as mi, k (mi.id)}
+          {@const stars = profile.campaign[mi.id] ?? 0}
+          <li style="left:{STATIONS[k]![0] * 100}%;top:{STATIONS[k]![1] * 100}%">
+            <button
+              class="st"
+              class:on={at === k}
+              class:done={stars > 0}
+              class:next={unlocked(k) && !stars}
+              class:locked={!unlocked(k)}
+              aria-pressed={at === k}
+              onclick={() => (sel = k)}
             >
-          {:else}
-            <span class="chip"><Icon name="lock" size={13} />{t('campaign.lockedHint')}</span>
+              <span class="mk" aria-hidden="true"></span>
+              <span class="lbl">
+                <small>{t('campaign.missionN', { n: k + 1 })}</small>
+                <b>{t(`campaign.${mi.id}.title`)}</b>
+                {#if unlocked(k)}
+                  <span class="stars" aria-label={t('campaign.starsOf', { n: stars })}
+                    >{#each [1, 2, 3] as s (s)}<span class:got={s <= stars}
+                        ><Icon name="star" size={12} /></span
+                      >{/each}</span
+                  >
+                {:else}
+                  <span class="lock"><Icon name="lock" size={12} />{t('campaign.locked')}</span>
+                {/if}
+              </span>
+            </button>
+          </li>
+        {/each}
+      </ol>
+    </section>
+
+    <section class="detail">
+      {#key m.id}
+        <div class="chartbox">
+          {#if sizes[m.mapId]}
+            <ChartMap
+              mapId={m.mapId}
+              mapW={sizes[m.mapId]![0]}
+              mapH={sizes[m.mapId]![1]}
+              width={900}
+              fit="contain"
+              {nations}
+              active={Math.min(missionNations[at] ?? 0, nations.length)}
+            />
           {/if}
         </div>
-      </div>
+        <div class="dtxt">
+          <span class="kicker">{t('campaign.missionN', { n: at + 1 })}</span>
+          <h2>{t(`campaign.${m.id}.title`)}</h2>
+          <p class="brief">{t(`campaign.${m.id}.brief`)}</p>
+          <ul class="objs">
+            {#each m.objectives as o (o.key)}
+              <li>
+                <span class="ok"><Icon name="target" size={16} /></span>
+                <span><b>{t('campaign.objective')}</b>{t(o.key)}</span>
+              </li>
+            {/each}
+            <li class="bonus">
+              <span class="ok"><Icon name="star" size={16} /></span>
+              <span><b>{t('campaign.bonusLabel')}</b>{t(m.bonus.key)}</span>
+            </li>
+            <li>
+              <span class="ok"><Icon name="time" size={16} /></span>
+              <span><b>{t('campaign.parTime')}</b>{Math.round(m.parTicks / 600)} min</span>
+            </li>
+          </ul>
+          <p class="hint">{t('campaign.starsRule')}</p>
+          <div class="act">
+            {#if unlocked(at)}
+              <button class="btn primary play" onclick={() => startMission(m.id)} data-testid="mission-{m.id}"
+                ><Icon name="play" size={16} />{t('campaign.play')}</button
+              >
+            {:else}
+              <p class="locked-hint"><Icon name="lock" size={14} />{t('campaign.lockedHint')}</p>
+            {/if}
+          </div>
+        </div>
+      {/key}
     </section>
   </div>
 </div>
 
 <style>
-  .camp {
-    position: fixed;
-    inset: 0;
-    padding: 18px 22px;
+  .top {
     display: grid;
-    grid-template-rows: auto 1fr;
-    gap: 14px;
-    background: var(--abyss);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 6px 22px;
   }
-  header {
-    display: flex;
-    gap: 14px;
-    align-items: center;
+  .back {
+    margin-top: 6px;
   }
   .htitle {
-    flex: 1;
     display: grid;
+    gap: 4px;
   }
-  .chip.big {
-    font-size: 0.95em;
-    padding: 0.35em 0.7em;
+  .htitle h1 {
+    font-size: 2.15em;
+    line-height: 1.1;
+  }
+  .sub {
+    margin: 0;
+    color: var(--muted);
+    max-width: 78ch;
+    line-height: 1.5;
+  }
+  .acts {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .stars-total {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    color: var(--brass-text);
+    font-size: 1.05em;
+  }
+  .stars-total :global(svg) {
     color: var(--brass);
+    transform: translateY(2px);
   }
+  .stars-total b {
+    font-size: 1.25em;
+    font-weight: 600;
+  }
+  .stars-total span {
+    color: var(--muted);
+  }
+
   .body {
     display: grid;
-    grid-template-columns: 340px 1fr;
-    gap: 14px;
+    grid-template-columns: minmax(0, 1.25fr) minmax(380px, 1fr);
+    gap: 18px;
     min-height: 0;
   }
-  .list {
+
+  /* The route chart */
+  .route {
+    position: relative;
+    min-height: 0;
+    background: var(--panel-solid);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .route svg,
+  .stations {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .stations {
     list-style: none;
     margin: 0;
-    padding: 6px;
-    display: grid;
-    align-content: start;
-    gap: 2px;
+    padding: 0;
   }
-  .row {
-    width: 100%;
+  .grat line {
+    stroke: var(--line);
+    stroke-width: 1;
+    opacity: 0.55;
+  }
+  .summit path {
+    fill: none;
+    stroke: var(--contour-ink);
+    stroke-width: 1.1;
+    opacity: 0.32;
+  }
+  .summit.open path {
+    opacity: 0.6;
+  }
+  .track {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 2.5;
+    stroke-dasharray: 0.1 9;
+    stroke-linecap: round;
+  }
+  .progress {
+    fill: none;
+    stroke: var(--aurora);
+    stroke-width: 3.5;
+    stroke-dasharray: 0.1 9;
+    stroke-linecap: round;
+  }
+  .reveal {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 24;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: reveal 1.6s 0.2s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+  }
+  .reveal.late {
+    animation-duration: 1.1s;
+    animation-delay: 0.5s;
+  }
+  @keyframes reveal {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  .stations li {
+    position: absolute;
+    transform: translate(-50%, -14px);
+  }
+  .st {
     display: grid;
-    grid-template-columns: 26px 1fr auto;
-    align-items: center;
+    justify-items: center;
     gap: 8px;
-    padding: 12px 10px;
+    padding: 0;
     background: none;
-    border: 1px solid transparent;
-    border-radius: 4px;
+    border: 0;
     color: var(--parchment);
-    text-align: left;
-    cursor: pointer;
+    cursor: var(--cursor-pointer, pointer);
+    text-align: center;
   }
-  .row:hover {
-    background: var(--panel-2);
+  .mk {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
   }
-  .row.on {
-    background: var(--panel-3);
+  .mk::before {
+    content: '';
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--panel-solid);
+    border: 2px solid var(--line-strong);
+    transition:
+      transform 0.22s var(--ease-out),
+      background 0.16s,
+      border-color 0.16s;
+  }
+  .done .mk::before {
+    background: var(--parchment);
+    border-color: var(--parchment);
+  }
+  .next .mk::before {
+    width: 15px;
+    height: 15px;
+    border-radius: 2px;
+    background: var(--brass);
+    border: 2px solid var(--panel-solid);
+    transform: rotate(45deg);
+    box-shadow: 0 0 0 1px var(--brass);
+  }
+  .mk::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 2px solid var(--aurora);
+    opacity: 0;
+    transform: scale(0.6);
+    transition:
+      opacity 0.2s,
+      transform 0.25s var(--ease-out);
+  }
+  .st.on .mk::after {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .st:hover .mk::before {
+    transform: scale(1.2);
+  }
+  .next:hover .mk::before {
+    transform: rotate(45deg) scale(1.2);
+  }
+  .st:focus-visible {
+    outline: none;
+  }
+  .st:focus-visible .lbl {
+    outline: 2px solid var(--aurora);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+  .lbl {
+    display: grid;
+    justify-items: center;
+    gap: 1px;
+    padding: 4px 10px 5px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background: color-mix(in srgb, var(--panel-solid) 88%, transparent);
+    transition:
+      border-color 0.16s,
+      box-shadow 0.16s;
+  }
+  .st:hover .lbl {
     border-color: var(--line-strong);
-    box-shadow: inset 3px 0 0 var(--brass);
   }
-  .row.locked {
-    color: var(--faint);
+  .st.on .lbl {
+    background: var(--panel-solid);
+    border-color: var(--aurora);
+    box-shadow: 0 6px 16px -10px rgba(22, 50, 74, 0.5);
   }
-  .num {
-    color: var(--faint);
+  .lbl small {
+    color: var(--muted);
+    font-size: 0.78em;
+  }
+  .lbl b {
+    font-family: var(--title);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.08em;
+    white-space: nowrap;
+  }
+  .st.on .lbl b {
+    font-weight: 600;
+  }
+  .locked .lbl b {
+    color: var(--muted);
   }
   .stars {
     display: flex;
@@ -154,59 +470,107 @@
     color: var(--brass);
   }
   .lock {
-    color: var(--faint);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78em;
+    color: var(--muted);
   }
+
+  /* Mission detail */
   .detail {
-    display: grid;
-    grid-template-columns: minmax(280px, 42%) 1fr;
-    gap: 20px;
-    padding: 18px;
-    align-items: start;
-  }
-  .detail img {
-    width: 100%;
-    aspect-ratio: 16 / 10;
-    object-fit: cover;
-    border-radius: 3px;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--panel-solid);
     border: 1px solid var(--line);
+    border-radius: var(--radius);
+    display: grid;
+    align-content: start;
+    scrollbar-width: thin;
+  }
+  .chartbox {
+    position: relative;
+    height: clamp(160px, 30vh, 320px);
+    border-bottom: 1px solid var(--line);
+    background: #f7fafa;
+    animation: fade 0.3s ease-out both;
   }
   .dtxt {
     display: grid;
-    gap: 10px;
+    gap: 12px;
+    padding: 18px 22px 22px;
+    animation: rise 0.3s ease-out both;
   }
-  .dtxt .section-title {
-    margin: 0;
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+  .kicker {
+    color: var(--muted);
+    font-size: 0.88em;
+  }
+  .dtxt h2 {
+    font-size: 1.7em;
+    margin-top: -6px;
   }
   .brief {
     margin: 0;
     line-height: 1.6;
+    max-width: 62ch;
   }
   .objs {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
     display: grid;
-    gap: 6px;
-    padding: 10px 12px;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 4px;
+    gap: 10px;
   }
-  .objs div {
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
+  .objs li {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 12px;
+    align-items: center;
+  }
+  .ok {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    color: var(--parchment);
+  }
+  .objs li > span:last-child {
+    display: grid;
   }
   .objs b {
+    font-size: 0.82em;
+    font-weight: 500;
     color: var(--muted);
-    font-weight: 600;
-    min-width: 110px;
   }
-  .bonus {
-    color: var(--brass);
-  }
-  .muted {
-    color: var(--muted);
+  .bonus .ok {
+    color: var(--brass-text);
+    border-color: color-mix(in srgb, var(--brass) 60%, transparent);
   }
   .act {
+    margin-top: 4px;
+  }
+  .play {
+    font-size: 1.08em;
+    padding: 0.7em 1.4em;
+  }
+  .locked-hint {
+    margin: 0;
     display: flex;
     gap: 8px;
+    align-items: center;
+    color: var(--muted);
   }
 </style>

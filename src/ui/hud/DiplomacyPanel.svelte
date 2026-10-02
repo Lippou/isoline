@@ -5,10 +5,37 @@
   import { inkHex } from '../../render/colors';
   import { flagUrl } from '../../render/flags';
   import type { GameController } from '../game/controller';
+  import { confirmModal } from '../stores/app.svelte';
   import Icon from '../icons/Icon.svelte';
+  import { audio } from '../../audio/audio';
+  import { ALLIANCE_REQUEST_TTL } from '../../core/game/constants';
 
   let { ctl }: { ctl: GameController } = $props();
   const s = ctl.session;
+  /** Every order given from this window is acknowledged by a sound: the click did register. */
+  const order = (c: Parameters<typeof s.cmd>[0]) => {
+    audio.ui('confirm');
+    s.cmd(c);
+  };
+  /** Offers sent from here (tick): the button says so while the other side thinks it over. */
+  let sent = $state<Record<number, number>>({});
+  const pending = (id: number) => sent[id] !== undefined && hud.tick - sent[id]! < ALLIANCE_REQUEST_TTL;
+  function propose(id: number): void {
+    order({ t: 'allyRequest', target: id });
+    sent[id] = hud.tick;
+  }
+  /** Breaking an alliance is a betrayal: confirm first (unless confirmations are off). */
+  function breakAlliance(target: number): void {
+    const go = () => order({ t: 'allyBreak', target });
+    if (!settings.game.confirmations) return go();
+    confirmModal(
+      t('confirm.betrayTitle'),
+      t('confirm.betrayBody'),
+      go,
+      t('confirm.betrayYes'),
+      t('common.cancel'),
+    );
+  }
   let filter = $state('');
   let all = $state(false);
   const rows = $derived(
@@ -18,8 +45,14 @@
       .sort((a, b) => b.tiles - a.tiles)
       .map((p) => {
         const ally = hud.local?.allies.find((a) => a.id === p.id);
-        const attacking = (hud.local?.attacks ?? []).some((a) => a.target === p.id);
-        return { p, ally, attacking, embargo: hud.local?.embargo.includes(p.id) ?? false };
+        const attacking = hud.local?.wars.includes(p.id) ?? false;
+        return {
+          p,
+          ally,
+          attacking,
+          embargo: hud.local?.embargo.includes(p.id) ?? false,
+          noTrade: hud.local?.noTrade.includes(p.id) ?? false,
+        };
       }),
   );
 </script>
@@ -28,10 +61,10 @@
 
 <div class="tools">
   <input type="text" placeholder={t('diplo.search')} bind:value={filter} />
-  <button class="btn small" onclick={() => s.cmd({ t: 'embargoAll', on: true, exceptTeam: true })}
+  <button class="btn small" onclick={() => order({ t: 'embargoAll', on: true, exceptTeam: true })}
     ><Icon name="embargo" size={14} />{t('diplo.embargoAll')}</button
   >
-  <button class="btn small" onclick={() => s.cmd({ t: 'embargoAll', on: false, exceptTeam: false })}
+  <button class="btn small" onclick={() => order({ t: 'embargoAll', on: false, exceptTeam: false })}
     >{t('diplo.liftAll')}</button
   >
 </div>
@@ -59,44 +92,54 @@
             ><Icon name="alliance" size={13} />{t('diplo.allied')} · {clock(r.ally.expiresIn)}</span
           >
         {:else if r.attacking}
-          <span class="chip bad"><Icon name="war" size={13} />{t('diplo.war')}</span>
+          <span class="chip bad"><Icon name="sword" size={13} />{t('diplo.war')}</span>
         {:else}
           <span class="chip">{t('diplo.neutral')}</span>
         {/if}
-        {#if r.embargo}<span class="chip warn"><Icon name="embargo" size={13} />{t('diplo.embargo')}</span
+        {#if r.noTrade}<span class="chip warn" data-tip={r.embargo ? '' : t('diplo.tempEmbargoTip')}
+            ><Icon name="noTrade" size={13} />{t('diplo.embargo')}</span
           >{/if}
-        {#if r.p.traitor}<span class="chip bad"><Icon name="traitor" size={13} />{t('hud.traitorMark')}</span
+        {#if r.p.traitor}<span class="chip warn"
+            ><Icon name="brokenShield" size={13} />{t('hud.traitorMark')} · {Math.ceil(r.p.traitorFor / 10)} s</span
           >{/if}
       </div>
       <div class="acts">
         {#if r.ally}
-          <button class="btn small" onclick={() => s.cmd({ t: 'allyRequest', target: r.p.id })}
+          <button class="btn small" onclick={() => order({ t: 'allyRequest', target: r.p.id })}
             ><Icon name="renew" size={13} />{t('diplo.renew')}</button
           >
           {#if s.config.allowDonations}<button
               class="btn small"
               data-tip={t('diplo.giveTip')}
               onclick={() =>
-                s.cmd({ t: 'donate', target: r.p.id, gold: (hud.local?.gold ?? 0) * 0.1, troops: 0 })}
+                order({ t: 'donate', target: r.p.id, gold: (hud.local?.gold ?? 0) * 0.1, troops: 0 })}
               ><Icon name="gift" size={13} />{t('diplo.give')}</button
             >{/if}
-          <button class="btn small danger" onclick={() => s.cmd({ t: 'allyBreak', target: r.p.id })}
+          <button class="btn small danger" onclick={() => breakAlliance(r.p.id)}
             ><Icon name="betrayal" size={13} />{t('diplo.break')}</button
           >
         {:else}
-          <button class="btn small" onclick={() => s.cmd({ t: 'allyRequest', target: r.p.id })}
-            ><Icon name="alliance" size={13} />{t('diplo.propose')}</button
+          <button
+            class="btn small"
+            class:sent={pending(r.p.id)}
+            onclick={() => propose(r.p.id)}
+            data-testid="diplo-propose"
+            ><Icon name={pending(r.p.id) ? 'hourglass' : 'alliance'} size={13} />{t(
+              pending(r.p.id) ? 'diplo.proposed' : 'diplo.propose',
+            )}</button
           >
         {/if}
-        <button class="btn small" onclick={() => s.cmd({ t: 'embargo', target: r.p.id, on: !r.embargo })}
+        <button class="btn small" onclick={() => order({ t: 'embargo', target: r.p.id, on: !r.embargo })}
           >{r.embargo ? t('radial.embargoOff') : t('radial.embargoOn')}</button
         >
         <button
           class="btn small ghost"
           aria-label={t('hud.centerOn')}
           data-tip={t('hud.centerOn')}
-          onclick={() => ctl.renderer.camera.goTo(r.p.label[0], r.p.label[1], 2.5)}
-          ><Icon name="target" size={14} /></button
+          onclick={() => {
+            audio.ui('click');
+            ctl.renderer.camera.goTo(r.p.label[0], r.p.label[1], 2.5);
+          }}><Icon name="target" size={14} /></button
         >
       </div>
     </li>
@@ -208,6 +251,11 @@
   }
   .more {
     margin-top: 6px;
+  }
+  /* An offer on its way: the button keeps a quiet green edge until it is answered. */
+  .btn.sent {
+    color: var(--good-text);
+    border-color: rgba(91, 201, 138, 0.5);
   }
   h4 {
     margin: 14px 0 6px;

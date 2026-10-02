@@ -2,6 +2,70 @@
   "brand": {
     "slogan": "Trace ta ligne. Tiens le monde."
   },
+  "flag": {
+    "title": "Drapeau",
+    "change": "Changer de drapeau",
+    "pickerTitle": "Votre drapeau",
+    "pickerSub": "Il flotte à côté de votre nom : sur la carte, au classement, dans le journal et à la une.",
+    "tabWorld": "Pays du monde",
+    "tabCustom": "Créer le mien",
+    "tabAuto": "Tiré de votre nom",
+    "search": "Rechercher un pays…",
+    "count": "{n} drapeaux",
+    "noMatch": "Aucun pays ne correspond à « {q} ».",
+    "autoHint": "Un drapeau dessiné d'après votre nom : changez de nom, il change aussi. C'est celui des parties sans choix.",
+    "preview": "Aperçu",
+    "inGame": "En jeu",
+    "sampleLog": "{name} signe un pacte",
+    "current": "Actuel :",
+    "use": "Utiliser ce drapeau",
+    "layoutTitle": "Disposition",
+    "colorsTitle": "Couleurs",
+    "emblemTitle": "Emblème",
+    "position": "Position",
+    "color": "Couleur {n}",
+    "emblemColor": "Emblème",
+    "otherColor": "Autre couleur",
+    "random": "Au hasard",
+    "reset": "Réinitialiser",
+    "lowContrast": "L'emblème se voit mal sur ce fond : choisissez une couleur plus contrastée.",
+    "layout": {
+      "plain": "Uni",
+      "bandsH2": "Deux bandes horizontales",
+      "bandsH3": "Trois bandes horizontales",
+      "bandsV2": "Deux bandes verticales",
+      "bandsV3": "Trois bandes verticales",
+      "stripes": "Rayures",
+      "cross": "Croix",
+      "nordic": "Croix scandinave",
+      "saltire": "Sautoir",
+      "diagonal": "Coupé en diagonale",
+      "bend": "Bande diagonale",
+      "canton": "Canton",
+      "border": "Bordure",
+      "disc": "Disque",
+      "triangle": "Triangle à la hampe",
+      "quartered": "Écartelé"
+    },
+    "emblem": {
+      "none": "Sans emblème",
+      "star": "Étoile",
+      "sun": "Soleil",
+      "crescent": "Croissant",
+      "compass": "Rose des vents",
+      "anchor": "Ancre",
+      "mountain": "Montagne",
+      "wave": "Vagues",
+      "tree": "Sapin",
+      "crown": "Couronne",
+      "isoline": "Isoligne"
+    },
+    "at": {
+      "center": "Centre",
+      "hoist": "Hampe",
+      "canton": "Canton"
+    }
+  },
   "common": {
     "accept": "Accepter",
     "refuse": "Refuser",
@@ -18,7 +82,6 @@
     "solo": "Solo",
     "lan": "Multijoueur (LAN)",
     "campaign": "Campagne",
-    "tutorial": "Didacticiel",
     "load": "Charger une partie",
     "editor": "Éditeur de cartes",
     "replays": "Replays",
@@ -33,20 +96,35 @@
     "admiral": "Amiral des cartes",
     "isolineMaster": "Maître des isolines",
     "updateAvailable": "Version {version} disponible.",
-    "updateOpen": "Ouvrir la page",
     "mainMenu": "Menu principal",
-    "playDesc": "Partie solo, campagne, didacticiel ou réseau local.",
+    "playDesc": "Partie solo, campagne ou réseau local.",
     "editorDesc": "Créer et modifier vos propres cartes.",
     "replaysDesc": "Revoir vos parties enregistrées.",
     "profileDesc": "Statistiques, succès et classement local.",
     "settingsDesc": "Graphismes, son, contrôles, accessibilité, langue.",
     "aboutDesc": "Version, crédits et licences.",
     "soloDesc": "Choisissez une carte et affrontez des nations dirigées par l'ordinateur.",
-    "campaignDesc": "Six missions guidées, de plus en plus exigeantes.",
-    "tutorialDesc": "Apprenez les bases pas à pas (environ 6 minutes).",
+    "campaignDesc": "Six missions guidées : la campagne vous apprend à jouer, pas à pas.",
     "lanDesc": "Héberger ou rejoindre une partie sur votre réseau local.",
     "loadDesc": "Reprendre une partie sauvegardée.",
-    "recommended": "Conseillé"
+    "recommended": "Conseillé",
+    "peekPlay": "Campagne : {stars} étoiles sur {total}.",
+    "peekNew": "Première partie ? La campagne vous apprend les bases, mission après mission.",
+    "peekMaps": "{n} cartes personnalisées enregistrées.",
+    "peekMapsOne": "Une carte personnalisée enregistrée.",
+    "peekMapsNone": "Aucune carte personnalisée pour l'instant : partez d'une page blanche ou d'une carte existante.",
+    "peekReplays": "{n} replays enregistrés.",
+    "peekReplaysOne": "Un replay enregistré.",
+    "peekReplaysNone": "Vos parties terminées s'enregistreront ici automatiquement.",
+    "peekProfile": "{games} parties jouées, {wins} victoires, {ach} succès sur {total}.",
+    "peekSettings": "Langue : {lang}. Qualité graphique : {quality}.",
+    "peekAbout": "Isoline {version}. Code, cartes, sons et images originaux ou sous licence libre.",
+    "peekSolo": "Dernière carte choisie : {map}.",
+    "peekCampaign": "{stars} étoiles sur {total}. Prochaine mission : {mission}.",
+    "peekLan": "Sans serveur externe : tous les joueurs doivent être sur le même réseau.",
+    "peekSaves": "{n} sauvegardes disponibles.",
+    "peekSavesOne": "Une sauvegarde disponible.",
+    "peekSavesNone": "Aucune sauvegarde pour l'instant. Sauvegardez depuis le menu de pause d'une partie."
   },
   "menu": {
     "main": "Menu principal",
@@ -70,31 +148,32 @@
     "loadFailed": "Impossible de charger cette sauvegarde.",
     "noSaves": "Aucune sauvegarde pour l'instant.",
     "loadSubtitle": "Dix emplacements de sauvegarde, plus une sauvegarde automatique toutes les deux minutes.",
-    "colSlot": "Emplacement"
+    "colSlot": "Emplacement",
+    "noSavesTitle": "Aucune sauvegarde pour l'instant",
+    "noSavesHint": "Pendant une partie, ouvrez le menu de pause (Échap) pour sauvegarder. En solo, une sauvegarde automatique est aussi faite toutes les deux minutes.",
+    "resetWindows": "Replacer les fenêtres",
+    "windowsReset": "Fenêtres remises à leur place"
   },
   "help": {
     "intro": "Isoline se joue sur un atlas vivant : étendez votre encre, bâtissez une économie, nouez des alliances et tenez le monde.",
-    "click": "Clic gauche sur une terre voisine : attaque terrestre. Sur une côte au-delà de l'eau : débarquement.",
+    "click": "Clic gauche sur une terre voisine : attaque terrestre. Côte au-delà de l'eau : B ou clic droit → Débarquer.",
     "radial": "Clic droit : menu contextuel (construire, armes, navires, diplomatie). Alt + clic : emojis.",
     "drag": "Glisser (gauche ou bouton du milieu) : déplacer la carte. Maj + glisser : sélectionner des navires de guerre.",
     "wheel": "Molette / pincement : zoom. Maj + molette : ratio d'attaque."
   },
   "hud": {
     "chooseSpawn": "Choisissez votre point de départ",
-    "population": "Population",
+    "army": "Troupes",
     "troops": "troupes",
-    "workers": "ouvriers",
     "gold": "Or",
     "income": {
       "base": "Revenu de base",
-      "workers": "Ouvriers",
       "resources": "Gisements",
-      "trade": "Commerce (total)",
-      "trains": "Trains (total)"
+      "trade": "Commerce",
+      "trains": "Trains"
     },
     "attackRatio": "Ratio d'attaque",
-    "troopShare": "Part des troupes",
-    "cancelAttack": "Annuler l'attaque (−10 %)",
+    "cancelAttack": "Annuler l'attaque (−25 %)",
     "leaderboard": "Classement",
     "showTribes": "tribus",
     "centerOn": "Centrer la caméra",
@@ -106,6 +185,9 @@
     "immune": "Immunité {s} s",
     "traitor": "Traître",
     "traitorMark": "traître",
+    "pause": "Mettre en pause",
+    "resume": "Reprendre",
+    "speedTip": "Vitesse du temps ({down} : ralentir, {up} : accélérer)",
     "paused": "Pause",
     "resyncing": "Resynchronisation…",
     "menu": "Menu",
@@ -124,14 +206,16 @@
       "terrain": "Vue terrain",
       "fog": "Brouillard de guerre",
       "resources": "Ressources",
-      "loyalty": "Loyauté"
+      "loyalty": "Loyauté",
+      "tradeRoutes": "Routes commerciales",
+      "tradeRoutesTip": "Lignes entre les ports qui commercent (les vôtres en laiton), plus épaisses quand elles rapportent ; voies ferrées chargées en surbrillance ; une route coupée par un embargo apparaît brisée, en magenta, pendant 10 s."
     },
     "autoPerformance": "Mode performance activé automatiquement (machine lente).",
     "fogLocked": "Le brouillard de guerre ne peut être levé qu'en spectateur ou en replay.",
     "attackRatioTip": "Part de vos troupes envoyée à chaque ordre d'attaque ou d'expansion.",
     "boatsTip": "Transports de troupes en mer.",
     "buildTime": "Construction : {s} s",
-    "capTip": "Population actuelle par rapport au plafond fixé par votre territoire et vos villes.",
+    "capTip": "Troupes par rapport au plafond fixé par votre territoire et vos villes achevées (+60 000 par niveau de ville).",
     "colCountry": "Pays",
     "colLand": "Terres",
     "colTroops": "Troupes",
@@ -143,39 +227,42 @@
     "groupNavy": "Marine",
     "groupNukes": "Nucléaire",
     "groupViews": "Vues",
-    "growthTip": "Croissance de la population par seconde. Elle est maximale autour de 42 % du plafond.",
+    "growthTip": "Troupes régénérées par seconde. La régénération est maximale vers 42 % du plafond et s'arrête au plafond.",
     "immuneTip": "Personne ne peut vous attaquer pendant ce délai.",
     "inactive": "Joueur absent",
     "incomeTitle": "Revenus",
     "needsAirfield": "Nécessite un aérodrome",
     "noVictory": "Partie libre (sans victoire)",
+    "incomingAttacks": "Attaques reçues",
+    "boatsAtSea": "Bateaux en mer ({n}/3)",
+    "boatHome": "Retour au port",
+    "recallBoat": "Rappeler le bateau (les troupes reviennent, moins 25 %)",
+    "retreating": "repli",
+    "wilderness": "Terres libres",
+    "counter": "Riposter",
+    "counterTip": "Contre-attaquer avec {n} troupes : assez pour annuler cette attaque dans le choc.",
     "ongoingAttacks": "Attaques en cours",
     "ownedN": "Possédés : {n}",
-    "populationTip": "Population totale = troupes + ouvriers. Les villes et le territoire relèvent le plafond.",
+    "armyTip": "Votre armée : elle attaque, défend et se régénère seule. Le territoire et les villes achevées relèvent le plafond.",
     "readyN": "Prêts : {n}",
     "spawnHelp": "Cliquez sur une terre libre. La partie commence dès que votre capitale est posée.",
     "spawnWait": "Les pays prennent position.",
     "spawnTimerTip": "Temps restant avant un placement automatique.",
     "traitorTip": "Vous avez trahi un allié : votre défense est réduite et les autres nations s'en souviennent.",
-    "troopShareTip": "Répartition de la croissance entre troupes (pour combattre) et ouvriers (pour l'or).",
     "troopsTip": "Troupes disponibles pour attaquer et défendre.",
     "victoryThresholdTip": "Le premier pays (ou la première équipe) à contrôler {pct} % des terres utiles l'emporte.",
-    "workersTip": "Les ouvriers produisent de l'or.",
     "youHold": "vous : {pct} %",
-    "goalMission": "Objectifs de mission (panneau de gauche)"
+    "goalMission": "Objectifs de mission (en bas de l'écran)",
+    "windowMoveTip": "Glisser pour déplacer · double-clic : remettre à sa place",
+    "windowResize": "Redimensionner"
   },
   "panel": {
     "diplomacy": "Diplomatie",
     "tech": "Technologies",
     "stats": "Statistiques",
     "log": "Journal",
-    "chat": "Messages"
-  },
-  "log": {
-    "all": "Tout",
-    "danger": "Alertes",
-    "warn": "Avertissements",
-    "good": "Succès"
+    "chat": "Messages",
+    "trade": "Commerce"
   },
   "chat": {
     "all": "Tous",
@@ -209,6 +296,9 @@
     "air": "Aviation",
     "diplomacy": "Diplomatie",
     "allyRequest": "Proposer une alliance",
+    "allyAccept": "Accepter son alliance",
+    "allyAskedYou": "Ce pays vous propose une alliance.",
+    "allyRefuse": "Refuser son alliance",
     "allyRenew": "Renouveler l'alliance",
     "allyBreak": "Rompre l'alliance",
     "donate": "Don",
@@ -225,18 +315,27 @@
     "expand": "S'étendre ici",
     "attackPlain": "Attaquer",
     "attackDesc": "Envoie la part de vos troupes indiquée (réglable avec T / Y ou Maj + molette).",
-    "boatDesc": "Embarque des troupes depuis votre côte la plus proche et débarque ici.",
+    "boatDesc": "Embarque des troupes depuis votre côte la plus proche et débarque ici, en remontant les rivières navigables s'il le faut.",
     "upgradeNamed": "Améliorer : {name}",
     "level": "niv.",
     "signalTitle": "Envoyer un signal",
     "yours": "votre territoire",
     "unclaimed": "Terre libre",
-    "sea": "Mer"
+    "sea": "Mer",
+    "capitalHere": "Établir la capitale ici",
+    "capitalMove": "Déplacer la capitale ici",
+    "capitalDesc": "Siège du gouvernement : le perdre désorganise le pays pendant une minute. Un transfert toutes les 5 minutes au plus.",
+    "capitalNeeded": "Votre pays n'a plus de capitale",
+    "capitalFront": "trop près du front",
+    "capitalFallout": "irradié"
   },
   "confirm": {
     "betrayTitle": "Trahir votre allié ?",
-    "betrayBody": "Attaquer un allié rompt l'alliance : défense ×0,5 et vitesse ×0,8 pendant 30 s, marque de traître et embargo pendant 5 minutes.",
-    "betrayYes": "Trahir"
+    "betrayBody": "Rompre l'alliance ou attaquer un allié fait de vous un traître pendant 30 s (défense ×0,5, vitesse ×0,8) et déclenche un embargo de 5 minutes.",
+    "betrayYes": "Trahir",
+    "selfNukeTitle": "Frapper votre propre territoire ?",
+    "selfNukeBody": "La bombe rasera vos terres, vos bâtiments et vos troupes sous le souffle, et laissera des retombées. Utile pour briser un envahisseur, mais irréversible.",
+    "selfNukeYes": "Lancer quand même"
   },
   "diplo": {
     "embargoAll": "Embargo général (sauf équipe)",
@@ -250,14 +349,16 @@
     "betrayedLine": "{traitor} a trahi {victim}",
     "break": "Rompre",
     "embargo": "Embargo",
+    "tempEmbargoTip": "Embargo temporaire : un pays attaqué refuse de commercer avec son agresseur pendant 5 minutes.",
     "give": "Donner 10 % d'or",
     "giveTip": "Envoie 10 % de votre or à cet allié.",
-    "intro": "Une alliance dure 5 minutes et empêche toute attaque entre alliés. La renouveler demande l'accord des deux parties. Attaquer un allié est une trahison : défense réduite de moitié pendant 30 s et embargo automatique.",
+    "intro": "Une alliance dure 5 minutes et empêche toute attaque entre alliés. La renouveler demande l'accord des deux parties. Rompre une alliance ou attaquer un allié est une trahison : marque de traître et défense réduite de moitié pendant 30 s, embargo automatique. Tout pays attaqué cesse de commercer avec son agresseur pendant 5 minutes.",
     "propose": "Proposer une alliance",
     "renew": "Renouveler",
     "search": "Rechercher un pays…",
     "showAllN": "Afficher les {n} pays",
-    "showLess": "Afficher moins"
+    "showLess": "Afficher moins",
+    "proposed": "Proposée…"
   },
   "council": {
     "title": "Conseil mondial",
@@ -275,27 +376,107 @@
     "ceasefire.desc": "Aucune nouvelle attaque entre joueurs pendant 60 secondes."
   },
   "tech": {
-    "rate": "Recherche : {rp} points/s (villes)",
+    "intro": "Aucune recherche en cours : cliquez sur une technologie, ses prérequis manquants passent d'abord.",
+    "perSecond": "points/s",
+    "bank": "{n} points en réserve",
+    "studying": "En cours :",
+    "stop": "Arrêter",
+    "goal": "Objectif de recherche",
+    "tier": "Palier {n}",
+    "etaNow": "immédiat",
+    "etaS": "≈ {s} s",
+    "etaM": "≈ {m} min",
+    "etaMS": "≈ {m} min {s}",
+    "state": {
+      "done": "Acquise",
+      "current": "En cours",
+      "queued": "En attente",
+      "available": "Disponible",
+      "locked": "Verrouillée"
+    },
+    "unlocks": "Débloque",
+    "requires": "Prérequis",
+    "requiresNone": "Aucun",
+    "doneHint": "Déjà acquise : son effet s'applique.",
+    "pathSteps": "{n} étapes",
+    "points": "{n} points",
+    "research": "Rechercher",
+    "researchPath": "Rechercher ({n} étapes)",
+    "requiresTech": "Nécessite la recherche : {tech}",
+    "openTree": "Cliquez pour ouvrir l'arbre technologique.",
+    "unlock": {
+      "silo": "Silos à missiles",
+      "atom": "Bombes A",
+      "hydrogen": "Bombes H",
+      "mirv": "MIRV",
+      "sam": "Batteries SAM",
+      "radar": "Tours radar",
+      "airfield": "Aérodromes et avions"
+    },
     "economy": {
+      "title": "Économie",
       "1": {
-        "name": "Ateliers",
-        "desc": "+10 % de revenu des ouvriers"
+        "name": "Comptoirs",
+        "desc": "+10 % de revenu de base"
       },
       "2": {
-        "name": "Écartement standard",
-        "desc": "+10 % de revenu des trains"
+        "name": "Banque centrale",
+        "desc": "+15 % de revenu de base"
       },
       "3": {
-        "name": "Banques",
-        "desc": "+15 % de revenu des ouvriers"
+        "name": "Universités",
+        "desc": "+25 % de vitesse de recherche"
       },
       "4": {
-        "name": "Préfabrication",
+        "name": "Marchés mondiaux",
+        "desc": "+20 % de revenus du commerce et des trains"
+      },
+      "5": {
+        "name": "Bourse",
+        "desc": "+10 % sur tous les revenus"
+      },
+      "6": {
+        "name": "Mondialisation",
+        "desc": "+20 % de revenus du commerce et des trains"
+      },
+      "r": {
+        "name": "Prospérité",
+        "desc": "+2 % sur tous les revenus par niveau"
+      }
+    },
+    "industry": {
+      "title": "Industrie",
+      "1": {
+        "name": "Chemins de fer",
+        "desc": "+10 % de revenus des trains"
+      },
+      "2": {
+        "name": "Industrie lourde",
         "desc": "−10 % sur le coût des bâtiments"
       },
-      "title": "Économie"
+      "3": {
+        "name": "Aérospatiale",
+        "desc": "Débloque aérodromes et avions ; mène au MIRV"
+      },
+      "4": {
+        "name": "Automatisation",
+        "desc": "−10 % sur le coût des bâtiments"
+      },
+      "5": {
+        "name": "Grands travaux",
+        "desc": "Constructions deux fois plus rapides, +10 % de revenus des trains"
+      },
+      "6": {
+        "name": "Robotique",
+        "desc": "−10 % sur le coût des bâtiments"
+      },
+      "r": {
+        "name": "Productivité",
+        "desc": "−1 % sur le coût des bâtiments par niveau"
+      }
     },
     "military": {
+      "title": "Militaire",
       "1": {
         "name": "Chasseurs alpins",
         "desc": "−10 % de pertes en collines et montagnes"
@@ -305,16 +486,28 @@
         "desc": "+10 % de vitesse d'attaque"
       },
       "3": {
-        "name": "Doctrine",
+        "name": "Doctrine interarmes",
         "desc": "−10 % de pertes partout"
       },
       "4": {
         "name": "Guerre éclair",
         "desc": "+15 % de vitesse d'attaque"
       },
-      "title": "Militaire"
+      "5": {
+        "name": "Conscription",
+        "desc": "+10 % de troupes maximales"
+      },
+      "6": {
+        "name": "Forces spéciales",
+        "desc": "−10 % de pertes partout"
+      },
+      "r": {
+        "name": "Entraînement",
+        "desc": "−1 % de pertes par niveau"
+      }
     },
     "naval": {
+      "title": "Marine",
       "1": {
         "name": "Blindage",
         "desc": "+20 % de points de vie des navires de guerre"
@@ -329,49 +522,102 @@
       },
       "4": {
         "name": "Compagnies maritimes",
-        "desc": "+30 % de revenu commercial"
+        "desc": "+25 % de revenu commercial"
       },
-      "title": "Marine"
-    },
-    "nuclear": {
-      "1": {
-        "name": "Enrichissement",
-        "desc": "−10 % sur le coût des bombes"
+      "5": {
+        "name": "Chantiers navals",
+        "desc": "−25 % sur le coût des navires de guerre"
       },
-      "2": {
-        "name": "Rechargement rapide",
-        "desc": "+25 % de vitesse de rechargement des silos"
+      "6": {
+        "name": "Porte-conteneurs",
+        "desc": "+25 % de revenu commercial"
       },
-      "3": {
-        "name": "Miniaturisation",
-        "desc": "−15 % sur le coût des bombes"
-      },
-      "4": {
-        "name": "Têtes multiples",
-        "desc": "MIRV : +2 ogives"
-      },
-      "title": "Nucléaire"
+      "r": {
+        "name": "Fret",
+        "desc": "+3 % de revenu commercial par niveau"
+      }
     },
     "defense": {
+      "title": "Défense",
       "1": {
-        "name": "Radars de tir",
-        "desc": "Portée des SAM +10"
+        "name": "Missiles sol-air",
+        "desc": "Débloque les batteries SAM"
       },
       "2": {
-        "name": "Salves",
-        "desc": "SAM : +1 cible simultanée"
+        "name": "Radars de tir",
+        "desc": "Débloque les tours radar ; portée des SAM +10"
       },
       "3": {
-        "name": "Génie civil",
-        "desc": "−5 % sur le coût des bâtiments"
+        "name": "Salves",
+        "desc": "SAM : +1 cible simultanée"
       },
       "4": {
         "name": "Bouclier",
         "desc": "SAM : +1 cible, portée +15"
       },
-      "title": "Défense"
+      "5": {
+        "name": "Abris antiatomiques",
+        "desc": "−30 % de troupes tuées par les bombes"
+      },
+      "6": {
+        "name": "Bouclier antimissile",
+        "desc": "SAM : +1 cible, portée +10"
+      },
+      "r": {
+        "name": "Interception",
+        "desc": "SAM : portée +1 par niveau"
+      }
     },
-    "intro": "La recherche progresse grâce à vos villes. Choisissez une branche : son prochain niveau sera étudié automatiquement."
+    "nuclear": {
+      "title": "Nucléaire",
+      "1": {
+        "name": "Physique atomique",
+        "desc": "+10 % de vitesse de recherche ; ouvre la voie au programme nucléaire"
+      },
+      "2": {
+        "name": "Programme nucléaire",
+        "desc": "Débloque les silos à missiles et la bombe A"
+      },
+      "3": {
+        "name": "Bombe thermonucléaire",
+        "desc": "Débloque la bombe H"
+      },
+      "4": {
+        "name": "Miniaturisation",
+        "desc": "−20 % sur le coût des bombes, silos rechargés 25 % plus vite"
+      },
+      "5": {
+        "name": "Têtes multiples",
+        "desc": "Débloque le MIRV"
+      },
+      "6": {
+        "name": "Production de masse",
+        "desc": "−25 % sur le coût des bombes"
+      },
+      "r": {
+        "name": "Cadence de tir",
+        "desc": "Silos rechargés 5 % plus vite par niveau"
+      }
+    },
+    "srcBase": "base {n}",
+    "srcLabs": "{lv} niv. de centres {n}",
+    "srcBonus": "bonus +{n} %",
+    "noLab": "Aucun centre de recherche : à peine 0,5 point/s.",
+    "buildLab": "Construire un centre",
+    "queueTitle": "File d'attente",
+    "queueEmpty": "Maj+clic sur une technologie pour planifier la suivante.",
+    "queueAdd": "Ajouter à la file",
+    "queueRemove": "Retirer de la file",
+    "queued": "En file",
+    "auto": "Continuer automatiquement",
+    "autoHint": "File vide : lance la technologie disponible la moins chère.",
+    "idle": "Recherche à l'arrêt",
+    "idleChoose": "choisir",
+    "idleBank": "{n} points en attente",
+    "tierRepeat": "Sans fin",
+    "repeatLevel": "Niveau {n}",
+    "repeatHint": "Recherche sans fin : chaque niveau ajoute son effet et coûte 15 % de plus.",
+    "repeatMax": "Niveau maximal atteint."
   },
   "stats": {
     "tiles": "Territoire",
@@ -395,13 +641,11 @@
     "defeat": "Défaite",
     "missionComplete": "Mission accomplie",
     "missionFailed": "Mission échouée",
-    "duration": "Durée",
-    "ranking": "Classement",
-    "graphs": "Territoire dans le temps",
-    "yourStats": "Vos statistiques",
     "exportCsv": "Exporter (CSV)",
-    "watchReplay": "Replays",
-    "keepWatching": "Continuer à regarder",
+    "continue": "Continuer à jouer",
+    "continueTip": "Reprendre la partie dans le même monde, sans nouvelle victoire : la conquête continue librement.",
+    "continued": "{player} poursuit la partie : la conquête continue.",
+    "keepWatching": "Regarder la carte",
     "playAgain": "Rejouer",
     "backToMenu": "Menu principal",
     "replaySaved": "Replay enregistré",
@@ -412,9 +656,102 @@
       "mission": "Fin de mission",
       "none": "Partie terminée"
     },
-    "winnerIs": "Victoire de {name}",
-    "showResults": "Voir les résultats",
-    "eliminated": "Éliminé"
+    "showResults": "Rouvrir le journal",
+    "playAgainTip": "Une nouvelle partie avec les mêmes réglages, sur un monde tiré à nouveau.",
+    "page": {
+      "nav": "Pages du journal",
+      "front": "La une",
+      "mission": "Communiqué",
+      "results": "Résultats",
+      "status": "Page {n} sur {of} : {name}",
+      "jump": "Suite en page 2 : le classement complet, vos statistiques et vos distinctions",
+      "jumpMission": "Suite en page 2 : le classement et les statistiques de la mission"
+    },
+    "results": {
+      "ear": "Édition finale · Page 2",
+      "kicker": "Résultats et statistiques",
+      "lasted": "partie de {duration}",
+      "ranking": "Le classement final",
+      "col": {
+        "rank": "Rang",
+        "nation": "Nation",
+        "tiles": "Territoire",
+        "troops": "Troupes",
+        "gold": "Or",
+        "kills": "Ennemis tués",
+        "buildings": "Bâtiments",
+        "nukes": "Bombes",
+        "fate": "Sort"
+      },
+      "you": "vous",
+      "winner": "Vainqueur",
+      "winnerTeam": "Équipe victorieuse",
+      "winnerHead": "{name} : la victoire",
+      "standing": "Debout",
+      "fell": "Chute à {clock}",
+      "out": "Éliminée",
+      "showAll": "Afficher les {n} autres nations",
+      "showLess": "Réduire le classement",
+      "yours": "Votre bilan",
+      "winners": "Le bilan du vainqueur",
+      "territory": "Territoire, du début à la fin de la partie",
+      "final": "Territoire final",
+      "betrayals": "Trahisons",
+      "score": "Score",
+      "awards": "Distinctions",
+      "noAwards": "Aucun nouveau succès cette fois-ci.",
+      "awardsCount": "{n} succès sur {total} au total",
+      "settings": "La partie en bref",
+      "map": "Carte",
+      "mode": "Mode",
+      "difficulty": "Difficulté",
+      "threshold": "Victoire",
+      "thresholdValue": "{n} % des terres",
+      "sandbox": "Aucune (bac à sable)",
+      "nations": "Nations",
+      "tribes": "Tribus",
+      "speed": "Vitesse",
+      "goldRate": "Revenus d'or",
+      "duration": "Durée",
+      "ending": "Fin",
+      "date": "Date",
+      "archives": "Archives",
+      "replayWatched": "Replay de la partie",
+      "replayNone": "Pas de replay pour cette partie.",
+      "exportReplay": "Exporter le replay…",
+      "allReplays": "Tous les replays"
+    },
+    "mission": {
+      "ear": "Communiqué de mission",
+      "number": "Campagne · mission {n} sur {of}",
+      "lasted": "Durée : {clock}",
+      "kicker": "Mission « {title} »",
+      "starsLabel": "{n} étoiles sur {max}",
+      "best": "Meilleur résultat : {n} sur {max}",
+      "objectives": "Objectifs",
+      "par": "Terminer en moins de {time}",
+      "bonus": "Bonus",
+      "done": "Atteint",
+      "missed": "Manqué",
+      "figures": "Compte rendu",
+      "nextUp": "Prochaine mission : {title}.",
+      "last": "C'était la dernière mission de la campagne.",
+      "again": "Les objectifs restent ouverts : la mission peut être reprise à tout moment.",
+      "retry": "Recommencer",
+      "next": "Mission suivante",
+      "campaign": "Campagne"
+    },
+    "fall": {
+      "ear": "Dépêche",
+      "title": "Votre nation est tombée",
+      "surrendered": "Vous avez capitulé",
+      "by": "Prise par {name}, à {clock}.",
+      "nuked": "Rasée par le feu nucléaire, à {clock}.",
+      "at": "À {clock} de jeu.",
+      "body": "La partie continue sans vous. Suivez-la jusqu'au bout : l'édition finale du Courrier paraîtra à la fin.",
+      "watch": "Suivre la partie",
+      "quit": "Quitter la partie"
+    }
   },
   "mode": {
     "ffa": "Chacun pour soi",
@@ -423,8 +760,7 @@
     "tribes": "Solo contre tribus",
     "doomsday": "Horloge de l'apocalypse",
     "battleRoyale": "Battle Royale",
-    "campaign": "Campagne",
-    "tutorial": "Didacticiel"
+    "campaign": "Campagne"
   },
   "difficulty": {
     "easy": "Facile",
@@ -436,6 +772,8 @@
     "continents": "Continents",
     "regions": "Régions",
     "fictional": "Fictives",
+    "legends": "Légendes",
+    "planets": "Planètes",
     "arcade": "Arcade",
     "procedural": "Procédurale",
     "custom": "Personnalisées"
@@ -488,9 +826,9 @@
     "subtitleSolo": "Choisissez une carte, réglez la partie, puis lancez-la.",
     "subtitleLan": "Partagez le code et l'adresse avec les autres joueurs du réseau.",
     "addressTip": "Adresse à saisir dans « Rejoindre manuellement » sur les autres ordinateurs.",
-    "stepMap": "1. Carte",
-    "stepRules": "2. Réglages",
-    "stepLaunch": "3. Lancement",
+    "stepMap": "Carte",
+    "stepRules": "Réglages",
+    "stepLaunch": "Lancement",
     "gGame": "Partie",
     "gOpponents": "Adversaires",
     "gVictory": "Victoire et départ",
@@ -501,7 +839,22 @@
     "spawnHelp": "Délai maximal pour poser sa capitale. La partie démarre dès que tous les joueurs ont choisi.",
     "speedHelp": "×1 correspond à 10 tours de simulation par seconde.",
     "summaryLong": "{mode}, difficulté {diff}. Vous affronterez {nations} nations et {tribes} tribus. Le premier à contrôler {pct} % des terres l'emporte.",
-    "waitHost": "Seul l'hôte peut modifier les réglages et lancer la partie."
+    "waitHost": "Seul l'hôte peut modifier les réglages et lancer la partie.",
+    "stepMapHint": "Choisissez où se joue la partie.",
+    "stepRulesHint": "Adversaires, victoire, économie et règles.",
+    "stepLaunchHint": "Vérifiez le résumé, puis lancez la partie.",
+    "gGameDesc": "Le mode fixe qui affronte qui ; la difficulté règle l'agressivité des nations.",
+    "gOpponentsDesc": "Qui partage la carte avec vous.",
+    "gVictoryDesc": "Ce qu'il faut tenir pour gagner, et le temps pour choisir sa capitale.",
+    "gEconomyDesc": "Le rythme de la partie et la quantité d'or en circulation.",
+    "togglesDesc": "Autorisez ou retirez des armes et des mécaniques entières.",
+    "featuresDesc": "Systèmes de jeu facultatifs. Tout désactiver donne une partie plus directe.",
+    "dotsActive": "Nations en jeu : {n}",
+    "dotsFree": "Places libres : {n}",
+    "startHint": "Vous choisirez ensuite l'emplacement de votre capitale sur la carte.",
+    "procPreview": "Monde généré à partir de la graine {seed}",
+    "noCustomTitle": "Aucune carte personnalisée",
+    "noCustom": "Dessinez votre propre monde dans l'éditeur de cartes : il apparaîtra ici dès qu'il sera enregistré."
   },
   "rule": {
     "allowPorts": "Ports et marine",
@@ -515,7 +868,7 @@
   "feature": {
     "weather": {
       "name": "Météo et jour/nuit",
-      "desc": "Cycle de 8 minutes, tempêtes qui ralentissent les navires, brouillards."
+      "desc": "Cycle de 8 minutes ; orages qui ralentissent navires et avions ; bancs de brouillard qui réduisent la portée des radars et des navires de guerre."
     },
     "fog": {
       "name": "Brouillard de guerre",
@@ -523,7 +876,7 @@
     },
     "tech": {
       "name": "Arbre technologique",
-      "desc": "5 branches × 4 niveaux, recherche produite par les villes."
+      "desc": "6 branches de 6 technologies, plus 6 recherches sans fin ; points produits par les centres de recherche ; silos, bombes, SAM, radars et aérodromes à rechercher."
     },
     "resources": {
       "name": "Ressources stratégiques",
@@ -603,12 +956,12 @@
   "building": {
     "city": {
       "name": "Ville",
-      "desc": "+250 000 de population maximale par niveau, produit de la recherche. Gare ferroviaire.",
+      "desc": "+60 000 troupes maximales par niveau une fois achevée. Gare ferroviaire.",
       "short": "Ville"
     },
     "port": {
       "name": "Port",
-      "desc": "À construire sur la côte. Envoie des navires marchands vers les ports étrangers et sert de gare. Rayon d'action de 60 tuiles (+10 par niveau) : les navires de guerre y sont construits et réparés.",
+      "desc": "À construire sur la côte. Envoie des navires marchands vers les ports étrangers : les deux ports touchent la cargaison, d'autant plus précieuse que la route est longue. Sert de gare. Rayon d'action de 60 tuiles (+10 par niveau) : les navires de guerre y sont construits. Un navire endommagé vient s'y amarrer pour se réparer.",
       "short": "Port"
     },
     "factory": {
@@ -628,7 +981,7 @@
     },
     "sam": {
       "name": "Batterie SAM",
-      "desc": "Intercepte bombes et ogives par prédiction de trajectoire. Portée 70 → 140 tuiles selon le niveau.",
+      "desc": "Intercepte bombes et ogives par prédiction de trajectoire. Portée 49 → 105 tuiles selon le niveau.",
       "short": "SAM"
     },
     "radar": {
@@ -640,12 +993,20 @@
       "name": "Aérodrome",
       "desc": "Produit chasseurs, bombardiers et avions de reconnaissance.",
       "short": "Aérodrome"
+    },
+    "lab": {
+      "name": "Centre de recherche",
+      "desc": "Produit 1,5 point de recherche par seconde et par niveau une fois achevé ; sans centre, la recherche plafonne à 0,5 point/s. Niveaux illimités. Transféré s'il est capturé.",
+      "short": "Recherche"
     }
   },
   "unit": {
+    "transport": {
+      "name": "Navires de transport en mer"
+    },
     "warship": {
       "name": "Navire de guerre",
-      "desc": "À placer sur l'eau, dans le rayon d'action d'un de vos ports. Portée de tir 130 tuiles ; cible d'abord les transports, puis les navires de guerre, et capture les marchands. Gagne en vétérance et patrouille autour de son point d'ancrage.",
+      "desc": "À placer sur l'eau, dans le rayon d'action d'un de vos ports. Portée de tir 90 tuiles ; cible d'abord les transports, puis les navires de guerre, et capture les marchands. Gagne en vétérance et patrouille autour de son point d'ancrage.",
       "short": "Croiseur"
     },
     "fighter": {
@@ -664,41 +1025,108 @@
       "short": "Reconnaiss."
     }
   },
+  "alliances": {
+    "title": "Alliances en cours",
+    "left": "Temps restant avant la fin de l'alliance",
+    "renew": "Renouveler",
+    "renewTip": "Proposer de prolonger l'alliance de 5 minutes (les deux pays doivent accepter).",
+    "acceptRenew": "Accepter le renouvellement",
+    "acceptRenewTip": "Votre allié propose de prolonger l'alliance de 5 minutes."
+  },
+  "pact": {
+    "signed": "Pacte d'alliance signé",
+    "renewed": "Alliance renouvelée",
+    "terms": "Avec {name} · 5 minutes · aucune attaque entre vous",
+    "refused": "Alliance refusée",
+    "refusedTerms": "{name} a décliné votre proposition",
+    "lapsed": "Proposition sans réponse",
+    "lapsedTerms": "{name} n'a pas répondu à temps",
+    "stamp": "Refusé",
+    "stampLapsed": "Sans suite",
+    "betrayed": "Pacte trahi",
+    "betrayedTerms": "{name} a rompu votre alliance"
+  },
+  "launch": {
+    "title": "Lancement de missile",
+    "available": "{n} prêt(s)",
+    "count": "Salve",
+    "max": "Max",
+    "arc": "Trajectoire",
+    "arcUp": "Arc haut",
+    "arcDown": "Arc bas",
+    "flipTip": "Inverser la trajectoire (effet miroir) pour contourner les SAM",
+    "mirvNote": "Le MIRV monte toujours en arc haut et ne peut pas être intercepté. Ses ogives, qui retombent sur tout le pays visé, peuvent l'être.",
+    "aim": "Pointez une cible sur la carte",
+    "teammate": "Impossible de viser un coéquipier",
+    "noSilo": "Aucun silo : construisez-en un",
+    "reloading": "Silos en rechargement",
+    "banned": "Le Conseil mondial interdit le nucléaire",
+    "gold": "Or insuffisant",
+    "mirvClear": "Le porteur ne peut pas être intercepté",
+    "intercepted": "Un SAM interceptera ce missile : inversez l'arc ({key}) ou visez ailleurs",
+    "clear": "Trajectoire dégagée : aucun SAM connu ne l'atteint",
+    "betray": "Trahison : rompt l'alliance avec {list}",
+    "legendOwn": "Vos SAM",
+    "legendAlly": "SAM alliés",
+    "legendEnemy": "SAM ennemis",
+    "legendDots": "Pointillés fins : hors de portée des SAM",
+    "hint": "Clic : lancer · Échap : annuler",
+    "arcUpToast": "Missiles : arc vers le haut",
+    "arcDownToast": "Missiles : arc vers le bas",
+    "locked": "Nécessite la recherche : {tech}"
+  },
   "nuke": {
     "nukeA": {
       "name": "Bombe A",
-      "desc": "750 000 or. Destruction 12 tuiles, retombées 30. Interceptable.",
+      "desc": "750 000 or. Rase tout sur 12 tuiles et la moitié des terres jusqu'à 30. Interceptable près du silo et de la cible.",
       "short": "Bombe A"
     },
     "nukeH": {
       "name": "Bombe H",
-      "desc": "5 000 000 or. Destruction 80 tuiles, retombées 100. Interceptable.",
+      "desc": "5 000 000 or. Rase tout sur 80 tuiles et la moitié des terres jusqu'à 100. Interceptable près du silo et de la cible.",
       "short": "Bombe H"
     },
     "nukeMirv": {
       "name": "MIRV",
-      "desc": "25 M + 15 M par lancement précédent. Se sépare en 8 à 12 ogives.",
+      "desc": "25 M + 15 M par MIRV déjà lancé. Se sépare en haute altitude en ogives (jusqu'à 350) qui frappent tout le pays visé.",
       "short": "MIRV"
     }
   },
   "worldEvent": {
-    "crisis": "Crise économique mondiale : −25 % de revenus pendant 2 minutes.",
-    "pandemic": "Pandémie : la croissance démographique est divisée par deux.",
-    "boom": "Boom commercial : commerce et trains rapportent double !",
-    "solarStorm": "Tempête solaire : les radars sont aveugles pendant 90 s.",
-    "peaceSummit": "Sommet de la paix : trêve forcée de 60 secondes.",
+    "crisis": "Crise économique mondiale : −25 % de revenus pendant 2 minutes.",
+    "pandemic": "Pandémie : la croissance des troupes est divisée par deux pendant 2 minutes.",
+    "boom": "Boom commercial : navires marchands et trains rapportent double pendant 2 minutes !",
+    "solarStorm": "Tempête solaire : les radars sont aveugles pendant 90 secondes.",
+    "peaceSummit": "Sommet de la paix : trêve forcée de 60 secondes entre tous les pays.",
     "crisis.short": "Crise",
     "pandemic.short": "Pandémie",
     "boom.short": "Boom commercial",
     "solarStorm.short": "Tempête solaire",
-    "peaceSummit.short": "Sommet de la paix"
+    "peaceSummit.short": "Sommet de la paix",
+    "crisis.title": "Crise économique mondiale",
+    "pandemic.title": "Pandémie mondiale",
+    "boom.title": "Boom commercial",
+    "solarStorm.title": "Tempête solaire",
+    "peaceSummit.title": "Sommet de la paix",
+    "crisis.desc": "Les revenus de tous les pays baissent de 25 % pendant 2 minutes. Le commerce et les trains ne sont pas touchés.",
+    "pandemic.desc": "La croissance des troupes est divisée par deux pendant 2 minutes. Toutes les armées ont perdu 3 % de leurs effectifs au début de l'épidémie.",
+    "boom.desc": "Navires marchands et trains rapportent le double pendant 2 minutes : c'est le moment de commercer.",
+    "solarStorm.desc": "Les radars sont aveugles pendant 90 secondes : le brouillard de guerre retombe sur les zones qu'ils éclairaient.",
+    "peaceSummit.desc": "Trêve forcée de 60 secondes : aucun pays ne peut en attaquer un autre. Les tribus restent attaquables.",
+    "crisis.fx": "Revenus −25 %",
+    "pandemic.fx": "Croissance des troupes −50 %",
+    "boom.fx": "Commerce et trains ×2",
+    "solarStorm.fx": "Radars hors service",
+    "peaceSummit.fx": "Aucune attaque entre pays"
   },
   "event": {
     "gameStart": "La partie commence ! L'immunité protège les joueurs pendant 60 s.",
     "eliminated": "{player} a été éliminé.",
     "betrayal": "{traitor} a trahi {victim} !",
     "doomsdayStep": "L'horloge avance : il faut désormais {share} % du territoire.",
-    "ringShrink": "La zone jouable se resserre !"
+    "ringShrink": "La zone jouable se resserre !",
+    "capitalFell": "La capitale de {player} tombe aux mains de {by}.",
+    "capitalRazed": "La capitale de {player} est rasée."
   },
   "alert": {
     "nuke": "Missile nucléaire lancé par {by} — impact dans {eta} s !",
@@ -709,6 +1137,7 @@
     "allianceRequest": "{from} propose une alliance.",
     "renewRequest": "{from} souhaite renouveler votre alliance.",
     "allianceRefused": "{by} a refusé votre alliance.",
+    "allianceLapsed": "{by} n'a pas répondu à votre proposition d'alliance.",
     "allianceFormed": "Alliance conclue avec {with}.",
     "allianceRenewed": "Alliance renouvelée avec {with}.",
     "allianceEnded": "L'alliance avec {with} a pris fin.",
@@ -726,18 +1155,29 @@
     "sabotaged": "Sabotage ordonné par {by} !",
     "researchDone": "Recherche terminée : {tech}.",
     "secession": "Sécession : {tiles} tuiles se sont révoltées !",
-    "youDied": "Vous avez été éliminé. Vous pouvez continuer en spectateur."
+    "youDied": "Vous avez été éliminé. Vous pouvez continuer en spectateur.",
+    "capitalLost": "Votre capitale est tombée aux mains de {by} : {gold} or du trésor saisis et une minute de désorganisation. Choisissez une nouvelle capitale.",
+    "capitalRazed": "Votre capitale a été rasée : {gold} or du trésor perdus et une minute de désorganisation. Choisissez une nouvelle capitale.",
+    "capitalTaken": "Vous prenez la capitale de {player} : {gold} or saisis, et le pays est désorganisé pendant une minute.",
+    "capitalMoved": "Capitale établie : le gouvernement siège ici.",
+    "threat": "{player} masse à votre frontière une armée {ratio} fois plus nombreuse que la vôtre : {why}.",
+    "researchRepeat": "Recherche terminée : {tech}, niveau {level}.",
+    "researchIdle": "Plus aucune recherche en cours : choisissez la prochaine technologie.",
+    "labReady": "Centre de recherche opérationnel : la recherche accélère.",
+    "labLost": "{by} s'est emparé d'un de vos centres de recherche.",
+    "labTaken": "Vous prenez un centre de recherche à {player}."
   },
   "error": {
+    "nukeSelfMirv": "Un MIRV ne peut pas viser votre propre pays : ses ogives tomberaient sur tout votre territoire.",
     "cannotAttack": "Impossible d'attaquer cette cible (immunité, équipe ou cessez-le-feu).",
-    "noFrontier": "Aucune frontière commune avec cette cible.",
+    "noFrontier": "Aucune frontière commune : pour l'atteindre, envoyez un bateau (touche B ou clic droit → Débarquer).",
     "warship": "Impossible d'armer un navire : port requis sur cette mer, ou or insuffisant.",
     "nuke": "Aucun missile disponible (silo, or ou rechargement).",
     "air": "Aucun aérodrome disponible, cible hors de portée ou or insuffisant.",
     "general": "Capacité indisponible.",
     "simulation": "Erreur de simulation — consultez le journal.",
     "boat": {
-      "max": "Trop de transports en mer (4 maximum).",
+      "max": "Trop de transports en mer (3 maximum).",
       "noLanding": "Pas de côte où débarquer ici.",
       "noCoast": "Vous n'avez aucune côte sur cette mer.",
       "noPath": "Aucun chemin maritime vers cette côte.",
@@ -752,8 +1192,15 @@
       "notLand": "Terrain invalide.",
       "occupied": "Emplacement occupé.",
       "tooClose": "Trop près d'un autre bâtiment.",
-      "notCoastal": "Un port doit être sur la côte.",
-      "gold": "Or insuffisant."
+      "notCoastal": "Un port doit être sur la côte ou au bord d'une rivière navigable.",
+      "gold": "Or insuffisant.",
+      "locked": "Recherche nécessaire : {tech}."
+    },
+    "capital": {
+      "notOwned": "La capitale doit être sur vos terres.",
+      "fallout": "Terre irradiée : la capitale ne peut pas s'y installer.",
+      "front": "Trop près d'une frontière : la capitale doit être à plus de 5 tuiles de toute terre étrangère (alliés exceptés).",
+      "cooldown": "Capitale déplacée récemment : nouveau transfert possible dans {s} s."
     }
   },
   "keys": {
@@ -780,6 +1227,7 @@
     "fogView": "Brouillard",
     "resourcesView": "Ressources",
     "loyaltyView": "Loyauté",
+    "tradeRoutes": "Routes commerciales",
     "home": "Centrer sur mon territoire",
     "chat": "Messages",
     "pause": "Pause (solo)",
@@ -791,7 +1239,11 @@
     "panLeft": "Caméra gauche",
     "panRight": "Caméra droite",
     "zoomIn": "Zoom +",
-    "zoomOut": "Zoom −"
+    "zoomOut": "Zoom −",
+    "flipArc": "Inverser la trajectoire des missiles",
+    "speedDown": "Ralentir le temps (solo)",
+    "speedUp": "Accélérer le temps (solo)",
+    "buildLab": "Centre de recherche"
   },
   "settings": {
     "tab": {
@@ -825,12 +1277,10 @@
     "muteUnfocused": "Atténuer quand la fenêtre est inactive",
     "testSound": "Tester le son",
     "confirmations": "Demander confirmation (trahisons)",
-    "simpleMode": "Mode simple (répartition troupes/ouvriers automatique)",
     "fontSize": "Taille du texte",
     "wheel": "Molette / pavé tactile",
     "wheel.zoom": "Molette : zoom",
     "wheel.trackpad": "Pavé tactile : défilement à deux doigts, pincer pour zoomer",
-    "checkUpdates": "Vérifier les mises à jour (appel réseau, désactivé par défaut)",
     "playerName": "Nom du joueur",
     "pressKey": "Appuyez sur une touche…",
     "resetKeys": "Réinitialiser les touches",
@@ -844,9 +1294,36 @@
     "subtitles": "Sous-titres des alertes sonores",
     "accessNote": "Les modes daltoniens utilisent des palettes optimisées et des hachures par joueur.",
     "language": "Langue",
-    "updateUrl": "URL du manifeste de mise à jour (HTTPS, JSON)",
     "subtitle": "Les modifications sont appliquées immédiatement et enregistrées automatiquement.",
-    "voiceOn": "Narration vocale dans la campagne et le didacticiel"
+    "voiceOn": "Narration vocale dans la campagne",
+    "tabDesc": {
+      "graphics": "Qualité d'affichage, effets et plein écran.",
+      "audio": "Volumes, voix et son en arrière-plan.",
+      "game": "Nom, confirmations, texte et souris.",
+      "controls": "Raccourcis clavier, modifiables.",
+      "access": "Couleurs, contraste, animations, sous-titres.",
+      "lang": "Langue de l'interface et des voix."
+    },
+    "d": {
+      "quality": "Élevée pour une machine récente. Performance allège les effets de la carte.",
+      "particles": "Quantité d'éclats, de fumées et d'explosions.",
+      "shaders": "Reflets de l'eau, relief et lumière. Désactivez-les sur une machine modeste.",
+      "vsync": "Aligne les images sur l'écran pour éviter les déchirures.",
+      "maxFps": "Limite les images par seconde pour économiser la batterie. ∞ : sans limite.",
+      "uiScale": "Agrandit ou réduit les panneaux pendant la partie.",
+      "fullscreen": "Le jeu occupe tout l'écran.",
+      "autoPerf": "Passe en mode performance si la partie ralentit.",
+      "voiceOn": "Les conseils d'Ilse sont lus à voix haute.",
+      "muteUnfocused": "Baisse le son quand vous passez à une autre fenêtre.",
+      "playerName": "Affiché sur la carte et dans les salons en réseau.",
+      "confirmations": "Une confirmation est demandée avant de trahir un allié.",
+      "fontSize": "Taille du texte de l'interface.",
+      "wheel": "Adaptez le zoom à une souris ou à un pavé tactile.",
+      "highContrast": "Renforce les filets et le texte secondaire.",
+      "reducedMotion": "Coupe les animations décoratives des menus et de la carte.",
+      "subtitles": "Un texte accompagne chaque alerte sonore.",
+      "language": "S'applique tout de suite aux menus, à la carte et aux voix."
+    }
   },
   "lan": {
     "title": "Multijoueur en réseau local",
@@ -876,11 +1353,13 @@
     "hostStep2": "Les autres joueurs voient votre partie dans la liste, ou saisissent l'adresse et le code.",
     "hostStep3": "Réglez la partie puis lancez-la quand tout le monde est prêt.",
     "manualHelp": "Si la partie n'apparaît pas, saisissez l'adresse affichée dans le salon de l'hôte.",
-    "address": "Adresse (IP:port)"
+    "address": "Adresse (IP:port)",
+    "asSpectator": "Rejoindre en spectateur",
+    "foundDesc": "Les salons ouverts sur votre réseau apparaissent ici d'eux-mêmes."
   },
   "campaign": {
     "title": "Campagne : Les Cartographes",
-    "intro": "Six missions pour apprendre à tracer, tenir et défendre vos lignes. Chaque mission rapporte jusqu'à trois étoiles : réussite, rapidité et objectif bonus.",
+    "intro": "Six missions pour apprendre à jouer : tracer, tenir et défendre vos lignes. Chaque mission rapporte jusqu'à trois étoiles : réussite, rapidité et objectif bonus.",
     "play": "Jouer",
     "advisor": "Conseillère Ilse",
     "objectives": "Objectifs",
@@ -888,21 +1367,16 @@
     "failed": "Nous avons perdu nos terres. Réessayons.",
     "m1": {
       "title": "Premières lignes",
-      "summary": "Entre deux lacs, prenez 15 % des terres.",
-      "d1": "Bienvenue, cartographe. Chaque trait que vous tracez sur cette carte devient une frontière.",
-      "d2": "Étendez-vous sur les terres libres, puis absorbez les tribus voisines. Visez 15 % du territoire.",
       "main": "Contrôler 15 % des terres",
+      "city": "Construire une ville",
       "bonus": "Posséder 2 villes",
       "outro": "Belles premières lignes. Les nations ont remarqué votre encre.",
-      "brief": "Deux grands lacs partagent cette région. Trois petites nations s'y installent, entourées de tribus qui gardent leur or. Vous partez de rien : un point sur la carte et quelques milliers d'hommes. Votre mission est de vous imposer comme une puissance régionale en contrôlant quinze pour cent des terres.",
-      "tip1": "Un clic sur une terre libre envoie la part de troupes réglée en bas à gauche. Plusieurs petits clics valent mieux qu'un seul gros.",
-      "tip2": "Les villes augmentent fortement votre population : construisez-en dès que l'or le permet."
+      "brief": "Deux grands lacs partagent cette région. Trois petites nations s'y installent, entourées de tribus qui gardent leur or. Vous partez d'une capitale et de quelques milliers d'hommes. Je vous guiderai pas à pas : étendez-vous, bâtissez une ville, soumettez les tribus, et imposez-vous en contrôlant quinze pour cent des terres.",
+      "tip1": "Un clic sur une terre libre y envoie une part de vos troupes, fixée par le ratio d'attaque en bas à gauche. Plusieurs petits clics valent mieux qu'un seul gros.",
+      "tip2": "Les villes relèvent votre plafond de troupes. Votre trésor de départ paie la première ; chaque nouvelle ville coûte deux fois plus cher que la précédente."
     },
     "m2": {
       "title": "Tenir la ligne",
-      "summary": "Survivez 20 minutes en Europe face à des nations agressives.",
-      "d1": "L'Europe est une poudrière. Les nations voisines sont belliqueuses.",
-      "d2": "Tenez 10 minutes. Les postes de défense multiplient par cinq les pertes de l'assaillant.",
       "main": "Survivre 20 minutes",
       "bonus": "Construire 3 postes de défense",
       "outro": "Vos lignes ont tenu. Les assaillants se sont brisés sur vos remparts.",
@@ -912,45 +1386,35 @@
     },
     "m3": {
       "title": "L'île",
-      "summary": "Dans l'archipel, éliminez une nation par la mer.",
-      "d1": "Les îles se gagnent par la mer. Cliquez sur une côte au-delà de l'eau pour débarquer.",
-      "d2": "Éliminez au moins une nation. Méfiez-vous des navires de guerre qui coulent les transports.",
-      "main": "Éliminer une nation",
+      "main": "Éliminer une nation (hors tribus)",
       "bonus": "Couler 2 navires",
       "outro": "L'archipel retient votre nom.",
-      "brief": "Un archipel de centaines d'îles. Ici, toute conquête passe par la mer. Une douzaine de nations se partagent les côtes, et leurs navires de guerre coulent les transports trop imprudents. Éliminez au moins une nation rivale.",
-      "tip1": "Cliquez sur une côte de l'autre côté de l'eau : vos troupes embarquent depuis votre rivage le plus proche.",
-      "tip2": "Un port permet de construire des navires de guerre pour escorter vos débarquements."
+      "brief": "Un archipel de centaines d'îles : ici, toute conquête passe par la mer. Une douzaine de nations se partagent les côtes, et leurs navires de guerre coulent les transports imprudents. Débarquez sur une autre île, puis éliminez au moins une nation rivale ; les tribus ne comptent pas.",
+      "tip1": "Visez une côte de l'autre côté de l'eau et appuyez sur B : un transport part de votre rivage le plus proche. Trois au plus peuvent naviguer en même temps.",
+      "tip2": "Un port permet d'armer des navires de guerre (touche 7) pour escorter vos débarquements. Les orages ralentissent tous les navires.",
+      "land": "Débarquer sur une autre île"
     },
     "m4": {
       "title": "Rail et fortune",
-      "summary": "Sur la Pangée, gagnez 3 millions grâce au commerce et aux trains.",
-      "d1": "La richesse circule. Les usines posent des rails vers vos villes et ports.",
-      "d2": "Les trains paient à chaque arrêt, les navires marchands à chaque port étranger. Gagnez 3 millions.",
-      "main": "Gagner 3 M d'or (commerce + trains)",
+      "main": "Gagner 1,5 M d'or (commerce + trains)",
       "bonus": "Posséder 3 usines",
       "outro": "Vos lignes de fer sont devenues des lignes de crédit.",
-      "brief": "La Pangée réunit toutes les terres en un seul continent : les routes commerciales y sont longues et lucratives. Votre objectif n'est pas la conquête mais la fortune. Gagnez trois millions d'or grâce au commerce maritime et aux trains.",
+      "brief": "La Pangée réunit toutes les terres en un seul continent : les routes commerciales y sont longues et lucratives. Votre objectif n'est pas la conquête mais la fortune : gagnez un million et demi d'or grâce au commerce maritime et aux trains, et recherchez les chemins de fer dans votre premier centre de recherche.",
       "tip1": "Une usine relie automatiquement par rail vos villes, ports et usines voisins. Chaque arrêt de train rapporte de l'or.",
-      "tip2": "Les ports envoient des navires marchands vers les ports étrangers ; un embargo coupe ces échanges."
+      "tip2": "Les ports envoient des navires marchands vers les ports étrangers ; un embargo coupe ces échanges. La touche C affiche les routes commerciales.",
+      "tech": "Rechercher les Chemins de fer"
     },
     "m5": {
       "title": "Le soleil artificiel",
-      "summary": "En Méditerranée, lancez une bombe H.",
-      "d1": "Certaines lignes ne se tracent qu'au feu. Construisez un silo et amassez 5 millions.",
-      "d2": "Lancez une bombe H. Les batteries SAM ennemies peuvent l'intercepter : visez juste.",
       "main": "Lancer une bombe H",
       "bonus": "Intercepter un missile avec un SAM",
       "outro": "Le monde a vu votre soleil. Il ne l'oubliera pas.",
-      "brief": "La Méditerranée, berceau d'empires. Certaines frontières ne se tracent qu'au feu. Vous devez acquérir l'arme absolue et l'utiliser : lancez une bombe H. Attention, les batteries SAM ennemies peuvent l'intercepter.",
-      "tip1": "Un silo coûte un million ; la bombe H en coûte cinq. Développez votre économie avant tout.",
+      "brief": "La Méditerranée, berceau d'empires. Certaines frontières ne se tracent qu'au feu. Bâtissez un centre de recherche, menez à bien le programme nucléaire, puis lancez une bombe H. Attention, les batteries SAM ennemies peuvent l'intercepter.",
+      "tip1": "Un silo coûte un million, la bombe H cinq, et tous deux doivent d'abord être recherchés. Plus vous avez de centres de recherche, plus l'étude va vite.",
       "tip2": "Visez une cible éloignée de toute batterie SAM : le missile peut être intercepté pendant son vol."
     },
     "m6": {
       "title": "Minuit moins une",
-      "summary": "Monde, horloge de l'apocalypse : atteignez 40 %.",
-      "d1": "L'horloge tourne. Après 10 minutes, ceux qui tiennent trop peu de terres s'effondrent.",
-      "d2": "Atteignez 40 % du monde avant qu'il ne soit trop tard.",
       "main": "Atteindre 40 % du territoire",
       "bonus": "Y parvenir en moins de 45 minutes",
       "outro": "Vous avez arrêté l'horloge. L'atlas porte désormais votre nom.",
@@ -969,34 +1433,14 @@
     "objective": "Objectif",
     "parTime": "Temps de référence",
     "starsRule": "Une étoile pour la réussite, une si vous battez le temps de référence, une pour l'objectif bonus.",
-    "lockedHint": "Réussissez la mission précédente pour débloquer celle-ci."
-  },
-  "tutorial": {
-    "spawn": "Cliquez sur une terre libre pour poser votre capitale. La partie commencera aussitôt.",
-    "spawn.short": "Choisir un point de départ",
-    "camera": "Déplacez la carte en la faisant glisser, et zoomez avec la molette ou en pinçant le pavé tactile.",
-    "camera.short": "Déplacer la caméra",
-    "expand": "Cliquez sur les terres libres autour de vous : vos troupes s'étendent. Atteignez 1 200 tuiles.",
-    "expand.short": "S'étendre (1 200 tuiles)",
-    "ratio": "Le ratio d'attaque fixe la part de troupes envoyée à chaque ordre. Changez-le avec T et Y, ou avec Maj et la molette.",
-    "ratio.short": "Régler le ratio d'attaque",
-    "city": "Construisez une ville : touche 1 puis clic sur votre territoire, ou clic droit, Construire, Ville. Les villes augmentent votre population.",
-    "city.short": "Construire une ville",
-    "attack": "Attaquez la tribu voisine, en gris : un clic sur sa frontière suffit. Vous récupérerez une part de son or.",
-    "attack.short": "Attaquer une tribu",
-    "port": "Construisez un port sur la côte avec la touche 2. Il génère du commerce et permet de construire des navires de guerre.",
-    "port.short": "Construire un port",
-    "alliance": "Ouvrez le panneau Diplomatie, à gauche, et proposez une alliance à une nation voisine.",
-    "alliance.short": "Conclure une alliance",
-    "tech": "Ouvrez le panneau Technologies, à gauche, et choisissez une branche à rechercher.",
-    "tech.short": "Lancer une recherche",
-    "done": "Vous connaissez l'essentiel. Continuez cette partie, ou lancez la campagne depuis le menu principal.",
-    "done.short": "Terminé",
-    "title": "Didacticiel",
-    "brief": "Bienvenue. Ce didacticiel vous apprend l'essentiel en six minutes environ : choisir un point de départ, vous étendre, construire, attaquer et nouer des alliances. Chaque étape reste affichée jusqu'à ce que vous l'ayez accomplie.",
-    "goal": "Suivre les étapes du guide",
-    "tip1": "Clic gauche pour attaquer ou vous étendre, clic droit pour le menu des actions.",
-    "tip2": "Survolez n'importe quel élément de l'interface pour obtenir une explication."
+    "lockedHint": "Réussissez la mission précédente pour débloquer celle-ci.",
+    "starsTotal": "{n} étoiles sur {total}",
+    "routeLabel": "Itinéraire de la campagne",
+    "starsOf": "{n} étoiles sur 3",
+    "locked": "Verrouillée",
+    "hint": "Conseil",
+    "need": "Il vous faut {gold} d'or (encore {time})",
+    "needGold": "Il vous faut {gold} d'or"
   },
   "achievement": {
     "unlocked": "Succès débloqué",
@@ -1133,9 +1577,14 @@
     "anonymous": "Cartographe anonyme",
     "defaultName": "Cartographe",
     "subtitle": "Vos statistiques cumulées, vos succès et vos meilleurs scores, enregistrés sur cet ordinateur.",
-    "needAch": "{n} succès requis"
+    "needAch": "{n} succès requis",
+    "record": "Bilan",
+    "won": "Victoire",
+    "noScoresHint": "Aucun score pour l'instant. Terminez une partie pour inscrire votre premier score ici.",
+    "playFirst": "Nouvelle partie"
   },
   "replay": {
+    "staleTip": "Enregistré avec une version précédente du jeu : les règles ont changé, la relecture peut s'écarter de la partie d'origine.",
     "watch": "Regarder",
     "import": "Importer un .rpl",
     "none": "Aucun replay. Ils sont enregistrés automatiquement à la fin de chaque partie.",
@@ -1148,7 +1597,9 @@
     "colWinner": "Vainqueur",
     "colDuration": "Durée",
     "colDate": "Date",
-    "export": "Exporter le fichier"
+    "export": "Exporter le fichier",
+    "emptyTitle": "Aucun replay pour l'instant",
+    "emptyHint": "Chaque partie terminée s'enregistre ici automatiquement. Vous pouvez aussi importer un fichier .rpl reçu d'un autre joueur."
   },
   "editor": {
     "new": "Nouvelle carte",
@@ -1181,18 +1632,30 @@
       "land": "La carte doit contenir au moins 2 000 tuiles de terre.",
       "spawns": "Placez au moins 4 points d'apparition (bouton automatique disponible)."
     },
-    "depositsShort": "gisements"
+    "depositsShort": "gisements",
+    "mapName": "Nom de la carte",
+    "newHint": "Choisissez une taille de départ : une page blanche d'océan à sculpter.",
+    "pickMap": "Choisir une carte…",
+    "spawns": "Points d'apparition",
+    "deposits": "Gisements"
   },
   "about": {
     "text": "Isoline est un jeu de conquête territoriale en temps réel sur un atlas vivant. Code, cartes, sons et images sont originaux ou sous licence libre.",
     "credits": "Crédits",
     "naturalEarth": "données géographiques du domaine public (naturalearthdata.com)",
-    "license": "Code sous licence MIT · Polices sous SIL Open Font License."
+    "license": "Code sous licence MIT, polices sous SIL Open Font License.",
+    "version": "Version",
+    "platform": "Plateforme",
+    "licenses": "Licences"
   },
   "subtitle": {
     "siren": "Sirène d'alerte nucléaire",
     "explosion": "Explosion nucléaire",
-    "betrayal": "Accord dissonant : trahison"
+    "betrayal": "Accord dissonant : trahison",
+    "pact": "Plume sur parchemin : pacte signé",
+    "refused": "Coup de tampon : alliance refusée",
+    "capitalLost": "Cor de guerre : votre capitale est tombée",
+    "capitalTaken": "Lame tirée : capitale prise"
   },
   "signal": {
     "attack": "Attaquer ici",
@@ -1215,23 +1678,29 @@
   "guide": {
     "spawn": "Choisissez l'emplacement de votre capitale : cliquez sur une terre libre, de préférence loin des autres nations. La partie démarre dès que vous l'avez posée.",
     "m1": {
+      "camera": "Faites glisser la carte pour la déplacer, et zoomez avec la molette ou en pinçant le pavé tactile. La touche H vous ramène sur votre territoire.",
       "expand": "Étendez-vous : cliquez sur les terres libres le long de votre frontière. Vos troupes avancent d'elles-mêmes tant qu'elles en ont la force.",
+      "ratio": "En bas à gauche, le ratio d'attaque fixe la part de vos troupes engagée à chaque clic. Changez-le avec T et Y, ou avec Maj et la molette : un ratio bas garde des troupes pour défendre.",
       "city": "Votre population atteint vite son plafond. Construisez une ville : touche 1 puis clic sur votre territoire, ou clic droit, Construire, Ville.",
       "tribes": "Les tribus, en gris, gardent un trésor. Attaquez-en une : chaque terre conquise vous rapporte une part de son or.",
+      "capital": "L'étoile sur votre territoire marque votre capitale. Si elle tombe, votre pays est désorganisé pendant une minute et vous devrez en désigner une autre : gardez-la loin du front.",
       "goal": "Continuez jusqu'à quinze pour cent des terres. Une deuxième ville vous vaudra l'étoile bonus."
     },
     "m2": {
       "spawn": "Placez votre capitale. Un relief accidenté, comme les Alpes ou les Carpates, sera plus facile à défendre.",
       "expand": "Prenez vite des terres libres avant que les nations voisines ne vous encerclent.",
       "defense": "Construisez un poste de défense (touche 4) près de votre frontière la plus exposée.",
-      "troops": "Gardez au moins la moitié de votre population sous les armes : réglez le curseur « Part des troupes » à 50 % ou plus.",
-      "alliance": "Proposez une alliance à un voisin depuis le panneau Diplomatie. Un allié ne peut pas vous attaquer.",
+      "threats": "Quand un voisin masse une armée bien plus forte que la vôtre à votre frontière, une alerte « frontière menacée » s'affiche et le journal la consigne. Renforcez ce front, ou faites de ce voisin un allié.",
+      "alliance": "Proposez une alliance à un voisin : clic droit sur son territoire, ou fenêtre Diplomatie dans le rail de gauche. Les offres que vous recevez s'affichent en bas à droite : K pour accepter, L pour refuser.",
+      "troops": "Laissez votre armée se reconstituer avant de repartir à l'attaque : atteignez la moitié de votre plafond de troupes.",
       "hold": "Tenez jusqu'à la fin du compte à rebours. Renforcez les fronts qui cèdent et renouvelez vos alliances."
     },
     "m3": {
       "island": "Commencez par prendre toute votre île.",
-      "port": "Construisez un port (touche 2) sur votre côte.",
-      "landing": "La nation la plus faible est signalée sur la carte. Cliquez sur sa côte pour lancer un débarquement.",
+      "port": "Construisez un port (touche 2) sur votre côte : il apporte le commerce maritime et permet d'armer des navires de guerre.",
+      "landing": "La nation la plus faible est signalée sur la carte. Visez sa côte et appuyez sur B, ou clic droit puis Débarquer : un transport part de votre rivage le plus proche avec la part de troupes du ratio.",
+      "boats": "Trois transports au plus peuvent naviguer à la fois. Ils sont listés dans le panneau en bas à gauche : la flèche de retour rappelle un transport, au prix d'un quart de ses troupes. Les orages ralentissent tous les navires.",
+      "warship": "Les navires de guerre ennemis coulent les transports. Armez le vôtre : touche 7, puis clic sur la mer près de votre port. Il escorte vos débarquements et attaque les navires adverses.",
       "finish": "Poursuivez jusqu'à son élimination. Envoyez des renforts par la mer si l'attaque s'essouffle."
     },
     "m4": {
@@ -1239,28 +1708,57 @@
       "cities": "Construisez deux villes : ce seront vos premières gares.",
       "factory": "Construisez une usine (touche 3) entre vos villes. Les rails se posent tout seuls.",
       "port": "Construisez un port pour ajouter le commerce maritime à vos revenus.",
+      "routes": "Trains et navires marchands paient à chaque arrêt. La touche C affiche ou masque les routes commerciales ; la fenêtre Commerce, dans le rail de gauche, détaille vos gains par partenaire.",
+      "lab": "Construisez un centre de recherche (touche J) : il produit des points de recherche, même quand rien n'est à l'étude.",
+      "research": "Ouvrez la fenêtre Technologies et cliquez sur Chemins de fer : son prérequis se place devant elle dans la file d'attente. Ajoutez d'autres technologies, elles seront étudiées dans l'ordre.",
+      "windows": "Les fenêtres se déplacent par leur barre de titre et se redimensionnent par leur coin ; Échap ferme celle du premier plan. Elles gardent la place que vous leur donnez.",
       "wait": "Votre réseau tourne. Ajoutez des usines et des gares pour multiplier les arrêts, et évitez les guerres qui coupent les lignes."
     },
     "m5": {
       "expand": "Étendez-vous pour asseoir votre économie.",
+      "lab": "Construisez un centre de recherche (touche J) : c'est lui qui produit les points de recherche.",
+      "research": "Ouvrez la fenêtre Technologies et cliquez sur Programme nucléaire : ses prérequis se placent devant lui dans la file d'attente. Un deuxième centre de recherche accélérerait l'étude.",
       "city": "Construisez deux villes pour accroître population et revenus.",
-      "silo": "Construisez un silo (touche 5).",
-      "save": "Amassez cinq millions d'or.",
+      "silo": "Une fois le programme nucléaire acquis, construisez un silo (touche 5).",
+      "hbomb": "Mettez maintenant la bombe thermonucléaire à l'étude. Pensez aussi aux batteries SAM (touche 6, une fois les missiles sol-air recherchés) : elles abattent les missiles ennemis.",
       "launch": "Appuyez sur 9 puis cliquez sur une cible ennemie. Une cible possible est signalée sur la carte."
     },
     "m6": {
       "expand": "Étendez-vous aussi vite que possible.",
       "economy": "Construisez trois villes pour soutenir l'effort de guerre.",
+      "weather": "Surveillez le ciel : les orages ralentissent navires et avions, et les bancs de brouillard réduisent de moitié la portée des radars.",
       "clock": "L'horloge de l'apocalypse démarre à dix minutes. Préparez-vous à dépasser le seuil requis.",
       "push": "Poussez vers quarante pour cent. Une nation vulnérable est signalée sur la carte."
+    },
+    "hint": {
+      "capital": "Notre capitale est tombée ! Le pays est désorganisé pendant une minute. Désignez-en une nouvelle depuis la dépêche, à gauche : « Choisir sur la carte », ou « Au plus sûr ».",
+      "threat": "Frontière menacée : un voisin masse ses troupes contre nous. Renforcez ce front, ou proposez-lui une alliance.",
+      "allyOffer": "Une nation nous propose une alliance : sa carte est en bas à droite. K pour accepter, L pour refuser. Un allié ne peut pas nous attaquer.",
+      "boats": "Trois transports sont en mer : c'est le maximum. Attendez qu'un débarque, ou rappelez-en un depuis le panneau en bas à gauche.",
+      "storm": "Un orage sur la route de nos transports : les navires y avancent moins vite. Mieux vaut le contourner, ou attendre qu'il passe.",
+      "research": "Nos centres de recherche tournent à vide : rien n'est à l'étude. Ouvrez Technologies et choisissez une recherche, ou mettez-en plusieurs en file."
     }
   },
   "hover": {
     "ally": "Votre allié",
+    "war": "En guerre contre vous",
+    "levels": "{n} niveaux au total",
+    "lv": "niv. {n}",
+    "noTrade": "Pas de commerce (embargo)",
     "attackCostTip": "Multiplicateur des pertes de l'attaquant sur ce terrain (plaine = ×1,00).",
     "tribe": "Tribu",
     "unknown": "Territoire hors de vue",
-    "you": "Votre pays"
+    "you": "Votre pays",
+    "storm": "Orage : navires ralentis de {ship} %, avions de {air} %",
+    "fogBank": "Banc de brouillard : portée des radars et des navires de guerre réduite de {pct} %",
+    "capital": "Capitale",
+    "yourCapital": "Votre capitale",
+    "disorg": "Désorganisé par la perte de sa capitale ({clock})",
+    "threat": "Armée ×{ratio} massée à votre frontière"
+  },
+  "weather": {
+    "stormNear": "Un orage se forme près de chez vous : navires ralentis de {pct} %.",
+    "fogNear": "Un banc de brouillard se forme près de chez vous : portée des radars et des navires de guerre réduite de {pct} %."
   },
   "modeDesc": {
     "ffa": "Chacun pour soi : le premier à atteindre le seuil de terres gagne.",
@@ -1271,10 +1769,10 @@
     "battleRoyale": "Toutes les 3 minutes, une zone se resserre ; les terres hors zone deviennent inhabitables."
   },
   "difficultyDesc": {
-    "easy": "Nations lentes et prudentes, peu de trahisons.",
+    "easy": "Petites armées ; nations lentes et prudentes, peu de trahisons.",
     "normal": "Nations équilibrées : un défi raisonnable.",
-    "hard": "Nations plus riches et plus agressives.",
-    "impossible": "Nations très riches, rapides et sans scrupules."
+    "hard": "Nations aussi fortes que vous, et plus agressives.",
+    "impossible": "Armées plus grandes ; nations rapides et sans scrupules."
   },
   "ruleDesc": {
     "allowPorts": "Autorise ports, navires de guerre et commerce maritime.",
@@ -1284,5 +1782,348 @@
     "waterNukes": "Les explosions nucléaires sur l'eau produisent aussi des retombées.",
     "decontamination": "Les retombées disparaissent en 10 minutes au lieu de rester.",
     "allowSpectators": "Autorise des spectateurs à rejoindre la partie."
+  },
+  "front": {
+    "edition": "Édition finale",
+    "open": "Lire la une",
+    "openTip": "La première page du Courrier : le récit de la partie, ses grands tournants et l'empire au fil du temps.",
+    "fold": "Replier le journal",
+    "results": "Résultats détaillés",
+    "replayAll": "Revoir la partie",
+    "replay": "Revoir",
+    "replayAt": "Revoir ce moment dans le replay ({clock})",
+    "seeking": "Avance rapide jusqu'à {clock}…",
+    "dateline": {
+      "duration": "Partie de {duration}",
+      "nations": "{n} nations au départ"
+    },
+    "team": {
+      "n": "Équipe {n}",
+      "humans": "Les humains",
+      "nations": "Les nations"
+    },
+    "kicker": {
+      "territory": "Domination territoriale",
+      "lastStanding": "Dernière nation debout",
+      "team": "Victoire d'équipe",
+      "forfeit": "Capitulation",
+      "defeat": "Défaite",
+      "points": "Victoire aux points",
+      "none": "Fin de partie"
+    },
+    "title": {
+      "blitz": "{winner} : la guerre éclair",
+      "reign": "{winner} : un règne sans partage",
+      "comeback": "{winner} : le grand retournement",
+      "attrition": "{winner} : la victoire à l'usure",
+      "domination": "{winner} : la carte à ses pieds",
+      "lastStanding": "{winner} : la dernière nation debout",
+      "team": "{team} : la victoire en équipe",
+      "forfeit": "{winner} : la victoire par forfait",
+      "finalBlow": "{winner} : le coup de grâce",
+      "points": "{winner} : la victoire aux points",
+      "none": "Fin de partie sans vainqueur"
+    },
+    "deck": {
+      "territory": "{share} % des terres utiles, au-delà du seuil de {threshold} %, après {duration} de partie.",
+      "lastStanding": "Ses {n} rivaux sont tous tombés, en {duration} de partie.",
+      "lastStandingOne": "Son unique rival est tombé après {duration} de partie.",
+      "team": "Membres : {list}. Ensemble, {share} % des terres utiles.",
+      "forfeit": "Votre gouvernement dépose les armes à {clock} ; la nation alors en tête l'emporte avec {share} % des terres utiles.",
+      "defeatBy": "Vos dernières terres tombent à {clock}. Coup de grâce : {by}.",
+      "defeat": "Vos dernières terres tombent à {clock}.",
+      "points": "Plus aucun humain en lice : la nation la plus vaste l'emporte avec {share} % des terres utiles.",
+      "none": "La partie s'achève après {duration}."
+    },
+    "lead": {
+      "territory": "Fin de partie après {duration} sur la carte « {map} » : la nation victorieuse contrôle {share} % des terres utiles, au-delà du seuil de {threshold} %.",
+      "lastStanding": "Fin de partie après {duration} sur la carte « {map} » : des {n} nations du départ, une seule reste debout.",
+      "team": "Fin de partie après {duration} sur la carte « {map} » : l'équipe victorieuse tient {share} % des terres utiles.",
+      "forfeit": "Votre gouvernement dépose les armes après {duration} sur la carte « {map} ». La nation alors en tête l'emporte avec {share} % des terres utiles.",
+      "defeat": "Vos dernières terres tombent après {duration} sur la carte « {map} ». La nation alors en tête l'emporte avec {share} % des terres utiles.",
+      "points": "Fin de partie après {duration} sur la carte « {map} » : plus aucun humain en lice, la nation la plus vaste l'emporte avec {share} % des terres utiles.",
+      "none": "Fin de partie après {duration} sur la carte « {map} ».",
+      "wire": "La nation victorieuse mène dès {clock} et ne lâche plus la première place.",
+      "wireStart": "La nation victorieuse mène dès les premières minutes et ne lâche plus la première place.",
+      "comeback": "Longtemps distancée, la nation victorieuse ne prend la tête qu'à {clock}, pour ne plus la lâcher.",
+      "took": "La nation victorieuse prend définitivement la tête à {clock}.",
+      "fallsNone": "Aucune nation n'est tombée en chemin.",
+      "fallsOne": "Une seule nation est tombée en chemin ({name}, à {clock}).",
+      "fallsMany": "{n} nations sont tombées en chemin, la première dès {clock} ({name}).",
+      "nukesOne": "Le feu nucléaire a frappé une fois, à {clock}.",
+      "nukesMany": "Le feu nucléaire a frappé {n} fois, pour la première fois à {clock}.",
+      "betrayalsOne": "Une alliance a été trahie.",
+      "betrayalsMany": "{n} alliances ont été trahies.",
+      "youWon": "Votre nation a culminé à {peak} % des terres utiles, à {clock}.",
+      "youRank": "Votre nation termine {rank} sur {n}, après un pic à {peak} % des terres utiles à {clock}.",
+      "youRankOnly": "Votre nation termine {rank} sur {n}."
+    },
+    "maps": {
+      "title": "L'empire au fil du temps",
+      "start": "Début",
+      "end": "Fin",
+      "alt": "Carte des territoires à {clock}",
+      "others": "Autres nations",
+      "tribes": "Tribus",
+      "free": "Terres libres",
+      "you": "{name} (vous)"
+    },
+    "chart": {
+      "title": "Part des terres utiles",
+      "threshold": "Seuil de victoire : {n} %",
+      "aria": "Part des terres utiles de chaque nation au fil de la partie. Flèches gauche et droite : se déplacer dans le temps.",
+      "time": "Temps de jeu",
+      "min": "{n} min",
+      "table": "Part des terres utiles, en pourcentage",
+      "pct": "{share} %"
+    },
+    "points": {
+      "title": "Les grands tournants",
+      "empty": "La partie a été trop courte pour avoir ses grands tournants."
+    },
+    "point": {
+      "fallAlone": "Ses dernières terres sont tombées.",
+      "betrayal": "{traitor} : la trahison",
+      "betrayalDeck": "Alliance rompue. Victime : {victim}.",
+      "alliance": "{a} et {b} : l'alliance",
+      "allianceDeck": "Les deux pays mettent fin à toute hostilité.",
+      "allianceBroken": "Elle sera trahie à {clock}.",
+      "nuke": {
+        "atom": "{owner} : le premier tir nucléaire",
+        "hydrogen": "{owner} : la première bombe H",
+        "mirv": "{owner} : le premier MIRV"
+      },
+      "nukeTarget": "Cible : {victim}.",
+      "nukeTaboo": "Le tabou nucléaire tombe.",
+      "nukeWild": "Le tir vise des terres sans maître.",
+      "lead": "{winner} : en tête pour de bon",
+      "leadTeam": "{team} : en tête pour de bon",
+      "leadDeck": "{share} % des terres utiles à cet instant.",
+      "leadOver": "{share} % des terres utiles. Pays dépassé : {prev}.",
+      "leadWire": "{share} % des terres utiles, et la première place ne lui échappera plus.",
+      "offensive": "{to} : la grande offensive",
+      "offensiveDeck": "{share} % des terres de la carte prises en {span}. Pays visé : {from}.",
+      "end": "Le dénouement",
+      "endWinner": "Vainqueur : {winner}.",
+      "endNone": "Aucun vainqueur."
+    },
+    "fate": {
+      "title": "Votre sort",
+      "podium": "Le podium",
+      "won": "Victoire",
+      "surrendered": "Capitulation à {clock}",
+      "fell": "Chute à {clock}",
+      "standing": "Encore debout à la fin",
+      "rank": "Classement final : {rank} sur {n}",
+      "peak": "Pic territorial",
+      "peakValue": "{share} % à {clock}",
+      "firstCity": "Première ville",
+      "firstAlliance": "Première alliance",
+      "firstNuke": "Premier tir nucléaire",
+      "kills": "Nations abattues",
+      "betrayedBy": "Trahison subie",
+      "conquered": "Cases conquises",
+      "at": "{clock}",
+      "with": "{name}, à {clock}",
+      "num": "{n}"
+    }
+  },
+  "news": {
+    "masthead": "Le Courrier des Isolignes",
+    "edition": "Édition de {clock}",
+    "standing": "{n} nations en lice",
+    "standingOne": "1 nation en lice",
+    "minute": "{n}e minute",
+    "minuteFirst": "1re minute",
+    "inBrief": "En bref",
+    "empty": "Rien à signaler pour l'instant. Les nouvelles du front s'imprimeront ici.",
+    "emptySection": "Aucune nouvelle dans cette rubrique pour l'instant.",
+    "sections": "Rubriques",
+    "section": {
+      "all": "Tout",
+      "danger": "Conflits",
+      "warn": "Vigilance",
+      "good": "Bonnes nouvelles"
+    },
+    "goTo": "Voir sur la carte",
+    "min": "{n} min",
+    "sec": "{n} s",
+    "others": "{n} autres",
+    "breaking": "Édition spéciale",
+    "readMore": "Lire la suite dans le journal",
+    "stopPressOne": "Dernière minute : {list} tombe aussi.",
+    "stopPressMany": "Dernière minute : {list} tombent aussi.",
+    "fall": {
+      "title": {
+        "conquered": "{name} : la chute",
+        "surrender": "{name} : la capitulation",
+        "nuked": "{name} : l'anéantissement",
+        "zone": "{name} : hors de la carte"
+      },
+      "deck": {
+        "conquered": "Défaite au combat face à {by}.",
+        "surrender": "Son gouvernement dépose les armes.",
+        "nuked": "Le feu nucléaire de {by} a rasé ses dernières terres.",
+        "nukedUnknown": "Le feu nucléaire a rasé ses dernières terres.",
+        "zone": "La zone de jeu s'est refermée sur ses dernières terres."
+      },
+      "body": "{nth} nation à tomber, après {time} de partie."
+    },
+    "head": {
+      "nuke": "{by} tire un missile nucléaire sur vous",
+      "mirv": "{by} lance un MIRV sur vous",
+      "betrayal": "{traitor} trahit {victim}",
+      "secession": "Sécession : {tiles} cases se soulèvent",
+      "councilSanctions": "Le Conseil mondial sanctionne {target}",
+      "councilNukeBan": "Le Conseil mondial interdit l'arme nucléaire",
+      "councilCeasefire": "Le Conseil mondial impose un cessez-le-feu",
+      "doomsday": "Il faut désormais {share} % des terres",
+      "ring": "La zone se resserre",
+      "alliance": "Alliance signée avec {with}",
+      "gameStart": "Ouverture des hostilités",
+      "capitalLost": "Votre capitale tombe aux mains de {by}",
+      "capitalRazed": "Votre capitale est rasée",
+      "capitalTaken": "Vous prenez la capitale de {player}",
+      "capitalFell": "La capitale de {player} tombe aux mains de {by}",
+      "capitalRazedOther": "La capitale de {player} est rasée"
+    },
+    "deck": {
+      "betrayal": "L'alliance vole en éclats : {traitor} porte la marque du traître, et {victim} rompt tout commerce avec {traitor} pendant 5 minutes.",
+      "secession": "Des provinces peu loyales proclament leur indépendance.",
+      "councilSanctions": "Ses revenus sont divisés par deux pendant 3 minutes.",
+      "councilNukeBan": "Aucun tir nucléaire pendant 3 minutes.",
+      "councilCeasefire": "Aucune nouvelle attaque entre pays pendant 60 secondes.",
+      "doomsday": "L'horloge du jugement dernier avance : les pays sous ce seuil perdent leurs troupes.",
+      "ring": "Les terres hors du cercle deviennent inhabitables.",
+      "gameStart": "Les joueurs sont protégés par 60 secondes d'immunité.",
+      "capitalLost": "{gold} or du trésor saisis et une minute de désorganisation : choisissez un nouveau siège du gouvernement.",
+      "capitalRazed": "Le trésor qui s'y trouvait part en fumée ; choisissez un nouveau siège du gouvernement.",
+      "capitalTaken": "{gold} or saisis dans son trésor ; le pays est désorganisé pendant une minute.",
+      "capitalFell": "Le pays est désorganisé pendant une minute et doit choisir un nouveau siège."
+    },
+    "flash": {
+      "title": "Flash info",
+      "since": "Depuis {clock}",
+      "council": "Conseil mondial",
+      "sanction": "Sanctions contre {target}",
+      "sanctionDesc": "Ses revenus sont divisés par deux.",
+      "nukeBan": "Arme nucléaire interdite",
+      "nukeBanDesc": "Aucun tir nucléaire n'est possible.",
+      "ceasefire": "Cessez-le-feu général",
+      "ceasefireDesc": "Aucune attaque entre pays.",
+      "voting": "Le Conseil vote : {votes} voix, clôture dans {s} s",
+      "next": "Prochaine séance du Conseil dans {clock}",
+      "collapse": "Réduire le flash info",
+      "expand": "Déplier le flash info",
+      "ends": "Fin à {clock}"
+    },
+    "freshOne": "1 nouvelle",
+    "freshMany": "{n} nouvelles"
+  },
+  "trade": {
+    "intro": "Navires marchands et trains rapportent de l'or aux deux pays qu'ils relient. Un embargo coupe ce commerce.",
+    "earned": "d'or gagné par le commerce en 5 minutes",
+    "bySea": "{gold} par la mer",
+    "byRail": "{gold} par le rail",
+    "boom": "Boom commercial en cours : les gains sont doublés.",
+    "partners": "Partenaires",
+    "partnersEmpty": "Aucun échange pour l'instant. Vos ports envoient des navires marchands vers les ports étrangers, et vos gares reçoivent les trains des pays reliés par le rail.",
+    "goldTip": "Or gagné avec ce pays ces 5 dernières minutes",
+    "ship1": "1 navire en route",
+    "ships": "{n} navires en route",
+    "train1": "1 train en route",
+    "trains": "{n} trains en route",
+    "embargoes": "Embargos",
+    "embargoesEmpty": "Aucun embargo : vous pouvez commercer avec tout le monde.",
+    "mine": "Votre embargo",
+    "theirs": "Embargo contre vous",
+    "mutual": "Embargo réciproque",
+    "mineFor": "Vous suspendez le commerce après son attaque, encore {clock}",
+    "theirsFor": "Commerce suspendu après votre attaque, encore {clock}",
+    "tempTip": "Un pays attaqué ou trahi cesse de commercer avec l'agresseur pendant 5 minutes.",
+    "others": "Autres pays",
+    "noTrade": "Pas d'échange en ce moment",
+    "embargo": "Embargo",
+    "lift": "Lever l'embargo",
+    "embargoAll": "Embargo sur tous sauf alliés",
+    "liftAll": "Lever tous mes embargos",
+    "center": "Centrer la carte sur ce pays",
+    "viaSea": "Par la mer",
+    "viaRail": "Par le rail"
+  },
+  "threat": {
+    "tag": "Frontière menacée",
+    "why": {
+      "war": "il vous a attaqué ces dernières minutes",
+      "hostile": "il vous est hostile",
+      "plan": "nos renseignements vous désignent comme sa prochaine cible"
+    },
+    "short": {
+      "war": "Vous a attaqué ces dernières minutes",
+      "hostile": "Vous est hostile",
+      "plan": "Vous vise, selon nos renseignements"
+    }
+  },
+  "capital": {
+    "kickerLost": "Capitale perdue",
+    "kickerDisorg": "Désorganisation",
+    "titleLost": "Le gouvernement cherche un nouveau siège",
+    "titleMoved": "Nouvelle capitale établie",
+    "takenBy": "Prise par {by}.",
+    "razed": "Rasée : son trésor est parti en fumée.",
+    "disorg": "Renforts −25 %, revenu −25 %, attaques −20 %",
+    "none": "Sans capitale : revenu −10 % tant qu'aucune n'est établie",
+    "how": "Choisissez une tuile de vos terres à plus de 5 tuiles de toute frontière étrangère (les alliés ne comptent pas).",
+    "pick": "Choisir sur la carte",
+    "safest": "Au plus sûr",
+    "safestTip": "Votre plus grande ville de l'intérieur, sinon le cœur du pays",
+    "toolHint": "Cliquez sur vos terres pour y établir la capitale (Échap pour annuler).",
+    "leftTip": "Fin de la désorganisation"
+  },
+  "offer": {
+    "title": "Proposition d'alliance",
+    "renewTitle": "Renouvellement d'alliance",
+    "terms": "vous propose une alliance",
+    "renewTerms": "souhaite renouveler votre alliance",
+    "more": "+{n} autres propositions"
+  },
+  "update": {
+    "title": "Mises à jour",
+    "desc": "Version installée : {version}. Les nouvelles versions viennent du dépôt GitHub privé du jeu",
+    "auto": "Vérifier au lancement",
+    "d": {
+      "auto": "Une seule requête à GitHub au démarrage, et seulement si l'accès au dépôt est configuré.",
+      "token": "Jeton à accès fin, en lecture seule (Contents : read) sur le dépôt isoline. Gardé chiffré dans le trousseau, envoyé uniquement à GitHub."
+    },
+    "token": "Jeton d'accès GitHub",
+    "save": "Enregistrer",
+    "forget": "Oublier le jeton",
+    "checkNow": "Vérifier maintenant",
+    "download": "Télécharger",
+    "install": "Redémarrer et installer",
+    "checking": "Vérification…",
+    "upToDate": "Vous avez la dernière version.",
+    "downloading": "Téléchargement… {pct} %",
+    "access": {
+      "saved": "accès : jeton enregistré",
+      "gh": "accès : connexion GitHub CLI",
+      "env": "accès : variable d'environnement",
+      "none": "aucun accès au dépôt"
+    },
+    "err": {
+      "no-token": "Aucun accès au dépôt : enregistrez un jeton ou connectez GitHub CLI (gh auth login).",
+      "unauthorized": "Jeton refusé par GitHub (expiré ou sans accès au dépôt).",
+      "not-found": "Aucune version publiée trouvée.",
+      "no-asset": "Pas de fichier pour cette plateforme dans cette version.",
+      "dev": "Installation possible seulement depuis l'application installée (Mac ou Windows).",
+      "readonly": "Le dossier de l'application n'est pas modifiable : déplacez Isoline dans Applications.",
+      "network": "Connexion à GitHub impossible.",
+      "format": "Réponse de GitHub inattendue.",
+      "corrupt": "Le fichier téléchargé est incomplet ou ne correspond pas à la version.",
+      "signature": "Mise à jour refusée : elle n'est pas signée par le développeur d'Isoline.",
+      "install": "L'installation a échoué.",
+      "bad-token": "Ce jeton n'a pas un format valide.",
+      "no-keychain": "Le trousseau du système est indisponible : jeton non enregistré."
+    }
   }
 }

@@ -18,6 +18,13 @@ export interface VictoryState {
   winnerTeam: number;
   threshold: number;
   reason: string;
+  /** Tick at which the match ended (absent until then). */
+  endTick?: number;
+  /**
+   * Play resumed after the end ("keep playing"): no victory is checked any more, the
+   * recorded winner, team, reason and end tick stay as they were.
+   */
+  continued?: boolean;
   /** Doomsday: current minimum share (percent), -1 inactive. */
   doomsday?: number;
   /** Battle royale ring. */
@@ -56,8 +63,21 @@ function end(game: Game, winner: number, team: number, reason: string): void {
   game.victory.winner = winner;
   game.victory.winnerTeam = team;
   game.victory.reason = reason;
+  game.victory.endTick = game.tick;
   game.phase = 'ended';
   game.emit({ k: 'gameOver', winner, team, reason });
+}
+
+/**
+ * "Keep playing" after the end of the match: back to 'playing' as a sandbox, with the
+ * recorded result kept and no further victory. Returns false unless the match had ended.
+ */
+export function continueAfterVictory(game: Game, by: number): boolean {
+  if (game.phase !== 'ended') return false;
+  game.victory.continued = true;
+  game.phase = 'playing';
+  game.emit({ k: 'gameContinued', by });
+  return true;
 }
 
 function leader(game: Game): Player | null {
@@ -75,7 +95,8 @@ export function updateVictory(game: Game): void {
 
   const th = currentThreshold(game);
   game.victory.threshold = th;
-  if (mode === 'campaign' || mode === 'tutorial') return; // objectives drive the end
+  if (mode === 'campaign') return; // objectives drive the end
+  if (game.victory.continued) return; // sandbox after the victory
 
   // Last player / team standing (ignoring tribes) — only if the match started with rivals.
   const contenders = [...game.alivePlayers()].filter((p) => p.kind !== 'tribe');

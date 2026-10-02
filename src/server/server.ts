@@ -10,6 +10,7 @@ import type { GameMap } from '../core/map/gamemap';
 import type { GameConfig } from '../core/game/config';
 import { isWellFormed, type Command, type StampedCommand } from '../core/net/commands';
 import { takeSnapshot } from '../core/net/snapshot';
+import { sanitizeFlag, type PlayerFlag } from '../core/data/flagSpec';
 import { hashGame } from '../core/net/hash';
 import { HASH_EVERY } from '../core/game/constants';
 import { checkPlacement } from '../core/buildings/buildings';
@@ -49,6 +50,7 @@ interface Client {
   host: boolean;
   playerId: number;
   ping: number;
+  flag?: PlayerFlag;
   disconnectedAt: number;
   cmdWindow: number[];
 }
@@ -182,6 +184,7 @@ export class LanServer {
         host: c.host,
         playerId: c.playerId,
         ping: c.ping,
+        ...(c.flag ? { flag: c.flag } : {}),
       })),
     };
   }
@@ -275,6 +278,7 @@ export class LanServer {
       host: this.clients.length === 0,
       playerId: -1,
       ping: 0,
+      flag: sanitizeFlag(m.flag),
       disconnectedAt: 0,
       cmdWindow: [],
     };
@@ -303,6 +307,7 @@ export class LanServer {
       case 'profile':
         c.team = Math.max(1, Math.min(8, m.team | 0));
         c.general = m.general;
+        if ('flag' in m && !this.started) c.flag = sanitizeFlag(m.flag);
         this.pushLobby();
         break;
       case 'config':
@@ -383,6 +388,7 @@ export class LanServer {
         kind: 'human',
         team: c.team,
         general: c.general,
+        ...(c.flag ? { flag: c.flag } : {}),
       })),
     };
     const map = await this.opts.loadMap(this.config);

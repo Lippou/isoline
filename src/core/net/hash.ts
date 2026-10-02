@@ -40,10 +40,12 @@ export function hashGame(game: Game): number {
     h = mix(h, p.id);
     h = mix(h, p.alive ? 1 : 0);
     h = mix(h, q(p.troops));
-    h = mix(h, q(p.workers));
     h = mix(h, q(p.gold));
     h = mix(h, p.tiles);
     h = mix(h, p.border.length);
+    h = mix(mix(h, p.capital + 1), p.disorgUntil + 1);
+    h = mix(mix(h, p.researching + 1), q(p.researchPoints));
+    for (let k = 0; k < p.tech.length; k++) h = mix(h, p.tech[k]!);
     for (const [a, e] of p.allies) h = mix(mix(h, a), e);
   }
   for (const a of game.attacks) h = mix(mix(mix(h, a.id), q(a.troops)), a.frontierSize);

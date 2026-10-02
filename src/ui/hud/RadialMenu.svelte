@@ -2,7 +2,7 @@
   // Context menu (right click): what is under the cursor, then grouped actions
   // with their cost; sub-menus open in a side column.
   import { hud } from '../stores/game.svelte';
-  import { t, i18n } from '../i18n/i18n.svelte';
+  import { t, i18n, clock } from '../i18n/i18n.svelte';
   import { settings } from '../stores/settings.svelte';
   import Icon from '../icons/Icon.svelte';
   import { BUILDING_ICONS, SIGNALS, type IconName } from '../icons/icons';
@@ -13,6 +13,7 @@
   import { confirmModal } from '../stores/app.svelte';
   import { flagUrl } from '../../render/flags';
   import { formatShort } from '../../render/renderer';
+  import { clientSpotError } from '../game/capitalWatch';
 
   let { ctl }: { ctl: GameController } = $props();
   type Item = {
@@ -26,6 +27,8 @@
     sub?: Item[];
     disabled?: boolean;
     danger?: boolean;
+    /** Highlighted at the top of the menu (alliance offers). */
+    featured?: boolean;
     group?: string;
   };
   let openSub: string | null = $state(null);
@@ -47,10 +50,12 @@
   const NUKE_NAMES = ['nukeA', 'nukeH', 'nukeMirv'];
   const gold = (n: number) => `${formatShort(n)}`;
 
-  function nukeItems(tile: number): Item[] {
+  function nukeItems(tile: number, own: boolean): Item[] {
     const L = hud.local;
     if (!L || !cfg.allowNukes) return [];
-    return [N.Atom, N.Hydrogen, N.Mirv].map((kind) => {
+    // On our own land: A and H bombs only, each behind a confirmation.
+    const guard = (fn: () => void) => (own ? selfGuard(fn) : act(fn));
+    return (own ? [N.Atom, N.Hydrogen] : [N.Atom, N.Hydrogen, N.Mirv]).map((kind) => {
       const max = L.maxLaunch[kind] ?? 0;
       const counts = kind === N.Mirv ? [1] : [1, 2, 5, max];
       return {
@@ -66,7 +71,7 @@
             k === 3 && kind !== N.Mirv ? t('radial.launchMax', { n: max }) : t('radial.launchN', { n: c }),
           disabled: c > max || c === 0,
           danger: true,
-          run: act(() => s.cmd({ t: 'nuke', kind, tile, count: Math.max(1, c) })),
+          run: guard(() => s.cmd({ t: 'nuke', kind, tile, count: Math.max(1, c), up: hud.nukeArcUp })),
         })),
       };
     });
@@ -80,10 +85,30 @@
     const allied = L.allies.some((a) => a.id === target);
     const embargo = L.embargo.includes(target);
     const items: Item[] = [];
-    if (!allied)
+    // They already asked us: answer instead of proposing.
+    const asked = L.allyRequests.includes(target);
+    if (!allied && asked) {
+      items.push({
+        id: 'allyAccept',
+        group: 'featured',
+        featured: true,
+        label: t('radial.allyAccept'),
+        desc: t('radial.allyAskedYou'),
+        icon: 'alliance',
+        run: act(() => s.cmd({ t: 'allyAnswer', target, accept: true })),
+      });
+      items.push({
+        id: 'allyRefuse',
+        group: 'featured',
+        label: t('radial.allyRefuse'),
+        icon: 'close',
+        run: act(() => s.cmd({ t: 'allyAnswer', target, accept: false })),
+      });
+    } else if (!allied)
       items.push({
         id: 'ally',
-        group: 'diplo',
+        group: 'featured',
+        featured: true,
         label: t('radial.allyRequest'),
         icon: 'alliance',
         run: act(() => s.cmd({ t: 'allyRequest', target })),
@@ -102,7 +127,7 @@
         label: t('radial.allyBreak'),
         icon: 'betrayal',
         danger: true,
-        run: act(() => s.cmd({ t: 'allyBreak', target })),
+        run: attackGuard(target, () => s.cmd({ t: 'allyBreak', target })),
       });
       if (cfg.allowDonations) {
         items.push({
@@ -159,6 +184,53 @@
       })),
     });
     return items;
+  }
+
+  function selfGuard(fn: () => void): () => void {
+    if (!settings.game.confirmations) return act(fn);
+    return () => {
+      close();
+      confirmModal(
+        t('confirm.selfNukeTitle'),
+        t('confirm.selfNukeBody'),
+        fn,
+        t('confirm.selfNukeYes'),
+        t('common.cancel'),
+      );
+    };
+  }
+
+  /**
+   * The seat of government on one of our tiles: re-establish a lost capital (featured at
+   * the top), or move the one we hold (once per 5 min). Refusals show their reason.
+   */
+  function capitalItems(tile: number): Item[] {
+    const L = hud.local;
+    if (!L || s.state.phase !== 'playing' || L.capital === tile) return [];
+    const none = L.capital < 0;
+    const err = clientSpotError(s.state, s.viewer, tile);
+    const wait = none ? 0 : L.capitalCooldown;
+    const hint =
+      err === 'front'
+        ? t('radial.capitalFront')
+        : err === 'fallout'
+          ? t('radial.capitalFallout')
+          : wait > 0
+            ? clock(wait)
+            : '';
+    return [
+      {
+        id: 'capital',
+        group: none ? 'featured' : 'main',
+        featured: none,
+        label: t(none ? 'radial.capitalHere' : 'radial.capitalMove'),
+        icon: 'capital',
+        hint,
+        desc: t(none ? 'radial.capitalNeeded' : 'radial.capitalDesc'),
+        disabled: err !== 'ok' || wait > 0,
+        run: act(() => s.cmd({ t: 'moveCapital', tile })),
+      },
+    ];
   }
 
   function attackGuard(target: number, fn: () => void): () => void {
@@ -230,11 +302,22 @@
       });
     }
     if (land && owner === s.viewer) {
-      const kinds = [B.City, B.Port, B.Factory, B.DefensePost, B.Silo, B.Sam, B.Radar, B.Airfield].filter(
+      const kinds = [
+        B.City,
+        B.Port,
+        B.Factory,
+        B.Lab,
+        B.DefensePost,
+        B.Silo,
+        B.Sam,
+        B.Radar,
+        B.Airfield,
+      ].filter(
         (k) =>
           !(
             (k === B.Port && !cfg.allowPorts) ||
             (k === B.Factory && !cfg.allowFactories) ||
+            (k === B.Lab && !cfg.features.tech) ||
             (k === B.Silo && !cfg.allowNukes) ||
             (k === B.Radar && !cfg.features.radar) ||
             (k === B.Airfield && !cfg.features.air)
@@ -282,8 +365,11 @@
           run: act(() => s.cmd({ t: 'demolish', id: b.id })),
         });
       }
+      out.push(...capitalItems(tile));
     }
-    if (!land && cfg.allowPorts) {
+    // Warships also sail up navigable rivers (river tiles are land, owned like any other).
+    const river = TERRAIN[s.state.terrain[tile] ?? 0]?.key === 'river';
+    if ((!land || river) && cfg.allowPorts) {
       out.push({
         id: 'ws',
         group: 'military',
@@ -320,8 +406,8 @@
         })),
       });
     }
-    const nukes = nukeItems(tile);
-    if (nukes.length && owner !== s.viewer)
+    const nukes = nukeItems(tile, owner === s.viewer);
+    if (nukes.length && land)
       out.push({
         id: 'nukes',
         group: 'military',
@@ -342,7 +428,7 @@
   });
 
   const groups = $derived.by(() => {
-    const order = ['main', 'military', 'diplo', 'signal', 'other'];
+    const order = ['featured', 'main', 'military', 'diplo', 'signal', 'other'];
     return order
       .map((g) => ({ g, list: items.filter((it) => (it.group ?? 'other') === g) }))
       .filter((x) => x.list.length);
@@ -402,6 +488,7 @@
           <button
             class="item"
             class:danger={it.danger}
+            class:featured={it.featured}
             class:open={openSub === it.id}
             disabled={it.disabled}
             role="menuitem"
@@ -416,7 +503,9 @@
             data-testid="radial-{it.id}"
           >
             {#if it.icon}<Icon name={it.icon} size={17} />{:else}<span class="sp"></span>{/if}
-            <span class="lab">{it.label}</span>
+            <span class="lab"
+              >{it.label}{#if it.featured && it.desc}<small class="sub">{it.desc}</small>{/if}</span
+            >
             {#if it.hint}<span class="hint mono">{it.hint}</span>{/if}
             {#if it.sub}<Icon name="chevronRight" size={15} />{/if}
           </button>
@@ -503,7 +592,7 @@
     background: none;
     border: 0;
     color: var(--faint);
-    cursor: pointer;
+    cursor: var(--cursor-pointer, pointer);
     padding: 2px;
   }
   .x:hover {
@@ -519,7 +608,7 @@
     border-radius: 4px;
     background: none;
     text-align: left;
-    cursor: pointer;
+    cursor: var(--cursor-pointer, pointer);
     color: var(--parchment);
   }
   .item:hover:not(:disabled),
@@ -527,7 +616,25 @@
     background: var(--panel-3);
   }
   .item.danger {
-    color: #f0a49c;
+    color: var(--bad-text);
+  }
+  /* Alliance offers stand out: green, framed, at the top. */
+  .item.featured {
+    margin: 2px 0;
+    padding: 9px 10px;
+    border: 1px solid color-mix(in srgb, var(--verdant) 70%, transparent);
+    background: color-mix(in srgb, var(--verdant) 14%, transparent);
+    color: var(--good-text);
+    font-weight: 600;
+  }
+  .item.featured:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--verdant) 26%, transparent);
+  }
+  .sub {
+    display: block;
+    font-weight: 400;
+    font-size: 0.82em;
+    color: var(--muted);
   }
   .item:disabled {
     opacity: 0.4;
