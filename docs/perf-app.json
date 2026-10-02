@@ -1,20 +1,20 @@
 {
-  "date": "2026-10-02T00:12:49.679Z",
-  "startupToTitleMs": 2158,
-  "world100_mediumZoom_mapReadyMs": 1030,
+  "date": "2026-10-02T02:55:24.139Z",
+  "startupToTitleMs": 2097,
+  "world100_mediumZoom_mapReadyMs": 453,
   "world100_mediumZoom": {
-    "fpsMin": 144,
-    "fpsAvg": 144,
-    "tickMsAvg": 0.98,
-    "memoryTotalMB": 788,
-    "processes": "Browser:178MB GPU:143MB Utility:47MB Tab:421MB"
+    "fpsMin": 60,
+    "fpsAvg": 60,
+    "tickMsAvg": 1.3,
+    "memoryTotalMB": 806,
+    "processes": "Browser:177MB GPU:147MB Utility:47MB Tab:435MB"
   },
-  "world100_fullMap_mapReadyMs": 349,
+  "world100_fullMap_mapReadyMs": 341,
   "world100_fullMap": {
-    "fpsMin": 144,
-    "fpsAvg": 144,
-    "tickMsAvg": 0.84,
-    "memoryTotalMB": 769,
-    "processes": "Browser:177MB GPU:141MB Utility:47MB Tab:404MB"
+    "fpsMin": 60,
+    "fpsAvg": 60,
+    "tickMsAvg": 1.65,
+    "memoryTotalMB": 743,
+    "processes": "Browser:176MB GPU:130MB Utility:47MB Tab:390MB"
   }
 }

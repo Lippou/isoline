@@ -9,14 +9,17 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const electronPath = (await import('electron')).default;
 const soak = process.argv.includes('soak');
-const exe = process.argv.slice(2).find((a) => a !== 'soak'); // optional: packaged app executable
+// --uncapped: measure raw rendering throughput (no vsync, no frame-rate limit).
+const uncapped = process.argv.includes('--uncapped');
+const chromeFlags = uncapped ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : [];
+const exe = process.argv.slice(2).find((a) => a !== 'soak' && !a.startsWith('--')); // optional: packaged app executable
 
 async function launch(query) {
   const userData = path.join(root, '.cache/e2e-userdata', `perf-${Date.now()}`);
   const t0 = Date.now();
   const app = await electron.launch({
     executablePath: exe ?? electronPath,
-    args: exe ? [] : [root],
+    args: exe ? chromeFlags : [...chromeFlags, root],
     cwd: root,
     env: { ...process.env, ISOLINE_QUERY: query, ISOLINE_USER_DATA: userData },
   });
@@ -29,7 +32,11 @@ async function launch(query) {
   return { app, page, t0 };
 }
 
-const outFile = path.join(root, 'docs', soak ? 'soak.json' : 'perf-app.json');
+const outFile = path.join(
+  root,
+  'docs',
+  soak ? 'soak.json' : uncapped ? 'perf-app-uncapped.json' : 'perf-app.json',
+);
 const out = { date: new Date().toISOString() };
 
 if (soak) {

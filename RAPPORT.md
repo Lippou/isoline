@@ -30,28 +30,28 @@ Les choix de bruitages et de musique ont été faits **sans écoute** possible d
 
 | Livrable | État | Emplacement |
 |---|---|---|
-| macOS universel (Intel + Apple Silicon) | ✅ DMG 215,8 Mo et ZIP 214,7 Mo, signature ad hoc vérifiée (`codesign --verify --deep --strict`) | `dist/Isoline-1.0.0-mac-universal.{dmg,zip}` |
-| Windows x64, installeur | ✅ NSIS 107 Mo (choix du dossier, raccourcis bureau et menu Démarrer, désinstalleur, icône) | `dist/Isoline-1.0.0-win-x64-setup.exe` |
-| Windows x64, portable | ✅ 107 Mo | `dist/Isoline-1.0.0-win-x64-portable.exe` |
+| macOS universel (Intel + Apple Silicon) | ✅ DMG 253,0 Mo et ZIP 251,6 Mo, signature ad hoc vérifiée (`codesign --verify --deep --strict`) | `dist/Isoline-1.1.0-mac-universal.{dmg,zip}` |
+| Windows x64, installeur | ✅ NSIS 144,0 Mo (choix du dossier, raccourcis bureau et menu Démarrer, désinstalleur, icône) | `dist/Isoline-1.1.0-win-x64-setup.exe` |
+| Windows x64, portable | ✅ 143,7 Mo | `dist/Isoline-1.1.0-win-x64-portable.exe` |
 | `npm run verify:packages` | ✅ 27 contrôles, dont lancement de l'app macOS en `--smoke-test` (code 0) | `scripts/verify-packages.mjs` |
 | Documentation | ✅ `README.md`, `GAME_DESIGN.md`, `BRAND.md` + `brand/`, `CREDITS.md`, `CHANGELOG.md`, ce rapport | racine |
-| Médias | ✅ 13 captures 1920×1080, GIF de 10 s, vidéo de 58 s en 1080p | `docs/media/` |
-| Mesures brutes | ✅ | `docs/bench.json`, `docs/perf-app.json`, `docs/soak.json` |
+| Médias | ✅ 15 captures 1920×1080, GIF de 10 s, vidéo de 58 s en 1080p | `docs/media/` |
+| Mesures brutes | ✅ | `docs/bench.json`, `docs/perf-app.json`, `docs/perf-app-uncapped.json`, `docs/soak.json` |
 
 ## 2. Performances mesurées (§19)
 
 | Exigence | Cible | Mesure | Verdict |
 |---|---|---|---|
-| Démarrage jusqu'à l'écran titre | < 5 s | **2,2 s** (app empaquetée, `dist/mac-universal`) | ✅ |
+| Démarrage jusqu'à l'écran titre | < 5 s | **2,1 s** (app empaquetée 1.1.0, `dist/mac-universal`) | ✅ |
 | Chargement d'une carte de 2 M de tuiles | < 3 s | Monde (2,01 M) : 0,41 s de décodage et d'analyse, 0,35–1,0 s de « lancer » à « carte affichée » dans l'app empaquetée. Monde géant (5,16 M) : 0,96 s | ✅ |
-| FPS, 100 nations, zoom moyen | ≥ 60 (M1) | 144 FPS (plafond de l'écran) à zoom moyen et sur carte entière, 100 nations + 100 tribus | ✅ sur M4 Pro ; **M1 non testé** (§4) |
+| FPS, 100 nations, zoom moyen | ≥ 60 (M1) | 60 FPS stables, plafond de l'écran de mesure (60 Hz) ; sans synchronisation verticale : **447 à 485 FPS** au zoom moyen, 809 à 1 055 sur carte entière (100 nations + 100 tribus, nouveau rendu réaliste) | ✅ sur M4 Pro ; **M1 non testé** (§4) |
 | FPS sur portable Windows à GPU intégré | ≥ 30 | non mesuré (aucune machine Windows) | ⚠️ |
 | Tick de simulation | < 50 ms en moyenne | 100 nations, Monde : **0,69 ms** en moyenne, p99 4,0 ms, max 7,2 ms (6 000 ticks). Monde géant, 100 nations : 1,08 ms | ✅ |
-| Mémoire | < 1,5 Go | 0,77–0,79 Go (tous processus Electron) à 100 nations ; pic à 1.01 Go pendant l'endurance | ✅ |
-| Taille de l'app | < 300 Mo | Téléchargements : 216 Mo (macOS universel), 107 Mo (Windows). Installée : 339 Mo (Windows), 470 Mo (macOS, deux architectures) | ⚠️ voir §4 |
+| Mémoire | < 1,5 Go | 0,74–0,81 Go (tous processus Electron) à 100 nations ; pic à 1,01 Go pendant l'endurance (mesurée en 1.0) | ✅ |
+| Taille de l'app | < 300 Mo | Téléchargements : 253 Mo (macOS universel), 144 Mo (Windows), dont 42 Mo de musique, bruitages et voix. Installée : 378 Mo (Windows), 510 Mo (macOS, deux architectures) | ⚠️ voir §4 |
 | Stabilité | pas de fuite sur 60 min ; pas de crash sur 30 min à 50 nations | Endurance : 60 min de jeu à 50 nations (×8), aucune erreur, mémoire stable (§2.2) ; 30 min sans affichage à 50 nations sans erreur | ✅ |
 | Déterminisme | même seed et mêmes commandes = même hash | Vérifié sur macOS (tests et `bench`) ; LAN 4 clients pendant 20 min sans désynchronisation. **Windows non vérifié** | ✅ / ⚠️ |
-| Couverture de `src/core` | ≥ 70 % | instructions 85,2 %, branches 75,0 %, fonctions 90,9 %, lignes 88,0 % | ✅ |
+| Couverture de `src/core` | ≥ 70 % | instructions 87,5 %, branches 79,5 %, fonctions 93,2 %, lignes 90,3 % | ✅ |
 
 ### 2.1 Mesures dans l'application empaquetée (`node scripts/perf-app.mjs dist/mac-universal/Isoline.app/Contents/MacOS/Isoline`)
 Démarrage à froid jusqu'à l'écran titre : 2 158 ms. Monde avec 100 nations, 100 tribus, vitesse ×2 :
@@ -125,7 +125,7 @@ Définition de « terminé » (§23) :
 1. `npm run package:all` et `npm run verify:packages` : ✅
 2. App macOS : écran titre, partie solo complète, sauvegarde/rechargement, replay, partie LAN : ✅ (tests e2e et parcours scriptés). L'app a été lancée depuis `dist/`, pas depuis `/Applications` (§4).
 3. Sections 5 à 21 : implémentées ; écarts ci-dessous.
-4. Tests (54 unitaires et d’intégration, 4 e2e), couverture ≥ 70 %, performances mesurées : ✅
+4. Tests (57 unitaires et d’intégration, 5 e2e), couverture ≥ 70 %, performances mesurées : ✅
 5. Documentation : ✅
 
 ## 4. Écarts, décisions et limites connues
@@ -141,7 +141,7 @@ Définition de « terminé » (§23) :
 
 ### Distribution
 - **Signature** : ad hoc (pas de certificat Apple Developer), non notarisée. Au premier lancement, Gatekeeper demande un clic droit → Ouvrir, ou `xattr -dr com.apple.quarantine /Applications/Isoline.app` (documenté dans le README). Windows n'est pas signé : SmartScreen affiche un avertissement.
-- **Taille installée > 300 Mo** : l'exécutable Electron 44 pèse à lui seul 241 Mo sous Windows ; le contenu du jeu fait 12 Mo (code, cartes, polices). Les téléchargements respectent la cible (107 et 216 Mo). L'app macOS fait 470 Mo sur disque parce qu'elle est universelle (deux binaires Chromium), soit environ 235 Mo par architecture. Les langues Chromium sont déjà limitées au français et à l'anglais. Pour descendre sous 300 Mo installés, il faudrait quitter Electron, alors que le cahier des charges l'impose.
+- **Taille installée > 300 Mo** : l'exécutable Electron 44 pèse à lui seul 241 Mo sous Windows ; le contenu du jeu fait 54 Mo (code, cartes, polices, 42 Mo de médias audio). Les téléchargements respectent la cible (144 et 253 Mo). L'app macOS fait 510 Mo sur disque parce qu'elle est universelle (deux binaires Chromium), soit environ 235 Mo par architecture. Les langues Chromium sont déjà limitées au français et à l'anglais. Pour descendre sous 300 Mo installés, il faudrait quitter Electron, alors que le cahier des charges l'impose.
 - **Mises à jour** : la vérification optionnelle est implémentée (manifeste JSON en HTTPS, désactivée par défaut, aucun appel réseau sans accord), mais aucun serveur de publication n'existe : l'URL est à renseigner dans les paramètres.
 
 ### Jeu
@@ -160,8 +160,10 @@ Définition de « terminé » (§23) :
 
 ## 5. Méthode de vérification
 
-- `npm test` : 54 tests Vitest (règles, combat, économie, unités, IA, déterminisme, snapshots, serveur LAN avec 4 clients pendant 20 min et une reconnexion, forme des fronts, seuil bac à sable).
-- `npm run test:e2e` : 4 parcours Playwright dans Electron (solo jusqu'à la capitulation et l'écran de fin ; tous les écrans ; spectateur et replay ; LAN à deux instances).
+- `npm test` : 57 tests Vitest (règles, combat, économie, unités, IA, déterminisme, snapshots, serveur LAN avec 4 clients pendant 20 min et une reconnexion, forme des fronts, seuil bac à sable, pillage des tribus, rayon d'action des ports, comptabilité des retombées).
+- `npm run test:e2e` : 5 parcours Playwright dans Electron (solo jusqu'à la capitulation et l'écran de fin ; tous les écrans ; spectateur et replay ; LAN à deux instances ; campagne : briefing, guide et progression des étapes).
+- `npm run pacing` : durée des parties entre IA (équilibrage).
+- Bug trouvé en 1.1 grâce aux captures (« -0,0 % » au classement) : une intensité de retombées de 256 repassait à 0 dans un octet et faussait le compte des terres utiles, donc les parts de territoire et la victoire. Corrigé, avec un test de non-régression.
 - `npm run lint`, `npm run typecheck` : 0 erreur.
 - `node scripts/i18n-keys.mjs` : 327 clés utilisées, aucune manquante en FR ou en EN.
 - Parties observées en accéléré (spectateur) jusqu'à la victoire, captures relues : c'est ainsi qu'ont été trouvés et corrigés les fronts en losange, le brouillard qui laissait voir les unités, les retombées confondues avec un territoire et le titre « Défaite » affiché aux spectateurs.
