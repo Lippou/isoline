@@ -2,6 +2,43 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.1.0] — Retours de test : rythme, réalisme, interface, audio
+### Modifié — rythme et équilibrage
+- **Parties de 25 à 60 minutes** au lieu de 7 à 18 minutes (mesuré avec `npm run pacing`) :
+  - IA posée : réflexion toutes les 3 à 6 s, 30 s entre deux offensives, constructions espacées, supériorité nette exigée avant de déclarer une guerre ;
+  - fronts plus lents contre un pays (environ 2 tuiles/s) et défense renforcée ;
+  - coût logistique des guerres proportionnel à la taille de l'empire ;
+  - prix des villes et des ports sans plafond : l'économie n'est plus exponentielle ;
+  - croissance ralentie.
+- **La partie commence dès que la capitale est posée** : le minuteur borne seulement l'attente.
+- **Tribus** : croissance comparable à une nation jusqu'à 60 000 troupes, puis arrêt ; elles thésaurisent de l'or, pillé tuile par tuile quand on les conquiert, avec un bruit de pièces.
+- L'IA construit de nouveau des ports (priorités de construction pondérées).
+- **Ports** : rayon d'action de 60 tuiles (+10 par niveau), affiché sur la carte. Les navires de guerre y sont construits et réparés.
+
+### Modifié — graphismes
+- **Carte réaliste** : biomes façon vue satellite, ombrage du relief, neiges éternelles, profondeur des mers, côtes lissées, territoires en aplat translucide et frontières nettes, brouillard de guerre nuageux.
+- **Vrais drapeaux** et couleurs nationales traditionnelles pour les 204 pays réels.
+- **Navires, trains et avions** redessinés vue de dessus (coque réaliste et marque nationale), agrandis.
+- **Pictogrammes de bâtiments** lisibles (pastilles cerclées de la couleur du propriétaire).
+
+### Modifié — interface
+- Refonte complète de tous les écrans et du HUD :
+  - style sobre, plus aucun emoji, icônes au trait avec libellés et infobulles ;
+  - menu contextuel clair à la place de l'anneau d'icônes ;
+  - lobby en trois étapes avec explication de chaque option ;
+  - pages Paramètres, Replays, Sauvegardes, Réseau local, Profil et À propos homogènes.
+- Signaux tactiques illustrés (Alt + clic) à la place des emojis.
+- **Campagne guidée** : briefing lu par la conseillère (partie en pause), guide pas à pas qui reste affiché jusqu'à l'accomplissement de chaque étape, objectifs avec jauges, repères sur la carte.
+
+### Ajouté — audio
+- Bruitages enregistrés (Freesound, CC0) : explosions, sirène, missiles, canon, cornes de navire, train, pièces, fanfare d'alliance, coup d'orchestre de trahison…
+- Musique orchestrale adaptative (Kevin MacLeod, CC BY 4.0) : calme, tension, guerre, victoire, défaite, en fondu enchaîné.
+- Voix de la conseillère pour la campagne et le didacticiel, en français et en anglais (synthèse neuronale Kokoro, générée hors ligne).
+
+### Corrigé
+- « Continuer à regarder » ne fait plus réapparaître l'écran de fin ; un bouton « Voir les résultats » permet d'y revenir.
+- La fin naturelle d'une alliance ne joue plus le son de trahison.
+
 ## [1.0.0] — Phase 9 : packaging, QA, livrables
 ### Ajouté
 - `npm run verify:packages` contrôle les paquets :

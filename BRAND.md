@@ -68,78 +68,81 @@ logo complet : 120 px de large.
 
 ## 4. Palette
 
-| Rôle | Nom | Hex | Usage |
+Version 1.1 : l'interface passe à une palette sobre d'« état-major ». Les noms historiques des jetons
+CSS sont conservés.
+
+| Rôle | Jeton | Hex | Usage |
 |---|---|---|---|
-| Fond | **Abyss** | `#0B1220` | Fond de l'application, océan profond nocturne |
-| Surface | **Slate** | `#16233A` | Panneaux, cartes UI (verre dépoli à 72 %) |
-| Accent primaire | **Aurora** | `#4FE3C1` | Isolines, sélection, focus, boutons primaires |
-| Accent secondaire | **Brass** | `#F2B84B` | Or, capitales, récompenses, éléments rares |
-| Danger | **Signal** | `#FF5A5F` | Alertes nucléaires, trahisons, erreurs |
-| Succès | **Verdant** | `#7BD88F` | Validations, alliances, croissance |
-| Texte | **Parchment** | `#EAE6DA` | Texte principal (contraste 15,0:1 sur Abyss) |
+| Fond | `--abyss` | `#0D1015` | Fond de l'application |
+| Panneaux | `--panel` / `--panel-2` / `--panel-3` | `#15191F` / `#1D222A` / `#252B34` | Panneaux opaques, lignes, survol |
+| Bordures | `--line` / `--line-strong` | `#2D343E` / `#46505C` | Filets fins |
+| Action principale | `--brass` (or) | `#D1A64A` | Boutons principaux, or, étoiles |
+| Sélection | `--aurora` (bleu acier) | `#7FA9D6` | Sélection, focus, progression |
+| Danger | `--signal` | `#D2544B` | Alertes, trahisons, erreurs |
+| Succès | `--verdant` | `#6FAE74` | Alliances, objectifs atteints |
+| Texte | `--parchment` | `#E8E5DD` | Texte principal |
+| Texte secondaire | `--muted` / `--faint` | `#A7ACB4` / `#6F7680` | Explications, légendes |
 
-Toutes les combinaisons texte/fond de l'interface respectent le niveau WCAG AA (≥ 4,5:1).
-Parchment sur Slate : 12,6:1 ; Aurora sur Abyss : 11,7:1 ; Brass sur Abyss : 10,5:1 ; Signal sur Abyss : 6,1:1.
+Contrastes sur le fond : texte 15:1, texte secondaire 8:1, or 8,4:1, bleu acier 7,6:1 (WCAG AA ≥ 4,5:1).
+Le logo garde ses teintes d'origine (Aurora `#4FE3C1`, Brass `#F2B84B`).
 
-### Encres des joueurs (40 couleurs)
+### Couleurs des pays
 
-`src/render/palette.ts` est généré par `scripts/brand/gen-palette.ts` :
+- **Pays réels** : une couleur traditionnelle de carte politique par code ISO (France bleue, Italie
+  verte, Royaume-Uni rouge, Allemagne grise…), choisie pour rester distincte de ses voisins
+  (`src/core/data/nationalColors.ts`, 118 pays). Ils affichent aussi leur **vrai drapeau** (flag-icons).
+- **Joueurs, nations fictives et régions historiques** : 40 encres générées par
+  `scripts/brand/gen-palette.ts`. Candidats en **OKLCH**, luminance 0,50 à 0,74 et chroma 0,11 à 0,21
+  (ni pastel ni fluo), puis sélection gloutonne du point le plus éloigné en OKLab.
+- **Modes daltoniens** : trois palettes optimisées après simulation de Machado et al. (2009). En mode
+  daltonien, les couleurs nationales cèdent la place à ces palettes et des hachures s'ajoutent.
+- Les tribus utilisent une encre neutre, `#B9B2A2`.
 
-1. On échantillonne des couleurs candidates dans l'espace **OKLCH**, avec une luminance de 0,60 à
-   0,90 pour rester lisibles en lavis translucide sur la carte sombre comme sur les terrains clairs.
-2. On fait une **sélection gloutonne du point le plus éloigné** en OKLab : chaque nouvelle couleur
-   maximise sa distance minimale aux couleurs déjà retenues. Les premiers joueurs reçoivent donc les
-   couleurs les plus distinctes.
-3. On calcule **trois palettes daltoniennes** (protanopie, deutéranopie, tritanopie) selon le même
-   principe. Les distances y sont mesurées *après* simulation de Machado et al. (2009, sévérité 1,0).
-4. En mode daltonien, des **motifs** (hachures orientées, points) s'ajoutent à la couleur, car
-   40 teintes ne peuvent pas toutes rester distinctes pour une vision dichromate.
+## 5. Direction artistique : carte réaliste, interface d'état-major
 
-Planche : `brand/player-palettes.png`. Les tribus utilisent une encre neutre unique, `#B9B2A2`.
+**Concept.** Une carte de stratégie crédible, comme celle d'un état-major : on doit lire d'un coup
+d'œil le relief, les mers, les pays et les fronts. Les retours de test ont écarté le style « atlas
+nocturne lumineux » de la version 1.0, jugé trop stylisé.
 
-## 5. Direction artistique : « Atlas nocturne, encre lumineuse »
+**Carte** (`src/render/shaders.ts`) :
 
-Moodboard : `brand/moodboard.png` (généré).
+- **Terrains réalistes**, façon vue satellite : plaines et cultures vert olive, forêts denses vert
+  sombre, collines, roche des montagnes et **neiges éternelles** en altitude, déserts de sable et
+  de regs, toundra et glaciers. Les limites entre biomes sont fondues et légèrement déformées par du
+  bruit, pour ne pas laisser voir de pixels.
+- **Ombrage du relief** marqué (lumière du nord-ouest) : c'est lui qui porte le réalisme et rend
+  lisible le coût d'attaque (montagnes, collines).
+- **Mers** : dégradé selon la profondeur (plateau continental turquoise, fosses bleu nuit), reflets
+  animés, écume discrète. **Côtes lissées** au-delà du pixel, avec une frange de plage.
+- **Territoires** en **aplat translucide** (42 % d'opacité) : le terrain reste lisible. Les
+  **frontières** sont un trait net à la couleur du pays, cerné de sombre, et la couleur s'intensifie
+  près des fronts. Pas de frontière tracée le long des côtes.
+- **Brouillard de guerre** en nappes nuageuses grises ; la géographie reste visible, les possessions
+  ennemies non.
+- **Nuit** : désaturation bleutée, villes éclairées par des halos chauds.
+- **Retombées nucléaires** : terre calcinée veinée de fissures incandescentes.
 
-**Concept.** La partie se joue sur une **table de cartographe, la nuit**. Le relief est dessiné en
-**courbes de niveau lumineuses** (les isolines) sur un papier bleu nuit. Chaque empire est un **lavis
-d'encre translucide** qui laisse voir le relief en dessous. Les frontières sont des **traits d'encre
-qui brillent et s'écoulent**. Quand un territoire est conquis, l'encre **diffuse**, comme une goutte
-sur du papier humide.
+**Unités** (`src/render/icons.ts`) : silhouettes vues de dessus en deux calques, une coque neutre
+réaliste et une marque à la couleur du pays. Croiseur gris avec tourelles et superstructure,
+transport de troupes, porte-conteneurs à coque rouge, train (locomotive et wagons), chasseur,
+bombardier, avion de reconnaissance. Taille réelle quand on zoome, taille minimale lisible quand on
+dézoome.
 
-**Pourquoi cette direction.**
+**Bâtiments** : pastilles sombres cerclées de la couleur du propriétaire, avec un pictogramme Lucide
+(immeubles, ancre, usine, château, fusée, viseur, radar, avion). Les niveaux s'affichent en points
+dorés, la construction en anneau de progression.
 
-- **Elle ne ressemble pas aux jeux existants.** Le genre utilise surtout des aplats de pixels
-  saturés sur des cartes réalistes. Isoline mise sur une esthétique d'atlas ancien, réinterprétée en
-  lumière.
-- **Elle est fonctionnelle.** Les isolines montrent l'altitude, donc le coût d'attaque (colline,
-  montagne) sans calque supplémentaire. Le lavis translucide garde le terrain lisible sous les
-  territoires.
-- **Elle est réaliste techniquement.** Tout passe par un shader de carte unique : courbes calculées
-  depuis une texture d'altitude filtrée, lavis et frontières depuis une texture de propriétaires.
-  Ça tient à 60 FPS sur 2 millions de tuiles.
-- **Elle s'adapte bien au jour et à la nuit.** La nuit, l'encre s'assombrit et les villes s'allument
-  comme des points de lumière.
-
-**Éléments clés du rendu.**
-
-- Océans : dégradé de profondeur, **lignes bathymétriques** animées le long des côtes (comme sur les
-  cartes marines) et écume.
-- Terres : textures procédurales par biome, ombrage du relief (*hillshading*) et isolines tous les
-  16 niveaux d'altitude (une ligne maîtresse sur quatre).
-- Interface : **verre dépoli** sombre (Slate à 72 % + flou), liserés Aurora, typographie d'atlas.
-- Pictogrammes des bâtiments : glyphes géométriques au trait, façon légende de carte.
-- Brouillard de guerre : la géographie reste visible, virée au sépia et assombrie comme une région
-  non relevée de l'atlas ; seules les possessions ennemies disparaissent.
-- Retombées nucléaires : terre calcinée, couleur de cendre, veinée de fissures ambre et vert pâle
-  qui pulsent ; les zones fraîches brillent davantage.
-- Météo : nuages de tempête tourbillonnants avec éclairs, bancs de brouillard laiteux.
+**Interface** : panneaux opaques, filets fins, accent or pour l'action principale, bleu acier pour
+la sélection. **Aucun emoji** : un seul jeu d'icônes au trait (Lucide), toujours accompagné d'un
+libellé ou d'une infobulle. Chaque menu dit ce qu'il fait (sous-titres, descriptions d'options,
+résumés). Signaux tactiques illustrés à la place des emojis.
 
 ## 6. Typographie (licence OFL, embarquée)
 
 | Rôle | Police | Graisses | Source |
 |---|---|---|---|
-| Titres, logotype, toponymes | **Fraunces** (Undercase Type) | 400, 600, 700 | `@fontsource/fraunces` (OFL 1.1) |
+| Titres, noms de pays sur la carte | **IBM Plex Serif** | 500, 600 | `@fontsource/ibm-plex-serif` (OFL 1.1) |
+| Logotype | **Fraunces** (Undercase Type) | 600 | `@fontsource/fraunces` (OFL 1.1) |
 | Interface, texte | **IBM Plex Sans** | 400, 500, 600 | `@fontsource/ibm-plex-sans` (OFL 1.1) |
 | Nombres, compteurs | **IBM Plex Mono** | 400, 600 | `@fontsource/ibm-plex-mono` (OFL 1.1) |
 
@@ -159,18 +162,20 @@ Générées par `npm run media` (1920×1080, jeu réel, aucune retouche), dans `
 
 | Fichier | Contenu |
 |---|---|
-| `01-title.png` | Écran titre, partie de démonstration en fond |
+| `01-title.png` | Écran titre : menu commenté, partie de démonstration en fond |
 | `02-lobby.png` | Lobby solo : cartes, modes, options, fonctionnalités inédites |
-| `03-gameplay.png` | Début de partie en Europe : expansion, villes, gisements, HUD complet |
+| `03-gameplay.png` | Partie en Europe : relief réaliste, vrais drapeaux, HUD complet |
 | `04-nukes-flight.png` | Bombe H : flash, onde de choc, cercles d'impact, sous-titre |
 | `05-nuclear-impact.png` | Cratère : retombées calcinées et fissures lumineuses |
-| `06-naval-rail.png` | Levant à 9 min : réseau ferré, trains, navires de guerre, marchands |
-| `07-night.png` | Méditerranée de nuit : encre assombrie, villes éclairées |
+| `06-naval-rail.png` | Méditerranée à 9 min : ports, réseau ferré, navires |
+| `07-night.png` | Méditerranée de nuit : carte désaturée, villes éclairées |
 | `08-tech-panel.png` | Arbre technologique |
 | `09-diplomacy.png` | Panneau de diplomatie, demande d'alliance |
 | `10-fog-of-war.png` | Brouillard de guerre sur l'Afrique |
 | `11-campaign.png` | Campagne |
 | `12-editor.png` | Éditeur de cartes (Archipel) |
 | `13-end-screen.png` | Écran de fin : classement, courbes, statistiques |
+| `14-briefing.png` | Campagne : briefing de mission (la partie attend le joueur) |
+| `15-guide.png` | Campagne : guide pas à pas, objectifs avec jauges |
 | `gameplay.gif` | 10 s de partie en Méditerranée (640×360, 10 i/s) |
 | `trailer.mp4` | Vidéo de 58 s (1080p, H.264) : menus, puis partie bac à sable en Europe jusqu'à la frappe nucléaire |

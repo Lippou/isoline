@@ -5,7 +5,7 @@
 
 ![Isoline — partie en cours](docs/media/03-gameplay.png)
 
-Isoline est un jeu de stratégie de bureau (macOS, Windows) : on part d'un point sur une carte du monde et on étend son territoire face à jusqu'à 100 nations autonomes et des tribus. Le jeu inclut économie, villes, ports, rail, flottes, aviation, armes nucléaires et diplomatie. Il ajoute une couche originale : météo, brouillard de guerre, technologies, ressources, loyauté et sécessions, généraux, conseil mondial, campagne, éditeur de cartes, replays et multijoueur en réseau local.
+Isoline est un jeu de stratégie de bureau (macOS, Windows) au rythme posé : on part d'un point sur une carte du monde réaliste et on étend son territoire face à jusqu'à 100 nations autonomes (avec leur vrai drapeau) et des tribus. Une partie dure de 25 minutes à une heure ; la gestion, les alliances et les trahisons comptent autant que la guerre. Le jeu inclut économie, villes, ports, rail, flottes, aviation, armes nucléaires et diplomatie. Il ajoute une couche originale : météo, brouillard de guerre, technologies, ressources, loyauté et sécessions, généraux, conseil mondial, campagne, éditeur de cartes, replays et multijoueur en réseau local.
 
 - Règles complètes et valeurs chiffrées : [`GAME_DESIGN.md`](GAME_DESIGN.md)
 - Identité visuelle : [`BRAND.md`](BRAND.md)
@@ -52,6 +52,20 @@ npm run bench:app      # FPS, mémoire et démarrage mesurés dans l'app → doc
 npm run media          # captures 1920×1080, GIF et vidéo → docs/media/
 npm run brand          # régénère logo, icônes, fond de DMG, palettes
 npm run maps           # télécharge Natural Earth dans .cache/ne puis régénère assets/maps/
+npm run pacing         # durée des parties entre IA (équilibrage)
+npm run audio:sfx      # bruitages réels CC0 (Freesound) → public/audio/sfx/
+npm run audio:music    # bande-son (Kevin MacLeod, CC BY 4.0) → public/audio/music/
+npm run audio:voice    # narration de la campagne (Kokoro TTS, local) → public/voice/
+```
+
+Les médias générés (`public/audio`, `public/voice`, 42 Mo) sont versionnés : ces trois scripts ne servent qu'à les régénérer. La voix demande un environnement Python **local au projet** :
+
+```bash
+python3 -m venv .tools/venv
+.tools/venv/bin/pip install kokoro-onnx soundfile
+mkdir -p .cache/tts && cd .cache/tts
+curl -LO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
+curl -LO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
 ```
 
 Les cartes générées (`assets/maps/`, 8 Mo) sont versionnées : `npm run maps` n'est nécessaire que pour les modifier. Sources : Natural Earth 1:10m et 1:50m (domaine public), [natural-earth-vector](https://github.com/nvkelso/natural-earth-vector).
@@ -80,13 +94,14 @@ scripts/       build, packaging, vérification, benchmarks, médias, marque, car
 ```
 
 - **Simulation** : 10 ticks/s dans un Web Worker. PRNG xoshiro128** seedé, aucun `Math.random` dans `src/core` (règle ESLint). L'état est vérifiable par hash et restaurable par snapshot.
-- **Rendu** : une seule surface pour toute la carte, avec des textures de données (terrain, relief, propriétaires, état, brouillard) dessinées par un shader : courbes de niveau, bathymétrie, lavis d'encre, frontières lumineuses, météo, nuit. Les mises à jour sont partielles, par bandes.
+- **Rendu** : une seule surface pour toute la carte, avec des textures de données (terrain, relief, propriétaires, état, brouillard) dessinées par un shader : biomes réalistes fondus, ombrage du relief, neiges, profondeur des mers, côtes lissées, territoires translucides à frontières nettes, météo, nuit. Les mises à jour sont partielles, par bandes. Unités vues de dessus et pictogrammes de bâtiments en SVG.
+- **Audio** : bruitages enregistrés, musique orchestrale adaptative en fondu enchaîné, narration de la campagne (voir `GAME_DESIGN.md` §20).
 - **Réseau** : lockstep. Le serveur relaie les tours et garde une simulation de référence pour valider les commandes, détecter une désynchronisation (hash) et renvoyer un snapshot.
 
 ## Contrôles essentiels
 
-Clic gauche : attaquer ou étendre · Clic droit : menu radial · Molette ou pincement : zoom · ZQSD/WASD, flèches ou glisser : caméra · 1–6, U, I, 7 : construire · 8 / 9 / 0 : bombes A, H et MIRV · T/Y : ratio d'attaque · K/L : accepter/refuser une alliance · E : général · Espace / V / R / N : vues terrain, brouillard, ressources, loyauté · Échap : menu. Tous les raccourcis sont remappables (Paramètres → Contrôles) ; liste complète dans `GAME_DESIGN.md` §16.
+Clic gauche : attaquer ou étendre · Clic droit : menu contextuel · Molette ou pincement : zoom · ZQSD/WASD, flèches ou glisser : caméra · 1–6, U, I, 7 : construire · 8 / 9 / 0 : bombes A, H et MIRV · T/Y : ratio d'attaque · K/L : accepter/refuser une alliance · E : général · Espace / V / R / N : vues terrain, brouillard, ressources, loyauté · Échap : menu. Tous les raccourcis sont remappables (Paramètres → Contrôles) ; liste complète dans `GAME_DESIGN.md` §16.
 
 ## Licence
 
-Code sous licence MIT. Tous les visuels, sons et musiques sont générés par le projet ; les polices sont sous licence OFL et les données géographiques dans le domaine public. Voir [`CREDITS.md`](CREDITS.md).
+Code sous licence MIT. Icônes Lucide (ISC), drapeaux flag-icons (MIT), polices OFL, données géographiques du domaine public, bruitages CC0, musique de Kevin MacLeod (CC BY 4.0), voix synthétisée avec Kokoro (Apache 2.0). Détail et attributions : [`CREDITS.md`](CREDITS.md).

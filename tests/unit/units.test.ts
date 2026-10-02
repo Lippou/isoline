@@ -251,3 +251,61 @@ describe('nuclear', () => {
     expect(warheads).toBeLessThanOrEqual(14);
   });
 });
+
+describe('port radius of action', () => {
+  it('warships can only be laid down within the port range', () => {
+    const g = testGame(
+      asciiMap(['~'.repeat(60), '~'.repeat(60), '~~' + '.'.repeat(10) + '~'.repeat(48), '~'.repeat(60)], 6),
+      1,
+    );
+    startWith(g, [[30, 15]]);
+    const p = g.players[1]!;
+    p.gold = 50_000_000;
+    const coast = p.coast[0]!;
+    g.step([cmd(1, { t: 'build', kind: B.Port, tile: coast })]);
+    for (let k = 0; k < 55; k++) g.step([]);
+    const port = [...g.buildings.values()].find((b) => b.type === B.Port)!;
+    expect(port).toBeDefined();
+    // Far beyond 60 tiles: refused. Within range: accepted.
+    g.step([cmd(1, { t: 'warship', tile: g.map.idx(Math.min(359, port.x + 200), 3) })]);
+    expect(g.units.some((u) => u.type === U.Warship)).toBe(false);
+    g.step([cmd(1, { t: 'warship', tile: g.map.idx(port.x + 30, 3) })]);
+    expect(g.units.some((u) => u.type === U.Warship)).toBe(true);
+  });
+});
+
+describe('fallout accounting', () => {
+  it('keeps every player useful-tile count exact through nuclear strikes (regression: 256 wrapped to 0)', () => {
+    const g = testGame(
+      asciiMap(
+        Array.from({ length: 20 }, () => '.'.repeat(30)),
+        6,
+      ),
+      2,
+    );
+    startWith(g, [
+      [40, 60],
+      [130, 60],
+    ]);
+    const [p1, p2] = [g.players[1]!, g.players[2]!];
+    p1.troops = p2.troops = 800_000;
+    g.step([
+      cmd(1, { t: 'attack', tile: g.map.idx(90, 60), ratio: 0.5 }),
+      cmd(2, { t: 'attack', tile: g.map.idx(90, 60), ratio: 0.5 }),
+    ]);
+    for (let k = 0; k < 300; k++) g.step([]);
+    for (const [x, y] of [
+      [60, 50],
+      [120, 70],
+      [90, 30],
+    ] as const)
+      detonate(g, N.Hydrogen, x, y, 1);
+    const counted = new Map<number, number>();
+    for (let i = 0; i < g.owner.length; i++) {
+      const o = g.owner[i]!;
+      if (o > 0 && g.isUsefulLand(i)) counted.set(o, (counted.get(o) ?? 0) + 1);
+    }
+    for (const p of [p1, p2]) expect(p.usefulTiles).toBe(counted.get(p.id) ?? 0);
+    expect(g.fallout.every((v) => v >= 0 && v <= 255)).toBe(true);
+  });
+});

@@ -272,3 +272,38 @@ describe('front shape', () => {
     expect(diag / axis).toBeGreaterThan(0.88);
   });
 });
+
+describe('tribes', () => {
+  it('hoard gold that is looted tile by tile, and stop growing at their troop ceiling', async () => {
+    const { claimDisc } = await import('../../src/core/game/spawn');
+    const { TRIBE_MAX_TROOPS } = await import('../../src/core/game/constants');
+    const g = testGame(asciiMap(FIELD, 6), 1);
+    startWith(g, [[20, 20]]);
+    const tribe = g.addPlayer({ fr: 'Tribu', en: 'Tribe' }, 'tribe');
+    claimDisc(g, tribe, g.map.idx(34, 20));
+    tribe.spawned = true;
+    tribe.alive = true;
+    tribe.troops = 2_000;
+    tribe.gold = 100_000;
+    const p = g.players[1]!;
+    p.troops = 400_000;
+    const gold0 = p.gold;
+    g.step([cmd(1, { t: 'attack', tile: g.map.idx(34, 20), ratio: 0.5 })]);
+    let looted = 0;
+    for (let k = 0; k < 400 && tribe.alive; k++) {
+      g.step([]);
+      for (const e of g.events) if (e.k === 'loot' && e.owner === 1) looted += e.amount;
+    }
+    expect(looted).toBeGreaterThan(50_000);
+    expect(p.gold - gold0).toBeGreaterThan(50_000);
+    // Ceiling: a tribe at the cap does not grow.
+    const t2 = g.addPlayer({ fr: 'T2', en: 'T2' }, 'tribe');
+    claimDisc(g, t2, g.map.idx(10, 35));
+    t2.spawned = true;
+    t2.alive = true;
+    t2.troops = TRIBE_MAX_TROOPS;
+    const before = t2.troops + t2.workers;
+    for (let k = 0; k < 20; k++) g.step([]);
+    expect(t2.troops + t2.workers).toBeLessThanOrEqual(before + 1);
+  });
+});

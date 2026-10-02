@@ -326,7 +326,7 @@ export function detonate(game: Game, kind: N, cx: number, cy: number, by: number
           game.setFallout(t, 255);
         }
       } else if (land) {
-        const f = 1 - (d - r) / Math.max(1, rf - r);
+        const f = Math.min(1, 1 - (d - r) / Math.max(1, rf - r)); // d may be < r on the ragged edge
         if ((hash2(x, y, seed + 7) & 1023) / 1023 < f * 0.85) {
           game.setFallout(t, Math.max(game.fallout[t]!, Math.round(110 + 120 * f)));
         }

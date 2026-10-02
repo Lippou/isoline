@@ -314,6 +314,8 @@ export class Game {
 
   /** Mark a tile with fallout (keeps useful-tile counts consistent). */
   setFallout(tile: number, value: number): void {
+    // Stored in a Uint8Array: clamp, or 256 would wrap to 0 and break the useful-land counts.
+    value = Math.max(0, Math.min(255, Math.round(value)));
     const prev = this.fallout[tile]!;
     if (prev === value) return;
     const wasUseful = prev === 0 && !this.isDead(tile) && IS_LAND[this.map.terrain[tile]!];

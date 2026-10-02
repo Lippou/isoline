@@ -1,8 +1,30 @@
-# Rapport de livraison — Isoline 1.0.0
+# Rapport de livraison — Isoline 1.1.0
 
 Ce rapport fait le point sur ce qui est livré, ce qui a été mesuré, les écarts avec le cahier des charges et les limites connues. Toutes les mesures viennent de scripts du dépôt et peuvent être reproduites (`npm run bench`, `npm run bench:app`, `node scripts/perf-app.mjs soak`, `npm run verify:packages`).
 
 **Machine de mesure** : Mac mini Apple M4 Pro (12 cœurs, 24 Go), macOS 27.2, écran 144 Hz, Node 24.19, Electron 44.5.
+
+## 0. Version 1.1 : retours de test traités
+
+| Retour | Réponse |
+|---|---|
+| Une partie de 8 minutes est trop rapide, tout est trop exponentiel ; minimum 20 minutes | IA posée, fronts lents contre un pays, coût logistique des guerres pour les grands empires, prix des villes et des ports sans plafond, croissance ralentie. **Mesures** (`npm run pacing`, IA seules, Normal) : Europe 48 min, Mer Noire 40 min, Méditerranée 44 min, Monde plus de 45 min ; Difficile 29 à 32 min ; Impossible 26 à 33 min. Avant : 7 à 18 min. |
+| Les bots sont trop rapides, ils calculent trop vite leur gestion | Réflexion toutes les 3 à 6 s (au lieu de 0,8 à 1,6 s), 30 s minimum entre deux offensives contre un pays, constructions espacées de 12 s, supériorité de 1,4 × exigée avant une guerre. |
+| La partie doit commencer dès que le point est posé | Fait : la phase d'apparition s'achève dès que tous les humains ont posé leur capitale ; le minuteur ne sert plus qu'à borner l'attente. |
+| Tribus : croissance comparable à une nation puis plafond ; elles servent à récupérer de l'or, avec un bruit de monnaie | Croissance identique à une nation jusqu'à 60 000 troupes, puis arrêt. Trésor de 600 or/s pillé tuile par tuile ; bruit de pièces et montant affiché. Test unitaire ajouté. |
+| Rayon d'action des ports | 60 tuiles (+10 par niveau) : construction et réparation des navires de guerre, affiché au survol, au placement et avec l'outil « navire de guerre ». Test unitaire ajouté. |
+| Graphismes plus réalistes | Shader de carte réécrit : biomes réalistes fondus, ombrage, neiges, profondeur des mers, côtes lissées, carte politique translucide à frontières nettes. |
+| Vrais drapeaux pour les pays réels | 204 pays réels étiquetés par code ISO : vrai drapeau (flag-icons, MIT) et couleur nationale traditionnelle. Les régions historiques et nations fictives gardent un emblème généré. |
+| Meilleurs pictogrammes (ville, port…) ; bateaux de guerre, trains « plus sérieux » | Pastilles de bâtiments à pictogrammes Lucide ; navires, transport, porte-conteneurs, train et avions redessinés vue de dessus, deux calques (coque neutre, marque nationale), agrandis. |
+| Interface de grande qualité, compréhensible, sans emoji, pour tous les menus | Refonte de tous les écrans et du HUD : style d'état-major, icônes au trait avec libellés et infobulles, descriptions de chaque option, menu contextuel, lobby en trois étapes avec résumé. 0 emoji restant (vérifié par script). |
+| Les emojis « font IA » | Supprimés partout. Les emojis de communication sont devenus 16 signaux tactiques illustrés. |
+| La campagne n'est pas bien guidée | Briefing (partie en pause), guide pas à pas qui ne disparaît plus avant l'accomplissement de l'étape, jauges de progression, repères sur la carte. Test e2e ajouté. |
+| Voix de grande qualité pour la campagne | Narration de 53 répliques par langue (FR/EN) par synthèse neuronale Kokoro (Apache 2.0), générée hors ligne. C'est une voix de synthèse, pas un comédien. |
+| Meilleure musique | Bande-son orchestrale de 12 morceaux (Kevin MacLeod, CC BY 4.0), adaptative (calme, tension, guerre, victoire, défaite) avec fondus enchaînés. |
+| Bruitages réalistes et non numériques (trahison, etc.) | 27 enregistrements réels CC0 (Freesound) : explosions, sirène, missile, canon, cornes, train, pièces, fanfare, coup d'orchestre de trahison… avec légère variation à chaque lecture. |
+| « Continuer à regarder » fait revenir l'écran de fin | Corrigé ; bouton « Voir les résultats » pour y revenir. |
+
+Les choix de bruitages et de musique ont été faits **sans écoute** possible dans cet environnement : d'après les titres, les notes et la popularité sur Freesound, puis vérifiés par analyse automatique (durée, niveau). Une écoute humaine reste recommandée ; chaque son se remplace en changeant un identifiant dans `scripts/audio/fetch-sfx.mjs`.
 
 ## 1. Livrables
 
@@ -128,6 +150,13 @@ Définition de « terminé » (§23) :
 - **Replays** : revenir en arrière re-simule depuis le début. D'après les temps de tick mesurés (0,3 à 1 ms), remonter une heure de jeu (36 000 ticks) prend de l'ordre de 10 à 40 s.
 - **Accessibilité** : `svelte-check` remonte 16 avertissements d'accessibilité (gestionnaires de clic sur des éléments qui ne sont pas des boutons, dans le HUD et l'éditeur). La navigation au clavier n'a pas été auditée élément par élément.
 - **Vidéo et GIF** : produits par Playwright et `ffmpeg-static` (dépendance locale). Le GIF fait 8,6 Mo (640×360).
+
+### Version 1.1
+- **Licences** : le cahier des charges cite CC0, MIT et OFL. La version 1.1 ajoute de la musique sous **CC BY 4.0** (attribution affichée dans « À propos » et dans `CREDITS.md`), des icônes **ISC** (équivalente à MIT), un modèle de voix **Apache 2.0** et une voix entraînée sur un corpus **CC BY 4.0**. Ce sont des licences libres compatibles avec la distribution du jeu. Les bruitages sont en CC0.
+- **Voix** : voix de synthèse neuronale de bonne qualité, mais pas un enregistrement de comédien. Les noms propres inventés (nations fictives) ne sont pas prononcés, car le guide ne les cite pas.
+- **Taille** : les médias ajoutent 42 Mo (36 Mo de musique). Le DMG et l'installeur grossissent d'autant (voir §1).
+- **Test e2e LAN** : il a échoué une fois sur cinq exécutions (salon resté sur « Démarrage du serveur… » juste après un build), puis il est passé à chaque relance. Cause non élucidée ; probablement un délai de démarrage du serveur au premier lancement.
+- **Unités** : les tailles minimales à l'écran (32 à 70 px) privilégient la lisibilité sur l'échelle réelle quand on dézoome.
 
 ## 5. Méthode de vérification
 

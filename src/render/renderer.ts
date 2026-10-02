@@ -739,7 +739,12 @@ export class GameRenderer {
       if (!l) {
         const name = new BitmapText({
           text: '',
-          style: { fontFamily: 'Fraunces, Georgia, serif', fontSize: 64, fill: 0xffffff, fontWeight: '600' },
+          style: {
+            fontFamily: '"IBM Plex Serif", Georgia, serif',
+            fontSize: 64,
+            fill: 0xffffff,
+            fontWeight: '600',
+          },
         });
         const troops = new BitmapText({
           text: '',
