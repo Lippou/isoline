@@ -5,11 +5,27 @@
   import credits from '../../../CREDITS.md?raw';
   import PageHeader from '../PageHeader.svelte';
 
-  const lines = credits
-    .split('\n')
-    .filter(
-      (l) => l.startsWith('|') && !l.includes('---') && !l.includes('Asset') && !l.includes('Bibliothèque'),
-    );
+  // CREDITS.md → sections of table rows (each table's header and separator are skipped).
+  const sections: { title: string; rows: string[][] }[] = [];
+  let header = false;
+  for (const line of credits.split('\n')) {
+    if (line.startsWith('## ')) {
+      sections.push({ title: line.slice(3).trim(), rows: [] });
+      header = true;
+    } else if (line.startsWith('|') && !line.includes('---') && sections.length) {
+      if (header) {
+        header = false;
+        continue;
+      }
+      sections[sections.length - 1]!.rows.push(
+        line
+          .split('|')
+          .map((c) => c.trim())
+          .filter(Boolean),
+      );
+    }
+  }
+  const shown = sections.filter((x) => x.rows.length);
 </script>
 
 <div class="page" data-testid="about">
@@ -20,16 +36,14 @@
     <p class="mono ver">v{app.version} · {app.platform}</p>
     <p>{t('about.text')}</p>
     <h3>{t('about.credits')}</h3>
-    <ul>
-      {#each lines as l, k (k)}
-        {@const cells = l
-          .split('|')
-          .map((c) => c.trim())
-          .filter(Boolean)}
-        <li><b>{cells[0]}</b> — {cells.slice(1, 3).join(' · ')}</li>
-      {/each}
-      <li><b>Natural Earth</b> — {t('about.naturalEarth')}</li>
-    </ul>
+    {#each shown as sec (sec.title)}
+      <h4>{sec.title}</h4>
+      <ul>
+        {#each sec.rows as cells, k (k)}
+          <li><b>{cells[0]}</b> — {cells.slice(1, 3).join(' · ')}</li>
+        {/each}
+      </ul>
+    {/each}
     <p class="muted">{t('about.license')}</p>
   </div>
 </div>
@@ -42,7 +56,7 @@
     display: grid;
     grid-template-rows: auto 1fr;
     justify-items: center;
-    background: radial-gradient(ellipse at 50% 30%, #172947, var(--abyss) 60%);
+    background: var(--abyss);
     overflow-y: auto;
   }
   header {
@@ -60,7 +74,12 @@
   .slogan {
     font-family: var(--title);
     font-style: italic;
-    color: var(--aurora);
+    color: var(--muted);
+  }
+  h4 {
+    justify-self: start;
+    margin: 12px 0 2px;
+    font-family: var(--title);
   }
   .ver {
     color: var(--faint);

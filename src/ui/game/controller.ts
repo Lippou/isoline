@@ -490,7 +490,7 @@ export class GameController {
         if (e.owner === me) audio.sfx('build', 0.6);
         break;
       case 'alliance':
-        if (e.a === me || e.b === me) audio.sfx(e.on ? 'alliance' : 'betrayal', 0.8);
+        if (e.a === me || e.b === me) audio.sfx(e.on ? 'alliance' : 'allianceEnd', 0.8);
         break;
       case 'betrayal':
         hud.betrayals = [
@@ -511,7 +511,7 @@ export class GameController {
         hud.councilOpen = e.phase === 'open';
         break;
       case 'trainPay':
-        if (e.owner === me) audio.sfx('train', 0.25);
+        if (e.owner === me) audio.sfx('train', 0.35);
         break;
       case 'loot':
         if (e.owner === me && performance.now() - this.lastCoin > 350) {
@@ -530,7 +530,7 @@ export class GameController {
         if (e.player === me) {
           toast(t('notify.youDied'), 'danger');
           audio.sfx('defeat', 0.9);
-        }
+        } else if (e.by === me) audio.sfx('eliminated', 0.8);
         break;
       case 'gameOver':
         break;

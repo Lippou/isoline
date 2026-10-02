@@ -13,7 +13,8 @@ export default defineConfig({
   base: './',
   plugins: [svelte()],
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
-  publicDir: false,
+  // Static media (sound effects, music, narration) copied as-is into the build.
+  publicDir: 'public',
   build: {
     outDir: 'dist-renderer',
     emptyOutDir: true,

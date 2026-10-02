@@ -30,6 +30,7 @@
     }
     await Promise.all([loadSettings(), loadProfile()]);
     audio.setVolumes(settings.audio);
+    audio.voiceLang = settings.lang;
     booted = true;
     autostart();
     const unlock = () => {

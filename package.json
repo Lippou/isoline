@@ -31,7 +31,11 @@
     "package:all": "npm run build && node scripts/package.mjs mac win",
     "verify:packages": "node scripts/verify-packages.mjs",
     "bench:app": "npm run build && node scripts/perf-app.mjs",
-    "media": "npm run build && node scripts/media.mjs"
+    "media": "npm run build && node scripts/media.mjs",
+    "audio:sfx": "node scripts/audio/fetch-sfx.mjs",
+    "audio:music": "node scripts/audio/fetch-music.mjs",
+    "audio:voice": ".tools/venv/bin/python scripts/audio/gen-voice.py",
+    "pacing": "tsx scripts/pacing.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

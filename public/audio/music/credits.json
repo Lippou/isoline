@@ -1,0 +1,86 @@
+{
+  "menu": {
+    "title": "Lord of the Land",
+    "author": "Kevin MacLeod (incompetech.com)",
+    "url": "https://incompetech.com",
+    "license": "CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/",
+    "mood": "menu"
+  },
+  "calm1": {
+    "title": "Lasting Hope",
+    "author": "Kevin MacLeod (incompetech.com)",
+    "url": "https://incompetech.com",
+    "license": "CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/",
+    "mood": "calm"
+  },
+  "calm2": {
+    "title": "Unwritten Return",
+    "author": "Kevin MacLeod (incompetech.com)",
+    "url": "https://incompetech.com",
+    "license": "CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/",
+    "mood": "calm"
+  },
+  "calm3": {
+    "title": "Reawakening",
+    "author": "Kevin MacLeod (incompetech.com)",
+    "url": "https://incompetech.com",
+    "license": "CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/",
+    "mood": "calm"
+  },
+  "tension1": {
+    "title": "Gathering Darkness",
+    "author": "Kevin MacLeod (incompetech.com)",
+    "url": "https://incompetech.com",
+    "license": "CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/",
+    "mood": "tension"
+  },
+  "tension2": {
+    "title": "Interloper",
+    "author": "Kevin MacLeod (incompetech.com)",
+    "url": "https://incompetech.com",
+    "license": "CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/",
+    "mood": "tension"
+  },
+  "war1": {
+    "title": "Five Armies",
+    "author": "Kevin MacLeod (incompetech.com)",
+    "url": "https://incompetech.com",
+    "license": "CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/",
+    "mood": "war"
+  },
+  "war2": {
+    "title": "Prelude and Action",
+    "author": "Kevin MacLeod (incompetech.com)",
+    "url": "https://incompetech.com",
+    "license": "CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/",
+    "mood": "war"
+  },
+  "war3": {
+    "title": "Volatile Reaction",
+    "author": "Kevin MacLeod (incompetech.com)",
+    "url": "https://incompetech.com",
+    "license": "CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/",
+    "mood": "war"
+  },
+  "war4": {
+    "title": "Clash Defiant",
+    "author": "Kevin MacLeod (incompetech.com)",
+    "url": "https://incompetech.com",
+    "license": "CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/",
+    "mood": "war"
+  },
+  "victory": {
+    "title": "Heroic Age",
+    "author": "Kevin MacLeod (incompetech.com)",
+    "url": "https://incompetech.com",
+    "license": "CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/",
+    "mood": "victory"
+  },
+  "defeat": {
+    "title": "Lightless Dawn",
+    "author": "Kevin MacLeod (incompetech.com)",
+    "url": "https://incompetech.com",
+    "license": "CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/",
+    "mood": "defeat"
+  }
+}

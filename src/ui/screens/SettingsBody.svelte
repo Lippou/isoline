@@ -20,6 +20,7 @@
   function change(): void {
     saveSettings();
     audio.setVolumes(settings.audio);
+    audio.voiceLang = settings.lang;
   }
   function capture(e: KeyboardEvent): void {
     if (!listening) return;

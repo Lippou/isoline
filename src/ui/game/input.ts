@@ -1,4 +1,5 @@
 // Mouse / trackpad / keyboard → camera moves and game commands.
+import { audio } from '../../audio/audio';
 import type { GameRenderer } from '../../render/renderer';
 import type { Session } from '../../engine/session';
 import { hud } from '../stores/game.svelte';
@@ -268,6 +269,8 @@ export class InputController {
     const owner = s.owner[tile]!;
     if (owner === session.viewer) return;
     session.cmd({ t: 'attack', tile, ratio });
+    // A drawn blade for attacks on a country; marching feet when expanding.
+    audio.sfx(owner > 0 ? 'attack' : 'conquest', owner > 0 ? 0.6 : 0.5);
   }
 }
 
