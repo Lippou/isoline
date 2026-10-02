@@ -115,12 +115,21 @@ if (doMac) {
   } catch (e) {
     check(false, 'lipo', String(e));
   }
-  const cs = spawnSync('codesign', ['-dv', app], { encoding: 'utf8' });
+  // (-dvv: the signing authorities are only printed from the second verbosity level.)
+  const cs = spawnSync('codesign', ['-dvv', app], { encoding: 'utf8' });
+  const team = /TeamIdentifier=(\S+)/.exec(cs.stderr)?.[1] ?? '';
   check(
-    /Signature=adhoc|Authority=/.test(cs.stderr),
-    'Code signature (ad hoc or identity)',
-    (cs.stderr.match(/Signature=\w+|flags=\S+/g) ?? []).join(' '),
+    /Signature=adhoc|Authority=Developer ID Application/.test(cs.stderr),
+    'Code signature (ad hoc or Developer ID)',
+    (
+      cs.stderr.match(/Authority=Developer ID Application[^\n]*|Signature=\w+|TeamIdentifier=\S+/g) ?? []
+    ).join(' · '),
   );
+  if (team && team !== 'not set') {
+    // Developer ID builds are notarised: the ticket is stapled to the app.
+    const st = spawnSync('xcrun', ['stapler', 'validate', app], { encoding: 'utf8' });
+    check(st.status === 0, 'Notarisation ticket stapled', (st.stdout || st.stderr).trim().split('\n').pop());
+  }
   const vr = spawnSync('codesign', ['--verify', '--deep', '--strict', app], { encoding: 'utf8' });
   check(vr.status === 0, 'codesign --verify --deep --strict', vr.stderr.trim());
   // Smoke test: open the title screen then quit with code 0.

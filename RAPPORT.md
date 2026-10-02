@@ -1,8 +1,24 @@
-# Rapport de livraison — Isoline 1.4.0
+# Rapport de livraison — Isoline 1.5.0
 
 Ce rapport fait le point sur ce qui est livré, ce qui a été mesuré, les écarts avec le cahier des charges et les limites connues. Toutes les mesures viennent de scripts du dépôt et peuvent être reproduites (`npm run bench`, `npm run bench:app`, `node scripts/perf-app.mjs soak`, `npm run verify:packages`).
 
 **Machine de mesure** : Mac mini Apple M4 Pro (12 cœurs, 24 Go), macOS 27.2, écran 144 Hz, Node 24.19, Electron 44.5.
+
+## 0. Version 1.5 : septième lot de retours
+
+| Retour | Réponse |
+|---|---|
+| Un refus d'alliance doit sonner comme un rejet ; la déchirure plutôt pour la trahison | Refus : tampon « Refusé » (ou « Sans suite ») qui s'abat sur le document, coup de tampon et note de rejet. Trahison : le pacte se déchire, au même endroit, avec le son de papier déchiré. |
+| « Afficher le détail » revient à l'ancien écran de victoire | Un seul journal de fin : page 1 la une, page 2 « Résultats et statistiques » (classement avec drapeaux, bilan, distinctions, archives, actions). L'ancien écran est supprimé, campagne comprise (« Communiqué de mission »). |
+| Campagne : mission 3 terminée en éliminant une tribu, ancienne fin | Objectifs requis tous nécessaires et tribus exclues des éliminations ; tests unitaires pour chaque mission ; fin de mission dans le nouveau journal. |
+| Enlever le didacticiel, présenter les nouveautés, pas d'argent quand le guide demande une ville | Didacticiel supprimé (la mission 1 en reprend les bases) ; centres de recherche, capitale, bateaux et rappel, routes commerciales, alliances, météo, frontières menacées enseignés au fil des missions ; « Il vous faut X d'or (encore Y s) » avant chaque construction et or de départ adapté. |
+| Le journal et les alliances passent devant l'objectif | Objectifs et guide regroupés en bas au centre ; les fenêtres s'ouvrent au-dessus ; vérifié en 1280×800, 1600×900 et 1920×1080 (test e2e). |
+| Icônes trop petites sur la carte | Bâtiments à 24–36 px à l'écran (10–18 avant), classés et espacés pour ne pas couvrir la carte vue de loin. |
+| Les rivières ne servent à rien | Rivières reliées à la mer navigables (navires à 0,6× de leur vitesse), débarquements sur les berges, ports fluviaux ; données des cartes réparées (77 à 82 % des rivières atteignent la mer, contre 47 à 56 %). |
+| Plus de cartes : arcade, planètes, pop culture | 16 cartes : 7 d'arcade symétriques, 4 planètes (Mars, la Lune, Titan, Océanide) avec leur palette, 5 légendes (Atlantide, les Neuf Mondes, l'Olympe, la Terre du Dragon, la Mer des Flibustiers). Parties IA de 28 à 55 min. |
+| Le jeu sur GitHub en privé, mis à jour depuis l'app | Dépôt privé `Lippou/isoline`. `npm run release` signe l'app (Developer ID), la fait notariser par Apple, vérifie les paquets, crée le tag et la release. Dans le jeu : vérification au lancement si l'accès est configuré (jeton GitHub en lecture seule dans Paramètres → Mises à jour, ou connexion GitHub CLI), téléchargement, contrôle de la signature (même équipe Apple) et redémarrage sur la nouvelle version. |
+
+Mesures : 229 tests unitaires et d'intégration, 5 e2e ; app signée et notarisée, contrôle des paquets réussi.
 
 ## 0. Version 1.4 : sixième lot de retours
 
