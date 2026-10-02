@@ -65,6 +65,39 @@ class AudioEngine {
   private focusMul = 1;
   private lastSfx = new Map<string, number>();
   muteUnfocused = true;
+  private voiceEl: HTMLAudioElement | null = null;
+  /** Language of the campaign narration and whether it plays. */
+  voiceLang = 'fr';
+  voiceOn = true;
+  voiceVolume = 0.9;
+
+  /** Campaign advisor narration (pre-recorded files; silently skipped if missing). */
+  voice(key: string): void {
+    this.stopVoice();
+    if (!this.voiceOn) return;
+    const el = new Audio(`./voice/${this.voiceLang}/${key}.mp3`);
+    el.volume = Math.max(0, Math.min(1, this.volumes.master * this.voiceVolume * this.focusMul));
+    this.voiceEl = el;
+    this.duck(true);
+    el.onended = () => this.duck(false);
+    el.onerror = () => this.duck(false);
+    void el.play().catch(() => this.duck(false));
+  }
+
+  stopVoice(): void {
+    if (this.voiceEl) {
+      this.voiceEl.pause();
+      this.voiceEl = null;
+    }
+    this.duck(false);
+  }
+
+  private ducked = false;
+  /** Lowers the music while the advisor speaks. */
+  private duck(on: boolean): void {
+    this.ducked = on;
+    this.applyVolumes();
+  }
 
   /** Must be called from a user gesture at least once (autoplay policy). */
   ensure(): void {
@@ -118,8 +151,19 @@ class AudioEngine {
     return buf;
   }
 
-  setVolumes(v: { master: number; music: number; sfx: number; ui: number; muteUnfocused: boolean }): void {
+  setVolumes(v: {
+    master: number;
+    music: number;
+    sfx: number;
+    ui: number;
+    voice?: number;
+    voiceOn?: boolean;
+    muteUnfocused: boolean;
+  }): void {
     this.volumes = { master: v.master, music: v.music, sfx: v.sfx, ui: v.ui };
+    this.voiceVolume = v.voice ?? 0.9;
+    this.voiceOn = v.voiceOn ?? true;
+    if (this.voiceEl) this.voiceEl.volume = Math.max(0, Math.min(1, v.master * this.voiceVolume));
     this.muteUnfocused = v.muteUnfocused;
     this.applyVolumes();
   }
@@ -133,7 +177,7 @@ class AudioEngine {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.master.gain.setTargetAtTime(this.volumes.master * this.focusMul, t, 0.1);
-    this.musicBus.gain.setTargetAtTime(this.volumes.music * 0.55, t, 0.1);
+    this.musicBus.gain.setTargetAtTime(this.volumes.music * 0.55 * (this.ducked ? 0.35 : 1), t, 0.25);
     this.sfxBus.gain.setTargetAtTime(this.volumes.sfx, t, 0.05);
     this.uiBus.gain.setTargetAtTime(this.volumes.ui * 0.7, t, 0.05);
   }

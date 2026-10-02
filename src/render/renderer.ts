@@ -1,9 +1,11 @@
 import 'pixi.js/unsafe-eval';
 // PixiJS v8 renderer: map shader + vector/sprite layers + particles + labels.
-import { Application, BitmapText, Container, Graphics, Sprite, type Texture } from 'pixi.js';
+import { Application, BitmapText, Container, Graphics, Sprite } from 'pixi.js';
 import { MapLayer } from './mapLayer';
 import { Camera } from './camera';
 import { buildIcons, type IconSet } from './icons';
+import { SIGNALS } from '../ui/icons/icons';
+import { t } from '../ui/i18n/i18n.svelte';
 import { inkNum, inkRgb, type ColorVision, UI } from './colors';
 import type { ClientState } from '../engine/clientState';
 import { UNIT_STRIDE } from '../engine/protocol';
@@ -46,10 +48,13 @@ export interface Overlay {
   resourcesView: boolean;
   fogView: boolean;
   loyaltyView: boolean;
+  /** Campaign guide: a pulsing marker on what the current step is about. */
+  guideMarker: [number, number] | null;
 }
 
 interface UnitSprite {
-  s: Sprite;
+  /** Container rotated/scaled as a whole: [hull, owner mark]. */
+  s: Container;
   seen: number;
   wakeT: number;
 }
@@ -84,7 +89,7 @@ export class GameRenderer {
   private shake = 0;
   private startTime = performance.now();
   private pings: { x: number; y: number; t: number; color: number; kind: number }[] = [];
-  private emojis: { x: number; y: number; t: number; text: BitmapText }[] = [];
+  private emojis: { x: number; y: number; t: number; text: Container }[] = [];
   private popups: { x: number; y: number; t: number; text: BitmapText }[] = [];
   private frontSparks: number[] = [];
   fps = 60;
@@ -103,6 +108,7 @@ export class GameRenderer {
     resourcesView: false,
     fogView: true,
     loyaltyView: false,
+    guideMarker: null,
   };
   onFrame: (dt: number) => void = () => {};
 
@@ -123,7 +129,7 @@ export class GameRenderer {
     });
     parent.appendChild(this.app.canvas);
     this.app.canvas.style.display = 'block';
-    this.icons = buildIcons(this.app.renderer);
+    this.icons = await buildIcons(this.app.renderer);
     this.map = new MapLayer(this.state, this.app.renderer);
     this.particles = new ParticleSystem(this.icons, 2600);
     this.lights.blendMode = 'add';
@@ -273,7 +279,7 @@ export class GameRenderer {
     const z = cam.zoom;
     this.deposits.visible = this.overlay.resourcesView || z > 2.5;
     for (const d of this.deposits.children)
-      d.scale.set(Math.min(0.9, (18 / 24 / z) * (this.overlay.resourcesView ? 1.2 : 1)));
+      d.scale.set(Math.min(0.34, (18 / 64 / z) * (this.overlay.resourcesView ? 1.2 : 1)));
     this.rails.visible = z > 0.9;
     if (s.railsVersion !== this.railsVersion) this.drawRails();
     if (s.buildingsVersion !== this.buildingsVersion) this.syncBuildings();
@@ -333,12 +339,18 @@ export class GameRenderer {
       let c = this.buildingSprites.get(b.id);
       if (!c) {
         c = new Container();
+        // Badge: dark disc, ring in the owner's colour, white glyph (sizes in 32-unit design space).
         const back = new Sprite(this.icons.backdrop);
         back.anchor.set(0.5);
+        back.setSize(32, 32);
+        const ring = new Sprite(this.icons.badgeRing);
+        ring.anchor.set(0.5);
+        ring.setSize(32, 32);
         const ico = new Sprite(this.icons.buildings[b.type]!);
         ico.anchor.set(0.5);
+        ico.setSize(19, 19);
         const prog = new Graphics();
-        c.addChild(back, ico, prog);
+        c.addChild(back, ring, ico, prog);
         const light = new Sprite(this.icons.glow);
         light.anchor.set(0.5);
         light.visible = false;
@@ -350,8 +362,8 @@ export class GameRenderer {
       }
       c.position.set(b.x + 0.5, b.y + 0.5);
       const ink = this.inkOf(b.owner);
-      (c.children[0] as Sprite).tint = ink;
-      (c.children[1] as Sprite).tint = b.ready ? 0xffffff : 0x9aa3ad;
+      (c.children[1] as Sprite).tint = ink;
+      (c.children[2] as Sprite).tint = b.ready ? 0xffffff : 0x8d949b;
       (c as Container & { info?: typeof b }).info = b;
     }
     for (const [id, c] of this.buildingSprites) {
@@ -379,12 +391,12 @@ export class GameRenderer {
         continue;
       }
       c.scale.set(scale);
-      const prog = c.children[2] as Graphics;
+      const prog = c.children[3] as Graphics;
       prog.clear();
       if (!b.ready) {
         prog
-          .arc(0, 0, 18, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * b.progress)
-          .stroke({ width: 3, color: UI.aurora });
+          .arc(0, 0, 17.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * b.progress)
+          .stroke({ width: 3, color: 0xf2f0e8 });
       } else if (b.level > 1) {
         for (let k = 0; k < Math.min(5, b.level - 1); k++)
           prog.circle(-10 + k * 5, 19, 1.8).fill({ color: UI.brass });
@@ -438,9 +450,17 @@ export class GameRenderer {
       const inView = x >= vx0 - 5 && x <= vx1 + 5 && y >= vy0 - 5 && y <= vy1 + 5;
       let us = this.unitSprites.get(id);
       if (!us) {
-        const tex = this.unitTexture(type);
-        const sp = new Sprite(tex);
-        sp.anchor.set(0.5);
+        const art = this.unitArt(type);
+        const sp = new Container();
+        const hull = new Sprite(art.base);
+        hull.anchor.set(0.5);
+        const mark = new Sprite(art.mark);
+        mark.anchor.set(0.5);
+        sp.addChild(hull, mark);
+        // Normalise: the sprite is `length` tiles long at scale 1.
+        const k = art.length / art.base.width;
+        hull.scale.set(k);
+        mark.scale.set(k);
         this.units.addChild(sp);
         us = { s: sp, seen: 0, wakeT: 0 };
         this.unitSprites.set(id, us);
@@ -460,20 +480,12 @@ export class GameRenderer {
         this.revealed(owner, x, y) &&
         !(type === U.Transport && this.hiddenInFogBank(owner, x, y));
       if (!sp.visible) continue;
-      const base =
-        type === U.Warship
-          ? 20
-          : type === U.Train
-            ? 11
-            : type >= U.Fighter
-              ? 14
-              : type === U.Merchant
-                ? 10
-                : 15;
-      const px = Math.max(base * 0.6, Math.min(base * 1.4, base * (0.6 + z * 0.08)));
-      sp.scale.set((px / sp.texture.width / z) * 3);
-      sp.tint = type === U.Merchant ? 0xffffff : this.inkOf(owner);
-      sp.alpha = type === U.Merchant ? 0.7 : 1;
+      // Real size in tiles when zoomed in; a readable minimum on screen when zoomed out.
+      const lenTiles = this.unitArt(type).length;
+      const minPx = type === U.Merchant ? 16 : type === U.Train ? 18 : 24;
+      sp.scale.set(Math.max(1, minPx / (lenTiles * z)));
+      (sp.children[1] as Sprite).tint = this.inkOf(owner);
+      sp.alpha = type === U.Merchant ? 0.85 : 1;
       // Wakes behind ships; contrails behind planes.
       us.wakeT += dt;
       const moving = Math.abs(dx) + Math.abs(dy) > 0.001;
@@ -548,7 +560,7 @@ export class GameRenderer {
     return false;
   }
 
-  private unitTexture(type: U): Texture {
+  private unitArt(type: U): import('./icons').UnitSprite {
     switch (type) {
       case U.Warship:
         return this.icons.warship;
@@ -557,11 +569,13 @@ export class GameRenderer {
       case U.Train:
         return this.icons.train;
       case U.Fighter:
+        return this.icons.fighter;
       case U.Bomber:
+        return this.icons.bomber;
       case U.Recon:
-        return this.icons.plane;
+        return this.icons.recon;
       default:
-        return this.icons.ship;
+        return this.icons.transport;
     }
   }
 
@@ -687,6 +701,17 @@ export class GameRenderer {
         g.circle(p.x, p.y, r).stroke({ width: lw(2), color: p.color, alpha: 1 - ((a * 2 + k * 0.5) % 1) });
       }
     }
+    // Campaign guide marker: double pulsing ring and a downward chevron.
+    if (ov.guideMarker) {
+      const [mx, my] = ov.guideMarker;
+      const pulse = (now % 1600) / 1600;
+      const base = Math.max(3, 26 / z);
+      g.circle(mx, my, base).stroke({ width: lw(2.5), color: UI.brass, alpha: 0.95 });
+      g.circle(mx, my, base * (1 + pulse * 1.2)).stroke({ width: lw(2), color: UI.brass, alpha: 1 - pulse });
+      const ay = my - base * 1.6 - Math.sin(now / 250) * (4 / z);
+      const aw = Math.max(1.5, 10 / z);
+      g.poly([mx - aw, ay - aw * 1.4, mx + aw, ay - aw * 1.4, mx, ay]).fill({ color: UI.brass });
+    }
     void t;
   }
 
@@ -718,7 +743,7 @@ export class GameRenderer {
         this.labelPool.set(p.id, l);
       }
       const fontPx = Math.max(10, Math.min(46, px * 0.32));
-      const nm = (p.name[lang] || p.name.en) + (p.traitor ? ' ⚠' : '') + (p.inactive ? ' Zzz' : '');
+      const nm = p.name[lang] || p.name.en;
       if (l.name.text !== nm) l.name.text = nm;
       const tr = formatShort(p.troops);
       if (l.troops.text !== tr) l.troops.text = tr;
@@ -743,14 +768,14 @@ export class GameRenderer {
   private updateFloaters(dt: number, z: number): void {
     const now = performance.now();
     for (const e of this.emojis) {
-      const a = (now - e.t) / 2500;
-      e.text.position.set(e.x, e.y - (a * 30) / z);
-      e.text.scale.set(28 / 64 / z);
-      e.text.alpha = 1 - a;
+      const a = (now - e.t) / 4000;
+      e.text.position.set(e.x, e.y - (a * 10) / z);
+      e.text.scale.set(34 / 64 / z);
+      e.text.alpha = a < 0.8 ? 1 : 1 - (a - 0.8) / 0.2;
     }
     this.emojis = this.emojis.filter((e) => {
-      if (now - e.t > 2500) {
-        e.text.destroy();
+      if (now - e.t > 4000) {
+        e.text.destroy({ children: true });
         return false;
       }
       return true;
@@ -828,17 +853,31 @@ export class GameRenderer {
           });
           break;
         case 'emoji': {
-          const text = new BitmapText({
-            text: EMOJIS[e.emoji] ?? '•',
-            style: { fontFamily: 'sans-serif', fontSize: 64, fill: 0xffffff },
+          // Tactical signal: badge + caption, visible to its recipient (or everyone).
+          const sig = SIGNALS[e.emoji];
+          if (!sig) break;
+          const box = new Container();
+          const badge = new Sprite(this.icons.signals[e.emoji]!);
+          badge.anchor.set(0.5);
+          badge.setSize(64, 64);
+          const cap = new BitmapText({
+            text: t(`signal.${sig.key}`),
+            style: {
+              fontFamily: '"IBM Plex Sans", sans-serif',
+              fontSize: 30,
+              fill: 0xffffff,
+              fontWeight: '600',
+            },
           });
-          text.anchor.set(0.5);
-          this.labels.addChild(text);
+          cap.anchor.set(0.5, 0);
+          cap.position.set(0, 38);
+          box.addChild(badge, cap);
+          this.labels.addChild(box);
           this.emojis.push({
             x: (e.tile % this.state.width) + 0.5,
             y: ((e.tile / this.state.width) | 0) + 0.5,
             t: performance.now(),
-            text,
+            text: box,
           });
           break;
         }
@@ -912,25 +951,6 @@ export class GameRenderer {
     return canvas.toDataURL('image/png');
   }
 }
-
-export const EMOJIS = [
-  '👍',
-  '👎',
-  '😂',
-  '😡',
-  '🤝',
-  '💀',
-  '🔥',
-  '❤️',
-  '⚔️',
-  '🏳️',
-  '🎯',
-  '😱',
-  '🙏',
-  '👀',
-  '💰',
-  '☢️',
-];
 
 export function formatShort(v: number): string {
   const a = Math.abs(v);

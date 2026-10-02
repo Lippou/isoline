@@ -1,36 +1,29 @@
 <script lang="ts">
-  import { go, app } from '../stores/app.svelte';
   import { t } from '../i18n/i18n.svelte';
   import SettingsBody from './SettingsBody.svelte';
+  import PageHeader from '../PageHeader.svelte';
 </script>
 
 <div class="page">
-  <header>
-    <button class="btn ghost" onclick={() => go(app.previous === 'settings' ? 'title' : 'title')}
-      >← {t('common.back')}</button
-    >
-    <h1>{t('title.settings')}</h1>
-  </header>
-  <div class="glass body scroll"><SettingsBody /></div>
+  <PageHeader title={t('title.settings')} subtitle={t('settings.subtitle')} />
+  <div class="panel body scroll"><SettingsBody /></div>
 </div>
 
 <style>
   .page {
     position: fixed;
     inset: 0;
-    padding: 1.4rem 2rem;
+    padding: 18px 22px;
     display: grid;
     grid-template-rows: auto 1fr;
     gap: 1rem;
-    background: radial-gradient(ellipse at 70% 0%, #172947, var(--abyss) 60%);
-  }
-  header {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
+    background: var(--abyss);
   }
   .body {
-    padding: 1.2rem 1.4rem;
+    padding: 0;
     min-height: 0;
+    max-width: 1100px;
+    width: 100%;
+    justify-self: center;
   }
 </style>

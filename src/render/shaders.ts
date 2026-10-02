@@ -1,7 +1,7 @@
-// GLSL (ES 3.0) sources for the map surface — the "night atlas / luminous ink" look.
+// GLSL (ES 3.0) sources for the map surface — realistic relief map with a political overlay.
 // Textures:
 //   uTerrain  RGBA8 nearest : r terrain id, g altitude, b coast distance, a deposit
-//   uRelief   RG8   linear  : r altitude, g coast distance (smooth isolines, hillshade, bathymetry)
+//   uRelief   RGBA8 linear  : r altitude, g coast distance, b land mask (hillshade, depth, smooth coasts)
 //   uOwner    RGBA8 nearest : rg owner id (16-bit), ba previous owner id
 //   uState    RGBA8 nearest : r fallout, g flags (bit0 dead zone), b tick of last change (mod 256)
 //   uPalette  RGBA8 nearest : 256×256 ink colour per owner id
@@ -91,32 +91,62 @@ vec4 inkOf(float id) {
 
 bool isWaterId(float t) { return t < 2.5; }
 
+// Realistic, satellite-like ground colours per terrain (with natural variation).
 vec3 biome(float t, vec2 p, float elev) {
-  // Muted night-atlas tones; procedural texture per biome.
-  float n = vnoise(p * 0.35);
-  float fine = vnoise(p * 2.7);
+  float n = fbm(p * 0.06);
+  float m = vnoise(p * 0.45);
+  float fine = vnoise(p * 2.3);
   vec3 c;
   if (t < 3.5) {               // river
-    c = vec3(0.15, 0.30, 0.36);
-  } else if (t < 4.5) {        // plains
-    c = mix(vec3(0.20, 0.29, 0.22), vec3(0.25, 0.33, 0.24), n);
+    c = vec3(0.16, 0.33, 0.47);
+  } else if (t < 4.5) {        // plains: farmland and grassland
+    c = mix(vec3(0.36, 0.47, 0.23), vec3(0.52, 0.55, 0.30), n);
+    c = mix(c, vec3(0.30, 0.42, 0.20), smoothstep(0.55, 0.9, m) * 0.5);
+    c *= 0.94 + 0.08 * fine;
   } else if (t < 5.5) {        // hills
-    c = mix(vec3(0.29, 0.29, 0.21), vec3(0.34, 0.32, 0.23), n);
-  } else if (t < 6.5) {        // mountain
-    c = mix(vec3(0.33, 0.31, 0.29), vec3(0.45, 0.43, 0.41), smoothstep(0.65, 0.95, elev));
-  } else if (t < 7.5) {        // desert: dune stripes
-    float dune = sin(p.x * 0.9 + p.y * 0.35 + n * 5.0) * 0.5 + 0.5;
-    c = mix(vec3(0.40, 0.35, 0.24), vec3(0.47, 0.41, 0.28), dune * 0.6 + n * 0.4);
-  } else if (t < 8.5) {        // forest: stippled canopy
-    float trees = smoothstep(0.55, 0.85, fine);
-    c = mix(vec3(0.14, 0.24, 0.18), vec3(0.11, 0.19, 0.15), trees);
-  } else if (t < 9.5) {        // tundra / ice
-    c = mix(vec3(0.55, 0.60, 0.63), vec3(0.66, 0.71, 0.74), n);
-  } else {                     // impassable cliffs / glaciers
-    float hatch = step(0.5, fract((p.x - p.y) * 0.7));
-    c = mix(vec3(0.14, 0.13, 0.16), vec3(0.20, 0.19, 0.23), hatch);
+    c = mix(vec3(0.43, 0.46, 0.27), vec3(0.52, 0.48, 0.32), n);
+  } else if (t < 6.5) {        // mountains: rock, then snow on the high ground
+    c = mix(vec3(0.42, 0.39, 0.34), vec3(0.56, 0.53, 0.48), n * 0.7 + fine * 0.3);
+    float snow = smoothstep(0.7, 0.86, elev + (m - 0.5) * 0.1);
+    c = mix(c, vec3(0.84, 0.86, 0.89), snow * 0.85);
+  } else if (t < 7.5) {        // desert: sand seas and darker regs
+    float dune = sin(p.x * 0.7 + p.y * 0.25 + n * 6.0) * 0.5 + 0.5;
+    c = mix(vec3(0.79, 0.67, 0.46), vec3(0.86, 0.75, 0.54), dune * 0.5 + m * 0.5);
+    c = mix(c, vec3(0.62, 0.50, 0.36), smoothstep(0.62, 0.85, n) * 0.6);
+  } else if (t < 8.5) {        // forest: dense canopy
+    float canopy = smoothstep(0.35, 0.8, fine);
+    c = mix(vec3(0.17, 0.30, 0.14), vec3(0.12, 0.23, 0.11), canopy);
+    c = mix(c, vec3(0.22, 0.33, 0.17), n * 0.5);
+  } else if (t < 9.5) {        // tundra and ice fields
+    c = mix(vec3(0.55, 0.56, 0.48), vec3(0.72, 0.73, 0.68), n);
+    c = mix(c, vec3(0.90, 0.92, 0.95), smoothstep(0.6, 0.85, m) * 0.6);
+  } else {                     // glaciers and impassable walls
+    c = mix(vec3(0.86, 0.90, 0.95), vec3(0.74, 0.80, 0.88), smoothstep(0.5, 0.9, fine));
   }
   return c;
+}
+
+// Terrain colour bilinearly blended between the four nearest tile centres
+// (soft biome transitions instead of square pixels).
+vec3 landColour(vec2 tp, float elev) {
+  // Domain warp: irregular, natural-looking biome boundaries (visual only).
+  vec2 warp = vec2(fbm(tp * 0.07), fbm(tp * 0.07 + vec2(5.2, 1.3))) - 0.5;
+  vec2 q = tp + warp * 7.0 - 0.5;
+  ivec2 i0 = ivec2(floor(q));
+  vec2 fq = fract(q);
+  fq = fq * fq * (3.0 - 2.0 * fq);
+  vec3 acc = vec3(0.0);
+  float wsum = 0.0;
+  for (int k = 0; k < 4; k++) {
+    ivec2 o = ivec2(k & 1, k >> 1);
+    ivec2 tc = clamp(i0 + o, ivec2(0), ivec2(uSize) - 1);
+    float id = floor(texelFetch(uTerrain, tc, 0).r * 255.0 + 0.5);
+    if (id < 2.5) continue;
+    float w = (o.x == 1 ? fq.x : 1.0 - fq.x) * (o.y == 1 ? fq.y : 1.0 - fq.y);
+    acc += biome(id, tp, elev) * w;
+    wsum += w;
+  }
+  return wsum > 0.0 ? acc / wsum : biome(4.0, tp, elev);
 }
 
 vec3 heat(float t) {
@@ -139,50 +169,49 @@ void main() {
   float tId = floor(ter.r * 255.0 + 0.5);
   vec2 rel = texture(uRelief, vUV).rg;
   float elev = rel.r;
-  float coast = rel.g * 255.0;
+  float coast = rel.g * 255.0 / 4.0; // render-only chamfer distance, quarter-tile precision
   float pxPerTile = max(uZoom, 0.0001);
   bool water = isWaterId(tId);
   vec3 col;
 
-  if (water) {
-    // Depth gradient + bathymetric isolines rippling away from the coasts.
-    float depth = clamp(coast / 40.0, 0.0, 1.0);
-    vec3 shallow = tId > 1.5 ? vec3(0.10, 0.22, 0.30) : vec3(0.08, 0.17, 0.27);
-    col = mix(shallow, vec3(0.035, 0.065, 0.12), pow(depth, 0.6));
-    if (uQuality > 0.5) {
-      float band = (coast - uTime * 0.35) / 3.2;
-      float d = abs(fract(band) - 0.5) * 3.2;
-      float w = max(fwidth(coast) * 0.9, 0.05);
-      float line = 1.0 - smoothstep(0.0, w, d - 0.05);
-      col += vec3(0.18, 0.45, 0.42) * line * 0.22 * exp(-coast / 14.0);
-      // Glints / waves.
-      float wave = vnoise(tp * 0.18 + vec2(uTime * 0.05, uTime * 0.03));
-      col += vec3(0.03, 0.05, 0.065) * smoothstep(0.7, 0.95, wave) * (1.0 - depth * 0.6);
-    }
-    // Coastal foam.
-    float foam = (1.0 - smoothstep(0.0, 1.4, coast)) * (0.6 + 0.4 * sin(uTime * 1.7 + tp.x * 0.9 + tp.y * 0.7));
-    col = mix(col, vec3(0.62, 0.78, 0.76), foam * 0.35);
-  } else {
-    col = biome(tId, tp, elev);
-    if (uQuality > 0.5) {
-      // Hillshade from the smooth relief (light from the north-west).
-      vec2 px = 1.0 / uSize;
-      float ex = texture(uRelief, vUV + vec2(px.x, 0.0)).r - texture(uRelief, vUV - vec2(px.x, 0.0)).r;
-      float ey = texture(uRelief, vUV + vec2(0.0, px.y)).r - texture(uRelief, vUV - vec2(0.0, px.y)).r;
-      vec3 nrm = normalize(vec3(-ex * 18.0, -ey * 18.0, 1.0));
-      float shade = dot(nrm, normalize(vec3(-0.6, -0.7, 0.75)));
-      col *= 0.72 + 0.42 * shade;
-      // Contour lines (the isolines): every 16 altitude steps, a master line every 64.
-      float e = elev * 255.0;
-      float w = fwidth(e);
-      float fine = abs(fract(e / 16.0 + 0.5) - 0.5) * 16.0;
-      float master = abs(fract(e / 64.0 + 0.5) - 0.5) * 64.0;
-      float lf = (1.0 - smoothstep(0.0, w * 1.1, fine)) * smoothstep(1.6, 4.0, pxPerTile);
-      float lm = (1.0 - smoothstep(0.0, w * 1.6, master)) * (0.35 + 0.65 * smoothstep(0.6, 2.0, pxPerTile));
-      col = mix(col, col + vec3(0.20, 0.32, 0.27), clamp(lf * 0.45 + lm * 0.7, 0.0, 1.0) * (e > 12.0 ? 1.0 : 0.0));
-    }
-    if (tId > 2.5 && tId < 3.5) col = mix(col, vec3(0.18, 0.40, 0.48), 0.6); // rivers
+  // Smooth coastline from the filtered land mask (gameplay still uses whole tiles).
+  float landMask = texture(uRelief, vUV).b;
+  float coastNoise = (vnoise(tp * 1.7) - 0.5) * 0.25;
+  float landA = smoothstep(0.42, 0.58, landMask + coastNoise);
+  if (pxPerTile < 2.0) landA = water ? 0.0 : 1.0;
+
+  // Ocean: depth gradient, sun glint, coastal shallows and surf.
+  float depth = clamp(coast / 50.0, 0.0, 1.0);
+  float shelf = fbm(tp * 0.04) * 0.18;
+  vec3 sea = mix(vec3(0.10, 0.33, 0.42), vec3(0.04, 0.17, 0.32), smoothstep(0.0, 0.16 + shelf, depth));
+  sea = mix(sea, vec3(0.02, 0.08, 0.20), smoothstep(0.25, 1.0, depth));
+  if (tId > 1.5 && tId < 2.5) sea = mix(vec3(0.10, 0.30, 0.40), vec3(0.06, 0.22, 0.34), depth);
+  if (uQuality > 0.5) {
+    float wv = fbm(tp * 0.22 + vec2(uTime * 0.04, uTime * 0.025));
+    sea *= 0.94 + 0.12 * wv;
+    sea += vec3(0.10, 0.12, 0.12) * pow(smoothstep(0.62, 0.9, wv), 3.0) * (1.0 - depth * 0.5);
   }
+  float surf = (1.0 - smoothstep(0.0, 1.6, coast)) * (0.75 + 0.25 * sin(uTime * 1.3 + tp.x * 0.8 + tp.y * 0.6));
+  sea = mix(sea, vec3(0.72, 0.84, 0.86), surf * 0.22);
+
+  vec3 ground = pxPerTile < 2.0 ? biome(water ? 4.0 : tId, tp, elev) : landColour(tp, elev);
+  if (uQuality > 0.5) {
+    // Hillshade (sun from the north-west) — the relief carries the realism.
+    vec2 px = 1.0 / uSize;
+    float ex = texture(uRelief, vUV + vec2(px.x, 0.0)).r - texture(uRelief, vUV - vec2(px.x, 0.0)).r;
+    float ey = texture(uRelief, vUV + vec2(0.0, px.y)).r - texture(uRelief, vUV - vec2(0.0, px.y)).r;
+    vec3 nrm = normalize(vec3(-ex * 26.0, -ey * 26.0, 1.0));
+    float shade = dot(nrm, normalize(vec3(-0.55, -0.65, 0.8)));
+    ground *= 0.62 + 0.5 * shade;
+    // Light atmospheric haze on low plains, crisper highlands.
+    ground = mix(ground, ground * vec3(1.03, 1.02, 0.98), smoothstep(0.5, 0.9, elev));
+  }
+  if (!water && tId > 2.5 && tId < 3.5) ground = mix(ground, vec3(0.16, 0.33, 0.47), 0.75); // rivers
+  // Beaches: a thin sand fringe on the land side of the coast.
+  float beach = landA * (1.0 - smoothstep(0.5, 0.75, landMask)) * step(0.5, 1.0 - float(tId > 5.5 && tId < 6.5));
+  ground = mix(ground, vec3(0.80, 0.74, 0.58), beach * 0.45);
+  col = mix(sea, ground, landA);
+  water = landA < 0.5;
 
   if (uTerrainView > 0.5) col = mix(col, heat(tId), 0.55);
 
@@ -204,9 +233,10 @@ void main() {
     float n = vnoise(tp * 0.45);
     float spread = smoothstep(n - 0.25, n + 0.25, k * 1.5 - 0.25);
     vec3 inkNow = mix(inkPrev, ink, spread);
-    float wash = uContrast > 0.5 ? 0.62 : 0.46;
-    if (own == uHighlight) wash += 0.12;
-    vec3 tinted = mix(col, inkNow * (0.55 + 0.9 * dot(col, vec3(0.333))), wash);
+    // Political-map fill: translucent, the terrain stays fully readable.
+    float fill = uContrast > 0.5 ? 0.55 : 0.42;
+    if (own == uHighlight) fill += 0.1;
+    vec3 tinted = mix(col, inkNow * (0.6 + 0.6 * dot(col, vec3(0.333))) + inkNow * 0.25, fill);
     if (uPattern > 0.5) {
       float ang = mod(own, 4.0) * PI * 0.25;
       float s = sin((tp.x * cos(ang) + tp.y * sin(ang)) * 1.6);
@@ -231,16 +261,18 @@ void main() {
     if (d != own) { dist = min(dist, 1.0 - f.y); other = d; }
     float side = own > 0.5 ? own : other;
     if (dist < 9.0 && side > 0.5 && !water) {
+      // Crisp double-stroked border: a solid line in the owner's colour, edged in dark.
       float dpx = dist * pxPerTile;
       vec3 ink = inkOf(side).rgb;
-      float flow = 0.82 + 0.18 * sin((tp.x + tp.y) * 0.55 - uTime * 2.2);
-      float core = exp(-dpx / (uContrast > 0.5 ? 1.6 : 1.05));
-      float glow = exp(-dpx / 5.0) * 0.35;
-      // Small zoom: a whole tile is the border.
-      if (pxPerTile < 1.5) { core = 0.85; glow = 0.0; }
-      float wild = (own < 0.5 || other < 0.5) ? 0.55 : 1.0;
-      col = mix(col, ink * 1.25 + 0.08, clamp(core * wild * flow, 0.0, 1.0));
-      col += ink * glow * wild;
+      float width = uContrast > 0.5 ? 2.2 : 1.6;
+      float line = 1.0 - smoothstep(width - 0.6, width + 0.4, dpx);
+      float edge = (1.0 - smoothstep(width + 0.3, width + 1.4, dpx)) * (1.0 - line);
+      float inner = exp(-dpx / 6.0) * 0.18; // colour deepens towards the frontier
+      if (pxPerTile < 1.5) { line = 0.9; edge = 0.0; inner = 0.0; }
+      float wild = (own < 0.5 || other < 0.5) ? 0.7 : 1.0;
+      if (own > 0.5) col = mix(col, ink, inner);
+      col = mix(col, col * 0.35, edge * 0.6 * wild);
+      col = mix(col, ink * 1.1 + 0.04, line * wild);
     }
   }
 
@@ -285,15 +317,15 @@ void main() {
     }
   }
 
-  // Fog of war.
+  // Fog of war: drifting cloud cover over what the player cannot see.
   if (uFogOn > 0.5) {
-    // The geography stays readable (it is an atlas); who holds it does not.
     float v = texture(uFog, vUV).r;
-    float paper = 0.5 + 0.5 * vnoise(tp * 0.08);
     float lum = dot(atlas, vec3(0.3, 0.5, 0.2));
-    vec3 sepia = mix(vec3(lum) * vec3(0.78, 0.86, 1.05), atlas, 0.3);
-    vec3 unknown = sepia * (0.36 + 0.08 * paper);
-    vec3 remembered = sepia * (0.55 + 0.06 * paper);
+    vec3 grey = mix(vec3(lum), atlas, 0.35);
+    float cloud = fbm(tp * 0.025 + vec2(uTime * 0.01, uTime * 0.006));
+    vec3 veil = mix(vec3(0.60, 0.64, 0.70), vec3(0.85, 0.87, 0.90), cloud);
+    vec3 unknown = mix(grey * 0.45, veil, 0.45 + 0.25 * cloud);
+    vec3 remembered = mix(grey * 0.65, veil, 0.22);
     col = v < 0.43 ? mix(unknown, remembered, smoothstep(0.0, 0.43, v)) : mix(remembered, col, smoothstep(0.6, 1.0, v));
   }
 
@@ -309,7 +341,9 @@ void main() {
   }
 
   // Night: cool, darker ink.
-  col = mix(col, col * vec3(0.34, 0.43, 0.78) + vec3(0.0, 0.01, 0.03), uNight * 0.85);
+  float lumN = dot(col, vec3(0.3, 0.5, 0.2));
+  vec3 nightCol = mix(vec3(lumN), col, 0.5) * vec3(0.32, 0.38, 0.58);
+  col = mix(col, nightCol, uNight * 0.9);
   finalColor = vec4(col, 1.0);
 }
 `;

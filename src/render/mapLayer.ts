@@ -83,13 +83,16 @@ export class MapLayer {
     const n = w * h;
     const terrain = new Uint8Array(n * 4);
     const relief = new Uint8Array(n * 4);
+    const smoothCoast = chamferCoast(state.coastDist, w, h);
     for (let i = 0; i < n; i++) {
       terrain[i * 4] = state.terrain[i]!;
       terrain[i * 4 + 1] = state.elevation[i]!;
       terrain[i * 4 + 2] = state.coastDist[i]!;
       terrain[i * 4 + 3] = state.resource[i]!;
       relief[i * 4] = state.elevation[i]!;
-      relief[i * 4 + 1] = Math.min(255, state.coastDist[i]!);
+      relief[i * 4 + 1] = smoothCoast[i]!;
+      // Land mask (bilinear-filtered in the shader → smooth coastlines).
+      relief[i * 4 + 2] = state.terrain[i]! > 2 ? 255 : 0;
       relief[i * 4 + 3] = 255;
     }
     this.ownerData = new Uint8Array(n * 4);
@@ -337,4 +340,44 @@ export class MapLayer {
 
 export function textureFromSource(src: BufferImageSource): Texture {
   return new Texture({ source: src });
+}
+
+/**
+ * Render-only distance to the coast (tiles × 4, capped 255) using an 8-neighbour
+ * chamfer transform: round depth contours instead of the gameplay BFS diamonds.
+ */
+function chamferCoast(coast: Uint8Array, w: number, h: number): Uint8Array {
+  const n = w * h;
+  const d = new Float32Array(n);
+  for (let i = 0; i < n; i++) d[i] = coast[i] === 0 ? 0 : 1e9;
+  const D = Math.SQRT2;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      let v = d[i]!;
+      if (x > 0) v = Math.min(v, d[i - 1]! + 1);
+      if (y > 0) {
+        v = Math.min(v, d[i - w]! + 1);
+        if (x > 0) v = Math.min(v, d[i - w - 1]! + D);
+        if (x < w - 1) v = Math.min(v, d[i - w + 1]! + D);
+      }
+      d[i] = v;
+    }
+  }
+  for (let y = h - 1; y >= 0; y--) {
+    for (let x = w - 1; x >= 0; x--) {
+      const i = y * w + x;
+      let v = d[i]!;
+      if (x < w - 1) v = Math.min(v, d[i + 1]! + 1);
+      if (y < h - 1) {
+        v = Math.min(v, d[i + w]! + 1);
+        if (x < w - 1) v = Math.min(v, d[i + w + 1]! + D);
+        if (x > 0) v = Math.min(v, d[i + w - 1]! + D);
+      }
+      d[i] = v;
+    }
+  }
+  const out = new Uint8Array(n);
+  for (let i = 0; i < n; i++) out[i] = Math.min(255, Math.round(d[i]! * 4));
+  return out;
 }

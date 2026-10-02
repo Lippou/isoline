@@ -116,7 +116,7 @@ export function saveProfile(): Promise<boolean> {
 function unlock(id: AchievementId): void {
   if (profile.achievements[id]) return;
   profile.achievements[id] = new Date().toISOString();
-  toast(`🏆 ${t('achievement.unlocked')} — ${t(`achievement.${id}.name`)}`, 'good');
+  toast(`${t('achievement.unlocked')} — ${t(`achievement.${id}.name`)}`, 'good');
 }
 
 export function unlockedTitles(): string[] {

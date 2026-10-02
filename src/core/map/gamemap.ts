@@ -15,6 +15,8 @@ export interface NationSpawn {
   x: number;
   y: number;
   flagSeed: number;
+  /** ISO 3166-1 alpha-2 code (lower case) for real countries: real flag and map colour. */
+  iso?: string;
   /** Importance (population / area); the lobby keeps the N most important. */
   weight: number;
 }

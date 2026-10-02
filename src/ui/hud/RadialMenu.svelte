@@ -1,33 +1,40 @@
 <script lang="ts">
+  // Context menu (right click): what is under the cursor, then grouped actions
+  // with their cost; sub-menus open in a side column.
   import { hud } from '../stores/game.svelte';
-  import { t } from '../i18n/i18n.svelte';
+  import { t, i18n } from '../i18n/i18n.svelte';
   import { settings } from '../stores/settings.svelte';
-  import Glyph from './Glyph.svelte';
+  import Icon from '../icons/Icon.svelte';
+  import { BUILDING_ICONS, SIGNALS, type IconName } from '../icons/icons';
   import type { GameController } from '../game/controller';
   import { B, BUILDING_KEYS, N } from '../../core/game/constants';
-  import { IS_LAND } from '../../core/map/terrain';
-  import { EMOJIS } from '../../render/renderer';
+  import { IS_LAND, TERRAIN } from '../../core/map/terrain';
   import { audio } from '../../audio/audio';
   import { confirmModal } from '../stores/app.svelte';
+  import { flagUrl } from '../../render/flags';
+  import { formatShort } from '../../render/renderer';
 
   let { ctl }: { ctl: GameController } = $props();
   type Item = {
     id: string;
     label: string;
-    glyph?: string;
-    icon?: string;
+    icon?: IconName;
+    /** Right-aligned detail: cost, count, shortcut. */
+    hint?: string;
+    desc?: string;
     run?: () => void;
     sub?: Item[];
     disabled?: boolean;
     danger?: boolean;
+    group?: string;
   };
-  let stack: Item[][] = $state([]);
+  let openSub: string | null = $state(null);
   const s = ctl.session;
   const cfg = s.config;
 
   function close(): void {
     hud.radial = null;
-    stack = [];
+    openSub = null;
   }
   function act(fn: () => void): () => void {
     return () => {
@@ -38,6 +45,7 @@
   }
 
   const NUKE_NAMES = ['nukeA', 'nukeH', 'nukeMirv'];
+  const gold = (n: number) => `${formatShort(n)}`;
 
   function nukeItems(tile: number): Item[] {
     const L = hud.local;
@@ -48,11 +56,14 @@
       return {
         id: `n${kind}`,
         label: t(`nuke.${NUKE_NAMES[kind]}.name`),
-        glyph: NUKE_NAMES[kind]!,
+        icon: 'nuke' as IconName,
+        hint: max > 0 ? `${max}` : t('radial.unavailable'),
         disabled: max === 0,
+        danger: true,
         sub: counts.map((c, k) => ({
           id: `n${kind}x${k}`,
-          label: k === 3 && kind !== N.Mirv ? `×Max (${max})` : `×${c}`,
+          label:
+            k === 3 && kind !== N.Mirv ? t('radial.launchMax', { n: max }) : t('radial.launchN', { n: c }),
           disabled: c > max || c === 0,
           danger: true,
           run: act(() => s.cmd({ t: 'nuke', kind, tile, count: Math.max(1, c) })),
@@ -72,48 +83,56 @@
     if (!allied)
       items.push({
         id: 'ally',
+        group: 'diplo',
         label: t('radial.allyRequest'),
-        icon: '🤝',
+        icon: 'alliance',
         run: act(() => s.cmd({ t: 'allyRequest', target })),
       });
     else {
       items.push({
         id: 'renew',
+        group: 'diplo',
         label: t('radial.allyRenew'),
-        icon: '🔁',
+        icon: 'renew',
         run: act(() => s.cmd({ t: 'allyRequest', target })),
       });
       items.push({
         id: 'break',
+        group: 'diplo',
         label: t('radial.allyBreak'),
-        icon: '✂',
+        icon: 'betrayal',
         danger: true,
         run: act(() => s.cmd({ t: 'allyBreak', target })),
       });
       if (cfg.allowDonations) {
         items.push({
           id: 'donate',
+          group: 'diplo',
           label: t('radial.donate'),
-          icon: '🎁',
+          icon: 'gift',
           sub: [
             {
               id: 'g10',
-              label: `🪙 10%`,
+              label: t('radial.giveGold', { pct: 10 }),
+              hint: gold(L.gold * 0.1),
               run: act(() => s.cmd({ t: 'donate', target, gold: L.gold * 0.1, troops: 0 })),
             },
             {
               id: 'g25',
-              label: `🪙 25%`,
+              label: t('radial.giveGold', { pct: 25 }),
+              hint: gold(L.gold * 0.25),
               run: act(() => s.cmd({ t: 'donate', target, gold: L.gold * 0.25, troops: 0 })),
             },
             {
               id: 't10',
-              label: `⚔ 10%`,
+              label: t('radial.giveTroops', { pct: 10 }),
+              hint: gold(L.troops * 0.1),
               run: act(() => s.cmd({ t: 'donate', target, gold: 0, troops: L.troops * 0.1 })),
             },
             {
               id: 't25',
-              label: `⚔ 25%`,
+              label: t('radial.giveTroops', { pct: 25 }),
+              hint: gold(L.troops * 0.25),
               run: act(() => s.cmd({ t: 'donate', target, gold: 0, troops: L.troops * 0.25 })),
             },
           ],
@@ -122,14 +141,17 @@
     }
     items.push({
       id: 'emb',
+      group: 'diplo',
       label: embargo ? t('radial.embargoOff') : t('radial.embargoOn'),
-      icon: '⚓',
+      icon: 'embargo',
+      desc: t('radial.embargoDesc'),
       run: act(() => s.cmd({ t: 'embargo', target, on: !embargo })),
     });
     items.push({
       id: 'quick',
+      group: 'diplo',
       label: t('radial.quick'),
-      icon: '💬',
+      icon: 'chat',
       sub: [0, 1, 2, 3, 4, 5, 6, 7].map((m) => ({
         id: `q${m}`,
         label: t(`quick.${m}`),
@@ -157,43 +179,53 @@
     return act(fn);
   }
 
-  const root = $derived.by((): Item[] => {
+  const signalMode = $derived(!!hud.radial && hud.radial.tile < -1);
+  const tile = $derived(hud.radial ? (hud.radial.tile < -1 ? -hud.radial.tile - 2 : hud.radial.tile) : 0);
+  const owner = $derived(s.state.owner[tile] ?? 0);
+  const ownerView = $derived(owner > 0 ? s.state.players.get(owner) : undefined);
+  const terrainKey = $derived(TERRAIN[s.state.terrain[tile] ?? 0]?.key ?? 'plains');
+
+  const items = $derived.by((): Item[] => {
     const r = hud.radial;
     if (!r) return [];
-    if (r.tile < -1) {
-      const tile = -r.tile - 2;
-      const target = s.state.owner[tile] ?? 0;
-      return EMOJIS.map((e, k) => ({
+    if (signalMode) {
+      return SIGNALS.map((sig, k) => ({
         id: `e${k}`,
-        label: e,
-        icon: e,
-        run: act(() => s.cmd({ t: 'emoji', target, tile, emoji: k })),
+        group: 'signal',
+        label: t(`signal.${sig.key}`),
+        icon: sig.icon,
+        run: act(() => s.cmd({ t: 'emoji', target: owner, tile, emoji: k })),
       }));
     }
-    const tile = r.tile;
-    const owner = s.state.owner[tile]!;
     const land = IS_LAND[s.state.terrain[tile]!] === 1;
-    const items: Item[] = [];
+    const out: Item[] = [];
     if (s.state.phase === 'spawn') {
-      items.push({
+      out.push({
         id: 'spawn',
+        group: 'main',
         label: t('radial.spawn'),
-        icon: '📍',
+        icon: 'pin',
         run: act(() => s.cmd({ t: 'spawn', tile })),
       });
-      return items;
+      return out;
     }
     if (land && owner !== s.viewer) {
-      items.push({
+      out.push({
         id: 'attack',
-        label: t('radial.attack', { pct: Math.round(hud.attackRatio * 100) }),
-        icon: '⚔',
+        group: 'main',
+        label: owner === 0 ? t('radial.expand') : t('radial.attackPlain'),
+        icon: 'war',
+        hint: `${Math.round(hud.attackRatio * 100)} %`,
+        desc: t('radial.attackDesc'),
         run: attackGuard(owner, () => s.cmd({ t: 'attack', tile, ratio: hud.attackRatio })),
       });
-      items.push({
+      out.push({
         id: 'boat',
+        group: 'main',
         label: t('radial.boat'),
-        icon: '⛵',
+        icon: 'transport',
+        hint: `${Math.round(hud.attackRatio * 100)} %`,
+        desc: t('radial.boatDesc'),
         run: attackGuard(owner, () => s.cmd({ t: 'boat', tile, ratio: hud.attackRatio })),
       });
     }
@@ -208,17 +240,23 @@
             (k === B.Airfield && !cfg.features.air)
           ),
       );
-      items.push({
+      out.push({
         id: 'build',
+        group: 'main',
         label: t('radial.build'),
-        glyph: 'city',
-        sub: kinds.map((k) => ({
-          id: `b${k}`,
-          label: t(`building.${BUILDING_KEYS[k]}.name`),
-          glyph: BUILDING_KEYS[k]!,
-          disabled: (hud.local?.gold ?? 0) < (hud.local?.buildCosts[k] ?? Infinity),
-          run: act(() => s.cmd({ t: 'build', kind: k, tile })),
-        })),
+        icon: 'city',
+        sub: kinds.map((k) => {
+          const cost = hud.local?.buildCosts[k] ?? Infinity;
+          return {
+            id: `b${k}`,
+            label: t(`building.${BUILDING_KEYS[k]}.name`),
+            icon: BUILDING_ICONS[k],
+            hint: gold(cost),
+            desc: t(`building.${BUILDING_KEYS[k]}.desc`),
+            disabled: (hud.local?.gold ?? 0) < cost,
+            run: act(() => s.cmd({ t: 'build', kind: k, tile })),
+          };
+        }),
       });
       const b = s.state.buildings.find(
         (x) =>
@@ -227,79 +265,101 @@
           x.owner === s.viewer,
       );
       if (b) {
-        items.push({
+        out.push({
           id: 'up',
-          label: t('radial.upgrade'),
-          icon: '⬆',
+          group: 'main',
+          label: t('radial.upgradeNamed', { name: t(`building.${BUILDING_KEYS[b.type]}.name`) }),
+          icon: 'upgrade',
+          hint: `${t('radial.level')} ${b.level}`,
           run: act(() => s.cmd({ t: 'upgrade', id: b.id })),
         });
-        items.push({
+        out.push({
           id: 'del',
+          group: 'main',
           label: t('radial.demolish'),
-          icon: '🗑',
+          icon: 'trash',
           danger: true,
           run: act(() => s.cmd({ t: 'demolish', id: b.id })),
         });
       }
     }
-    const nukes = nukeItems(tile);
-    if (nukes.length && owner !== s.viewer)
-      items.push({ id: 'nukes', label: t('radial.nukes'), glyph: 'nukeA', sub: nukes, danger: true });
     if (!land && cfg.allowPorts) {
-      items.push({
+      out.push({
         id: 'ws',
+        group: 'military',
         label: t('radial.warshipHere'),
-        glyph: 'warship',
+        icon: 'warship',
+        hint: hud.local ? gold(hud.local.warshipCost) : '',
         run: act(() => s.cmd({ t: 'warship', tile })),
       });
       if (hud.selection.length)
-        items.push({
+        out.push({
           id: 'move',
+          group: 'military',
           label: t('radial.moveShips', { n: hud.selection.length }),
-          icon: '➜',
+          icon: 'next',
           run: act(() => s.cmd({ t: 'shipMove', ids: hud.selection, tile, patrol: true })),
         });
     }
     if (cfg.features.air) {
-      items.push({
+      out.push({
         id: 'air',
+        group: 'military',
         label: t('radial.air'),
-        glyph: 'fighter',
+        icon: 'airfield',
         sub: [
-          {
-            id: 'f',
-            label: t('unit.fighter.name'),
-            glyph: 'fighter',
-            run: act(() => s.cmd({ t: 'air', kind: 0, tile })),
-          },
-          {
-            id: 'bo',
-            label: t('unit.bomber.name'),
-            glyph: 'bomber',
-            run: act(() => s.cmd({ t: 'air', kind: 1, tile })),
-          },
-          {
-            id: 'r',
-            label: t('unit.recon.name'),
-            glyph: 'recon',
-            run: act(() => s.cmd({ t: 'air', kind: 2, tile })),
-          },
-        ],
+          { id: 'f', label: t('unit.fighter.name'), k: 0 },
+          { id: 'bo', label: t('unit.bomber.name'), k: 1 },
+          { id: 'r', label: t('unit.recon.name'), k: 2 },
+        ].map((x) => ({
+          id: x.id,
+          label: x.label,
+          icon: 'airfield' as IconName,
+          desc: t(`unit.${['fighter', 'bomber', 'recon'][x.k]}.desc`),
+          run: act(() => s.cmd({ t: 'air', kind: x.k, tile })),
+        })),
       });
     }
-    const diplo = diplomacyItems(owner);
-    if (diplo.length) items.push({ id: 'diplo', label: t('radial.diplomacy'), icon: '🏳', sub: diplo });
-    items.push({
+    const nukes = nukeItems(tile);
+    if (nukes.length && owner !== s.viewer)
+      out.push({
+        id: 'nukes',
+        group: 'military',
+        label: t('radial.nukes'),
+        icon: 'nuke',
+        sub: nukes,
+        danger: true,
+      });
+    out.push(...diplomacyItems(owner));
+    out.push({
       id: 'ping',
+      group: 'other',
       label: t('radial.ping'),
-      icon: '◎',
+      icon: 'pin',
       run: act(() => s.cmd({ t: 'ping', tile, kind: 0 })),
     });
-    return items;
+    return out;
   });
 
-  const items = $derived(stack.length ? stack[stack.length - 1]! : root);
-  const R = 92;
+  const groups = $derived.by(() => {
+    const order = ['main', 'military', 'diplo', 'signal', 'other'];
+    return order
+      .map((g) => ({ g, list: items.filter((it) => (it.group ?? 'other') === g) }))
+      .filter((x) => x.list.length);
+  });
+  const sub = $derived(items.find((it) => it.id === openSub)?.sub ?? null);
+
+  // Keep the menu on screen.
+  const pos = $derived.by(() => {
+    const r = hud.radial;
+    if (!r) return { x: 0, y: 0 };
+    const w = 260;
+    const h = 64 + items.length * 34;
+    return {
+      x: Math.min(r.x + 6, window.innerWidth - w * (sub ? 2 : 1) - 12),
+      y: Math.max(8, Math.min(r.y + 6, window.innerHeight - h - 12)),
+    };
+  });
 </script>
 
 {#if hud.radial && items.length}
@@ -313,31 +373,76 @@
       close();
     }}
   ></div>
-  <div class="radial" style="left:{hud.radial.x}px; top:{hud.radial.y}px" data-testid="radial">
-    <button class="center glass" onclick={() => (stack.length ? (stack = stack.slice(0, -1)) : close())}
-      >{stack.length ? '↩' : '✕'}</button
-    >
-    {#each items as it, k (it.id)}
-      {@const a = -Math.PI / 2 + (k / items.length) * Math.PI * 2}
-      <button
-        class="item glass fade-in"
-        class:danger={it.danger}
-        disabled={it.disabled}
-        style="transform: translate({Math.cos(a) * (items.length > 8 ? R * 1.25 : R)}px, {Math.sin(a) *
-          (items.length > 8 ? R * 1.25 : R)}px); animation-delay:{k * 18}ms"
-        onclick={() => {
-          if (it.sub) {
-            stack = [...stack, it.sub];
-            audio.ui('open');
-          } else it.run?.();
-        }}
-        title={it.label}
-        data-testid="radial-{it.id}"
-      >
-        {#if it.glyph}<Glyph kind={it.glyph} size={20} />{:else}<span class="ico">{it.icon}</span>{/if}
-        <span class="lab">{it.label}</span>
-      </button>
-    {/each}
+  <div class="ctx" style="left:{pos.x}px; top:{pos.y}px" data-testid="radial" role="menu">
+    <div class="menu panel fade-in">
+      <header>
+        {#if signalMode}
+          <Icon name="pin" size={16} />
+          <span>{t('radial.signalTitle')}</span>
+        {:else if ownerView}
+          <img class="flag" src={flagUrl(ownerView, 24)} alt="" />
+          <div class="who">
+            <b>{ownerView.name[i18n.lang] || ownerView.name.en}</b>
+            <small>{t(`terrain.${terrainKey}`)}{owner === s.viewer ? ` · ${t('radial.yours')}` : ''}</small>
+          </div>
+        {:else}
+          <Icon name="terrain" size={16} />
+          <div class="who">
+            <b>{t(`terrain.${terrainKey}`)}</b>
+            <small>{IS_LAND[s.state.terrain[tile] ?? 0] ? t('radial.unclaimed') : t('radial.sea')}</small>
+          </div>
+        {/if}
+        <button class="x" onclick={close} aria-label={t('common.close')}
+          ><Icon name="close" size={15} /></button
+        >
+      </header>
+      {#each groups as gr, gi (gr.g)}
+        {#if gi > 0}<div class="sep"></div>{/if}
+        {#each gr.list as it (it.id)}
+          <button
+            class="item"
+            class:danger={it.danger}
+            class:open={openSub === it.id}
+            disabled={it.disabled}
+            role="menuitem"
+            title={it.desc ?? ''}
+            onclick={() => {
+              if (it.sub) {
+                openSub = openSub === it.id ? null : it.id;
+                audio.ui('open');
+              } else it.run?.();
+            }}
+            onmouseenter={() => it.sub && !it.disabled && (openSub = it.id)}
+            data-testid="radial-{it.id}"
+          >
+            {#if it.icon}<Icon name={it.icon} size={17} />{:else}<span class="sp"></span>{/if}
+            <span class="lab">{it.label}</span>
+            {#if it.hint}<span class="hint mono">{it.hint}</span>{/if}
+            {#if it.sub}<Icon name="chevronRight" size={15} />{/if}
+          </button>
+        {/each}
+      {/each}
+    </div>
+    {#if sub}
+      <div class="menu panel subm fade-in">
+        {#each sub as it (it.id)}
+          <button
+            class="item"
+            class:danger={it.danger}
+            disabled={it.disabled}
+            role="menuitem"
+            title={it.desc ?? ''}
+            onclick={() => it.run?.()}
+            data-testid="radial-{it.id}"
+          >
+            {#if it.icon}<Icon name={it.icon} size={17} />{:else}<span class="sp"></span>{/if}
+            <span class="lab">{it.label}</span>
+            {#if it.hint}<span class="hint mono">{it.hint}</span>{/if}
+          </button>
+          {#if it.desc && !it.disabled && sub.length <= 8}<p class="desc">{it.desc}</p>{/if}
+        {/each}
+      </div>
+    {/if}
   </div>
 {/if}
 
@@ -347,60 +452,107 @@
     inset: 0;
     z-index: 40;
   }
-  .radial {
+  .ctx {
     position: absolute;
     z-index: 41;
-    width: 0;
-    height: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
   }
-  .center {
-    position: absolute;
-    left: -22px;
-    top: -22px;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
+  .menu {
+    width: 260px;
+    padding: 4px;
+    display: grid;
+  }
+  .subm {
+    width: 280px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px 8px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 4px;
+    color: var(--muted);
+  }
+  header .flag {
+    width: 26px;
+    height: 19px;
+    object-fit: cover;
+    border: 1px solid #0006;
+  }
+  .who {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+  }
+  .who b {
+    color: var(--parchment);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .who small {
+    font-size: 0.8em;
+  }
+  .x {
+    background: none;
+    border: 0;
+    color: var(--faint);
     cursor: pointer;
+    padding: 2px;
+  }
+  .x:hover {
     color: var(--parchment);
   }
   .item {
-    position: absolute;
-    left: -38px;
-    top: -30px;
-    width: 76px;
-    height: 60px;
-    border-radius: 14px;
-    display: grid;
-    justify-items: center;
-    align-content: center;
-    gap: 2px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 7px 8px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    text-align: left;
     cursor: pointer;
     color: var(--parchment);
-    transition:
-      background 0.12s,
-      border-color 0.12s;
   }
-  .item:hover:not(:disabled) {
-    background: rgba(79, 227, 193, 0.22);
-    border-color: var(--aurora);
+  .item:hover:not(:disabled),
+  .item.open {
+    background: var(--panel-3);
   }
   .item.danger {
-    color: #ffb070;
+    color: #f0a49c;
   }
   .item:disabled {
-    opacity: 0.35;
+    opacity: 0.4;
     cursor: not-allowed;
   }
-  .ico {
-    font-size: 1.25em;
-    line-height: 1;
-  }
   .lab {
-    font-size: 0.66em;
-    line-height: 1.1;
-    max-width: 70px;
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+  }
+  .hint {
+    color: var(--brass);
+    font-size: 0.85em;
+  }
+  .sp {
+    width: 17px;
+  }
+  .sep {
+    height: 1px;
+    background: var(--line);
+    margin: 4px 6px;
+  }
+  .desc {
+    margin: -2px 8px 6px 35px;
+    font-size: 0.78em;
+    color: var(--faint);
+    line-height: 1.35;
   }
 </style>

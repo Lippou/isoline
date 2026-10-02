@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../icons/Icon.svelte';
   import { onMount, onDestroy } from 'svelte';
   import { go } from '../stores/app.svelte';
   import { t, i18n } from '../i18n/i18n.svelte';
@@ -227,7 +228,9 @@
 
 <div class="editor" data-testid="editor">
   <header>
-    <button class="btn ghost" onclick={() => go('title')}>← {t('common.back')}</button>
+    <button class="btn ghost" onclick={() => go('title')}
+      ><Icon name="back" size={16} />{t('common.back')}</button
+    >
     <h1>{t('title.editor')}</h1>
     <input type="text" bind:value={name} onchange={sync} />
     <button class="btn" onclick={importFile}>{t('editor.import')}</button>
@@ -290,7 +293,8 @@
         <button class="btn" onclick={fit}>{t('editor.fit')}</button>
         <p class="muted">
           {model.meta.width}×{model.meta.height} · {model.meta.spawnPoints.length} spawns · {model.meta
-            .nations.length} nations · {model.meta.deposits.length} ◆
+            .nations.length} nations · {model.meta.deposits.length}
+          {t('editor.depositsShort')}
         </p>
         <p class="muted">{t('editor.hint')}</p>
         {#each errors as er (er)}<p class="err">{t(er)}</p>{/each}

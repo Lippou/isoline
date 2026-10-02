@@ -45,6 +45,8 @@ export class Player {
   team = 0;
   color = 0;
   flagSeed = 0;
+  /** ISO code of the real country this nation represents ('' otherwise). */
+  iso = '';
   slot = -1;
   personality: Personality = 'expansionist';
   general: GeneralType = 'blitz';

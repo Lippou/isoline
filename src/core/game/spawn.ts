@@ -1,4 +1,5 @@
 // Player creation, nation/tribe placement and the spawn phase.
+import { nationalColorIndex } from '../data/nationalColors';
 import type { Game } from './state';
 import type { Player } from './player';
 import { PERSONALITIES } from './player';
@@ -42,7 +43,9 @@ export function setupPlayers(game: Game): void {
     if (!IS_LAND[game.map.terrain[tile]!] || game.owner[tile] !== 0) continue;
     const p = game.addPlayer(spec.name, 'nation');
     p.flagSeed = spec.flagSeed;
-    p.color = colorIdx++;
+    p.iso = spec.iso ?? '';
+    const national = p.iso ? nationalColorIndex(p.iso) : -1;
+    p.color = national >= 0 ? national : colorIdx++;
     p.personality = PERSONALITIES[spec.flagSeed % PERSONALITIES.length]!;
     p.general = GENERALS[(spec.flagSeed >>> 8) % GENERALS.length]!;
     if (cfg.mode === 'teams') p.team = (teamRR++ % teams) + 1;

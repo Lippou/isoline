@@ -12,6 +12,7 @@
   import type { LobbyState } from '../../server/protocol';
   import { settings } from '../stores/settings.svelte';
   import { audio } from '../../audio/audio';
+  import Icon from '../icons/Icon.svelte';
 
   interface MapEntry {
     id: string;
@@ -156,38 +157,57 @@
   }
 
   const shown = $derived(category === 'custom' ? customs : maps.filter((m) => m.category === category));
+  const selected = $derived([...maps, ...customs].find((m) => m.id === cfg.mapId));
+  const featureCount = $derived(FEATURES.filter((f) => cfg.features[f]).length);
   const me = $derived(lobby?.players.find((p) => p.slot === client?.slot));
 </script>
 
 <div class="lobby" data-testid="lobby">
   <header>
-    <button class="btn ghost" onclick={() => go('title')}>← {t('common.back')}</button>
-    <h1>{lan ? t('lobby.titleLan') : t('lobby.titleSolo')}</h1>
-    {#if lobby}<span class="code chip" data-testid="lobby-code"
-        >🔑 {t('lobby.code')} <b class="mono">{lobby.code}</b></span
-      >{/if}
-    {#if client?.host && port}<span class="code chip mono" data-testid="lobby-address"
-        >{(hostAddresses[0] ?? '127.0.0.1') + ':' + port}</span
-      >{/if}
-    <button class="btn primary start" onclick={start} disabled={!isHost} data-testid="lobby-start"
-      >{t('lobby.start')}</button
+    <button class="btn ghost" onclick={() => go('title')}
+      ><Icon name="back" size={16} />{t('common.back')}</button
     >
+    <div class="htitle">
+      <h1>{lan ? t('lobby.titleLan') : t('lobby.titleSolo')}</h1>
+      <span class="hint">{lan ? t('lobby.subtitleLan') : t('lobby.subtitleSolo')}</span>
+    </div>
+    {#if lobby}<span class="chip big" data-testid="lobby-code"
+        ><Icon name="key" size={14} />{t('lobby.code')} <b class="mono">{lobby.code}</b></span
+      >{/if}
+    {#if client?.host && port}<span
+        class="chip big mono"
+        data-testid="lobby-address"
+        data-tip={t('lobby.addressTip')}
+        ><Icon name="network" size={14} />{(hostAddresses[0] ?? '127.0.0.1') + ':' + port}</span
+      >{/if}
   </header>
 
   <div class="cols">
-    <section class="maps glass">
-      <nav class="cats">
+    <!-- 1. Map -->
+    <section class="maps panel">
+      <h3 class="section-title"><Icon name="territory" size={14} />{t('lobby.stepMap')}</h3>
+      <nav class="tabs">
         {#each CATS as c (c)}
-          <button class="chip" class:on={category === c} onclick={() => (category = c)} disabled={!isHost}
+          <button class="tab" class:on={category === c} onclick={() => (category = c)} disabled={!isHost}
             >{t(`mapcat.${c}`)}</button
           >
         {/each}
       </nav>
       {#if category === 'procedural'}
         <div class="gen">
-          <label>{t('gen.seed')} <input type="number" bind:value={gen.seed} /></label>
-          <label
-            >{t('gen.size')}
+          <p class="hint">{t('gen.intro')}</p>
+          <label class="field"
+            ><span>{t('gen.seed')}</span>
+            <span class="row"
+              ><input type="number" bind:value={gen.seed} /><button
+                class="btn small"
+                onclick={() => (gen.seed = (Math.random() * 1e9) >>> 0)}
+                ><Icon name="dice" size={14} />{t('gen.reroll')}</button
+              ></span
+            ></label
+          >
+          <label class="field"
+            ><span>{t('gen.size')}</span>
             <select
               bind:value={
                 () => `${gen.width}x${gen.height}`,
@@ -198,30 +218,27 @@
                 }
               }
             >
-              <option value="800x500">800 × 500</option>
-              <option value="1200x800">1200 × 800</option>
-              <option value="1600x1000">1600 × 1000</option>
-              <option value="2000x1000">2000 × 1000</option>
+              <option value="800x500">800 × 500 — {t('gen.small')}</option>
+              <option value="1200x800">1200 × 800 — {t('gen.medium')}</option>
+              <option value="1600x1000">1600 × 1000 — {t('gen.large')}</option>
+              <option value="2000x1000">2000 × 1000 — {t('gen.huge')}</option>
             </select>
           </label>
-          <label
-            >{t('gen.land')}
+          <label class="field"
+            ><span>{t('gen.land')} <b class="mono">{Math.round(gen.landRatio * 100)} %</b></span>
             <input type="range" min="0.15" max="0.8" step="0.01" bind:value={gen.landRatio} /></label
           >
-          <label
-            >{t('gen.islands')}
+          <label class="field"
+            ><span>{t('gen.islands')} <b class="mono">{Math.round(gen.islands * 100)} %</b></span>
             <input type="range" min="0" max="1" step="0.05" bind:value={gen.islands} /></label
           >
-          <label
-            >{t('gen.mountains')}
+          <label class="field"
+            ><span>{t('gen.mountains')} <b class="mono">{Math.round(gen.mountains * 100)} %</b></span>
             <input type="range" min="0" max="1" step="0.05" bind:value={gen.mountains} /></label
           >
-          <label
-            >{t('gen.rivers')}
+          <label class="field"
+            ><span>{t('gen.rivers')} <b class="mono">{Math.round(gen.rivers * 100)} %</b></span>
             <input type="range" min="0" max="1" step="0.05" bind:value={gen.rivers} /></label
-          >
-          <button class="btn" onclick={() => (gen.seed = (Math.random() * 1e9) >>> 0)}
-            >🎲 {t('gen.reroll')}</button
           >
           <button class="btn primary" onclick={pickProcedural} disabled={!isHost}>{t('gen.use')}</button>
         </div>
@@ -238,30 +255,34 @@
               {#if !m.custom}<img src="{mapsBase()}{m.id}.thumb.png" alt="" loading="lazy" />{:else}<div
                   class="ph"
                 >
-                  ✎
+                  <Icon name="edit" size={22} />
                 </div>{/if}
               <span class="mname">{m.name[i18n.lang] || m.name.en}</span>
-              <span class="msize mono">{m.width}×{m.height} · {m.nations} {t('lobby.nationsShort')}</span>
+              <span class="msize">{m.nations} {t('lobby.nationsShort')}</span>
             </button>
           {:else}
-            <p class="empty">{t('lobby.noMaps')}</p>
+            <p class="empty hint">{t('lobby.noMaps')}</p>
           {/each}
         </div>
       {/if}
     </section>
 
-    <section class="opts glass scroll">
-      <h3>{t('lobby.rules')}</h3>
-      <div class="form">
-        <label
-          >{t('lobby.mode')}
+    <!-- 2. Settings -->
+    <section class="opts panel scroll">
+      <h3 class="section-title"><Icon name="settings" size={14} />{t('lobby.stepRules')}</h3>
+
+      <div class="group">
+        <h4>{t('lobby.gGame')}</h4>
+        <label class="field"
+          ><span>{t('lobby.mode')}</span>
           <select bind:value={cfg.mode} onchange={push} disabled={!isHost} data-testid="opt-mode">
             {#each MODES as m (m)}<option value={m}>{t(`mode.${m}`)}</option>{/each}
           </select>
+          <small>{t(`modeDesc.${cfg.mode}`)}</small>
         </label>
         {#if cfg.mode === 'teams'}
-          <label
-            >{t('lobby.teams')}
+          <label class="field"
+            ><span>{t('lobby.teams')}</span>
             <input
               type="number"
               min="2"
@@ -272,56 +293,78 @@
             /></label
           >
         {/if}
-        <label
-          >{t('lobby.difficulty')}
-          <select bind:value={cfg.difficulty} onchange={push} disabled={!isHost}>
-            {#each DIFFS as d (d)}<option value={d}>{t(`difficulty.${d}`)}</option>{/each}
-          </select>
+        <label class="field"
+          ><span>{t('lobby.difficulty')}</span>
+          <div class="seg">
+            {#each DIFFS as d (d)}
+              <button
+                class:on={cfg.difficulty === d}
+                disabled={!isHost}
+                onclick={() => {
+                  cfg.difficulty = d;
+                  push();
+                }}>{t(`difficulty.${d}`)}</button
+              >
+            {/each}
+          </div>
+          <small>{t(`difficultyDesc.${cfg.difficulty}`)}</small>
         </label>
-        <label
-          >{t('lobby.nations')} <b class="mono">{cfg.nations}</b><input
+      </div>
+
+      <div class="group">
+        <h4>{t('lobby.gOpponents')}</h4>
+        <label class="field"
+          ><span>{t('lobby.nations')} <b class="mono">{cfg.nations}</b></span><input
             type="range"
             min="0"
-            max="100"
+            max={Math.min(100, selected?.nations ?? 100)}
             bind:value={cfg.nations}
             onchange={push}
             disabled={!isHost}
             data-testid="opt-nations"
-          /></label
+          /><small>{t('lobby.nationsHelp')}</small></label
         >
-        <label
-          >{t('lobby.tribes')} <b class="mono">{cfg.tribes}</b><input
+        <label class="field"
+          ><span>{t('lobby.tribes')} <b class="mono">{cfg.tribes}</b></span><input
             type="range"
             min="0"
             max="200"
             bind:value={cfg.tribes}
             onchange={push}
             disabled={!isHost}
-          /></label
+          /><small>{t('lobby.tribesHelp')}</small></label
         >
-        <label
-          >{t('lobby.victory')} <b class="mono">{cfg.victoryThreshold}%</b><input
+      </div>
+
+      <div class="group">
+        <h4>{t('lobby.gVictory')}</h4>
+        <label class="field"
+          ><span>{t('lobby.victory')} <b class="mono">{cfg.victoryThreshold} %</b></span><input
             type="range"
             min="50"
             max="100"
             bind:value={cfg.victoryThreshold}
             onchange={push}
             disabled={!isHost}
-          /></label
+          /><small>{t('lobby.victoryHelp')}</small></label
         >
-        <label
-          >{t('lobby.spawn')} <b class="mono">{cfg.spawnSeconds}s</b><input
+        <label class="field"
+          ><span>{t('lobby.spawn')} <b class="mono">{cfg.spawnSeconds} s</b></span><input
             type="range"
             min="15"
-            max="60"
+            max="90"
             bind:value={cfg.spawnSeconds}
             onchange={push}
             disabled={!isHost}
             data-testid="opt-spawn"
-          /></label
+          /><small>{t('lobby.spawnHelp')}</small></label
         >
-        <label
-          >{t('lobby.gold')} <b class="mono">×{cfg.goldMultiplier}</b><input
+      </div>
+
+      <div class="group">
+        <h4>{t('lobby.gEconomy')}</h4>
+        <label class="field"
+          ><span>{t('lobby.gold')} <b class="mono">×{cfg.goldMultiplier}</b></span><input
             type="range"
             min="0.5"
             max="4"
@@ -331,8 +374,8 @@
             disabled={!isHost}
           /></label
         >
-        <label
-          >{t('lobby.startGold')} <b class="mono">{(cfg.startGold ?? 0) / 1e6} M</b><input
+        <label class="field"
+          ><span>{t('lobby.startGold')} <b class="mono">{(cfg.startGold ?? 0) / 1e6} M</b></span><input
             type="range"
             min="0"
             max="50000000"
@@ -342,8 +385,8 @@
             disabled={!isHost}
           /></label
         >
-        <label
-          >{t('lobby.speed')} <b class="mono">×{cfg.gameSpeed}</b><input
+        <label class="field"
+          ><span>{t('lobby.speed')} <b class="mono">×{cfg.gameSpeed}</b></span><input
             type="range"
             min="0.5"
             max="2"
@@ -351,41 +394,71 @@
             bind:value={cfg.gameSpeed}
             onchange={push}
             disabled={!isHost}
-          /></label
+          /><small>{t('lobby.speedHelp')}</small></label
         >
       </div>
-      <h3>{t('lobby.toggles')}</h3>
-      <div class="toggles">
-        {#each RULES as r (r)}
-          <label
-            ><input type="checkbox" bind:checked={cfg[r]} onchange={push} disabled={!isHost} />
-            {t(`rule.${r}`)}</label
-          >
-        {/each}
+
+      <div class="group">
+        <h4>{t('lobby.toggles')}</h4>
+        <div class="toggles">
+          {#each RULES as r (r)}
+            <label class="tog" data-tip={t(`ruleDesc.${r}`)}
+              ><input type="checkbox" bind:checked={cfg[r]} onchange={push} disabled={!isHost} />
+              <span>{t(`rule.${r}`)}</span></label
+            >
+          {/each}
+        </div>
       </div>
-      <h3>{t('lobby.features')}</h3>
-      <div class="toggles">
-        {#each FEATURES as f (f)}
-          <label title={t(`feature.${f}.desc`)}
-            ><input
-              type="checkbox"
-              bind:checked={cfg.features[f]}
-              onchange={push}
-              disabled={!isHost}
-              data-testid="feat-{f}"
-            />
-            {t(`feature.${f}.name`)}</label
-          >
-        {/each}
+
+      <div class="group">
+        <h4>{t('lobby.features')} <span class="mono cnt">{featureCount}/{FEATURES.length}</span></h4>
+        <div class="toggles feats">
+          {#each FEATURES as f (f)}
+            <label class="tog feat">
+              <input
+                type="checkbox"
+                bind:checked={cfg.features[f]}
+                onchange={push}
+                disabled={!isHost}
+                data-testid="feat-{f}"
+              />
+              <span><b>{t(`feature.${f}.name`)}</b><small>{t(`feature.${f}.desc`)}</small></span>
+            </label>
+          {/each}
+        </div>
       </div>
     </section>
 
-    <section class="players glass">
-      <h3>{t('lobby.players')}</h3>
-      {#if !lan}
-        <div class="me">
-          <label
-            >{t('lobby.name')}
+    <!-- 3. Summary & players -->
+    <section class="side panel">
+      <h3 class="section-title"><Icon name="surrender" size={14} />{t('lobby.stepLaunch')}</h3>
+      {#if selected && !selected.custom}
+        <img class="preview" src="{mapsBase()}{selected.id}.thumb.png" alt="" />
+      {/if}
+      <div class="mapname">
+        <b
+          >{cfg.procedural
+            ? t('mapcat.procedural')
+            : selected
+              ? selected.name[i18n.lang] || selected.name.en
+              : '—'}</b
+        >
+        {#if selected}<span class="mono">{selected.width} × {selected.height}</span>{/if}
+      </div>
+      <p class="summary">
+        {t('lobby.summaryLong', {
+          mode: t(`mode.${cfg.mode}`),
+          diff: t(`difficulty.${cfg.difficulty}`),
+          nations: cfg.nations,
+          tribes: cfg.tribes,
+          pct: cfg.victoryThreshold,
+        })}
+      </p>
+
+      <div class="who">
+        {#if !lan}
+          <label class="field"
+            ><span>{t('lobby.name')}</span>
             <input
               type="text"
               bind:value={cfg.players[0]!.name}
@@ -396,16 +469,16 @@
               }}
             /></label
           >
-          <label
-            >{t('lobby.general')}
+          <label class="field"
+            ><span>{t('lobby.general')}</span>
             <select bind:value={cfg.players[0]!.general} onchange={push}>
               {#each GENERALS as g (g)}<option value={g}>{t(`general.${g}.name`)}</option>{/each}
             </select>
+            <small>{t(`general.${cfg.players[0]!.general}.desc`)}</small>
           </label>
-          <p class="gdesc">{t(`general.${cfg.players[0]!.general}.desc`)}</p>
           {#if cfg.mode === 'teams'}
-            <label
-              >{t('lobby.team')}
+            <label class="field"
+              ><span>{t('lobby.team')}</span>
               <input
                 type="number"
                 min="1"
@@ -415,27 +488,32 @@
               /></label
             >
           {/if}
-        </div>
-      {:else if lobby}
-        <ul class="plist">
-          {#each lobby.players as p (p.slot)}
-            <li class:off={!p.connected}>
-              <span>{p.host ? '★ ' : ''}{p.name}{p.spectator ? ` (${t('lobby.spectator')})` : ''}</span>
-              <span class="chip">{t('lobby.team')} {p.team || '—'}</span>
-              <span class="chip">{t(`general.${p.general}.name`)}</span>
-              <span class="chip" class:ok={p.ready}>{p.ready ? t('lobby.ready') : t('lobby.notReady')}</span>
-              {#if isHost && !p.host}<button
-                  class="x"
-                  title={t('lobby.kick')}
-                  onclick={() => client?.send({ t: 'kick', slot: p.slot })}>✕</button
-                >{/if}
-            </li>
-          {/each}
-        </ul>
-        {#if me}
-          <div class="me">
-            <label
-              >{t('lobby.general')}
+        {:else if lobby}
+          <ul class="plist">
+            {#each lobby.players as p (p.slot)}
+              <li class:off={!p.connected}>
+                <span class="pn"
+                  >{#if p.host}<Icon name="leader" size={13} />{/if}{p.name}{p.spectator
+                    ? ` (${t('lobby.spectator')})`
+                    : ''}</span
+                >
+                <span class="chip">{t('lobby.team')} {p.team || '—'}</span>
+                <span class="chip" class:good={p.ready}
+                  >{p.ready ? t('lobby.ready') : t('lobby.notReady')}</span
+                >
+                {#if isHost && !p.host}<button
+                    class="x"
+                    title={t('lobby.kick')}
+                    aria-label={t('lobby.kick')}
+                    onclick={() => client?.send({ t: 'kick', slot: p.slot })}
+                    ><Icon name="close" size={13} /></button
+                  >{/if}
+              </li>
+            {/each}
+          </ul>
+          {#if me}
+            <label class="field"
+              ><span>{t('lobby.general')}</span>
               <select
                 value={me.general}
                 onchange={(e) =>
@@ -449,8 +527,8 @@
               </select>
             </label>
             {#if cfg.mode === 'teams'}
-              <label
-                >{t('lobby.team')}
+              <label class="field"
+                ><span>{t('lobby.team')}</span>
                 <input
                   type="number"
                   min="1"
@@ -471,25 +549,29 @@
               onclick={() => {
                 ready = !ready;
                 client?.send({ t: 'ready', ready });
-              }}>{ready ? t('lobby.ready') : t('lobby.setReady')}</button
+              }}><Icon name="check" size={14} />{ready ? t('lobby.ready') : t('lobby.setReady')}</button
             >
+          {/if}
+          <div class="chat">
+            <ul class="scroll">
+              {#each chat as c, k (k)}<li><b>{c.name}</b> {c.text}</li>{/each}
+            </ul>
+            <form
+              onsubmit={(e) => {
+                e.preventDefault();
+                sendChat();
+              }}
+            >
+              <input type="text" bind:value={chatText} placeholder={t('chat.placeholder')} />
+            </form>
           </div>
         {/if}
-        <div class="chat">
-          <ul class="scroll">
-            {#each chat as c, k (k)}<li><b>{c.name}</b> {c.text}</li>{/each}
-          </ul>
-          <form
-            onsubmit={(e) => {
-              e.preventDefault();
-              sendChat();
-            }}
-          >
-            <input type="text" bind:value={chatText} placeholder={t('chat.placeholder')} />
-          </form>
-        </div>
-      {/if}
-      <p class="summary">{t('lobby.summary', { nations: cfg.nations, tribes: cfg.tribes })}</p>
+      </div>
+
+      <button class="btn primary start" onclick={start} disabled={!isHost} data-testid="lobby-start"
+        ><Icon name="play" size={18} />{t('lobby.start')}</button
+      >
+      {#if !isHost}<p class="hint">{t('lobby.waitHost')}</p>{/if}
     </section>
   </div>
 </div>
@@ -500,190 +582,291 @@
     inset: 0;
     display: grid;
     grid-template-rows: auto 1fr;
-    gap: 1rem;
-    padding: 1.2rem 1.6rem;
-    background: radial-gradient(ellipse at 20% 0%, #172947, var(--abyss) 60%);
+    gap: 14px;
+    padding: 18px 22px;
+    background: var(--abyss);
   }
   header {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 14px;
   }
-  header h1 {
+  .htitle {
     flex: 1;
-    font-size: 1.7em;
+    display: grid;
   }
-  .start {
-    font-size: 1.1em;
-    padding: 0.7em 1.6em;
+  .chip.big {
+    font-size: 0.95em;
+    padding: 0.35em 0.7em;
   }
   .cols {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 0.9fr;
-    gap: 1rem;
+    grid-template-columns: minmax(300px, 1fr) minmax(360px, 1.15fr) minmax(300px, 0.9fr);
+    gap: 14px;
     min-height: 0;
   }
-  .maps,
-  .opts,
-  .players {
-    padding: 0.9rem;
+  .cols > section {
+    padding: 14px 16px;
     min-height: 0;
-    display: grid;
-    align-content: start;
-    gap: 0.7rem;
   }
   .maps {
-    grid-template-rows: auto 1fr;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 10px;
   }
-  .cats {
+  .tabs {
     display: flex;
-    gap: 0.3rem;
     flex-wrap: wrap;
+    gap: 2px;
+    border-bottom: 1px solid var(--line);
   }
-  .chip {
-    cursor: pointer;
+  .tab {
     background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    padding: 6px 10px;
+    cursor: pointer;
   }
-  .chip.on,
-  .chip.ok {
-    color: var(--aurora);
-    border-color: var(--aurora);
+  .tab:hover {
+    color: var(--parchment);
+  }
+  .tab.on {
+    color: var(--parchment);
+    border-bottom-color: var(--brass);
   }
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 0.6rem;
-    min-height: 0;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
     align-content: start;
+    min-height: 0;
+    padding-right: 4px;
   }
   .map {
     display: grid;
-    gap: 0.25rem;
-    padding: 0.4rem;
+    gap: 3px;
+    padding: 6px;
+    background: var(--panel-2);
     border: 1px solid var(--line);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.02);
+    border-radius: 4px;
     cursor: pointer;
     text-align: left;
-    transition:
-      border-color 0.15s,
-      transform 0.15s;
+    color: var(--parchment);
   }
   .map:hover {
-    transform: translateY(-2px);
     border-color: var(--line-strong);
   }
   .map.on {
-    border-color: var(--aurora);
-    box-shadow: 0 0 0 2px rgba(79, 227, 193, 0.25);
+    border-color: var(--brass);
+    box-shadow: inset 0 0 0 1px var(--brass);
   }
   .map img,
   .ph {
     width: 100%;
     aspect-ratio: 16 / 10;
     object-fit: cover;
-    border-radius: 8px;
-    background: #0e1a2e;
+    border-radius: 2px;
+    background: #0b1016;
   }
   .ph {
     display: grid;
     place-items: center;
-    font-size: 2em;
     color: var(--faint);
   }
   .mname {
-    font-family: var(--title);
     font-weight: 600;
+    font-size: 0.92em;
   }
   .msize {
-    font-size: 0.75em;
+    font-size: 0.78em;
     color: var(--faint);
   }
   .gen {
     display: grid;
-    gap: 0.5rem;
+    gap: 10px;
+    align-content: start;
   }
-  .gen label,
-  .form label {
+  .opts {
     display: grid;
-    gap: 0.2rem;
-    font-size: 0.88em;
+    align-content: start;
+    gap: 6px;
+  }
+  .group {
+    display: grid;
+    gap: 10px;
+    padding: 10px 0 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .group:last-child {
+    border-bottom: 0;
+  }
+  .group h4 {
+    margin: 0;
+    font-family: var(--title);
+    font-size: 1em;
+    display: flex;
+    justify-content: space-between;
+  }
+  .cnt {
+    color: var(--faint);
+    font-size: 0.85em;
+  }
+  .field {
+    display: grid;
+    gap: 4px;
+  }
+  .field > span {
+    display: flex;
+    justify-content: space-between;
     color: var(--muted);
+    font-size: 0.9em;
   }
-  .form label b {
-    color: var(--aurora);
+  .field > span b {
+    color: var(--parchment);
   }
-  .form {
+  .field small {
+    color: var(--faint);
+    font-size: 0.8em;
+    line-height: 1.35;
+  }
+  .row {
+    display: flex;
+    gap: 6px;
+  }
+  .row input {
+    flex: 1;
+  }
+  .seg {
     display: grid;
-    gap: 0.55rem;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    overflow: hidden;
   }
-  h3 {
-    font-size: 1.02em;
+  .seg button {
+    background: var(--panel-2);
+    border: 0;
+    border-right: 1px solid var(--line);
+    color: var(--muted);
+    padding: 6px 2px;
+    cursor: pointer;
+    font-size: 0.88em;
+  }
+  .seg button:last-child {
+    border-right: 0;
+  }
+  .seg button.on {
+    background: rgba(209, 166, 74, 0.2);
+    color: var(--parchment);
   }
   .toggles {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.35rem 0.8rem;
-    font-size: 0.86em;
+    gap: 6px 12px;
   }
-  .toggles label {
+  .feats {
+    grid-template-columns: 1fr;
+  }
+  .tog {
     display: flex;
-    gap: 0.4rem;
-    align-items: center;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 0.9em;
+    cursor: pointer;
   }
-  .me {
+  .tog input {
+    margin-top: 2px;
+  }
+  .feat span {
     display: grid;
-    gap: 0.5rem;
   }
-  .me label {
-    display: grid;
-    gap: 0.2rem;
-    color: var(--muted);
-    font-size: 0.88em;
-  }
-  .gdesc {
-    margin: 0;
+  .feat small {
     color: var(--faint);
     font-size: 0.82em;
+    line-height: 1.35;
+  }
+  .side {
+    display: grid;
+    grid-template-rows: auto auto auto auto 1fr auto auto;
+    gap: 10px;
+  }
+  .preview {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+  }
+  .mapname {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .mapname b {
+    font-family: var(--title);
+    font-size: 1.15em;
+  }
+  .mapname span {
+    color: var(--faint);
+    font-size: 0.85em;
+  }
+  .summary {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.5;
+    font-size: 0.92em;
+  }
+  .who {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .start {
+    font-size: 1.15em;
+    padding: 0.8em 1em;
   }
   .plist {
     list-style: none;
     padding: 0;
     margin: 0;
     display: grid;
-    gap: 0.35rem;
+    gap: 4px;
   }
   .plist li {
     display: flex;
-    gap: 0.35rem;
+    gap: 6px;
     align-items: center;
     flex-wrap: wrap;
-    font-size: 0.86em;
   }
   .plist li.off {
     opacity: 0.5;
   }
+  .pn {
+    flex: 1;
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
   .x {
     background: none;
     border: 0;
-    color: var(--signal);
+    color: var(--faint);
     cursor: pointer;
   }
   .chat ul {
     list-style: none;
     padding: 0;
-    margin: 0 0 0.3rem;
-    max-height: 160px;
-    font-size: 0.85em;
+    margin: 0 0 6px;
+    max-height: 140px;
+    font-size: 0.88em;
   }
   .chat input {
     width: 100%;
   }
-  .summary {
-    color: var(--faint);
-    font-size: 0.82em;
-  }
   .empty {
-    color: var(--faint);
+    grid-column: 1 / -1;
   }
 </style>

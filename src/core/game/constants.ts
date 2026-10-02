@@ -134,6 +134,13 @@ export const SHELL_SPEED = 9;
 export const WARSHIP_PATROL_RADIUS = 40;
 export const WARSHIP_REPAIR = 3; // hp per tick near a friendly port
 export const WARSHIP_REPAIR_RANGE = 20;
+/**
+ * A port's radius of action (tiles): warships are built and repaired inside it,
+ * and it is drawn on the map when placing or hovering a port.
+ */
+export const PORT_RANGE = 60;
+export const PORT_RANGE_PER_LEVEL = 10;
+export const portRange = (level: number) => PORT_RANGE + PORT_RANGE_PER_LEVEL * Math.max(0, level - 1);
 export const VETERANCY_KILLS = [2, 5, 9] as const;
 export const VETERANCY_BONUS = 0.2;
 export const TRANSPORT_HP = 300;

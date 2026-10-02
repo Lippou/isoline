@@ -62,7 +62,7 @@
     <Requests {ctl} />
     <Panels {ctl} />
     <RadialMenu {ctl} />
-    <Dialogue />
+    <Dialogue {ctl} />
     <Toasts {ctl} />
     {#if hud.replay}<ReplayBar {ctl} />{/if}
     {#if hud.panels.menu}<GameMenu {ctl} />{/if}

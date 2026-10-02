@@ -1,33 +1,44 @@
-@import '@fontsource/fraunces/400.css';
 @import '@fontsource/fraunces/600.css';
-@import '@fontsource/fraunces/700.css';
+@import '@fontsource/ibm-plex-serif/500.css';
+@import '@fontsource/ibm-plex-serif/600.css';
 @import '@fontsource/ibm-plex-sans/400.css';
 @import '@fontsource/ibm-plex-sans/500.css';
 @import '@fontsource/ibm-plex-sans/600.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/600.css';
 
+/*
+ * Design system — "staff map room": opaque dark panels, hairline borders,
+ * a muted gold accent for primary actions and steel blue for selection.
+ * Legacy token names (--aurora, --brass, --glass…) are kept so every component
+ * inherits the palette.
+ */
 :root {
-  --abyss: #0b1220;
-  --slate: #16233a;
-  --aurora: #4fe3c1;
-  --brass: #f2b84b;
-  --signal: #ff5a5f;
-  --verdant: #7bd88f;
-  --parchment: #eae6da;
-  --muted: rgba(234, 230, 218, 0.62);
-  --faint: rgba(234, 230, 218, 0.38);
-  --glass: rgba(18, 29, 48, 0.72);
-  --glass-strong: rgba(14, 23, 39, 0.9);
-  --line: rgba(79, 227, 193, 0.22);
-  --line-strong: rgba(79, 227, 193, 0.5);
-  --radius: 14px;
+  --abyss: #0d1015;
+  --slate: #171b22;
+  --panel: rgba(21, 25, 31, 0.96);
+  --panel-2: #1d222a;
+  --panel-3: #252b34;
+  --aurora: #7fa9d6; /* steel blue: selection, focus, progress */
+  --brass: #d1a64a; /* gold: primary actions, money */
+  --signal: #d2544b; /* danger */
+  --verdant: #6fae74; /* positive */
+  --warn: #d89a35;
+  --parchment: #e8e5dd;
+  --muted: #a7acb4;
+  --faint: #6f7680;
+  --glass: rgba(21, 25, 31, 0.95);
+  --glass-strong: rgba(15, 18, 23, 0.98);
+  --line: #2d343e;
+  --line-strong: #46505c;
+  --radius: 6px;
   --ui-scale: 1;
   --font-scale: 1;
-  --title: 'Fraunces', Georgia, serif;
+  --title: 'IBM Plex Serif', Georgia, serif;
+  --brand: 'Fraunces', Georgia, serif;
   --text: 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   color-scheme: dark;
 }
 
@@ -43,7 +54,8 @@ body {
   background: var(--abyss);
   color: var(--parchment);
   font-family: var(--text);
-  font-size: calc(15px * var(--font-scale));
+  font-size: calc(14.5px * var(--font-scale));
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
@@ -65,8 +77,17 @@ h2,
 h3 {
   font-family: var(--title);
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   margin: 0;
+}
+h1 {
+  font-size: 1.7em;
+}
+h2 {
+  font-size: 1.3em;
+}
+h3 {
+  font-size: 1.05em;
 }
 
 .mono {
@@ -74,105 +95,162 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 
-.glass {
+/* Panels (the legacy class name "glass" is now an opaque panel). */
+.glass,
+.panel {
   background: var(--glass);
-  backdrop-filter: blur(14px) saturate(1.2);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
 
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-family: var(--text);
+  font-size: 0.74em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin: 0 0 0.6em;
+}
+
+.hint {
+  font-size: 0.85em;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+/* Buttons */
 .btn {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
   border: 1px solid var(--line-strong);
-  background: rgba(79, 227, 193, 0.08);
+  background: var(--panel-2);
   color: var(--parchment);
-  padding: 0.62em 1.1em;
-  border-radius: 10px;
+  padding: 0.55em 1em;
+  border-radius: var(--radius);
   cursor: pointer;
   transition:
-    background 0.15s,
-    transform 0.12s,
-    border-color 0.15s,
-    box-shadow 0.15s;
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
   font-weight: 500;
-  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 .btn:hover,
 .btn:focus-visible {
-  background: rgba(79, 227, 193, 0.18);
-  border-color: var(--aurora);
-  box-shadow: 0 0 0 3px rgba(79, 227, 193, 0.12);
+  background: var(--panel-3);
+  border-color: #5d6875;
   outline: none;
 }
 .btn:active {
-  transform: translateY(1px) scale(0.99);
+  transform: translateY(1px);
 }
 .btn.primary {
-  background: var(--aurora);
-  color: #062a22;
-  border-color: var(--aurora);
+  background: var(--brass);
+  color: #1b1408;
+  border-color: var(--brass);
   font-weight: 600;
 }
 .btn.primary:hover {
-  background: #74ecd0;
+  background: #ddb65d;
 }
 .btn.danger {
-  border-color: rgba(255, 90, 95, 0.6);
-  background: rgba(255, 90, 95, 0.12);
+  border-color: rgba(210, 84, 75, 0.7);
+  color: #f0b2ac;
+  background: rgba(210, 84, 75, 0.1);
+}
+.btn.danger:hover {
+  background: rgba(210, 84, 75, 0.2);
 }
 .btn.ghost {
   background: transparent;
   border-color: transparent;
+  color: var(--muted);
 }
 .btn.ghost:hover {
-  border-color: var(--line);
+  color: var(--parchment);
+  background: var(--panel-2);
+}
+.btn.small {
+  padding: 0.3em 0.6em;
+  font-size: 0.88em;
+}
+.btn.icon-only {
+  padding: 0.45em;
+}
+.btn.selected {
+  border-color: var(--aurora);
+  color: #fff;
+  background: rgba(127, 169, 214, 0.16);
 }
 .btn:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: not-allowed;
+  transform: none;
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 0.35em;
-  padding: 0.18em 0.6em;
-  border-radius: 999px;
+  padding: 0.15em 0.55em;
+  border-radius: 4px;
   border: 1px solid var(--line);
+  background: var(--panel-2);
   font-size: 0.82em;
   color: var(--muted);
+}
+.chip.good {
+  color: #a9d6ad;
+  border-color: rgba(111, 174, 116, 0.5);
+}
+.chip.bad {
+  color: #efa69f;
+  border-color: rgba(210, 84, 75, 0.55);
+}
+.chip.warn {
+  color: #ebc27a;
+  border-color: rgba(216, 154, 53, 0.55);
 }
 
 .label {
   font-size: 0.72em;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   color: var(--faint);
 }
 
 input[type='text'],
+input[type='url'],
 input[type='number'],
-select {
-  background: rgba(8, 14, 26, 0.75);
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 0.5em 0.7em;
+select,
+textarea {
+  background: #11151a;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 0.45em 0.65em;
   outline: none;
 }
-input[type='text']:focus,
-select:focus {
+input:focus,
+select:focus,
+textarea:focus {
   border-color: var(--aurora);
 }
 
 input[type='range'] {
-  accent-color: var(--aurora);
+  accent-color: var(--brass);
   width: 100%;
 }
 
 input[type='checkbox'] {
-  accent-color: var(--aurora);
+  accent-color: var(--brass);
   width: 1.05em;
   height: 1.05em;
 }
@@ -180,14 +258,21 @@ input[type='checkbox'] {
 .scroll {
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(79, 227, 193, 0.3) transparent;
+  scrollbar-color: #3a424d transparent;
+}
+
+.good {
+  color: #9fd0a4;
+}
+.bad {
+  color: #ec9a92;
 }
 
 .fade-in {
-  animation: fadeIn 0.28s ease-out both;
+  animation: fadeIn 0.2s ease-out both;
 }
 .rise-in {
-  animation: riseIn 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation: riseIn 0.24s ease-out both;
 }
 @keyframes fadeIn {
   from {
@@ -197,7 +282,7 @@ input[type='checkbox'] {
 @keyframes riseIn {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.98);
+    transform: translateY(6px);
   }
 }
 
@@ -209,10 +294,11 @@ input[type='checkbox'] {
 }
 
 .high-contrast {
-  --glass: rgba(4, 8, 14, 0.96);
-  --line: rgba(255, 255, 255, 0.55);
-  --muted: rgba(255, 255, 255, 0.85);
-  --faint: rgba(255, 255, 255, 0.7);
+  --glass: rgba(4, 6, 9, 0.99);
+  --line: rgba(255, 255, 255, 0.5);
+  --line-strong: rgba(255, 255, 255, 0.75);
+  --muted: rgba(255, 255, 255, 0.88);
+  --faint: rgba(255, 255, 255, 0.72);
 }
 
 :focus-visible {
@@ -226,4 +312,31 @@ input[type='checkbox'] {
   height: 1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
+}
+
+/* Tooltips: <span data-tip="…"> shows an explanation on hover. */
+[data-tip] {
+  position: relative;
+}
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 280px;
+  white-space: normal;
+  background: #0b0e12;
+  border: 1px solid var(--line-strong);
+  color: var(--parchment);
+  font-size: 12.5px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.4;
+  padding: 0.45em 0.65em;
+  border-radius: 4px;
+  z-index: 100;
+  pointer-events: none;
 }

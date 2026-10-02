@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../icons/Icon.svelte';
   import { hud } from '../stores/game.svelte';
   import { t, clock, i18n } from '../i18n/i18n.svelte';
   import type { GameController } from '../game/controller';
@@ -33,7 +34,7 @@
     onclick={() => {
       rp.setPaused(!rp.paused);
       hud.paused = rp.paused;
-    }}>{rp.paused ? '▶' : '⏸'}</button
+    }}><Icon name={rp.paused ? 'play' : 'pause'} size={16} /></button
   >
   <span class="mono">{clock(hud.replay?.tick ?? 0)} / {clock(hud.replay?.end ?? 0)}</span>
   <input

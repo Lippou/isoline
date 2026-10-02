@@ -77,8 +77,22 @@ export const hud = $state({
   councilOpen: false,
   subtitles: [] as { id: number; text: string; t: number }[],
   replay: null as null | { tick: number; end: number; speed: number; paused: boolean },
-  objectives: [] as { text: string; done: boolean }[],
-  dialogue: null as null | { speaker: string; text: string },
+  objectives: [] as {
+    text: string;
+    done: boolean;
+    bonus: boolean;
+    progress?: { value: number; max: number; format: 'pct' | 'count' | 'gold' | 'time' };
+  }[],
+  /** Campaign / tutorial: the current guide step (stays until accomplished). */
+  guide: null as null | { index: number; total: number; text: string; speaker: string },
+  /** Mission briefing shown before the game starts (the game waits). */
+  briefing: null as null | {
+    title: string;
+    text: string;
+    objectives: string[];
+    bonus: string;
+    tips: string[];
+  },
   desync: false,
   lan: null as null | { ping: number; players: { name: string; connected: boolean }[]; code: string },
   views: { terrain: false, fog: true, resources: false, loyalty: false },
@@ -123,7 +137,8 @@ export function resetHud(): void {
   hud.spectating = false;
   hud.replay = null;
   hud.objectives = [];
-  hud.dialogue = null;
+  hud.guide = null;
+  hud.briefing = null;
   hud.desync = false;
   hud.lan = null;
   hud.views = { terrain: false, fog: true, resources: false, loyalty: false };

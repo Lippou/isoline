@@ -6,7 +6,9 @@
     "accept": "Accept",
     "refuse": "Refuse",
     "back": "Back",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete"
   },
   "loading": {
     "map": "Unrolling the map…"
@@ -31,7 +33,20 @@
     "admiral": "Admiral of Maps",
     "isolineMaster": "Isoline Master",
     "updateAvailable": "Version {version} is available.",
-    "updateOpen": "Open page"
+    "updateOpen": "Open page",
+    "mainMenu": "Main menu",
+    "playDesc": "Solo game, campaign, tutorial or local network.",
+    "editorDesc": "Create and edit your own maps.",
+    "replaysDesc": "Watch your recorded games again.",
+    "profileDesc": "Statistics, achievements and local leaderboard.",
+    "settingsDesc": "Graphics, sound, controls, accessibility, language.",
+    "aboutDesc": "Version, credits and licences.",
+    "soloDesc": "Pick a map and take on computer-controlled nations.",
+    "campaignDesc": "Six guided missions of rising difficulty.",
+    "tutorialDesc": "Learn the basics step by step (about 6 minutes).",
+    "lanDesc": "Host or join a game on your local network.",
+    "loadDesc": "Resume a saved game.",
+    "recommended": "Recommended"
   },
   "menu": {
     "main": "Main menu",
@@ -53,7 +68,9 @@
     "saved": "Game saved (slot {slot}).",
     "saveFailed": "Saving failed.",
     "loadFailed": "This save cannot be loaded.",
-    "noSaves": "No saves yet."
+    "noSaves": "No saves yet.",
+    "loadSubtitle": "Ten save slots, plus an automatic save every two minutes.",
+    "colSlot": "Slot"
   },
   "help": {
     "intro": "Isoline is played on a living atlas: spread your ink, build an economy, forge alliances and hold the world.",
@@ -106,10 +123,45 @@
     "view": {
       "terrain": "Terrain view",
       "fog": "Fog of war",
-      "resources": "Resources"
+      "resources": "Resources",
+      "loyalty": "Loyalty"
     },
     "autoPerformance": "Performance mode enabled automatically (slow machine).",
-    "fogLocked": "The fog of war can only be lifted when spectating or in a replay."
+    "fogLocked": "The fog of war can only be lifted when spectating or in a replay.",
+    "attackRatioTip": "Share of your troops sent with each attack or expansion order.",
+    "boatsTip": "Troop transports at sea.",
+    "buildTime": "Build time: {s} s",
+    "capTip": "Current population compared with the ceiling set by your land and cities.",
+    "colCountry": "Country",
+    "colLand": "Land",
+    "colTroops": "Troops",
+    "costN": "Cost: {n}",
+    "elapsed": "Game time",
+    "goal": "Goal: {pct}% of the land",
+    "groupAir": "Air force",
+    "groupBuild": "Buildings",
+    "groupNavy": "Navy",
+    "groupNukes": "Nuclear",
+    "groupViews": "Views",
+    "growthTip": "Population growth per second. It peaks around 42% of the ceiling.",
+    "immuneTip": "Nobody can attack you during this time.",
+    "inactive": "Player away",
+    "incomeTitle": "Income",
+    "needsAirfield": "Requires an airfield",
+    "noVictory": "Free play (no victory)",
+    "ongoingAttacks": "Ongoing attacks",
+    "ownedN": "Owned: {n}",
+    "populationTip": "Total population = troops + workers. Cities and land raise the ceiling.",
+    "readyN": "Ready: {n}",
+    "spawnHelp": "Click on unclaimed land. The match starts as soon as your capital is placed.",
+    "spawnWait": "Countries are taking position.",
+    "spawnTimerTip": "Time left before automatic placement.",
+    "traitorTip": "You betrayed an ally: your defence is reduced and other nations remember it.",
+    "troopShareTip": "How growth is split between troops (to fight) and workers (for gold).",
+    "troopsTip": "Troops available to attack and defend.",
+    "victoryThresholdTip": "The first country (or team) to control {pct}% of the useful land wins.",
+    "workersTip": "Workers produce gold.",
+    "youHold": "you: {pct}%"
   },
   "panel": {
     "diplomacy": "Diplomacy",
@@ -130,7 +182,8 @@
     "allies": "Allies",
     "placeholder": "Type a message…",
     "mute": "Click to mute this player",
-    "muted": "{n} player(s) muted"
+    "muted": "{n} player(s) muted",
+    "send": "Send"
   },
   "quick": {
     "0": "Hello!",
@@ -161,7 +214,23 @@
     "embargoOn": "Embargo",
     "embargoOff": "Lift embargo",
     "quick": "Quick message",
-    "ping": "Ping"
+    "ping": "Ping",
+    "unavailable": "unavailable",
+    "launchN": "Launch {n}",
+    "launchMax": "Launch maximum ({n})",
+    "giveGold": "Give {pct}% of gold",
+    "giveTroops": "Give {pct}% of troops",
+    "embargoDesc": "Cuts sea and rail trade with this country.",
+    "expand": "Expand here",
+    "attackPlain": "Attack",
+    "attackDesc": "Sends the shown share of your troops (adjust with T / Y or Shift + wheel).",
+    "boatDesc": "Ships troops from your nearest coast and lands them here.",
+    "upgradeNamed": "Upgrade: {name}",
+    "level": "lvl",
+    "signalTitle": "Send a signal",
+    "yours": "your territory",
+    "unclaimed": "Unclaimed land",
+    "sea": "Sea"
   },
   "confirm": {
     "betrayTitle": "Betray your ally?",
@@ -175,7 +244,19 @@
     "allianceTimer": "Alliance time left",
     "war": "at war",
     "neutral": "neutral",
-    "betrayals": "Betrayal history"
+    "betrayals": "Betrayal history",
+    "allied": "Allied",
+    "betrayedLine": "{traitor} betrayed {victim}",
+    "break": "Break",
+    "embargo": "Embargo",
+    "give": "Give 10% gold",
+    "giveTip": "Sends 10% of your gold to this ally.",
+    "intro": "An alliance lasts 5 minutes and forbids attacks between allies. Renewing requires both parties' consent. Attacking an ally is a betrayal: halved defence for 30 s and an automatic embargo.",
+    "propose": "Propose alliance",
+    "renew": "Renew",
+    "search": "Search for a country…",
+    "showAllN": "Show all {n} countries",
+    "showLess": "Show less"
   },
   "council": {
     "title": "World Council",
@@ -195,7 +276,6 @@
   "tech": {
     "rate": "Research: {rp} points/s (cities)",
     "economy": {
-      "title": "Economy",
       "1": {
         "name": "Workshops",
         "desc": "+10% worker income"
@@ -211,10 +291,10 @@
       "4": {
         "name": "Prefabrication",
         "desc": "−10% building costs"
-      }
+      },
+      "title": "Economy"
     },
     "military": {
-      "title": "Military",
       "1": {
         "name": "Mountain troops",
         "desc": "−10% losses in hills and mountains"
@@ -230,10 +310,10 @@
       "4": {
         "name": "Blitzkrieg",
         "desc": "+15% attack speed"
-      }
+      },
+      "title": "Military"
     },
     "naval": {
-      "title": "Navy",
       "1": {
         "name": "Armour plating",
         "desc": "+20% warship hit points"
@@ -249,10 +329,10 @@
       "4": {
         "name": "Shipping lines",
         "desc": "+30% trade income"
-      }
+      },
+      "title": "Navy"
     },
     "nuclear": {
-      "title": "Nuclear",
       "1": {
         "name": "Enrichment",
         "desc": "−10% bomb costs"
@@ -268,10 +348,10 @@
       "4": {
         "name": "Multiple warheads",
         "desc": "MIRV: +2 warheads"
-      }
+      },
+      "title": "Nuclear"
     },
     "defense": {
-      "title": "Defence",
       "1": {
         "name": "Fire-control radar",
         "desc": "SAM range +10"
@@ -287,8 +367,10 @@
       "4": {
         "name": "Shield",
         "desc": "SAM: +1 target, range +15"
-      }
-    }
+      },
+      "title": "Defence"
+    },
+    "intro": "Research progresses thanks to your cities. Pick a branch: its next level will be studied automatically."
   },
   "stats": {
     "tiles": "Territory",
@@ -330,7 +412,8 @@
       "none": "Game over"
     },
     "winnerIs": "{name} wins",
-    "showResults": "Show results"
+    "showResults": "Show results",
+    "eliminated": "Eliminated"
   },
   "mode": {
     "ffa": "Free for all",
@@ -364,7 +447,12 @@
     "mountains": "Mountains",
     "rivers": "Rivers",
     "reroll": "New seed",
-    "use": "Use this map"
+    "use": "Use this map",
+    "intro": "Generate a brand-new world. The same seed always produces the same map.",
+    "small": "small",
+    "medium": "medium",
+    "large": "large",
+    "huge": "huge"
   },
   "lobby": {
     "titleSolo": "New game",
@@ -395,7 +483,24 @@
     "kick": "Kick",
     "noMaps": "No map in this category.",
     "summary": "{nations} nations and {tribes} tribes will share the map.",
-    "startGold": "Players’ starting gold (sandbox)"
+    "startGold": "Players’ starting gold (sandbox)",
+    "subtitleSolo": "Pick a map, adjust the game, then launch it.",
+    "subtitleLan": "Share the code and the address with the other players on the network.",
+    "addressTip": "Address to type into “Join manually” on the other computers.",
+    "stepMap": "1. Map",
+    "stepRules": "2. Settings",
+    "stepLaunch": "3. Launch",
+    "gGame": "Game",
+    "gOpponents": "Opponents",
+    "gVictory": "Victory and start",
+    "gEconomy": "Economy and pace",
+    "nationsHelp": "Computer-controlled countries, placed at their real position.",
+    "tribesHelp": "Small neutral peoples who guard a treasury of gold.",
+    "victoryHelp": "Share of the land needed to win. After 30 minutes this threshold gradually decreases.",
+    "spawnHelp": "Maximum time to place your capital. The match starts as soon as every player has chosen.",
+    "speedHelp": "×1 means 10 simulation turns per second.",
+    "summaryLong": "{mode}, {diff} difficulty. You will face {nations} nations and {tribes} tribes. The first to control {pct}% of the land wins.",
+    "waitHost": "Only the host can change the settings and start the game."
   },
   "rule": {
     "allowPorts": "Ports and navy",
@@ -497,67 +602,82 @@
   "building": {
     "city": {
       "name": "City",
-      "desc": "+250,000 max population per level, produces research. Railway station."
+      "desc": "+250,000 max population per level, produces research. Railway station.",
+      "short": "City"
     },
     "port": {
       "name": "Port",
-      "desc": "Coastal. Sends merchant ships to foreign ports and arms warships. Station."
+      "desc": "Built on the coast. Sends merchant ships to foreign ports and acts as a station. Radius of action of 60 tiles (+10 per level): warships are built and repaired inside it.",
+      "short": "Port"
     },
     "factory": {
       "name": "Factory",
-      "desc": "Lays railways to stations within 110 tiles and runs trains."
+      "desc": "Lays railways to stations within 110 tiles and runs trains.",
+      "short": "Factory"
     },
     "defensePost": {
       "name": "Defence post",
-      "desc": "Within 30 tiles: attacker losses ×5, speed ×3. Destroyed when captured."
+      "desc": "Within 30 tiles: attacker losses ×5, speed ×3. Destroyed when captured.",
+      "short": "Defence"
     },
     "silo": {
       "name": "Missile silo",
-      "desc": "Launches A-bombs, H-bombs and MIRVs. Each upgrade adds a tube."
+      "desc": "Launches A-bombs, H-bombs and MIRVs. Each upgrade adds a tube.",
+      "short": "Silo"
     },
     "sam": {
       "name": "SAM battery",
-      "desc": "Intercepts bombs and warheads with trajectory prediction. Range 70 → 140 tiles by level."
+      "desc": "Intercepts bombs and warheads with trajectory prediction. Range 70 → 140 tiles by level.",
+      "short": "SAM"
     },
     "radar": {
       "name": "Radar tower",
-      "desc": "Reveals the fog of war within 60 tiles."
+      "desc": "Reveals the fog of war within 60 tiles.",
+      "short": "Radar"
     },
     "airfield": {
       "name": "Airfield",
-      "desc": "Produces fighters, bombers and reconnaissance planes."
+      "desc": "Produces fighters, bombers and reconnaissance planes.",
+      "short": "Airfield"
     }
   },
   "unit": {
     "warship": {
       "name": "Warship",
-      "desc": "Requires a port. Range 130, targets transports > warships > merchants, gains veterancy, patrols."
+      "desc": "Placed on water, within the radius of action of one of your ports. Firing range 130 tiles; targets transports first, then warships, and captures merchants. Gains veterancy and patrols around its anchor point.",
+      "short": "Cruiser"
     },
     "fighter": {
       "name": "Fighter",
-      "desc": "Intercepts bombers and transports within 90 tiles of its airfield."
+      "desc": "Intercepts bombers and transports within 90 tiles of its airfield.",
+      "short": "Fighter"
     },
     "bomber": {
       "name": "Bomber",
-      "desc": "Kills troops in a 6-tile radius, no fallout. Can be intercepted."
+      "desc": "Kills troops in a 6-tile radius, no fallout. Can be intercepted.",
+      "short": "Bomber"
     },
     "recon": {
       "name": "Reconnaissance",
-      "desc": "Reveals an area for 40 seconds."
+      "desc": "Reveals an area for 40 seconds.",
+      "short": "Recon"
     }
   },
   "nuke": {
     "nukeA": {
       "name": "A-bomb",
-      "desc": "750,000 gold. Destruction 12 tiles, fallout 30. Interceptable."
+      "desc": "750,000 gold. Destruction 12 tiles, fallout 30. Interceptable.",
+      "short": "A-bomb"
     },
     "nukeH": {
       "name": "H-bomb",
-      "desc": "5,000,000 gold. Destruction 80 tiles, fallout 100. Interceptable."
+      "desc": "5,000,000 gold. Destruction 80 tiles, fallout 100. Interceptable.",
+      "short": "H-bomb"
     },
     "nukeMirv": {
       "name": "MIRV",
-      "desc": "25M + 15M per previous launch. Splits into 8–12 warheads."
+      "desc": "25M + 15M per previous launch. Splits into 8–12 warheads.",
+      "short": "MIRV"
     }
   },
   "worldEvent": {
@@ -698,7 +818,8 @@
       "master": "Master volume",
       "music": "Music",
       "sfx": "Effects",
-      "ui": "Interface"
+      "ui": "Interface",
+      "voice": "Campaign voice"
     },
     "muteUnfocused": "Lower volume when the window is inactive",
     "testSound": "Test sound",
@@ -722,7 +843,9 @@
     "subtitles": "Subtitles for audio alerts",
     "accessNote": "Colour-blind modes use optimised palettes plus per-player hatch patterns.",
     "language": "Language",
-    "updateUrl": "Update manifest URL (HTTPS, JSON)"
+    "updateUrl": "Update manifest URL (HTTPS, JSON)",
+    "subtitle": "Changes apply immediately and are saved automatically.",
+    "voiceOn": "Voice narration in the campaign and tutorial"
   },
   "lan": {
     "title": "Local network multiplayer",
@@ -746,7 +869,13 @@
       "full": "Lobby full.",
       "started": "The game has already started."
     },
-    "connectionLost": "Connection to the host lost — reconnecting…"
+    "connectionLost": "Connection to the host lost — reconnecting…",
+    "subtitle": "Play together on the same local network, with no external server.",
+    "hostStep1": "Click Host: a lobby opens with a code and an address.",
+    "hostStep2": "Other players see your game in the list, or type the address and the code.",
+    "hostStep3": "Adjust the game and start it when everyone is ready.",
+    "manualHelp": "If the game does not show up, type the address shown in the host's lobby.",
+    "address": "Address (IP:port)"
   },
   "campaign": {
     "title": "Campaign: The Cartographers",
@@ -763,16 +892,22 @@
       "d2": "Spread over free land, then absorb the neighbouring tribes. Aim for 15% of the territory.",
       "main": "Control 15% of the land",
       "bonus": "Own 2 cities",
-      "outro": "Fine first lines. The nations have noticed your ink."
+      "outro": "Fine first lines. The nations have noticed your ink.",
+      "brief": "Two great lakes divide this region. Three small nations are settling here, surrounded by tribes that guard their gold. You start from nothing: a point on the map and a few thousand men. Your mission is to become a regional power by controlling fifteen percent of the land.",
+      "tip1": "A click on unclaimed land sends the share of troops set at the bottom left. Several small clicks beat a single large one.",
+      "tip2": "Cities greatly increase your population: build them as soon as gold allows."
     },
     "m2": {
       "title": "Hold the Line",
-      "summary": "Survive 10 minutes in Europe against aggressive nations.",
+      "summary": "Survive 20 minutes in Europe against aggressive nations.",
       "d1": "Europe is a powder keg. The neighbouring nations are warlike.",
       "d2": "Hold for 10 minutes. Defence posts multiply attacker losses by five.",
-      "main": "Survive 10 minutes",
+      "main": "Survive 20 minutes",
       "bonus": "Build 3 defence posts",
-      "outro": "Your lines held. The attackers broke against your ramparts."
+      "outro": "Your lines held. The attackers broke against your ramparts.",
+      "brief": "Europe is a powder keg. Thirty nations fight over every valley, and the difficulty is set to hard. You will not win this war; the task is not to lose it. Hold out for twenty minutes without being wiped off the map.",
+      "tip1": "Mountains, hills and forests cost the attacker more: lean on them.",
+      "tip2": "A defence post multiplies the attacker's losses by five within thirty tiles."
     },
     "m3": {
       "title": "The Island",
@@ -781,7 +916,10 @@
       "d2": "Eliminate at least one nation. Beware of warships that sink transports.",
       "main": "Eliminate a nation",
       "bonus": "Sink 2 ships",
-      "outro": "The archipelago remembers your name."
+      "outro": "The archipelago remembers your name.",
+      "brief": "An archipelago of hundreds of islands. Here, every conquest goes through the sea. A dozen nations share the coasts, and their warships sink careless transports. Eliminate at least one rival nation.",
+      "tip1": "Click a coast across the water: your troops embark from your nearest shore.",
+      "tip2": "A port lets you build warships to escort your landings."
     },
     "m4": {
       "title": "Rails and Riches",
@@ -790,7 +928,10 @@
       "d2": "Trains pay at every stop, merchant ships at every foreign port. Earn 3 million.",
       "main": "Earn 3M gold (trade + trains)",
       "bonus": "Own 3 factories",
-      "outro": "Your iron lines became lines of credit."
+      "outro": "Your iron lines became lines of credit.",
+      "brief": "Pangaea joins all land into a single continent: trade routes here are long and lucrative. Your goal is not conquest but fortune. Earn three million gold through sea trade and trains.",
+      "tip1": "A factory automatically links your nearby cities, ports and factories by rail. Every train stop pays gold.",
+      "tip2": "Ports send merchant ships to foreign ports; an embargo cuts that trade."
     },
     "m5": {
       "title": "Artificial Sun",
@@ -799,7 +940,10 @@
       "d2": "Launch an H-bomb. Enemy SAM batteries can intercept it: aim well.",
       "main": "Launch an H-bomb",
       "bonus": "Intercept a missile with a SAM",
-      "outro": "The world saw your sun. It will not forget it."
+      "outro": "The world saw your sun. It will not forget it.",
+      "brief": "The Mediterranean, cradle of empires. Some borders are only drawn in fire. You must acquire the ultimate weapon and use it: launch a hydrogen bomb. Beware, enemy SAM batteries can intercept it.",
+      "tip1": "A silo costs one million; the hydrogen bomb costs five. Grow your economy first.",
+      "tip2": "Aim far from any SAM battery: the missile can be intercepted in flight."
     },
     "m6": {
       "title": "One Minute to Midnight",
@@ -807,31 +951,51 @@
       "d1": "The clock is ticking. After 10 minutes, those holding too little land collapse.",
       "d2": "Reach 40% of the world before it is too late.",
       "main": "Reach 40% of the territory",
-      "bonus": "Do it in under 30 minutes",
-      "outro": "You stopped the clock. The atlas now bears your name."
-    }
+      "bonus": "Do it in under 45 minutes",
+      "outro": "You stopped the clock. The atlas now bears your name.",
+      "brief": "The whole world, and a ticking clock. After ten minutes, any nation that holds too little land collapses, and the threshold keeps rising. Reach forty percent of the world before the clock catches up with you.",
+      "tip1": "Watch the threshold at the top of the screen: below it, your troops melt away.",
+      "tip2": "Tribes and unclaimed land are your first targets; keep the big wars for later."
+    },
+    "step": "Step {n} of {total}",
+    "bonusLabel": "Bonus",
+    "briefing": "Mission briefing",
+    "tips": "Advice",
+    "briefingHint": "The game is paused until you start the mission.",
+    "begin": "Start mission",
+    "stopVoice": "Stop the voice",
+    "missionN": "Mission {n}",
+    "objective": "Objective",
+    "parTime": "Par time",
+    "starsRule": "One star for success, one for beating the par time, one for the bonus objective.",
+    "lockedHint": "Complete the previous mission to unlock this one."
   },
   "tutorial": {
-    "spawn": "Click free land to choose your starting point. You can change your mind until the countdown ends.",
+    "spawn": "Click on unclaimed land to place your capital. The match starts right away.",
     "spawn.short": "Choose a starting point",
-    "camera": "Drag to move the map, zoom with the wheel or by pinching the trackpad.",
+    "camera": "Move the map by dragging it, and zoom with the mouse wheel or by pinching the trackpad.",
     "camera.short": "Move the camera",
-    "expand": "Click the free lands around you: your troops spread like ink. Reach 1,200 tiles.",
+    "expand": "Click on the unclaimed land around you: your troops spread out. Reach 1,200 tiles.",
     "expand.short": "Expand (1,200 tiles)",
-    "ratio": "The attack ratio sets the share of troops sent. Change it with T / Y or Shift + wheel.",
+    "ratio": "The attack ratio sets the share of troops sent with each order. Change it with T and Y, or with Shift and the wheel.",
     "ratio.short": "Adjust the attack ratio",
-    "city": "Right click your territory → Build → City (or key 1). Cities raise your population.",
+    "city": "Build a city: press 1 then click your territory, or right click, Build, City. Cities increase your population.",
     "city.short": "Build a city",
-    "attack": "Attack the neighbouring tribe (grey ink): one click on its border is enough.",
+    "attack": "Attack the neighbouring tribe, in grey: one click on its border is enough. You will take a share of its gold.",
     "attack.short": "Attack a tribe",
-    "port": "Build a port on the coast (key 2): it generates trade and enables warships.",
+    "port": "Build a port on the coast with key 2. It generates trade and lets you build warships.",
     "port.short": "Build a port",
-    "alliance": "Open diplomacy (🏳) and propose an alliance to a neighbouring nation.",
+    "alliance": "Open the Diplomacy panel on the left and propose an alliance to a neighbouring nation.",
     "alliance.short": "Form an alliance",
-    "tech": "Open technologies (⚙) and pick a branch to research.",
+    "tech": "Open the Technologies panel on the left and choose a branch to research.",
     "tech.short": "Start research",
-    "done": "Well done! You know the essentials. Keep playing or start the real campaign.",
-    "done.short": "Done"
+    "done": "You know the essentials. Carry on with this match, or start the campaign from the main menu.",
+    "done.short": "Done",
+    "title": "Tutorial",
+    "brief": "Welcome. This tutorial teaches you the essentials in about six minutes: choosing a starting point, expanding, building, attacking and forming alliances. Each step stays on screen until you have completed it.",
+    "goal": "Follow the guide's steps",
+    "tip1": "Left click to attack or expand, right click for the actions menu.",
+    "tip2": "Hover over any part of the interface for an explanation."
   },
   "achievement": {
     "unlocked": "Achievement unlocked",
@@ -966,7 +1130,9 @@
     "noScores": "No scores yet.",
     "achievements": "Achievements",
     "anonymous": "Anonymous cartographer",
-    "defaultName": "Cartographer"
+    "defaultName": "Cartographer",
+    "subtitle": "Your cumulative statistics, achievements and best scores, stored on this computer.",
+    "needAch": "{n} achievements required"
   },
   "replay": {
     "watch": "Watch",
@@ -975,7 +1141,13 @@
     "invalid": "Invalid replay file.",
     "viewpoint": "Viewpoint",
     "freeCamera": "Free camera (see all)",
-    "seeking": "Seeking…"
+    "seeking": "Seeking…",
+    "subtitle": "Every finished game is recorded. Watch a replay at any speed, from any player's point of view.",
+    "colMap": "Map",
+    "colWinner": "Winner",
+    "colDuration": "Duration",
+    "colDate": "Date",
+    "export": "Export file"
   },
   "editor": {
     "new": "New map",
@@ -1007,7 +1179,8 @@
     "err": {
       "land": "The map needs at least 2,000 land tiles.",
       "spawns": "Place at least 4 spawn points (automatic button available)."
-    }
+    },
+    "depositsShort": "deposits"
   },
   "about": {
     "text": "Isoline is a real-time territorial conquest game played on a living atlas. Code, maps, sounds and images are original or under free licences.",
@@ -1019,5 +1192,96 @@
     "siren": "Nuclear alert siren",
     "explosion": "Nuclear explosion",
     "betrayal": "Dissonant chord: betrayal"
+  },
+  "signal": {
+    "attack": "Attack here",
+    "defend": "Defend",
+    "help": "Need help",
+    "alliance": "Alliance?",
+    "target": "Priority target",
+    "watch": "Watch this",
+    "gold": "Need gold",
+    "nuke": "Nuclear threat",
+    "yes": "Agreed",
+    "no": "Refused",
+    "retreat": "Fall back",
+    "danger": "Danger",
+    "betrayal": "Betrayal",
+    "landing": "Landing",
+    "here": "Here",
+    "peace": "Peace?"
+  },
+  "guide": {
+    "spawn": "Choose where to place your capital: click on unclaimed land, ideally away from other nations. The match starts as soon as you have placed it.",
+    "m1": {
+      "expand": "Expand: click on unclaimed land along your border. Your troops advance on their own while they have the strength.",
+      "city": "Your population soon reaches its ceiling. Build a city: press 1 then click your territory, or right click, Build, City.",
+      "tribes": "Tribes, in grey, guard a treasury. Attack one: each piece of land you take yields a share of its gold.",
+      "goal": "Keep going until you hold fifteen percent of the land. A second city earns the bonus star."
+    },
+    "m2": {
+      "spawn": "Place your capital. Rugged terrain, such as the Alps or the Carpathians, will be easier to defend.",
+      "expand": "Take unclaimed land quickly, before neighbouring nations surround you.",
+      "defense": "Build a defence post (key 4) near your most exposed border.",
+      "troops": "Keep at least half of your population under arms: set the Troop share slider to 50% or more.",
+      "alliance": "Propose an alliance to a neighbour from the Diplomacy panel. An ally cannot attack you.",
+      "hold": "Hold out until the countdown ends. Reinforce the fronts that give way and renew your alliances."
+    },
+    "m3": {
+      "island": "Start by taking your whole island.",
+      "port": "Build a port (key 2) on your coast.",
+      "landing": "The weakest nation is marked on the map. Click its coast to launch a landing.",
+      "finish": "Keep going until it is eliminated. Send reinforcements by sea if the attack runs out of steam."
+    },
+    "m4": {
+      "expand": "Expand to make room: railways need distance between stations.",
+      "cities": "Build two cities: they will be your first stations.",
+      "factory": "Build a factory (key 3) between your cities. The tracks are laid automatically.",
+      "port": "Build a port to add sea trade to your income.",
+      "wait": "Your network is running. Add factories and stations to multiply stops, and avoid wars that cut the lines."
+    },
+    "m5": {
+      "expand": "Expand to build up your economy.",
+      "city": "Build two cities to raise population and income.",
+      "silo": "Build a missile silo (key 5).",
+      "save": "Save up five million gold.",
+      "launch": "Press 9 then click an enemy target. A possible target is marked on the map."
+    },
+    "m6": {
+      "expand": "Expand as fast as you can.",
+      "economy": "Build three cities to sustain the war effort.",
+      "clock": "The doomsday clock starts at ten minutes. Get ready to exceed the required share.",
+      "push": "Push towards forty percent. A vulnerable nation is marked on the map."
+    }
+  },
+  "hover": {
+    "ally": "Your ally",
+    "attackCostTip": "Attacker loss multiplier on this terrain (plains = ×1.00).",
+    "tribe": "Tribe",
+    "unknown": "Territory out of sight",
+    "you": "Your country"
+  },
+  "modeDesc": {
+    "ffa": "Free for all: the first to reach the land threshold wins.",
+    "teams": "Players and nations are split into teams; a team's land adds up.",
+    "humansVsNations": "All human players team up against all nations.",
+    "tribes": "No nations, only tribes. Ideal for practice.",
+    "doomsday": "After 10 minutes a minimum share of land is required, and it keeps rising.",
+    "battleRoyale": "Every 3 minutes a zone shrinks; land outside it becomes uninhabitable."
+  },
+  "difficultyDesc": {
+    "easy": "Slow, cautious nations; few betrayals.",
+    "normal": "Balanced nations: a fair challenge.",
+    "hard": "Richer and more aggressive nations.",
+    "impossible": "Very rich, fast and ruthless nations."
+  },
+  "ruleDesc": {
+    "allowPorts": "Allows ports, warships and sea trade.",
+    "allowNukes": "Allows silos, A-bombs, H-bombs and MIRVs.",
+    "allowDonations": "Allows gifts of gold and troops between allies.",
+    "allowFactories": "Allows factories, railways and trains.",
+    "waterNukes": "Nuclear blasts over water also leave fallout.",
+    "decontamination": "Fallout disappears after 10 minutes instead of staying.",
+    "allowSpectators": "Allows spectators to join the game."
   }
 }

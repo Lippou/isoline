@@ -1,6 +1,6 @@
 // Generates the 40 player "inks" + 3 colour-vision-deficiency (CVD) palettes.
-// Method: candidate colours sampled in OKLCH (lightness kept high enough to read
-// on the dark atlas), then greedy farthest-point selection in OKLab. CVD palettes
+// Method: candidate colours sampled in OKLCH (mid lightness, firm chroma, for a
+// political overlay on a realistic map), then greedy farthest-point selection in OKLab. CVD palettes
 // measure distances after a Machado-2009 (severity 1.0) simulation, so colours stay
 // separable for protanopes, deuteranopes and tritanopes respectively.
 import fs from 'node:fs';
@@ -57,8 +57,10 @@ interface Cand {
 
 function candidates(): Cand[] {
   const out: Cand[] = [];
-  for (let L = 0.6; L <= 0.9; L += 0.035) {
-    for (let C = 0.07; C <= 0.24; C += 0.025) {
+  // Political-map inks: mid lightness, firm chroma (no pastels, no neon) so a
+  // translucent fill reads clearly over a realistic, daylight terrain.
+  for (let L = 0.5; L <= 0.74; L += 0.03) {
+    for (let C = 0.11; C <= 0.21; C += 0.02) {
       for (let h = 0; h < 360; h += 3) {
         const a = C * Math.cos((h * Math.PI) / 180),
           b = C * Math.sin((h * Math.PI) / 180);

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../icons/Icon.svelte';
   import { onMount, onDestroy } from 'svelte';
   import type { GameController } from '../game/controller';
   import { settings } from '../stores/settings.svelte';
@@ -163,9 +164,9 @@
   });
 </script>
 
-<aside class="mini glass" class:collapsed data-testid="minimap">
+<aside class="mini panel" class:collapsed data-testid="minimap">
   <button class="toggle" onclick={() => (collapsed = !collapsed)} title={t('hud.minimap')}
-    >{collapsed ? '▣' : '▭'}</button
+    ><Icon name={collapsed ? 'expand' : 'collapse'} size={13} /></button
   >
   <canvas
     bind:this={canvas}
@@ -186,8 +187,8 @@
   .mini {
     position: absolute;
     right: 12px;
-    bottom: calc(96px * var(--ui-scale));
-    padding: 6px;
+    bottom: 12px;
+    padding: 4px;
     z-index: 6;
   }
   .mini.collapsed canvas {
@@ -195,8 +196,8 @@
   }
   canvas {
     display: block;
-    width: 260px;
-    border-radius: 8px;
+    width: calc(270px * var(--ui-scale));
+    border-radius: 3px;
     cursor: crosshair;
     image-rendering: pixelated;
   }
@@ -206,11 +207,12 @@
     left: -12px;
     width: 24px;
     height: 24px;
-    border-radius: 50%;
-    border: 1px solid var(--line);
+    display: grid;
+    place-items: center;
+    border-radius: 3px;
+    border: 1px solid var(--line-strong);
     background: var(--glass-strong);
     color: var(--muted);
     cursor: pointer;
-    font-size: 11px;
   }
 </style>

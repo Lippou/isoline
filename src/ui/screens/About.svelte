@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { go, app } from '../stores/app.svelte';
+  import { app } from '../stores/app.svelte';
   import { t } from '../i18n/i18n.svelte';
   import Logo from '../Logo.svelte';
   import credits from '../../../CREDITS.md?raw';
+  import PageHeader from '../PageHeader.svelte';
 
   const lines = credits
     .split('\n')
@@ -12,10 +13,8 @@
 </script>
 
 <div class="page" data-testid="about">
-  <header>
-    <button class="btn ghost" onclick={() => go('title')}>← {t('common.back')}</button>
-  </header>
-  <div class="body glass">
+  <PageHeader title={t('title.about')} />
+  <div class="body panel">
     <Logo size={110} />
     <p class="slogan">{t('brand.slogan')}</p>
     <p class="mono ver">v{app.version} · {app.platform}</p>

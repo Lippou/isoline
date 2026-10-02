@@ -3,14 +3,17 @@
   import { t } from '../i18n/i18n.svelte';
   import type { GameController } from '../game/controller';
   import { BRANCHES, TECH_COST } from '../../core/rules/tech';
+  import Icon from '../icons/Icon.svelte';
+  import type { IconName } from '../icons/icons';
 
   let { ctl }: { ctl: GameController } = $props();
   const L = $derived(hud.local);
-  const icons = ['🪙', '⚔', '⚓', '☢', '🛡'];
+  const icons: IconName[] = ['gold', 'war', 'warship', 'nuke', 'immune'];
 </script>
 
 {#if L}
-  <p class="rate">{t('tech.rate', { rp: L.researchRate.toFixed(1) })}</p>
+  <p class="hint intro">{t('tech.intro')}</p>
+  <p class="rate"><Icon name="tech" size={14} /> {t('tech.rate', { rp: L.researchRate.toFixed(1) })}</p>
   {#if L.researching >= 0}
     <div class="progress">
       <span>{t(`tech.${BRANCHES[L.researching]}.${(L.tech[L.researching] ?? 0) + 1}.name`)}</span>
@@ -29,8 +32,9 @@
           onclick={() => ctl.session.cmd({ t: 'research', tech: b })}
           data-testid="tech-{br}"
         >
-          <span class="ico">{icons[b]}</span>
+          <Icon name={icons[b]!} size={17} />
           <span>{t(`tech.${br}.title`)}</span>
+          <span class="lv mono">{lvl}/4</span>
         </button>
         {#each [1, 2, 3, 4] as level (level)}
           <div
@@ -50,19 +54,25 @@
 {/if}
 
 <style>
+  .intro {
+    margin: 0 0 8px;
+  }
   .rate {
-    margin: 0 0 0.5rem;
+    margin: 0 0 8px;
     color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
   .progress {
     display: grid;
-    gap: 0.25rem;
-    margin-bottom: 0.6rem;
+    gap: 4px;
+    margin-bottom: 10px;
   }
   .bar {
     height: 6px;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
+    background: var(--panel-3);
+    border-radius: 2px;
     overflow: hidden;
   }
   .bar div {
@@ -72,58 +82,67 @@
   }
   .tree {
     display: grid;
-    gap: 0.6rem;
+    gap: 6px;
   }
   .branch {
     display: grid;
-    grid-template-columns: 92px repeat(4, 1fr);
+    grid-template-columns: 104px repeat(4, 1fr);
     gap: 4px;
     align-items: stretch;
   }
   .branch.active .head {
     border-color: var(--aurora);
-    color: var(--aurora);
+    background: rgba(127, 169, 214, 0.14);
   }
   .head {
     display: grid;
     justify-items: center;
     align-content: center;
-    gap: 2px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.03);
+    gap: 3px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--panel-2);
     cursor: pointer;
-    font-size: 0.8em;
+    font-size: 0.82em;
+    color: var(--parchment);
+    padding: 6px 4px;
+  }
+  .head:hover:not(:disabled) {
+    background: var(--panel-3);
   }
   .head:disabled {
     opacity: 0.6;
     cursor: default;
   }
-  .ico {
-    font-size: 1.3em;
+  .lv {
+    font-size: 0.85em;
+    color: var(--faint);
   }
   .node {
     border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 0.3rem;
+    border-radius: 4px;
+    padding: 5px 6px;
     display: grid;
+    align-content: start;
     gap: 2px;
-    font-size: 0.72em;
+    font-size: 0.74em;
     opacity: 0.55;
+    background: var(--panel-2);
   }
   .node b {
     font-size: 1.05em;
   }
   .node small {
     color: var(--muted);
+    line-height: 1.3;
   }
   .node.done {
     opacity: 1;
-    border-color: rgba(123, 216, 143, 0.6);
-    background: rgba(123, 216, 143, 0.08);
+    border-color: rgba(111, 174, 116, 0.65);
+    background: rgba(111, 174, 116, 0.1);
   }
   .node.next {
-    opacity: 0.9;
+    opacity: 1;
     border-color: var(--line-strong);
   }
   .cost {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../icons/Icon.svelte';
   import { hud } from '../stores/game.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
   import type { GameController } from '../game/controller';
@@ -65,7 +66,7 @@
     placeholder={t('chat.placeholder')}
     onkeydown={(e) => e.key === 'Escape' && (hud.panels.chat = false)}
   />
-  <button class="btn">↵</button>
+  <button class="btn" aria-label={t('chat.send')}><Icon name="send" size={15} /></button>
 </form>
 {#if hud.mutedPlayers.length}<p class="muted">{t('chat.muted', { n: hud.mutedPlayers.length })}</p>{/if}
 

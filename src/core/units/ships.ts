@@ -25,7 +25,7 @@ import {
   WARSHIP_PATROL_RADIUS,
   WARSHIP_RANGE,
   WARSHIP_REPAIR,
-  WARSHIP_REPAIR_RANGE,
+  portRange,
   WARSHIP_SPEED,
 } from '../game/constants';
 import { U, advanceOnPath, makeUnit, type Unit } from './unit';
@@ -212,7 +212,13 @@ export function buildWarship(game: Game, p: Player, tile: number): boolean {
   if (!game.config.allowPorts || game.phase !== 'playing') return false;
   const cost = warshipCost(game, p);
   if (p.gold < cost) return false;
-  const port = portsNear(game, p, tile)[0];
+  // The ship is laid down at the nearest own port whose radius of action covers the click.
+  const w = game.map.width;
+  const tx = tile % w;
+  const ty = (tile / w) | 0;
+  const port = portsNear(game, p, tile).find(
+    (b) => (b.x - tx) ** 2 + (b.y - ty) ** 2 <= portRange(b.level) ** 2,
+  );
   if (!port) return false;
   const wt = game.map.adjacentWater(port.tile);
   p.gold -= cost;
@@ -322,13 +328,14 @@ function fire(game: Game, ship: Unit, target: Unit): void {
 
 function nearFriendlyPort(game: Game, u: Unit): boolean {
   let found = false;
-  game.grid.query(u.x, u.y, WARSHIP_REPAIR_RANGE, (id) => {
+  const maxR = portRange(10);
+  game.grid.query(u.x, u.y, maxR, (id) => {
     if (found) return;
     const b = game.buildings.get(id)!;
     if (
       b.type === B.Port &&
       game.friendly(b.owner, u.owner) &&
-      (b.x - u.x) ** 2 + (b.y - u.y) ** 2 < WARSHIP_REPAIR_RANGE ** 2
+      (b.x - u.x) ** 2 + (b.y - u.y) ** 2 < portRange(b.level) ** 2
     )
       found = true;
   });

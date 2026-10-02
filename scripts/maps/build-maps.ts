@@ -446,11 +446,13 @@ function buildReal(def: RealMapDef, data: Record<string, Feature[]>): void {
     const en = String(p.NAME ?? p.NAME_EN);
     const fr = String(p.NAME_FR ?? en);
     if (nations.some((nn) => Math.hypot(nn.x - s[0], nn.y - s[1]) < 6)) continue;
+    const iso = String(p.ISO_A2_EH ?? '-99');
     nations.push({
       name: { fr, en },
       x: s[0],
       y: s[1],
       flagSeed: hashString(en + def.id),
+      ...(iso !== '-99' ? { iso: iso.toLowerCase() } : {}),
       weight: Math.round(Math.sqrt(pop) + 400),
     });
   }

@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { go } from '../stores/app.svelte';
   import { t, date, i18n, clock } from '../i18n/i18n.svelte';
   import { listSaves, deleteSave, type SaveInfo } from '../game/saves';
   import { startFromSave } from './launch';
+  import PageHeader from '../PageHeader.svelte';
+  import Icon from '../icons/Icon.svelte';
 
   let saves: SaveInfo[] = $state([]);
   onMount(async () => (saves = await listSaves()));
@@ -14,57 +15,93 @@
 </script>
 
 <div class="load" data-testid="load-game">
-  <header>
-    <button class="btn ghost" onclick={() => go('play')}>← {t('common.back')}</button>
-    <h1>{t('title.load')}</h1>
-  </header>
-  <ul>
-    {#each saves as s (s.slot)}
-      <li class="glass">
-        <b>{s.slot === 0 ? t('menu.autosave') : t('menu.slot', { slot: s.slot })}</b>
-        <span>{s.mapName[i18n.lang] || s.mapName.en}</span>
-        <span class="mono">{clock(s.tick)}</span>
-        <span class="muted">{date(Date.parse(s.date))}</span>
-        <button class="btn primary" onclick={() => startFromSave(s.slot)} data-testid="load-{s.slot}"
-          >{t('menu.load')}</button
-        >
-        <button class="btn danger" onclick={() => del(s.slot)}>🗑</button>
-      </li>
-    {:else}
-      <li class="muted">{t('menu.noSaves')}</li>
-    {/each}
-  </ul>
+  <PageHeader title={t('title.load')} subtitle={t('menu.loadSubtitle')} back="play" />
+  <section class="panel table">
+    <div class="thead">
+      <span>{t('menu.colSlot')}</span><span>{t('replay.colMap')}</span><span>{t('replay.colDuration')}</span
+      ><span>{t('replay.colDate')}</span><span></span>
+    </div>
+    <ul class="scroll">
+      {#each saves as s (s.slot)}
+        <li>
+          <b>{s.slot === 0 ? t('menu.autosave') : t('menu.slot', { slot: s.slot })}</b>
+          <span>{s.mapName[i18n.lang] || s.mapName.en}</span>
+          <span class="mono">{clock(s.tick)}</span>
+          <span class="muted">{date(Date.parse(s.date))}</span>
+          <span class="acts">
+            <button
+              class="btn primary small"
+              onclick={() => startFromSave(s.slot)}
+              data-testid="load-{s.slot}"><Icon name="play" size={13} />{t('menu.load')}</button
+            >
+            <button
+              class="btn small danger"
+              onclick={() => del(s.slot)}
+              aria-label={t('common.delete')}
+              data-tip={t('common.delete')}><Icon name="trash" size={14} /></button
+            >
+          </span>
+        </li>
+      {:else}
+        <li class="empty muted">{t('menu.noSaves')}</li>
+      {/each}
+    </ul>
+  </section>
 </div>
 
 <style>
   .load {
     position: fixed;
     inset: 0;
-    padding: 1.4rem 2rem;
-    background: radial-gradient(ellipse at 50% 0%, #172947, var(--abyss) 60%);
-    overflow-y: auto;
+    padding: 18px 22px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    background: var(--abyss);
   }
-  header {
-    display: flex;
-    gap: 1rem;
+  .table {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-height: 0;
+    max-width: 1000px;
+    width: 100%;
+    justify-self: center;
+    align-self: start;
+  }
+  .thead,
+  li {
+    display: grid;
+    grid-template-columns: 10em 1fr 6em 12em auto;
+    gap: 12px;
     align-items: center;
-    margin-bottom: 1rem;
+    padding: 10px 14px;
+  }
+  .thead {
+    font-size: 0.74em;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--faint);
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
   }
   ul {
     list-style: none;
+    margin: 0;
     padding: 0;
-    display: grid;
-    gap: 0.6rem;
-    max-width: 900px;
   }
-  li {
-    display: grid;
-    grid-template-columns: 9em 1fr 5em 12em auto auto;
-    gap: 0.8rem;
-    align-items: center;
-    padding: 0.7rem 0.9rem;
+  li + li {
+    border-top: 1px solid var(--line);
+  }
+  .empty {
+    display: block;
+    padding: 30px;
+    text-align: center;
   }
   .muted {
     color: var(--faint);
+  }
+  .acts {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
   }
 </style>

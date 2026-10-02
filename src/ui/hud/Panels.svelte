@@ -8,15 +8,17 @@
   import LogPanel from './LogPanel.svelte';
   import ChatPanel from './ChatPanel.svelte';
   import { audio } from '../../audio/audio';
+  import Icon from '../icons/Icon.svelte';
+  import type { IconName } from '../icons/icons';
 
   let { ctl }: { ctl: GameController } = $props();
   type P = 'diplomacy' | 'tech' | 'stats' | 'log' | 'chat';
-  const tabs: { id: P; icon: string; hidden?: boolean }[] = [
-    { id: 'diplomacy', icon: '🏳' },
-    { id: 'tech', icon: '⚙', hidden: !ctl.session.config.features.tech },
-    { id: 'stats', icon: '📈' },
-    { id: 'log', icon: '📜' },
-    { id: 'chat', icon: '💬' },
+  const tabs: { id: P; icon: IconName; hidden?: boolean }[] = [
+    { id: 'diplomacy', icon: 'diplomacy' },
+    { id: 'tech', icon: 'tech', hidden: !ctl.session.config.features.tech },
+    { id: 'stats', icon: 'stats' },
+    { id: 'log', icon: 'log' },
+    { id: 'chat', icon: 'chat' },
   ];
   function toggle(id: P): void {
     const open = hud.panels[id];
@@ -36,11 +38,15 @@
         title={t(`panel.${tb.id}`)}
         data-testid="panel-{tb.id}"
       >
-        <span>{tb.icon}</span>
+        <Icon name={tb.icon} size={18} />
+        <span class="lbl">{t(`panel.${tb.id}`)}</span>
         {#if tb.id === 'log' && hud.log.length}<i class="dot"></i>{/if}
       </button>
     {/each}
-    <button onclick={() => (hud.panels.menu = true)} title={t('hud.menu')}>☰</button>
+    <div class="sep"></div>
+    <button onclick={() => (hud.panels.menu = true)} title={t('hud.menu')} data-testid="open-menu">
+      <Icon name="menu" size={18} /><span class="lbl">{t('hud.menu')}</span>
+    </button>
   </nav>
 {/if}
 
@@ -48,7 +54,9 @@
   <section class="drawer glass rise-in" class:wide={openId === 'tech'} data-testid="panel-open">
     <header>
       <h3>{t(`panel.${openId}`)}</h3>
-      <button class="x" onclick={() => (hud.panels[openId] = false)}>✕</button>
+      <button class="x" onclick={() => (hud.panels[openId] = false)} aria-label={t('common.close')}
+        ><Icon name="close" size={16} /></button
+      >
     </header>
     <div class="body scroll">
       {#if openId === 'diplomacy'}<DiplomacyPanel {ctl} />{/if}
@@ -67,56 +75,73 @@
     top: 50%;
     transform: translateY(-50%);
     display: grid;
-    gap: 4px;
-    padding: 5px;
+    gap: 2px;
+    padding: 4px;
     z-index: 7;
   }
   .dock button {
     position: relative;
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
+    width: 64px;
+    padding: 7px 2px 5px;
+    display: grid;
+    justify-items: center;
+    gap: 3px;
+    border-radius: 4px;
     border: 1px solid transparent;
     background: transparent;
     cursor: pointer;
-    font-size: 1.05em;
-    color: var(--parchment);
+    color: var(--muted);
   }
-  .dock button:hover,
+  .lbl {
+    font-size: 0.66em;
+    line-height: 1.1;
+    text-align: center;
+  }
+  .dock button:hover {
+    color: var(--parchment);
+    background: var(--panel-2);
+  }
   .dock button.active {
-    background: rgba(79, 227, 193, 0.15);
-    border-color: var(--line-strong);
+    color: var(--parchment);
+    background: rgba(127, 169, 214, 0.16);
+    border-color: var(--aurora);
+  }
+  .sep {
+    height: 1px;
+    background: var(--line);
+    margin: 3px 4px;
   }
   .dot {
     position: absolute;
-    top: 6px;
-    right: 6px;
+    top: 5px;
+    right: 12px;
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--aurora);
+    background: var(--brass);
   }
   .drawer {
     position: absolute;
-    left: 62px;
+    left: 88px;
     top: 90px;
-    bottom: calc(330px * var(--ui-scale));
-    width: calc(380px * var(--ui-scale));
-    min-height: 260px;
+    bottom: calc(360px * var(--ui-scale));
+    width: calc(400px * var(--ui-scale));
+    min-height: 280px;
     display: grid;
     grid-template-rows: auto 1fr;
     z-index: 8;
     overflow: hidden;
   }
   .drawer.wide {
-    width: calc(600px * var(--ui-scale));
+    width: calc(640px * var(--ui-scale));
   }
   header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.6rem 0.8rem;
+    padding: 10px 14px;
     border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
   }
   .x {
     background: none;
@@ -124,9 +149,12 @@
     color: var(--muted);
     cursor: pointer;
   }
+  .x:hover {
+    color: var(--parchment);
+  }
   .body {
-    padding: 0.6rem 0.8rem;
-    font-size: 0.88em;
+    padding: 12px 14px;
+    font-size: 0.9em;
     min-height: 0;
   }
 </style>

@@ -1,9 +1,10 @@
 <script lang="ts">
+  import Icon from '../icons/Icon.svelte';
   import { hud } from '../stores/game.svelte';
   import { t, i18n, num, short, clock } from '../i18n/i18n.svelte';
   import { settings } from '../stores/settings.svelte';
   import { inkHex } from '../../render/colors';
-  import { flagDataUrl } from '../../render/flags';
+  import { flagUrl } from '../../render/flags';
   import { app, go } from '../stores/app.svelte';
   import { bridge } from '../bridge';
   import type { GameController } from '../game/controller';
@@ -66,7 +67,9 @@
             ? t('end.victory')
             : t('end.defeat')}
     </h1>
-    {#if mission > 0}<div class="stars">{'★'.repeat(mission)}{'☆'.repeat(3 - mission)}</div>{/if}
+    {#if mission > 0}<div class="stars">
+        {#each [1, 2, 3] as k (k)}<span class:got={k <= mission}><Icon name="star" size={26} /></span>{/each}
+      </div>{/if}
     <p class="sub">
       {t(`end.reason.${end.stats.reason.startsWith('mission') ? 'mission' : end.stats.reason || 'none'}`)} · {t(
         'end.duration',
@@ -79,12 +82,14 @@
           {#each ranking as p, k (p.id)}
             <li class:me={p.id === ctl.session.viewer}>
               <span class="mono rank">{k + 1}</span>
-              <img src={flagDataUrl(p.flagSeed, 24)} alt="" />
+              <img src={flagUrl(p, 24)} alt="" />
               <span class="name" style="color:{inkHex(p.color, settings.access.vision)}"
                 >{p.name[i18n.lang] || p.name.en}</span
               >
               <span class="mono">{short(p.tiles)}</span>
-              {#if !p.alive}<span class="dead">✝</span>{/if}
+              {#if !p.alive}<span class="dead" title={t('end.eliminated')}
+                  ><Icon name="eliminated" size={13} /></span
+                >{/if}
             </li>
           {/each}
         </ol>
@@ -134,7 +139,7 @@
       {/if}
     </div>
     <footer>
-      {#if end.replaySaved}<span class="chip">💾 {t('end.replaySaved')}</span>{/if}
+      {#if end.replaySaved}<span class="chip"><Icon name="save" size={13} />{t('end.replaySaved')}</span>{/if}
       <button class="btn" onclick={csv}>{t('end.exportCsv')}</button>
       <button class="btn" onclick={replay}>{t('end.watchReplay')}</button>
       <button class="btn" onclick={() => (hud.endHidden = true)} data-testid="end-spectate"
@@ -177,8 +182,12 @@
     text-shadow: 0 0 30px rgba(242, 184, 75, 0.4);
   }
   .stars {
-    text-align: center;
-    font-size: 2em;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    color: var(--line-strong);
+  }
+  .stars .got {
     color: var(--brass);
   }
   .sub {

@@ -55,6 +55,7 @@ export interface PlayerView {
   team: number;
   color: number;
   flagSeed: number;
+  iso: string;
   alive: boolean;
   spawned: boolean;
   tiles: number;
@@ -196,6 +197,7 @@ export interface FinalStats {
     kind: PlayerKind;
     color: number;
     flagSeed: number;
+    iso: string;
     team: number;
     alive: boolean;
     tiles: number;

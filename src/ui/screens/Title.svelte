@@ -9,6 +9,105 @@
   import DemoBackground from './DemoBackground.svelte';
   import { audio } from '../../audio/audio';
   import { startTutorial } from './launch';
+  import Icon from '../icons/Icon.svelte';
+  import type { IconName } from '../icons/icons';
+
+  type Entry = {
+    id: string;
+    icon: IconName;
+    label: string;
+    desc: string;
+    run: () => void;
+    primary?: boolean;
+    badge?: string;
+  };
+  const mainEntries = $derived<Entry[]>([
+    {
+      id: 'menu-play',
+      icon: 'play',
+      label: t('title.play'),
+      desc: t('title.playDesc'),
+      run: () => (sub = true),
+      primary: true,
+    },
+    {
+      id: 'menu-editor',
+      icon: 'edit',
+      label: t('title.editor'),
+      desc: t('title.editorDesc'),
+      run: () => nav('editor'),
+    },
+    {
+      id: 'menu-replays',
+      icon: 'rewind',
+      label: t('title.replays'),
+      desc: t('title.replaysDesc'),
+      run: () => nav('replays'),
+    },
+    {
+      id: 'menu-profile',
+      icon: 'user',
+      label: t('title.profile'),
+      desc: t('title.profileDesc'),
+      run: () => nav('profile'),
+    },
+    {
+      id: 'menu-settings',
+      icon: 'settings',
+      label: t('title.settings'),
+      desc: t('title.settingsDesc'),
+      run: () => nav('settings'),
+    },
+    {
+      id: 'menu-about',
+      icon: 'info',
+      label: t('title.about'),
+      desc: t('title.aboutDesc'),
+      run: () => nav('about'),
+    },
+  ]);
+  const playEntries = $derived<Entry[]>([
+    {
+      id: 'menu-solo',
+      icon: 'globe',
+      label: t('title.solo'),
+      desc: t('title.soloDesc'),
+      primary: true,
+      run: () => {
+        app.lobby.lan = false;
+        nav('lobby');
+      },
+    },
+    {
+      id: 'menu-campaign',
+      icon: 'book',
+      label: t('title.campaign'),
+      desc: t('title.campaignDesc'),
+      run: () => nav('campaign'),
+    },
+    {
+      id: 'menu-tutorial',
+      icon: 'help',
+      label: t('title.tutorial'),
+      desc: t('title.tutorialDesc'),
+      badge: settings.game.tutorialDone ? '' : t('title.recommended'),
+      run: () => startTutorial(),
+    },
+    {
+      id: 'menu-lan',
+      icon: 'network',
+      label: t('title.lan'),
+      desc: t('title.lanDesc'),
+      run: () => nav('lan'),
+    },
+    {
+      id: 'menu-load',
+      icon: 'save',
+      label: t('title.load'),
+      desc: t('title.loadDesc'),
+      run: () => nav('load'),
+    },
+  ]);
 
   let sub = $state(app.screen === 'play');
   let update = $state<{ latest: string; url: string; notes: string } | null>(null);
@@ -38,43 +137,37 @@
     <Logo size={150} />
     <p class="slogan">{t('brand.slogan')}</p>
   </div>
-  <nav class="menu glass rise-in" aria-label={t('menu.main')}>
+  <nav class="menu panel rise-in" aria-label={t('menu.main')}>
+    <header>
+      {#if sub}
+        <button class="back" onclick={() => (sub = false)} aria-label={t('common.back')}
+          ><Icon name="back" size={16} /></button
+        >
+        <h2>{t('title.play')}</h2>
+      {:else}
+        <h2>{t('title.mainMenu')}</h2>
+      {/if}
+    </header>
+    {#each sub ? playEntries : mainEntries as e (e.id)}
+      <button class="entry" class:primary={e.primary} onclick={e.run} data-testid={e.id}>
+        <span class="ic"><Icon name={e.icon} size={20} /></span>
+        <span class="txt">
+          <b
+            >{e.label}{#if e.badge}<span class="badge">{e.badge}</span>{/if}</b
+          >
+          <small>{e.desc}</small>
+        </span>
+      </button>
+    {/each}
     {#if !sub}
-      <button class="btn primary big" onclick={() => (sub = true)} data-testid="menu-play"
-        >{t('title.play')}</button
-      >
-      <button class="btn" onclick={() => nav('editor')} data-testid="menu-editor">{t('title.editor')}</button>
-      <button class="btn" onclick={() => nav('replays')} data-testid="menu-replays"
-        >{t('title.replays')}</button
-      >
-      <button class="btn" onclick={() => nav('profile')}>{t('title.profile')}</button>
-      <button class="btn" onclick={() => nav('settings')} data-testid="menu-settings"
-        >{t('title.settings')}</button
-      >
-      <button class="btn" onclick={() => nav('about')}>{t('title.about')}</button>
-      <button class="btn ghost" onclick={() => bridge.quit()}>{t('title.quit')}</button>
-    {:else}
-      <button
-        class="btn primary big"
-        onclick={() => {
-          app.lobby.lan = false;
-          nav('lobby');
-        }}
-        data-testid="menu-solo">{t('title.solo')}</button
-      >
-      <button class="btn" onclick={() => nav('lan')} data-testid="menu-lan">{t('title.lan')}</button>
-      <button class="btn" onclick={() => nav('campaign')} data-testid="menu-campaign"
-        >{t('title.campaign')}</button
-      >
-      <button class="btn" onclick={() => startTutorial()} data-testid="menu-tutorial"
-        >{t('title.tutorial')}{#if !settings.game.tutorialDone}<span class="new">●</span>{/if}</button
-      >
-      <button class="btn" onclick={() => nav('load')}>{t('title.load')}</button>
-      <button class="btn ghost" onclick={() => (sub = false)}>← {t('common.back')}</button>
+      <button class="entry quit" onclick={() => bridge.quit()}>
+        <span class="ic"><Icon name="quit" size={18} /></span>
+        <span class="txt"><b>{t('title.quit')}</b></span>
+      </button>
     {/if}
   </nav>
   {#if update}
-    <div class="update glass" role="status" data-testid="update-banner">
+    <div class="update panel" role="status" data-testid="update-banner">
       {t('title.updateAvailable', { version: update.latest })}
       {#if update.url}<button class="btn small" onclick={() => bridge.openExternal(update!.url)}
           >{t('title.updateOpen')}</button
@@ -111,8 +204,14 @@
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(ellipse at 30% 50%, rgba(11, 18, 32, 0.15), rgba(11, 18, 32, 0.85) 75%),
-      linear-gradient(90deg, rgba(11, 18, 32, 0.75), rgba(11, 18, 32, 0.1) 45%, rgba(11, 18, 32, 0.6));
+      linear-gradient(
+        90deg,
+        rgba(10, 12, 16, 0.7),
+        rgba(10, 12, 16, 0.15) 40%,
+        rgba(10, 12, 16, 0.25) 60%,
+        rgba(10, 12, 16, 0.75)
+      ),
+      linear-gradient(0deg, rgba(10, 12, 16, 0.6), transparent 30%);
     pointer-events: none;
   }
   .brand {
@@ -127,33 +226,114 @@
     margin: 0.8rem 0 0;
     font-family: var(--title);
     font-style: italic;
-    color: var(--aurora);
+    color: var(--parchment);
+    opacity: 0.85;
     font-size: 1.25em;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
   }
   .menu {
     position: absolute;
-    right: 8vw;
+    right: 7vw;
     top: 50%;
     transform: translateY(-50%);
-    width: 300px;
-    padding: 1.2rem;
+    width: 380px;
+    padding: 8px;
     display: grid;
-    gap: 0.55rem;
+    gap: 2px;
   }
-  .menu .btn {
+  .menu header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px 10px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 4px;
+  }
+  .back {
+    background: none;
+    border: 0;
+    color: var(--muted);
+    cursor: pointer;
+    display: grid;
+    padding: 2px;
+  }
+  .back:hover {
+    color: var(--parchment);
+  }
+  .entry {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
     text-align: left;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--parchment);
+    cursor: pointer;
+  }
+  .entry:hover,
+  .entry:focus-visible {
+    background: var(--panel-3);
+    border-color: var(--line-strong);
+    outline: none;
+  }
+  .entry.primary {
+    background: rgba(209, 166, 74, 0.12);
+    border-color: rgba(209, 166, 74, 0.45);
+  }
+  .entry.primary .ic {
+    background: var(--brass);
+    color: #1b1408;
+  }
+  .entry.primary:hover {
+    background: rgba(209, 166, 74, 0.2);
+  }
+  .ic {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 4px;
+    background: var(--panel-3);
+    color: var(--parchment);
+  }
+  .txt {
+    display: grid;
+    gap: 1px;
+  }
+  .txt b {
+    font-weight: 600;
     font-size: 1.02em;
-    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .big {
-    font-size: 1.2em !important;
-    padding: 0.85em 1.1em;
+  .txt small {
+    color: var(--muted);
+    font-size: 0.84em;
+    line-height: 1.35;
   }
-  .new {
+  .badge {
+    font-size: 0.68em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     color: var(--brass);
-    margin-left: 0.5em;
-    font-size: 0.7em;
+    border: 1px solid rgba(209, 166, 74, 0.5);
+    border-radius: 3px;
+    padding: 0 5px;
+  }
+  .quit {
+    margin-top: 4px;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    padding-top: 12px;
+  }
+  .quit .ic {
+    background: none;
+    color: var(--muted);
   }
   footer {
     position: absolute;

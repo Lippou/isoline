@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../icons/Icon.svelte';
   import { hud } from '../stores/game.svelte';
   import { t, short, num } from '../i18n/i18n.svelte';
   import type { GameController } from '../game/controller';
@@ -41,7 +42,11 @@
   <h4>{t('stats.resources')}</h4>
   <div class="res">
     {#each [1, 2, 3, 4] as r (r)}
-      <span class="chip">◆ {t(`resource.${RESOURCE_KEYS[r]}`)} ×{L.resources[r - 1]}</span>
+      <span class="chip"
+        ><Icon name={(['gold', 'oil', 'uranium', 'fertile', 'metals'] as const)[r] ?? 'gold'} size={13} />{t(
+          `resource.${RESOURCE_KEYS[r]}`,
+        )} ×{L.resources[r - 1]}</span
+      >
     {/each}
   </div>
   <h4>{t('stats.timeline')}</h4>

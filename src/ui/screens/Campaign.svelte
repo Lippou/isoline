@@ -5,100 +5,208 @@
   import { profile } from '../stores/profile.svelte';
   import { startMission, startTutorial } from './launch';
   import { mapsBase } from '../bridge';
+  import Icon from '../icons/Icon.svelte';
 
   const unlocked = (k: number) => k === 0 || (profile.campaign[MISSIONS[k - 1]!.id] ?? 0) > 0;
+  const totalStars = $derived(MISSIONS.reduce((s, m) => s + (profile.campaign[m.id] ?? 0), 0));
+  let sel = $state(0);
+  const m = $derived(MISSIONS[sel]!);
 </script>
 
 <div class="camp" data-testid="campaign">
   <header>
-    <button class="btn ghost" onclick={() => go('play')}>← {t('common.back')}</button>
-    <h1>{t('campaign.title')}</h1>
-    <button class="btn" onclick={startTutorial}>{t('title.tutorial')}</button>
+    <button class="btn ghost" onclick={() => go('play')}
+      ><Icon name="back" size={16} />{t('common.back')}</button
+    >
+    <div class="htitle">
+      <h1>{t('campaign.title')}</h1>
+      <span class="hint">{t('campaign.intro')}</span>
+    </div>
+    <span class="chip big"><Icon name="star" size={14} />{totalStars} / {MISSIONS.length * 3}</span>
+    <button class="btn" onclick={startTutorial}><Icon name="help" size={15} />{t('title.tutorial')}</button>
   </header>
-  <p class="intro">{t('campaign.intro')}</p>
-  <ol class="missions">
-    {#each MISSIONS as m, k (m.id)}
-      {@const stars = profile.campaign[m.id] ?? 0}
-      <li class="glass" class:locked={!unlocked(k)}>
-        <img src="{mapsBase()}{m.mapId}.thumb.png" alt="" />
-        <div class="txt">
-          <span class="num mono">{k + 1}</span>
-          <h3>{t(`campaign.${m.id}.title`)}</h3>
-          <p>{t(`campaign.${m.id}.summary`)}</p>
-          <div class="stars">{'★'.repeat(stars)}{'☆'.repeat(3 - stars)}</div>
+
+  <div class="body">
+    <ol class="list panel">
+      {#each MISSIONS as mi, k (mi.id)}
+        {@const stars = profile.campaign[mi.id] ?? 0}
+        <li>
+          <button class="row" class:on={sel === k} class:locked={!unlocked(k)} onclick={() => (sel = k)}>
+            <span class="num mono">{k + 1}</span>
+            <span class="name">{t(`campaign.${mi.id}.title`)}</span>
+            {#if unlocked(k)}
+              <span class="stars"
+                >{#each [1, 2, 3] as s (s)}<span class:got={s <= stars}><Icon name="star" size={13} /></span
+                  >{/each}</span
+              >
+            {:else}
+              <span class="lock"><Icon name="lock" size={14} /></span>
+            {/if}
+          </button>
+        </li>
+      {/each}
+    </ol>
+
+    <section class="detail panel">
+      <img src="{mapsBase()}{m.mapId}.thumb.png" alt="" />
+      <div class="dtxt">
+        <span class="section-title">{t('campaign.missionN', { n: sel + 1 })}</span>
+        <h2>{t(`campaign.${m.id}.title`)}</h2>
+        <p class="brief">{t(`campaign.${m.id}.brief`)}</p>
+        <div class="objs">
+          <div><Icon name="target" size={15} /><b>{t('campaign.objective')}</b> {t(m.main.key)}</div>
+          <div class="bonus">
+            <Icon name="star" size={15} /><b>{t('campaign.bonusLabel')}</b>
+            {t(m.bonus.key)}
+          </div>
+          <div class="muted">
+            <Icon name="time" size={15} /><b>{t('campaign.parTime')}</b>
+            {Math.round(m.parTicks / 600)} min
+          </div>
         </div>
-        <button
-          class="btn primary"
-          disabled={!unlocked(k)}
-          onclick={() => startMission(m.id)}
-          data-testid="mission-{m.id}">{unlocked(k) ? t('campaign.play') : '🔒'}</button
-        >
-      </li>
-    {/each}
-  </ol>
+        <p class="hint">{t('campaign.starsRule')}</p>
+        <div class="act">
+          {#if unlocked(sel)}
+            <button class="btn primary" onclick={() => startMission(m.id)} data-testid="mission-{m.id}"
+              ><Icon name="play" size={16} />{t('campaign.play')}</button
+            >
+          {:else}
+            <span class="chip"><Icon name="lock" size={13} />{t('campaign.lockedHint')}</span>
+          {/if}
+        </div>
+      </div>
+    </section>
+  </div>
 </div>
 
 <style>
   .camp {
     position: fixed;
     inset: 0;
-    padding: 1.4rem 2rem;
-    overflow-y: auto;
-    background: radial-gradient(ellipse at 50% 0%, #1a2c4b, var(--abyss) 65%);
+    padding: 18px 22px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 14px;
+    background: var(--abyss);
   }
   header {
     display: flex;
-    gap: 1rem;
+    gap: 14px;
     align-items: center;
   }
-  header h1 {
+  .htitle {
     flex: 1;
+    display: grid;
   }
-  .intro {
-    color: var(--muted);
-    max-width: 70ch;
+  .chip.big {
+    font-size: 0.95em;
+    padding: 0.35em 0.7em;
+    color: var(--brass);
   }
-  .missions {
+  .body {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 14px;
+    min-height: 0;
+  }
+  .list {
     list-style: none;
-    padding: 0;
+    margin: 0;
+    padding: 6px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
-    gap: 1rem;
+    align-content: start;
+    gap: 2px;
   }
-  li {
+  .row {
+    width: 100%;
     display: grid;
-    grid-template-columns: 120px 1fr;
-    grid-template-rows: 1fr auto;
-    gap: 0.6rem 0.9rem;
-    padding: 0.9rem;
+    grid-template-columns: 26px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 10px;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--parchment);
+    text-align: left;
+    cursor: pointer;
   }
-  li.locked {
-    opacity: 0.5;
+  .row:hover {
+    background: var(--panel-2);
   }
-  img {
-    width: 120px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 8px;
-    grid-row: span 2;
+  .row.on {
+    background: var(--panel-3);
+    border-color: var(--line-strong);
+    box-shadow: inset 3px 0 0 var(--brass);
+  }
+  .row.locked {
+    color: var(--faint);
   }
   .num {
-    color: var(--aurora);
-  }
-  h3 {
-    margin: 0.1rem 0 0.2rem;
-  }
-  p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.88em;
+    color: var(--faint);
   }
   .stars {
-    color: var(--brass);
-    font-size: 1.2em;
-    margin-top: 0.3rem;
+    display: flex;
+    gap: 1px;
+    color: var(--line-strong);
   }
-  li .btn {
-    justify-self: end;
+  .got {
+    color: var(--brass);
+  }
+  .lock {
+    color: var(--faint);
+  }
+  .detail {
+    display: grid;
+    grid-template-columns: minmax(280px, 42%) 1fr;
+    gap: 20px;
+    padding: 18px;
+    align-items: start;
+  }
+  .detail img {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+  }
+  .dtxt {
+    display: grid;
+    gap: 10px;
+  }
+  .dtxt .section-title {
+    margin: 0;
+  }
+  .brief {
+    margin: 0;
+    line-height: 1.6;
+  }
+  .objs {
+    display: grid;
+    gap: 6px;
+    padding: 10px 12px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+  .objs div {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .objs b {
+    color: var(--muted);
+    font-weight: 600;
+    min-width: 110px;
+  }
+  .bonus {
+    color: var(--brass);
+  }
+  .muted {
+    color: var(--muted);
+  }
+  .act {
+    display: flex;
+    gap: 8px;
   }
 </style>

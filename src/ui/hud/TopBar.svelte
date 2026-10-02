@@ -4,6 +4,7 @@
   import { settings } from '../stores/settings.svelte';
   import { inkHex } from '../../render/colors';
   import { currentSession } from '../stores/app.svelte';
+  import Icon from '../icons/Icon.svelte';
 
   const shares = $derived.by(() => {
     const total = hud.world?.usefulLand ?? 1;
@@ -22,60 +23,83 @@
       if (p.id === hud.viewer) e.me = true;
       teams.set(key, e);
     }
-    return [...teams.values()].sort((a, b) => b.share - a.share).slice(0, 12);
+    return [...teams.values()].sort((a, b) => b.share - a.share).slice(0, 14);
   });
+  const myShare = $derived(shares.find((s) => s.me)?.share ?? 0);
 
   const elapsed = $derived(hud.world ? Math.max(0, hud.tick - hud.world.startTick) : 0);
   const spawnLeft = $derived(hud.world ? Math.max(0, hud.world.spawnEndTick - hud.tick) : 0);
   const mode = $derived(currentSession()?.config.mode ?? 'ffa');
   const threshold = $derived(hud.world?.threshold ?? 80);
+  const secs = (ticks: number) => Math.ceil(ticks / 10);
 </script>
 
 <header class="top">
-  <div class="bar glass" data-testid="territory-bar">
-    {#each shares as s (s.key)}
-      <div
-        class="seg"
-        class:me={s.me}
-        style="width:{Math.max(0.4, s.share * 100)}%; background:{s.color}"
-        title="{s.name} — {(s.share * 100).toFixed(1)}%"
-      ></div>
-    {/each}
-    <div class="goal" style="left:{threshold}%" title={t('hud.victoryAt', { pct: threshold })}></div>
-  </div>
-  <div class="info glass">
-    {#if hud.phase === 'spawn'}
-      <span class="spawn" data-testid="spawn-countdown"
-        >{t('hud.chooseSpawn')} · <b class="mono">{Math.ceil(spawnLeft / 10)}s</b></span
-      >
-    {:else}
-      <span class="mono clock" data-testid="clock">{clock(elapsed)}</span>
-      <span class="sep"></span>
-      <span>{t(`mode.${mode}`)}</span>
-      <span class="sep"></span>
-      <span title={t('hud.victoryThreshold')}>🎯 {threshold}%</span>
+  {#if hud.phase === 'spawn'}
+    <div class="spawn panel" data-testid="spawn-countdown">
+      <Icon name="pin" size={20} />
+      <div>
+        <b>{t('hud.chooseSpawn')}</b>
+        <span class="hint">{hud.viewer > 0 ? t('hud.spawnHelp') : t('hud.spawnWait')}</span>
+      </div>
+      <span class="mono left" data-tip={t('hud.spawnTimerTip')}>{secs(spawnLeft)} s</span>
+    </div>
+  {:else}
+    <div class="strip panel">
+      <span class="item mono clock" data-testid="clock" data-tip={t('hud.elapsed')}>
+        <Icon name="time" size={15} />{clock(elapsed)}
+      </span>
+      <span class="item">{t(`mode.${mode}`)}</span>
+      <span class="item goal-txt" data-tip={t('hud.victoryThresholdTip', { pct: threshold })}>
+        <Icon name="target" size={15} />
+        {#if threshold > 100}{t('hud.noVictory')}{:else}{t('hud.goal', {
+            pct: threshold,
+          })}{/if}
+        {#if hud.viewer > 0}<span class="mine mono"
+            >{t('hud.youHold', { pct: (myShare * 100).toFixed(1) })}</span
+          >{/if}
+      </span>
+    </div>
+    <div class="bar" data-testid="territory-bar" aria-hidden="true">
+      {#each shares as s (s.key)}
+        <div
+          class="seg"
+          class:me={s.me}
+          style="width:{Math.max(0.3, s.share * 100)}%; background:{s.color}"
+          title="{s.name} — {(s.share * 100).toFixed(1)} %"
+        ></div>
+      {/each}
+      {#if threshold <= 100}<div class="goal" style="left:{threshold}%"></div>{/if}
+    </div>
+    <div class="status">
       {#if (hud.world?.doomsday ?? -1) > 0}
-        <span class="chip warn">☢ {t('hud.doomsday', { pct: hud.world?.doomsday ?? 0 })}</span>
-      {/if}
-      {#if hud.world?.event}
-        <span class="chip event"
-          >{t(`worldEvent.${hud.world.event.id}.short`)} · {Math.ceil(
-            (hud.world.event.until - hud.tick) / 10,
-          )}s</span
+        <span class="chip warn"
+          ><Icon name="nuke" size={13} />{t('hud.doomsday', { pct: hud.world?.doomsday ?? 0 })}</span
         >
       {/if}
-      {#if (hud.world?.ceasefireUntil ?? 0) > hud.tick}<span class="chip good">🕊 {t('hud.ceasefire')}</span
+      {#if hud.world?.event}
+        <span class="chip" data-tip={t(`worldEvent.${hud.world.event.id}.desc`)}
+          ><Icon name="event" size={13} />{t(`worldEvent.${hud.world.event.id}.short`)} · {secs(
+            hud.world.event.until - hud.tick,
+          )} s</span
+        >
+      {/if}
+      {#if (hud.world?.ceasefireUntil ?? 0) > hud.tick}<span class="chip good"
+          ><Icon name="ceasefire" size={13} />{t('hud.ceasefire')}</span
         >{/if}
-      {#if (hud.world?.nukeBanUntil ?? 0) > hud.tick}<span class="chip warn">🚫☢ {t('hud.nukeBan')}</span
+      {#if (hud.world?.nukeBanUntil ?? 0) > hud.tick}<span class="chip warn"
+          ><Icon name="embargo" size={13} />{t('hud.nukeBan')}</span
         >{/if}
-      {#if hud.local && hud.local.immuneFor > 0}<span class="chip good"
-          >🛡 {t('hud.immune', { s: Math.ceil(hud.local.immuneFor / 10) })}</span
+      {#if hud.local && hud.local.immuneFor > 0}<span class="chip good" data-tip={t('hud.immuneTip')}
+          ><Icon name="immune" size={13} />{t('hud.immune', { s: secs(hud.local.immuneFor) })}</span
         >{/if}
-      {#if hud.local && hud.local.traitorFor > 0}<span class="chip bad">💔 {t('hud.traitor')}</span>{/if}
-    {/if}
-    {#if hud.paused}<span class="chip warn">⏸ {t('hud.paused')}</span>{/if}
-    {#if hud.desync}<span class="chip bad">{t('hud.resyncing')}</span>{/if}
-  </div>
+      {#if hud.local && hud.local.traitorFor > 0}<span class="chip bad" data-tip={t('hud.traitorTip')}
+          ><Icon name="traitor" size={13} />{t('hud.traitor')}</span
+        >{/if}
+      {#if hud.paused}<span class="chip warn"><Icon name="pause" size={13} />{t('hud.paused')}</span>{/if}
+      {#if hud.desync}<span class="chip bad"><Icon name="refresh" size={13} />{t('hud.resyncing')}</span>{/if}
+    </div>
+  {/if}
 </header>
 
 <style>
@@ -84,74 +108,92 @@
     top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    width: min(820px, 62vw);
+    width: min(760px, 56vw);
     display: grid;
-    gap: 6px;
+    justify-items: center;
+    gap: 5px;
     pointer-events: none;
     z-index: 5;
   }
+  .spawn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    pointer-events: auto;
+    color: var(--brass);
+  }
+  .spawn div {
+    display: grid;
+  }
+  .spawn b {
+    color: var(--parchment);
+    font-family: var(--title);
+    font-size: 1.05em;
+  }
+  .spawn .left {
+    font-size: 1.1em;
+    color: var(--muted);
+    padding-left: 12px;
+    border-left: 1px solid var(--line);
+  }
+  .strip {
+    display: flex;
+    align-items: stretch;
+    pointer-events: auto;
+    font-size: 0.9em;
+  }
+  .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    color: var(--muted);
+  }
+  .item + .item {
+    border-left: 1px solid var(--line);
+  }
+  .clock {
+    color: var(--parchment);
+    font-size: 1.05em;
+  }
+  .mine {
+    color: var(--parchment);
+    margin-left: 4px;
+  }
   .bar {
     position: relative;
-    height: 14px;
+    width: 100%;
+    height: 8px;
     display: flex;
+    background: rgba(13, 16, 21, 0.85);
+    border: 1px solid var(--line);
+    border-radius: 2px;
     overflow: hidden;
-    border-radius: 8px;
-    padding: 0;
     pointer-events: auto;
   }
   .seg {
     height: 100%;
-    opacity: 0.85;
     transition: width 0.6s ease;
   }
   .seg.me {
-    opacity: 1;
-    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.7);
+    box-shadow: inset 0 0 0 1px #fff;
   }
   .goal {
     position: absolute;
-    top: -2px;
-    bottom: -2px;
+    top: 0;
+    bottom: 0;
     width: 2px;
     background: var(--parchment);
-    box-shadow: 0 0 6px var(--parchment);
   }
-  .info {
-    justify-self: center;
+  .status {
     display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.32rem 0.9rem;
-    font-size: 0.86em;
-    pointer-events: auto;
     flex-wrap: wrap;
+    gap: 5px;
     justify-content: center;
+    pointer-events: auto;
   }
-  .clock {
-    font-size: 1.05em;
-    color: var(--parchment);
-  }
-  .sep {
-    width: 1px;
-    height: 12px;
-    background: var(--line);
-  }
-  .spawn b {
-    color: var(--aurora);
-  }
-  .chip.warn {
-    color: var(--brass);
-    border-color: rgba(242, 184, 75, 0.5);
-  }
-  .chip.bad {
-    color: var(--signal);
-    border-color: rgba(255, 90, 95, 0.5);
-  }
-  .chip.good {
-    color: var(--verdant);
-    border-color: rgba(123, 216, 143, 0.5);
-  }
-  .chip.event {
-    color: var(--aurora);
+  .status .chip {
+    background: var(--glass);
   }
 </style>

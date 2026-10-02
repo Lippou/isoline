@@ -1,18 +1,16 @@
 <script lang="ts">
-  import { go } from '../stores/app.svelte';
   import { t, num, short, date, clock } from '../i18n/i18n.svelte';
   import { profile, saveProfile, ACHIEVEMENTS, TITLES, unlockedTitles } from '../stores/profile.svelte';
+  import PageHeader from '../PageHeader.svelte';
+  import Icon from '../icons/Icon.svelte';
 
   const titles = $derived(unlockedTitles());
 </script>
 
 <div class="page" data-testid="profile">
-  <header>
-    <button class="btn ghost" onclick={() => go('title')}>← {t('common.back')}</button>
-    <h1>{t('title.profile')}</h1>
-  </header>
+  <PageHeader title={t('title.profile')} subtitle={t('profile.subtitle')} />
   <div class="cols">
-    <section class="glass">
+    <section class="panel">
       <label
         >{t('profile.name')}
         <input type="text" bind:value={profile.name} maxlength="24" onchange={saveProfile} /></label
@@ -21,7 +19,8 @@
         >{t('profile.title')}
         <select bind:value={profile.title} onchange={saveProfile}>
           {#each TITLES as ti (ti.id)}<option value={ti.id} disabled={!titles.includes(ti.id)}
-              >{t(`title.${ti.id}`)} {titles.includes(ti.id) ? '' : `(🔒 ${ti.need})`}</option
+              >{t(`title.${ti.id}`)}
+              {titles.includes(ti.id) ? '' : `(${t('profile.needAch', { n: ti.need })})`}</option
             >{/each}
         </select>
       </label>
@@ -51,12 +50,12 @@
           <li>
             <span class="mono">{k + 1}.</span> <b class="mono">{num(e.score)}</b> <span>{e.map}</span>
             <span class="muted">{t(`mode.${e.mode}`)} · {date(Date.parse(e.date))}</span>
-            {e.won ? '🏆' : ''}
+            {#if e.won}<span class="won"><Icon name="trophy" size={13} /></span>{/if}
           </li>
         {:else}<li class="muted">{t('profile.noScores')}</li>{/each}
       </ol>
     </section>
-    <section class="glass ach">
+    <section class="panel ach">
       <h3>
         {t('profile.achievements')}
         <span class="muted">{Object.keys(profile.achievements).length}/{ACHIEVEMENTS.length}</span>
@@ -65,7 +64,7 @@
         {#each ACHIEVEMENTS as a (a)}
           {@const got = profile.achievements[a]}
           <li class:got={!!got}>
-            <span class="medal">{got ? '🏆' : '◌'}</span>
+            <span class="medal"><Icon name={got ? 'trophy' : 'lock'} size={18} /></span>
             <div><b>{t(`achievement.${a}.name`)}</b><small>{t(`achievement.${a}.desc`)}</small></div>
           </li>
         {/each}
@@ -82,7 +81,7 @@
     display: grid;
     grid-template-rows: auto 1fr;
     gap: 1rem;
-    background: radial-gradient(ellipse at 30% 0%, #172947, var(--abyss) 60%);
+    background: var(--abyss);
   }
   header {
     display: flex;
@@ -142,12 +141,13 @@
     gap: 0.5rem;
     padding: 0.4rem 0.5rem;
     border: 1px solid var(--line);
-    border-radius: 8px;
-    opacity: 0.55;
+    border-radius: 4px;
+    background: var(--panel-2);
+    opacity: 0.6;
   }
   .ach li.got {
     opacity: 1;
-    border-color: rgba(242, 184, 75, 0.5);
+    border-color: rgba(209, 166, 74, 0.5);
   }
   .ach div {
     display: grid;
@@ -157,6 +157,10 @@
     font-size: 0.8em;
   }
   .medal {
-    font-size: 1.3em;
+    color: var(--faint);
+  }
+  .got .medal,
+  .won {
+    color: var(--brass);
   }
 </style>

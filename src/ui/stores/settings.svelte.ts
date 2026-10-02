@@ -57,7 +57,15 @@ export interface Settings {
     fullscreen: boolean;
     autoPerformance: boolean;
   };
-  audio: { master: number; music: number; sfx: number; ui: number; muteUnfocused: boolean };
+  audio: {
+    master: number;
+    music: number;
+    sfx: number;
+    ui: number;
+    voice: number;
+    voiceOn: boolean;
+    muteUnfocused: boolean;
+  };
   game: {
     confirmations: boolean;
     simpleMode: boolean;
@@ -88,7 +96,7 @@ export function defaultSettings(): Settings {
       fullscreen: false,
       autoPerformance: true,
     },
-    audio: { master: 0.8, music: 0.6, sfx: 0.8, ui: 0.6, muteUnfocused: true },
+    audio: { master: 0.8, music: 0.6, sfx: 0.8, ui: 0.6, voice: 0.9, voiceOn: true, muteUnfocused: true },
     game: {
       confirmations: true,
       simpleMode: false,
@@ -154,6 +162,13 @@ export function keyLabel(code: string): string {
   if (!code) return '—';
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Digit')) return code.slice(5);
-  const map: Record<string, string> = { Space: '␣', Equal: '+', Minus: '−', Enter: '↵', Escape: 'Esc' };
+  const fr = i18n.lang === 'fr';
+  const map: Record<string, string> = {
+    Space: fr ? 'Espace' : 'Space',
+    Equal: '+',
+    Minus: '−',
+    Enter: fr ? 'Entrée' : 'Enter',
+    Escape: fr ? 'Échap' : 'Esc',
+  };
   return map[code] ?? code;
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../icons/Icon.svelte';
   import { hud } from '../stores/game.svelte';
   import { t, i18n } from '../i18n/i18n.svelte';
   import type { GameController } from '../game/controller';
@@ -13,7 +14,7 @@
         class="alert"
         onclick={() => ctl.renderer.camera.goTo(a.tx, a.ty, Math.max(ctl.renderer.camera.zoom, 2))}
       >
-        <span class="icon">☢</span>
+        <span class="icon"><Icon name="nuke" size={18} /></span>
         <span>{t(`nuke.${names[a.kind]}.name`)} — {ctl.session.state.name(a.by, i18n.lang)}</span>
         <b class="mono">{Math.max(0, (a.impact - hud.tick) / 10).toFixed(1)} s</b>
       </button>

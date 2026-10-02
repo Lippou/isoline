@@ -8,7 +8,7 @@ import { t, i18n } from '../i18n/i18n.svelte';
 import { mapsBase, bridge, writeJson } from '../bridge';
 import { app, setSession, type LaunchRequest } from '../stores/app.svelte';
 import type { GameEvent } from '../../core/game/events';
-import { B, N } from '../../core/game/constants';
+import { portRange, B, N } from '../../core/game/constants';
 import { audio } from '../../audio/audio';
 import { recordGameEnd } from '../stores/profile.svelte';
 import { takeSnapshotSave } from './saves';
@@ -192,6 +192,12 @@ export class GameController {
     } else audio.ui('click');
   }
 
+  toggleLoyaltyView(): void {
+    hud.views.loyalty = !hud.views.loyalty;
+    this.session.sim.setLayers(hud.views.loyalty);
+    if (hud.views.loyalty) toast(t('hud.loyaltyHint'), 'info');
+  }
+
   private key(action: string, e: KeyboardEvent): void {
     const s = this.session;
     const hover = hud.hover?.tile ?? -1;
@@ -248,9 +254,7 @@ export class GameController {
         hud.views.resources = !hud.views.resources;
         break;
       case 'loyaltyView':
-        hud.views.loyalty = !hud.views.loyalty;
-        this.session.sim.setLayers(hud.views.loyalty);
-        if (hud.views.loyalty) toast(t('hud.loyaltyHint'), 'info');
+        this.toggleLoyaltyView();
         break;
       case 'home':
         this.home();
@@ -272,6 +276,11 @@ export class GameController {
         break;
     }
     void e;
+  }
+
+  /** Campaign: the player closed the briefing. */
+  beginMission(): void {
+    this.director?.begin();
   }
 
   togglePause(): void {
@@ -375,20 +384,38 @@ export class GameController {
     } else if (hover >= 0 && tool.k === 'nuke') {
       ov.nukeTarget = { tile: hover, kind: tool.kind };
     }
-    if (
-      hud.hover?.building &&
-      (hud.hover.building.type === B.Sam ||
-        hud.hover.building.type === B.DefensePost ||
-        hud.hover.building.type === B.Radar)
-    ) {
+    // Radius of action: hovered building, building being placed, or all own ports for the warship tool.
+    const rangeOf = (type: number, level: number): number =>
+      type === B.Sam
+        ? 150 - 480 / (level + 5)
+        : type === B.DefensePost
+          ? 30
+          : type === B.Radar
+            ? 60 + 20 * (level - 1)
+            : type === B.Port
+              ? portRange(level)
+              : 0;
+    const colorOf = (type: number) => (type === B.Sam ? 0x7fa9d6 : type === B.Port ? 0x6fb6c9 : 0xd1a64a);
+    if (hud.hover?.building) {
       const b = hud.hover.building;
-      const r = b.type === B.Sam ? 150 - 480 / (b.level + 5) : b.type === B.DefensePost ? 30 : 60;
-      ov.ranges.push({
-        x: hud.hover.x + 0.5,
-        y: hud.hover.y + 0.5,
-        r,
-        color: b.type === B.Sam ? 0x4fe3c1 : 0xf2b84b,
-      });
+      const r = rangeOf(b.type, b.level);
+      if (r > 0) ov.ranges.push({ x: hud.hover.x + 0.5, y: hud.hover.y + 0.5, r, color: colorOf(b.type) });
+    }
+    if (hover >= 0 && tool.k === 'build') {
+      const r = rangeOf(tool.kind, 1);
+      const w = this.session.state.width;
+      if (r > 0)
+        ov.ranges.push({
+          x: (hover % w) + 0.5,
+          y: Math.floor(hover / w) + 0.5,
+          r,
+          color: colorOf(tool.kind),
+        });
+    }
+    if (tool.k === 'warship') {
+      for (const b of this.session.state.buildings)
+        if (b.type === B.Port && b.owner === this.session.viewer && b.ready)
+          ov.ranges.push({ x: b.x + 0.5, y: b.y + 0.5, r: portRange(b.level), color: colorOf(B.Port) });
     }
     ov.highlightPlayer =
       hud.hover && hud.hover.owner > 0 && this.renderer.camera.zoom < 6 ? hud.hover.owner : -1;

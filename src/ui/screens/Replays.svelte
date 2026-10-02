@@ -1,6 +1,7 @@
 <script lang="ts">
+  import PageHeader from '../PageHeader.svelte';
+  import Icon from '../icons/Icon.svelte';
   import { onMount } from 'svelte';
-  import { go } from '../stores/app.svelte';
   import { t, date, clock } from '../i18n/i18n.svelte';
   import { bridge, readText } from '../bridge';
   import { parseReplay, type ReplayFile } from '../../engine/replay';
@@ -57,60 +58,99 @@
 </script>
 
 <div class="rep" data-testid="replays">
-  <header>
-    <button class="btn ghost" onclick={() => go('title')}>← {t('common.back')}</button>
-    <h1>{t('title.replays')}</h1>
-    <button class="btn" onclick={importFile}>{t('replay.import')}</button>
-  </header>
-  <ul>
-    {#each files as f (f.name)}
-      {@const m = meta[f.name]}
-      <li class="glass">
-        <span class="name">{m ? `${m.map} · ${m.winner}` : f.name}</span>
-        <span class="mono">{m ? clock(m.durationTicks) : ''}</span>
-        <span class="muted">{m ? date(Date.parse(m.date)) : ''}</span>
-        <button class="btn primary" onclick={() => open(f.name)} data-testid="replay-open"
-          >▶ {t('replay.watch')}</button
-        >
-        <button class="btn" onclick={() => exportFile(f.name)}>⤓</button>
-        <button class="btn danger" onclick={() => del(f.name)}>🗑</button>
-      </li>
-    {:else}
-      <li class="muted">{t('replay.none')}</li>
-    {/each}
-  </ul>
+  <PageHeader title={t('title.replays')} subtitle={t('replay.subtitle')}>
+    {#snippet actions()}
+      <button class="btn" onclick={importFile}><Icon name="upload" size={15} />{t('replay.import')}</button>
+    {/snippet}
+  </PageHeader>
+  <section class="panel table">
+    <div class="thead">
+      <span>{t('replay.colMap')}</span><span>{t('replay.colWinner')}</span><span
+        >{t('replay.colDuration')}</span
+      ><span>{t('replay.colDate')}</span><span></span>
+    </div>
+    <ul class="scroll">
+      {#each files as f (f.name)}
+        {@const m = meta[f.name]}
+        <li>
+          <span class="name">{m ? m.map : f.name}</span>
+          <span>{m ? m.winner : '—'}</span>
+          <span class="mono">{m ? clock(m.durationTicks) : ''}</span>
+          <span class="muted">{m ? date(Date.parse(m.date)) : ''}</span>
+          <span class="acts">
+            <button class="btn primary small" onclick={() => open(f.name)} data-testid="replay-open"
+              ><Icon name="play" size={13} />{t('replay.watch')}</button
+            >
+            <button
+              class="btn small"
+              onclick={() => exportFile(f.name)}
+              aria-label={t('replay.export')}
+              data-tip={t('replay.export')}><Icon name="download" size={14} /></button
+            >
+            <button
+              class="btn small danger"
+              onclick={() => del(f.name)}
+              aria-label={t('common.delete')}
+              data-tip={t('common.delete')}><Icon name="trash" size={14} /></button
+            >
+          </span>
+        </li>
+      {:else}
+        <li class="empty muted">{t('replay.none')}</li>
+      {/each}
+    </ul>
+  </section>
 </div>
 
 <style>
   .rep {
     position: fixed;
     inset: 0;
-    padding: 1.4rem 2rem;
-    overflow-y: auto;
-    background: radial-gradient(ellipse at 30% 0%, #172947, var(--abyss) 60%);
+    padding: 18px 22px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    background: var(--abyss);
   }
-  header {
-    display: flex;
-    gap: 1rem;
+  .table {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-height: 0;
+    max-width: 1100px;
+    width: 100%;
+    justify-self: center;
+  }
+  .thead,
+  li {
+    display: grid;
+    grid-template-columns: 1.4fr 1.2fr 6em 12em auto;
+    gap: 12px;
     align-items: center;
-    margin-bottom: 1rem;
+    padding: 9px 14px;
   }
-  header h1 {
-    flex: 1;
+  .thead {
+    font-size: 0.74em;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--faint);
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
   }
   ul {
     list-style: none;
+    margin: 0;
     padding: 0;
-    display: grid;
-    gap: 0.5rem;
-    max-width: 1000px;
+    min-height: 0;
   }
-  li {
-    display: grid;
-    grid-template-columns: 1fr 5em 12em auto auto auto;
-    gap: 0.7rem;
-    align-items: center;
-    padding: 0.6rem 0.9rem;
+  li + li {
+    border-top: 1px solid var(--line);
+  }
+  li:hover {
+    background: var(--panel-2);
+  }
+  .empty {
+    display: block;
+    padding: 30px;
+    text-align: center;
   }
   .muted {
     color: var(--faint);
@@ -119,5 +159,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 600;
+  }
+  .acts {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
   }
 </style>

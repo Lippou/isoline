@@ -187,3 +187,21 @@ export function flagDataUrl(seed: number, width = 48): string {
   }
   return u;
 }
+
+// Real national flags (flag-icons, MIT): bundled as URLs, 4:3 SVG.
+const REAL = import.meta.glob('../../node_modules/flag-icons/flags/4x3/*.svg', {
+  query: '?url',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+const REAL_BY_ISO = new Map<string, string>();
+for (const [k, url] of Object.entries(REAL)) REAL_BY_ISO.set(k.slice(k.lastIndexOf('/') + 1, -4), url);
+
+/** Flag image for a player: the real flag of a real country, else its generated emblem. */
+export function flagUrl(p: { flagSeed: number; iso?: string }, width = 48): string {
+  if (p.iso) {
+    const url = REAL_BY_ISO.get(p.iso);
+    if (url) return url;
+  }
+  return flagDataUrl(p.flagSeed, width);
+}

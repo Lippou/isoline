@@ -4,14 +4,22 @@
   import { settings, keyLabel } from '../stores/settings.svelte';
   import type { GameController } from '../game/controller';
   import { COUNCIL_OPTIONS } from '../../core/rules/features';
+  import Icon from '../icons/Icon.svelte';
+  import { flagUrl } from '../../render/flags';
   let { ctl }: { ctl: GameController } = $props();
   const s = ctl.session;
 </script>
 
 <div class="requests">
   {#each hud.local?.allyRequests ?? [] as from (from)}
-    <div class="req glass rise-in" data-testid="ally-request">
-      <span>🤝 {t('hud.allyRequestFrom', { name: s.state.name(from, i18n.lang) })}</span>
+    {@const pv = s.state.players.get(from)}
+    <div class="req panel rise-in" data-testid="ally-request">
+      {#if pv}<img class="flag" src={flagUrl(pv, 24)} alt="" />{/if}
+      <span class="txt"
+        ><Icon name="alliance" size={15} />{t('hud.allyRequestFrom', {
+          name: s.state.name(from, i18n.lang),
+        })}</span
+      >
       <button class="btn primary" onclick={() => s.cmd({ t: 'allyAnswer', target: from, accept: true })}
         >{t('common.accept')} <kbd>{keyLabel(settings.keys.allyAccept ?? '')}</kbd></button
       >
@@ -21,9 +29,9 @@
     </div>
   {/each}
   {#if hud.world?.council && hud.local?.alive}
-    <div class="req council glass rise-in" data-testid="council">
+    <div class="req council panel rise-in" data-testid="council">
       <div>
-        <b>🏛 {t('council.title')}</b>
+        <b><Icon name="council" size={15} /> {t('council.title')}</b>
         <small class="mono"
           >{Math.max(0, Math.ceil((hud.world.council.closes - hud.tick) / 10))} s · {hud.world.council.votes}
           {t('council.votes')}</small
@@ -63,6 +71,18 @@
   }
   .req .btn {
     padding: 0.3em 0.7em;
+  }
+  .flag {
+    width: 24px;
+    height: 18px;
+    object-fit: cover;
+    border: 1px solid #0006;
+  }
+  .txt {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
   }
   .council {
     display: grid;
