@@ -2,6 +2,9 @@
 // "arrival time"), terrain/defence/superiority-dependent losses.
 import type { Game } from '../game/state';
 import {
+  OVEREXTENSION,
+  FRONT_SPEED_PLAYER,
+  FRONT_SPEED_WILD,
   ATTACK_MIN_BUDGET,
   ATTACK_RATE,
   ATTACK_RATE_VS_PLAYER,
@@ -18,6 +21,7 @@ import {
 } from '../game/constants';
 import { IS_LAND, MAG, SPEED } from '../map/terrain';
 import { hash2 } from '../rng';
+import { addGold } from '../game/economy';
 
 export class Attack {
   readonly id: number;
@@ -273,6 +277,9 @@ export function conquestLoss(game: Game, a: Attack, tile: number): number {
   else loss *= 1 + INFERIORITY_PENALTY * (1 - ratio);
   if (T.debuffUntil > game.tick) loss *= TRAITOR_DEFENSE_MULT;
   loss *= 1 - game.bigEmpireMalus(T);
+  // Logistics: the larger the attacker's share of the world, the costlier its wars.
+  const A = game.players[a.attacker]!;
+  loss *= 1 + OVEREXTENSION * (A.usefulTiles / Math.max(1, game.usefulLand));
   loss *= game.eventDefenseMult(a.target);
   return loss;
 }
@@ -292,11 +299,13 @@ export function processAttacks(game: Game): void {
     if (p.debuffUntil > game.tick) speedMult *= TRAITOR_SPEED_MULT;
     if (p.blitzUntil > game.tick) speedMult *= 1.3;
     speedMult *= game.techSpeedMult(a.attacker);
-    a.clock += speedMult;
+    a.clock += speedMult * (T ? FRONT_SPEED_PLAYER : FRONT_SPEED_WILD);
     let budget =
       Math.max(ATTACK_MIN_BUDGET, ATTACK_RATE * Math.sqrt(a.troops)) *
       (T ? ATTACK_RATE_VS_PLAYER : 1) *
       speedMult;
+    let loot = 0;
+    let lootTile = 0;
     while (budget > 0 && a.frontierSize > 0 && a.peekPri() <= a.clock) {
       const tile = a.pop();
       if (owner[tile] !== a.target || !IS_LAND[map.terrain[tile]!] || game.isDead(tile)) continue;
@@ -325,10 +334,22 @@ export function processAttacks(game: Game): void {
         T.stats.troopsLost += kill;
         p.stats.enemiesKilled += kill;
       }
+      // Tribes hoard gold: each conquered tile yields its share of the treasury.
+      if (T && T.kind === 'tribe' && T.gold > 0) {
+        const share = T.gold / Math.max(1, T.tiles);
+        T.gold -= share;
+        addGold(p, share);
+        loot += share;
+        lootTile = tile;
+      }
       game.setOwner(tile, a.attacker);
       a.conquered++;
       budget -= tileCost(game, tile, a.target);
       enqueueNeighbors(game, a, tile);
+    }
+    if (loot >= 1) {
+      const w = map.width;
+      game.emit({ k: 'loot', x: lootTile % w, y: (lootTile / w) | 0, owner: p.id, amount: Math.round(loot) });
     }
     if (a.troops < 1 || a.frontierSize === 0) finishAttack(game, a);
   }

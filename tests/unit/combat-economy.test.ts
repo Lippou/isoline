@@ -17,16 +17,19 @@ const FIELD = [
 
 describe('spawn', () => {
   it('claims an 8-tile disc and grants immunity to humans', () => {
-    const g = testGame(asciiMap(FIELD, 6), 1, { spawnSeconds: 2 });
+    const g = testGame(asciiMap(FIELD, 6), 2, { spawnSeconds: 2 });
     g.step([cmd(1, { t: 'spawn', tile: g.map.idx(30, 20) })]);
     const p = g.players[1]!;
     expect(p.tiles).toBeGreaterThan(150);
     expect(p.tiles).toBeLessThan(230);
-    // Moving the spawn releases the previous disc.
+    // Moving the spawn releases the previous disc (player 2 has not chosen yet).
     g.step([cmd(1, { t: 'spawn', tile: g.map.idx(80, 20) })]);
     expect(g.owner[g.map.idx(30, 20)]).toBe(0);
     expect(g.owner[g.map.idx(80, 20)]).toBe(1);
-    while (g.phase === 'spawn') g.step([]);
+    expect(g.phase).toBe('spawn');
+    g.step([cmd(2, { t: 'spawn', tile: g.map.idx(30, 30) })]);
+    // Once every human has placed, the match starts at once (no waiting for the timer).
+    expect(g.phase).toBe('playing');
     expect(p.immuneUntil).toBe(g.tick - 1 + SPAWN_IMMUNITY_TICKS);
     expect(invariants(g)).toEqual([]);
   });
@@ -145,14 +148,14 @@ describe('economy', () => {
     expect(growthCurve(0.9)).toBeLessThan(growthCurve(0.6));
   });
 
-  it('cap = 100k + 250k per city level + territory bonus; gold accrues', () => {
+  it('cap = 100k + 150k per city level + territory bonus; gold accrues', () => {
     const g = testGame(asciiMap(FIELD, 6), 1);
     startWith(g, [[30, 20]]);
     const p = g.players[1]!;
     const base = populationCap(g, p);
     p.gold = 5_000_000;
     placeBuilding(g, p, B.City, g.map.idx(30, 20), true);
-    expect(populationCap(g, p) - base).toBeCloseTo(250_000, 0);
+    expect(populationCap(g, p) - base).toBeCloseTo(150_000, 0);
     const gold = p.gold;
     for (let k = 0; k < 10; k++) g.step([]);
     expect(p.gold - gold).toBeGreaterThan(900); // ≥ 1 000 gold/s base income
@@ -181,7 +184,9 @@ describe('buildings', () => {
     const p = g.players[1]!;
     expect(buildCost(g, p, B.City)).toBe(125_000);
     p.cityLevels = 3;
-    expect(buildCost(g, p, B.City)).toBe(1_000_000);
+    expect(buildCost(g, p, B.City)).toBe(Math.round(125_000 * 1.32 ** 3));
+    p.cityLevels = 20; // no price cap: gold cannot buy population exponentially
+    expect(buildCost(g, p, B.City)).toBeGreaterThan(30_000_000);
     p.cityLevels = 0;
     expect(buildCost(g, p, B.DefensePost)).toBe(50_000);
     p.buildingCount[B.DefensePost] = 9;
@@ -196,8 +201,8 @@ describe('buildings', () => {
     p.gold = 10_000_000;
     const f = placeBuilding(g, p, B.Factory, g.map.idx(40, 28))!;
     expect(f.buildLeft).toBe(20);
-    expect(buildCost(g, p, B.Port)).toBe(250_000);
-    expect(upgradeCost(g, p, f)).toBe(250_000);
+    expect(buildCost(g, p, B.Port)).toBe(Math.round(125_000 * 1.4));
+    expect(upgradeCost(g, p, f)).toBe(Math.round(125_000 * 1.4));
   });
 
   it('validates placement and refunds 25 % on demolition', () => {

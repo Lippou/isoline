@@ -71,6 +71,8 @@ export const hud = $state({
   selection: [] as number[],
   chat: [] as { from: number; text: string; channel: string; t: number }[],
   end: null as null | { stats: FinalStats; won: boolean; replaySaved: boolean },
+  /** The player chose "keep watching": results stay available but hidden. */
+  endHidden: false,
   spectating: false,
   councilOpen: false,
   subtitles: [] as { id: number; text: string; t: number }[],
@@ -117,6 +119,7 @@ export function resetHud(): void {
   hud.selection = [];
   hud.chat = [];
   hud.end = null;
+  hud.endHidden = false;
   hud.spectating = false;
   hud.replay = null;
   hud.objectives = [];

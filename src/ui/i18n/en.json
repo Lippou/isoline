@@ -329,7 +329,8 @@
       "mission": "Mission over",
       "none": "Game over"
     },
-    "winnerIs": "{name} wins"
+    "winnerIs": "{name} wins",
+    "showResults": "Show results"
   },
   "mode": {
     "ffa": "Free for all",

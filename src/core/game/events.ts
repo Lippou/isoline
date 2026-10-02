@@ -41,4 +41,5 @@ export type GameEvent =
   | { k: 'general'; player: number; ability: string; tile: number }
   | { k: 'trainPay'; x: number; y: number; owner: number; amount: number }
   | { k: 'tradePay'; x: number; y: number; owner: number; amount: number }
+  | { k: 'loot'; x: number; y: number; owner: number; amount: number }
   | { k: 'gameOver'; winner: number; team: number; reason: string };

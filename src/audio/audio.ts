@@ -2,6 +2,7 @@
 // synthesised sound effects. No sample files — everything is synthesised live.
 
 export type Sfx =
+  | 'coin'
   | 'conquest'
   | 'build'
   | 'siren'
@@ -464,6 +465,9 @@ class AudioEngine {
       case 'sunk':
         this.kick(t, out, 0.3 * vol);
         for (let k = 0; k < 4; k++) this.bell(ROOT - 12 + k * 3, t + 0.1 + k * 0.08, 0.25, out, 0.02 * vol);
+        break;
+      case 'coin':
+        for (let k = 0; k < 3; k++) this.bell(ROOT + 24 + k * 5, t + k * 0.05, 0.18, out, 0.03 * vol);
         break;
       case 'train':
         for (let k = 0; k < 4; k++)

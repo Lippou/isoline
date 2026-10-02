@@ -16,6 +16,8 @@ import {
   TERRITORY_K,
   TICKS_PER_SECOND,
   WORKER_INCOME,
+  TRIBE_INCOME,
+  TRIBE_MAX_TROOPS,
 } from './constants';
 import { resourceBonus } from '../rules/resources';
 import { techEconomy } from '../rules/tech';
@@ -23,7 +25,6 @@ import { techEconomy } from '../rules/tech';
 export function populationCap(game: Game, p: Player): number {
   const territory = TERRITORY_K * Math.pow(Math.max(0, p.usefulTiles), TERRITORY_EXP);
   let cap = POP_BASE + POP_PER_CITY_LEVEL * p.cityLevels + territory;
-  if (p.kind === 'tribe') cap *= 0.5;
   if (game.config.features.resources) cap *= 1 + resourceBonus(game, p).growth * 0.5;
   return cap;
 }
@@ -47,7 +48,8 @@ export function updateEconomy(game: Game): void {
     if (pop < cap) {
       growth = GROWTH_MAX * cap * growthCurve(p.troops / cap) * (1 - pop / cap);
       if (p.kind === 'nation') growth *= diff.troops;
-      if (p.kind === 'tribe') growth *= 0.55;
+      // Tribes grow like a nation, then stop once they reach their troop ceiling.
+      if (p.kind === 'tribe' && p.troops >= TRIBE_MAX_TROOPS) growth = 0;
       if (game.config.features.resources) growth *= 1 + resourceBonus(game, p).growth;
       growth *= game.features.growthMult;
       growth = Math.min(growth, cap - pop);
@@ -84,7 +86,9 @@ export function updateEconomy(game: Game): void {
 
     // --- gold
     if (p.kind === 'tribe') {
-      p.income = 0;
+      // Tribes trade and hoard: their treasury is the prize for conquering them.
+      p.income = TRIBE_INCOME / TICKS_PER_SECOND;
+      p.gold = Math.min(MAX_GOLD, p.gold + p.income);
       continue;
     }
     const sanctioned = game.features.sanction && game.features.sanction.target === p.id ? 0.5 : 1;

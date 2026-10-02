@@ -66,12 +66,24 @@
     <Toasts {ctl} />
     {#if hud.replay}<ReplayBar {ctl} />{/if}
     {#if hud.panels.menu}<GameMenu {ctl} />{/if}
-    {#if hud.end}<EndScreen {ctl} />{/if}
+    {#if hud.end && !hud.endHidden}<EndScreen {ctl} />{/if}
+    {#if hud.end && hud.endHidden}
+      <button class="btn primary results" onclick={() => (hud.endHidden = false)} data-testid="end-reopen"
+        >{t('end.showResults')}</button
+      >
+    {/if}
     {#if hud.showPerf}<Perf {ctl} />{/if}
   {/if}
 </div>
 
 <style>
+  .results {
+    position: fixed;
+    top: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+  }
   .game {
     position: fixed;
     inset: 0;

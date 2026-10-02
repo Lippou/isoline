@@ -9,16 +9,20 @@ export const min = (m: number) => sec(m * 60);
 export const SPAWN_RADIUS = 8;
 export const SPAWN_IMMUNITY_TICKS = sec(60);
 export const START_TROOPS = { human: 25_000, nation: 25_000, tribe: 9_000 } as const;
-export const START_GOLD = { human: 0, nation: 0, tribe: 0 } as const;
+export const START_GOLD = { human: 0, nation: 0, tribe: 60_000 } as const;
+/** Tribes grow like nations up to this many troops, then stop. */
+export const TRIBE_MAX_TROOPS = 60_000;
+/** Gold a tribe adds to its treasury per second (looted tile by tile when conquered). */
+export const TRIBE_INCOME = 600;
 
 // ---------------------------------------------------------- population
 export const POP_BASE = 100_000;
-export const POP_PER_CITY_LEVEL = 250_000;
+export const POP_PER_CITY_LEVEL = 150_000;
 /** Territory bonus = TERRITORY_K × usefulTiles ^ TERRITORY_EXP (decreasing marginal value). */
 export const TERRITORY_K = 4_000;
-export const TERRITORY_EXP = 0.55;
+export const TERRITORY_EXP = 0.5;
 /** Growth per tick at the optimum, as a fraction of the cap. */
-export const GROWTH_MAX = 0.0036;
+export const GROWTH_MAX = 0.0024;
 /** Optimum troops/cap ratio (bell curve peak). */
 export const GROWTH_PEAK = 0.42;
 export const GROWTH_SIGMA_LOW = 0.34;
@@ -35,7 +39,7 @@ export const BIG_EMPIRE_SPAN = 400_000;
 
 // ------------------------------------------------------------------ gold
 export const BASE_INCOME = { human: 1_000, nation: 500, tribe: 0 } as const; // per second
-export const WORKER_INCOME = 0.012; // gold per worker per second
+export const WORKER_INCOME = 0.007; // gold per worker per second
 export const MAX_GOLD = 2_000_000_000;
 
 // ---------------------------------------------------------------- combat
@@ -43,20 +47,28 @@ export const DEFAULT_ATTACK_RATIO = 0.2;
 /** Troops lost per wilderness tile at mag 80. */
 export const WILD_LOSS = 12;
 /** Base loss per enemy tile at mag 80, plus density term. */
-export const ENEMY_LOSS_BASE = 20;
-export const ENEMY_LOSS_DENSITY = 1.6;
+export const ENEMY_LOSS_BASE = 30;
+export const ENEMY_LOSS_DENSITY = 2.4;
 /** Defender troops killed per lost tile, as a multiple of its density. */
-export const DEFENDER_LOSS_DENSITY = 0.8;
+export const DEFENDER_LOSS_DENSITY = 0.6;
 /** Conquest budget per tick = ATTACK_RATE × sqrt(troops) (× 0.4 against players). */
-export const ATTACK_RATE = 0.36;
-export const ATTACK_RATE_VS_PLAYER = 0.42;
+export const ATTACK_RATE = 0.28;
+export const ATTACK_RATE_VS_PLAYER = 0.3;
 export const ATTACK_MIN_BUDGET = 1.2;
 /** Numerical superiority: losses ×(1 − SUPERIORITY_GAIN × clamp(ratio − 1, 0, 1)). */
-export const SUPERIORITY_GAIN = 0.35;
+export const SUPERIORITY_GAIN = 0.2;
+/** Attacker losses vs players ×(1 + OVEREXTENSION × attacker's share of useful land). */
+export const OVEREXTENSION = 2.5;
 /** Inferiority: losses ×(1 + INFERIORITY_PENALTY × (1 − ratio)) when ratio < 1. */
 export const INFERIORITY_PENALTY = 0.5;
 export const CANCEL_PENALTY = 0.1;
 export const MAX_ATTACKS_PER_PLAYER = 12;
+/**
+ * Depth a front can advance per tick, in plains tiles: ≈ 5 tiles/s into the
+ * wilderness, 2 tiles/s against a defended country (wars take minutes, not seconds).
+ */
+export const FRONT_SPEED_WILD = 0.5;
+export const FRONT_SPEED_PLAYER = 0.2;
 
 // ----------------------------------------------------------- defence post
 export const DEFENSE_POST_RANGE = 30;
@@ -75,6 +87,10 @@ export const ALLIANCE_REQUEST_TTL = sec(20);
 export const INACTIVE_TICKS = sec(60);
 
 // -------------------------------------------------------------- buildings
+/** City price = base × growth^levels; ports and factories share their own ladder. */
+export const CITY_COST_BASE = 125_000;
+export const CITY_COST_GROWTH = 1.32;
+export const PORT_COST_GROWTH = 1.4;
 export const enum B {
   City = 0,
   Port = 1,

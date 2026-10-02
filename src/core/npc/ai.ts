@@ -16,6 +16,8 @@ import { populationCap } from '../game/economy';
 interface Mem {
   nextThink: number;
   lastAttack: number;
+  /** Last offensive against another player (wars are deliberate, not continuous). */
+  lastWar: number;
   lastBoat: number;
   lastBuild: number;
   lastNuke: number;
@@ -116,6 +118,15 @@ const TRAITS: Record<Personality, Traits> = {
 };
 
 const NB = new Int32Array(4);
+/** Nations think every 3–6 s (× difficulty): a measured, management-heavy pace. */
+const AI_THINK_MIN = 30;
+const AI_THINK_MAX = 60;
+/** Minimum delay between two expansion orders, and between two wars, in ticks. */
+const AI_EXPAND_COOLDOWN = 40;
+const AI_WAR_COOLDOWN = 300;
+const AI_BUILD_COOLDOWN = 120;
+/** Extra strength a nation wants over its target before declaring war. */
+const AI_STRENGTH_MARGIN = 1.4;
 
 function mem(game: Game, p: Player): Mem {
   let m = game.ai.mem.get(p.id);
@@ -123,6 +134,7 @@ function mem(game: Game, p: Player): Mem {
     m = {
       nextThink: game.tick + game.rng.int(0, 20),
       lastAttack: -1000,
+      lastWar: -1000,
       lastBoat: -1000,
       lastBuild: -1000,
       lastNuke: -10_000,
@@ -149,10 +161,10 @@ export function updateAI(game: Game): void {
     if (game.tick < m.nextThink) continue;
     if (p.kind === 'tribe') {
       budget -= thinkTribe(game, p, m);
-      m.nextThink = game.tick + game.rng.int(25, 45);
+      m.nextThink = game.tick + game.rng.int(40, 70);
     } else {
       budget -= thinkNation(game, p, m);
-      m.nextThink = game.tick + Math.round(game.rng.int(8, 16) * diff.think);
+      m.nextThink = game.tick + Math.round(game.rng.int(AI_THINK_MIN, AI_THINK_MAX) * diff.think);
     }
     game.ai.cursor = id;
   }
@@ -278,19 +290,22 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
 
   // 4. Expansion & offensive choice.
   const sinceAttack = game.tick - m.lastAttack;
-  const ready = p.troops > cap * (0.32 / Math.max(0.5, t.aggression * diff.aggression));
-  if (ready && sinceAttack > 20) {
+  const ready = p.troops > cap * (0.36 / Math.max(0.5, t.aggression * diff.aggression));
+  // Offensives against players are spaced out (20–40 s, shorter for aggressive nations).
+  const warCooldown = AI_WAR_COOLDOWN / Math.max(0.5, t.aggression * diff.aggression);
+  if (ready && sinceAttack > AI_EXPAND_COOLDOWN) {
     if (nb.has(0) && !hasAttack(game, p, 0)) {
       applyCommand(game, p.id, { t: 'attack', tile: nb.get(0)!.tile, ratio: 0.25 + 0.1 * t.aggression });
       m.lastAttack = game.tick;
     } else {
-      const target = pickTarget(game, p, nb, m, t);
+      const target = game.tick - m.lastWar > warCooldown ? pickTarget(game, p, nb, m, t) : null;
       if (target) {
         const q = game.players[target.id]!;
-        const need = (q.troops * 1.3) / Math.max(1, p.troops);
-        const ratio = Math.max(0.15, Math.min(0.6, need)) * Math.min(1.3, t.aggression);
-        applyCommand(game, p.id, { t: 'attack', tile: target.tile, ratio: Math.min(0.7, ratio) });
+        const need = (q.troops * 1.1) / Math.max(1, p.troops);
+        const ratio = Math.max(0.12, Math.min(0.4, need)) * Math.min(1.2, t.aggression);
+        applyCommand(game, p.id, { t: 'attack', tile: target.tile, ratio: Math.min(0.45, ratio) });
         m.lastAttack = game.tick;
+        if (q.kind !== 'tribe') m.lastWar = game.tick;
       } else if (nb.size === 0 || (nb.size === 1 && nb.has(0) === false && game.rng.chance(0.3))) {
         cost += tryBoat(game, p, m, t);
       }
@@ -300,7 +315,7 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
   }
 
   // 5. Economy: build things.
-  if (game.tick - m.lastBuild > 25 / t.build) cost += tryBuild(game, p, m, t, underAttack);
+  if (game.tick - m.lastBuild > AI_BUILD_COOLDOWN / t.build) cost += tryBuild(game, p, m, t, underAttack);
 
   // 6. Diplomacy.
   if (game.tick - m.lastDiplo > 80) {
@@ -358,7 +373,7 @@ function pickTarget(game: Game, p: Player, nb: Map<number, Neighbor>, m: Mem, t:
       if (!(game.rng.chance(diff.betrayal * 0.1 * t.aggression) && q.troops < p.troops * 0.35)) continue;
     }
     const strength = p.troops / Math.max(1, q.troops);
-    if (strength < t.attackFactor && q.kind !== 'tribe') continue;
+    if (strength < t.attackFactor * AI_STRENGTH_MARGIN && q.kind !== 'tribe') continue;
     let score = strength * n.contact;
     if (q.kind === 'tribe') score *= 2.5;
     if (q.kind === 'human') score *= 0.9 + 0.3 * diff.aggression;

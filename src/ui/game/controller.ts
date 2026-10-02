@@ -321,7 +321,10 @@ export class GameController {
         speed: this.session.replay.speed,
         paused: this.session.replay.paused,
       };
-    if (st.phase === 'ended' && !hud.end) void this.finish();
+    if (st.phase === 'ended' && !this.finished && !hud.end) {
+      this.finished = true;
+      void this.finish();
+    }
     // Music intensity from active fronts and alerts.
     const intensity = Math.min(
       1,
@@ -334,6 +337,8 @@ export class GameController {
   }
 
   private slowSeconds = 0;
+  private lastCoin = 0;
+  private finished = false;
 
   private frame(dt: number): void {
     this.hudTimer += dt;
@@ -480,6 +485,12 @@ export class GameController {
         break;
       case 'trainPay':
         if (e.owner === me) audio.sfx('train', 0.25);
+        break;
+      case 'loot':
+        if (e.owner === me && performance.now() - this.lastCoin > 350) {
+          this.lastCoin = performance.now();
+          audio.sfx('coin', 0.7);
+        }
         break;
       case 'quick':
         if (e.to === me || e.to === -1)

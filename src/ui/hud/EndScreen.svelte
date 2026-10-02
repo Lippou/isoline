@@ -137,7 +137,7 @@
       {#if end.replaySaved}<span class="chip">💾 {t('end.replaySaved')}</span>{/if}
       <button class="btn" onclick={csv}>{t('end.exportCsv')}</button>
       <button class="btn" onclick={replay}>{t('end.watchReplay')}</button>
-      <button class="btn" onclick={() => (hud.end = null)} data-testid="end-spectate"
+      <button class="btn" onclick={() => (hud.endHidden = true)} data-testid="end-spectate"
         >{t('end.keepWatching')}</button
       >
       {#if mission < 0 && ctl.session.kind === 'solo'}<button class="btn" onclick={again}

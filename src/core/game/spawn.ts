@@ -68,6 +68,7 @@ export function setupPlayers(game: Game): void {
     p.color = -1;
     p.flagSeed = rng.nextU32();
     p.troops = START_TROOPS.tribe;
+    p.gold = START_GOLD.tribe;
     claimDisc(game, p, tile, SPAWN_RADIUS - 3);
     tribes++;
   }
@@ -143,7 +144,11 @@ export function handleSpawnCommand(game: Game, p: Player, tile: number): void {
 }
 
 export function updateSpawnPhase(game: Game): void {
-  if (game.tick < game.spawnEndTick) return;
+  // The match starts as soon as every human has placed their capital
+  // (the timer only bounds how long a hesitant player can take).
+  const humans = game.players.filter((p) => p && p.kind === 'human');
+  const allPlaced = humans.length > 0 && humans.every((p) => p!.spawned);
+  if (game.tick < game.spawnEndTick && !allPlaced) return;
   // Humans who did not choose get a random spawn point.
   for (const p of game.players) {
     if (!p || p.kind !== 'human' || p.spawned) continue;

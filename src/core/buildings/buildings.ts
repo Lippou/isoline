@@ -2,6 +2,9 @@
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import {
+  CITY_COST_BASE,
+  CITY_COST_GROWTH,
+  PORT_COST_GROWTH,
   B,
   BUILD_TICKS,
   DEMOLISH_REFUND,
@@ -22,10 +25,10 @@ function rawCost(game: Game, p: Player, type: B): number {
   const c = p.buildingCount;
   switch (type) {
     case B.City:
-      return Math.min(1_000_000, 125_000 * Math.pow(2, p.cityLevels));
+      return cityCost(p.cityLevels);
     case B.Port:
     case B.Factory:
-      return Math.min(1_000_000, 125_000 * Math.pow(2, portFactoryLevels(game, p)));
+      return portFactoryCost(portFactoryLevels(game, p));
     case B.DefensePost:
       return Math.min(250_000, 50_000 * (c[B.DefensePost]! + 1));
     case B.Silo:
@@ -39,6 +42,18 @@ function rawCost(game: Game, p: Player, type: B): number {
     default:
       return 1e12;
   }
+}
+
+/**
+ * Cities and ports/factories get steadily more expensive (no cap): gold buys
+ * population, so a capped price would make the economy grow exponentially.
+ */
+export function cityCost(levels: number): number {
+  return Math.round(CITY_COST_BASE * Math.pow(CITY_COST_GROWTH, levels));
+}
+
+export function portFactoryCost(levels: number): number {
+  return Math.round(CITY_COST_BASE * Math.pow(PORT_COST_GROWTH, levels));
 }
 
 function portFactoryLevels(game: Game, p: Player): number {
@@ -63,11 +78,11 @@ export function upgradeCost(game: Game, p: Player, b: Building): number {
   let raw: number;
   switch (b.type) {
     case B.City:
-      raw = Math.min(1_000_000, 125_000 * Math.pow(2, p.cityLevels));
+      raw = cityCost(p.cityLevels);
       break;
     case B.Port:
     case B.Factory:
-      raw = Math.min(1_000_000, 125_000 * Math.pow(2, portFactoryLevels(game, p)));
+      raw = portFactoryCost(portFactoryLevels(game, p));
       break;
     case B.Silo:
       raw = 1_000_000;

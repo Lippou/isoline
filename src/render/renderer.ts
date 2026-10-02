@@ -844,7 +844,8 @@ export class GameRenderer {
         }
         case 'trainPay':
         case 'tradePay':
-          if (e.owner === this.state.viewer && this.camera.zoom > 1.5) {
+        case 'loot':
+          if (e.owner === this.state.viewer && this.camera.zoom > (e.k === 'loot' ? 0.6 : 1.5)) {
             const text = new BitmapText({
               text: `+${formatShort(e.amount)}`,
               style: { fontFamily: '"IBM Plex Mono", monospace', fontSize: 40, fill: 0xffffff },

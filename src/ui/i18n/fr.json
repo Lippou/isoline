@@ -329,7 +329,8 @@
       "mission": "Fin de mission",
       "none": "Partie terminée"
     },
-    "winnerIs": "Victoire de {name}"
+    "winnerIs": "Victoire de {name}",
+    "showResults": "Voir les résultats"
   },
   "mode": {
     "ffa": "Chacun pour soi",
