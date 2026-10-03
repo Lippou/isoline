@@ -161,6 +161,8 @@
     top: 64px;
     max-height: calc(100vh - 64px - var(--hud-res-h, 270px) - 24px);
     overflow-y: auto;
+    /* An explanation (tooltip) wider than the column never adds a scrollbar under the pointer. */
+    overflow-x: hidden;
     scrollbar-width: none;
     display: grid;
     align-content: start;

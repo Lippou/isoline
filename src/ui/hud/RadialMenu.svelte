@@ -586,6 +586,7 @@
     width: 280px;
     max-height: 70vh;
     overflow-y: auto;
+    overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: var(--np-rule-2) transparent;
   }

@@ -206,6 +206,7 @@
     ul {
       max-height: 168px;
       overflow-y: auto;
+      overflow-x: hidden;
       scrollbar-width: thin;
       scrollbar-color: var(--np-rule-2) transparent;
     }

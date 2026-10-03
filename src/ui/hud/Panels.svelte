@@ -131,6 +131,7 @@
     pointer-events: auto;
     max-height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
     scrollbar-width: none;
   }
   .rail button {

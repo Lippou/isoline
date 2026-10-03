@@ -266,6 +266,7 @@
     gap: 0;
     max-height: min(300px, 40vh);
     overflow-y: auto;
+    overflow-x: hidden;
     border-top: 1px solid var(--np-rule);
   }
   .who button {
@@ -291,7 +292,11 @@
   }
   .who button.on .num,
   .who button.on .chip {
-    color: color-mix(in srgb, var(--np-paper) 80%, transparent);
+    color: color-mix(in srgb, var(--np-paper) 85%, transparent);
+  }
+  .who button.on .chip {
+    background: transparent;
+    border-color: color-mix(in srgb, var(--np-paper) 45%, transparent);
   }
   .who img {
     width: 24px;

@@ -471,6 +471,7 @@
     gap: 2px;
     max-height: 120px;
     overflow-y: auto;
+    overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: var(--np-rule-2) transparent;
   }
