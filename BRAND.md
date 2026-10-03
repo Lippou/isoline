@@ -79,22 +79,46 @@ pendant les transitions et ondulent pendant les chargements. Ce motif, qui donne
 qu'un rôle de signature. Tout le reste reste calme : pas de dégradés décoratifs, pas d'ombres
 partout, pas d'animation gratuite.
 
-### 4.1 Deux thèmes, une même encre
+### 4.1 Un seul papier : le Courrier (1.8.0)
+
+Depuis la 1.8.0, tout le jeu est **imprimé sur le papier du Courrier des Isolignes**, le journal du
+jeu : écrans de menu, fenêtres, dialogues, et l'interface de partie elle-même (barres, classement,
+minimap, cartes, dépêches). L'ancien thème « encre » sombre de l'interface de jeu et le papier
+blanc froid des menus (§4.1 de la 1.2, ci-dessous en historique) sont abandonnés à la demande du
+joueur (« tout doit être comme la DA »). Seule la carte garde ses couleurs.
+
+| Rôle | Jeton | Valeur |
+|---|---|---|
+| Papier | `--np-paper` / `--np-paper-2` | `#F1ECE2` / `#E6DFD1` |
+| Carte (encadrés, champs) | `--np-card` | `#F8F4EC` |
+| Encre (texte, filets épais, boutons principaux) | `--np-ink` | `#172A3C` |
+| Texte secondaire | `--np-ink-2` / `--np-ink-3` | `#46535F` / `#5C636A` |
+| Filets fins | `--np-rule` / `--np-rule-2` | `#BDB4A2` / `#A89E8A` |
+| Or (laiton) | `--np-gold` | `#B8862A` |
+| Danger, nucléaire, guerre | `--np-spot` (magenta) | `#B3245F` |
+| Alliance, réussite | `--np-good` | `#276B48` |
+| Avertissement | `--np-warn` | `#8F5C0E` |
+| Mer, recherche | `--np-sea` | `#2C6E91` |
+
+**Pièces communes** : le bandeau (`PaperMast.svelte` : titre Fraunces centré sur un filet épais,
+ligne de date entre deux filets fins), les pièces de `src/ui/hud/paper.css` (`np-*` : sections,
+ordres écrits en toutes lettres, boutons, champs, étiquettes) et `src/ui/hud/hud.css` (classe
+`np-hud` posée sur l'écran de jeu, qui ramène les anciens jetons sombres aux encres du papier).
+Sur la carte, chaque pièce est une feuille de papier cernée d'un filet d'encre et d'une ombre
+courte, lisible sur n'importe quelle couleur de terrain. Les notifications sont des **dépêches**
+datées en colonne sur le bord droit, jamais au milieu de l'écran. Les photos de presse des
+événements mondiaux sont imprimées en bichromie encre/papier (le rouge gardé en magenta là où il
+raconte l'histoire). Le survol ne déplace jamais la mise en page.
+
+#### Historique : deux thèmes de la 1.2
 
 | Rôle | Menus (thème « carte », clair) | Jeu (thème « encre », sombre, lisible sur la carte) |
 |---|---|---|
 | Fond | Papier `#EEF3F2` | Encre profonde `#0C1A26` |
 | Panneaux | `#FAFCFB` / `#E8F0F0` / `#DCE8EA` | `#0E1D2A` / `#142636` / `#1B3044` |
-| Filets | `#C9D8DC` / `#9DB4BC` | `#253D52` / `#3A5770` |
 | Texte | Encre marine `#16324A` | Papier `#EEF3F2` |
-| Texte secondaire | `#4B6478` / `#7D93A2` | `#9FB3C2` / `#6B8394` |
-| Sélection, focus | Brasse `#2C6E91` | Haut-fond `#6FB3D8` |
 | Or, action principale | Laiton `#B8862A` | Laiton `#D6A53F` |
 | Danger, nucléaire, guerre | Magenta `#B3245F` | Magenta `#E0456F` |
-| Succès, alliance | Vert sonde `#2F7D55` | `#5BC98A` |
-
-Les jetons CSS gardent leurs noms historiques (`--parchment` est la couleur du texte, `--aurora`
-celle de la sélection). Le thème « carte » s'applique à tous les écrans hors partie (classe `chart`).
 
 ### 4.2 Règles
 
