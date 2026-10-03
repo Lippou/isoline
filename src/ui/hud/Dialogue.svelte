@@ -7,16 +7,33 @@
   // column of cards and the offers never cover it.
   import Icon from '../icons/Icon.svelte';
   import { hud } from '../stores/game.svelte';
-  import { t, short } from '../i18n/i18n.svelte';
+  import { t, short, i18n } from '../i18n/i18n.svelte';
   import type { GameController } from '../game/controller';
   import { audio } from '../../audio/audio';
   import { reserveBottom } from '../stores/windows.svelte';
   import { hudBox } from '../stores/hudBox.svelte';
   import { settings } from '../stores/settings.svelte';
   import { researchIdle } from './research';
+  import Masthead from './Masthead.svelte';
+  import './paper.css';
+  import { app } from '../stores/app.svelte';
+  import { MISSIONS } from '../campaign/missions';
 
   let { ctl }: { ctl: GameController } = $props();
   let collapsed = $state(false);
+
+  // The briefing's masthead: the map, the mission's number in the campaign, today's date.
+  const mapName = $derived.by(() => {
+    const n = ctl.session.state.meta?.name;
+    return n ? n[i18n.lang] || n.en : ctl.session.config.mapId;
+  });
+  const mission = $derived.by(() => {
+    const k = MISSIONS.findIndex((m) => m.id === app.launch?.missionId);
+    return k < 0 ? null : { n: k + 1, total: MISSIONS.length };
+  });
+  const day = $derived(
+    new Intl.DateTimeFormat(i18n.lang === 'fr' ? 'fr-FR' : 'en-GB', { dateStyle: 'full' }).format(new Date()),
+  );
 
   const reached = $derived(hud.objectives.filter((o) => o.done).length);
 
@@ -147,33 +164,55 @@
 {/if}
 
 {#if hud.briefing}
-  <div class="brief-veil fade-in">
-    <section class="brief panel rise-in" data-testid="briefing" role="dialog" aria-modal="true">
-      <header>
-        <span class="section-title"><Icon name="book" size={14} />{t('campaign.briefing')}</span>
-        <h2>{hud.briefing.title}</h2>
-      </header>
-      <p class="text">{hud.briefing.text}</p>
-      <div class="cols">
-        <div>
-          <h4 class="section-title"><Icon name="target" size={14} />{t('campaign.objectives')}</h4>
-          <ul>
-            {#each hud.briefing.objectives as o (o)}<li><Icon name="dot" size={12} />{o}</li>{/each}
-            {#if hud.briefing.bonus}<li class="bonus">
-                <Icon name="star" size={13} />{hud.briefing.bonus}
-              </li>{/if}
-          </ul>
-        </div>
-        <div>
-          <h4 class="section-title"><Icon name="info" size={14} />{t('campaign.tips')}</h4>
-          <ul>
-            {#each hud.briefing.tips as tip (tip)}<li><Icon name="next" size={12} />{tip}</li>{/each}
-          </ul>
+  <!-- The opening dispatch, printed by the Courier as its communiqué closes the mission. -->
+  <div class="np-veil fade-in brief-veil">
+    <section
+      class="brief newsprint np-sheet"
+      data-testid="briefing"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mb-title"
+    >
+      <div class="sheet scroll">
+        <Masthead
+          ear={t('campaign.briefing')}
+          date={day}
+          dateline={[
+            mapName,
+            mission ? t('campaign.missionOf', { n: mission.n, total: mission.total }) : t('mode.campaign'),
+            t('campaign.title'),
+          ]}
+        />
+        <h2 id="mb-title">{hud.briefing.title}</h2>
+        <blockquote class="word">
+          <p>{hud.briefing.text}</p>
+          <footer>— {t('campaign.advisor')}</footer>
+        </blockquote>
+        <div class="cols">
+          <section aria-labelledby="mb-objectives">
+            <h3 class="np-mark" id="mb-objectives">{t('campaign.objectives')}</h3>
+            <ul class="objectives">
+              {#each hud.briefing.objectives as o (o)}<li>
+                  <span class="mark" aria-hidden="true"></span>{o}
+                </li>{/each}
+              {#if hud.briefing.bonus}<li class="bonus">
+                  <span class="mark" aria-hidden="true"><Icon name="star" size={11} /></span><span
+                    ><span class="np-tag">{t('campaign.bonusLabel')}</span> {hud.briefing.bonus}</span
+                  >
+                </li>{/if}
+            </ul>
+          </section>
+          <section aria-labelledby="mb-tips">
+            <h3 class="np-mark" id="mb-tips">{t('campaign.tips')}</h3>
+            <ol class="tips">
+              {#each hud.briefing.tips as tip (tip)}<li>{tip}</li>{/each}
+            </ol>
+          </section>
         </div>
       </div>
-      <footer>
+      <footer class="foot">
         <span class="hint">{t('campaign.briefingHint')}</span>
-        <button class="btn primary" onclick={() => ctl.beginMission()} data-testid="briefing-start"
+        <button class="np-btn ink start" onclick={() => ctl.beginMission()} data-testid="briefing-start"
           ><Icon name="play" size={15} />{t('campaign.begin')}</button
         >
       </footer>
@@ -358,55 +397,146 @@
     gap: 4px;
   }
   .brief-veil {
-    position: absolute;
-    inset: 0;
     z-index: 60;
-    background: rgba(6, 8, 11, 0.6);
-    display: grid;
-    place-items: center;
   }
   .brief {
-    width: min(760px, 86vw);
-    padding: 22px 26px;
+    width: min(820px, calc(100vw - 48px));
+    max-height: calc(100vh - 48px);
     display: grid;
-    gap: 14px;
+    grid-template-rows: minmax(0, 1fr) auto;
+    font-family: var(--np-serif);
+  }
+  .sheet {
+    min-height: 0;
+    padding: 14px 26px 4px;
+    scrollbar-color: var(--np-rule) transparent;
+  }
+  /* No close cross on this sheet: the ears span the full measure. */
+  .sheet :global(.ears) {
+    margin-right: 0;
   }
   .brief h2 {
-    font-size: 1.7em;
-    margin-top: 2px;
+    margin: 14px 0 0;
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 2.5em;
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    text-align: center;
+    text-wrap: balance;
+    color: var(--np-ink);
   }
-  .brief .text {
+  /* The advisor's word, as the communiqué prints her debrief. */
+  .word {
+    margin: 14px 0 0;
+    padding: 0 0 0 16px;
+    border-left: 3px solid var(--np-ink);
+  }
+  .word p {
     margin: 0;
-    line-height: 1.6;
-    color: var(--parchment);
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 1.14em;
+    line-height: 1.42;
+    color: var(--np-ink);
+    text-wrap: pretty;
+  }
+  .word footer {
+    margin-top: 5px;
+    font-family: var(--text);
+    font-size: 0.82em;
+    font-weight: 600;
+    color: var(--np-ink-2);
   }
   .cols {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 28px;
+    margin-top: 6px;
   }
-  .brief ul {
-    list-style: none;
-    padding: 0;
+  .objectives,
+  .tips {
     margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .objectives li {
     display: grid;
-    gap: 6px;
-    color: var(--muted);
-  }
-  .brief li {
-    display: flex;
-    gap: 8px;
+    grid-template-columns: 16px minmax(0, 1fr);
+    gap: 10px;
     align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--np-rule);
+    font-family: var(--text);
+    font-size: 0.92em;
+    line-height: 1.35;
+    color: var(--np-ink);
   }
-  .brief li.bonus {
-    color: var(--brass);
+  /* An empty ring to tick: the communiqué inks it in at the end. */
+  .objectives .mark {
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--np-ink);
+    border-radius: 50%;
+    transform: translateY(3px);
   }
-  footer {
+  .objectives .bonus .mark {
+    border-color: var(--np-rule-2);
+    color: var(--np-warn);
+  }
+  .objectives .np-tag {
+    margin-right: 2px;
+    vertical-align: 1px;
+  }
+  .tips {
+    counter-reset: tip;
+  }
+  .tips li {
+    position: relative;
+    padding: 6px 0 6px 22px;
+    border-bottom: 1px solid var(--np-rule);
+    font-size: 0.86em;
+    line-height: 1.5;
+    color: var(--np-ink-2);
+    text-wrap: pretty;
+  }
+  .tips li::before {
+    counter-increment: tip;
+    content: counter(tip);
+    position: absolute;
+    left: 0;
+    top: 6px;
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 1.05em;
+    line-height: 1.35;
+    color: var(--np-ink);
+  }
+  .foot {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
-    border-top: 1px solid var(--line);
-    padding-top: 14px;
+    gap: 14px;
+    margin: 0 26px;
+    padding: 10px 0 14px;
+    border-top: 2px solid var(--np-ink);
+  }
+  .hint {
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.9em;
+    color: var(--np-ink-2);
+  }
+  .brief .start {
+    padding: 8px 16px;
+    font-size: 0.95em;
+    font-weight: 600;
+  }
+  @media (max-width: 760px) {
+    .cols {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 </style>

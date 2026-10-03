@@ -35,7 +35,7 @@ test('menu → lobby → solo game → surrender → end screen → menu', async
     .getByRole('button', { name: /Capituler|Surrender/ })
     .first()
     .click();
-  await page.locator('.box .btn.primary').click();
+  await page.locator('.box button.primary').click();
   // The end of the game is the Courier's final edition: a game this short has no front
   // page, it opens straight on the results (ranking, figures, actions at its foot).
   await expect(page.getByTestId('end-screen')).toBeVisible({ timeout: 30_000 });

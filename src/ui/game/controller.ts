@@ -8,7 +8,7 @@ import { settings, saveSettings } from '../stores/settings.svelte';
 import { WeatherNews } from './weatherNews';
 import { t, i18n, clock } from '../i18n/i18n.svelte';
 import { mapsBase, bridge, writeJson } from '../bridge';
-import { app, setSession, type LaunchRequest } from '../stores/app.svelte';
+import { app, setSession, go, confirmModal, type LaunchRequest } from '../stores/app.svelte';
 import type { GameEvent } from '../../core/game/events';
 import { portRange, B, N, RAIL_CONNECT_RANGE, FIGHTER_RANGE } from '../../core/game/constants';
 import { launchInfo, type LaunchInfo } from './nukePreview';
@@ -264,6 +264,11 @@ export class GameController {
         setTool: (k: string) => (hud.tool = { k: 'none' } as never) && k,
         weather: () => this.session.state.world?.weather ?? [],
         routes: () => this.session.state.routes,
+        /** QA: back to the menus with a confirmation open (the dialog in the menus' theme). */
+        menuConfirm: () => {
+          go('title');
+          confirmModal(t('menu.quitTitle'), t('menu.quitBody'), () => {}, t('menu.quit'), t('common.cancel'));
+        },
       };
     }
   }

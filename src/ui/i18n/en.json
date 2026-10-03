@@ -152,14 +152,46 @@
     "noSavesTitle": "No saves yet",
     "noSavesHint": "During a game, open the pause menu (Esc) to save. In solo games an automatic save is also made every two minutes.",
     "resetWindows": "Reset window positions",
-    "windowsReset": "Windows back in place"
+    "windowsReset": "Windows back in place",
+    "held": "Game on hold",
+    "running": "The game goes on",
+    "d": {
+      "resume": "Back to the map",
+      "save": "Ten slots to carry on later",
+      "settings": "Graphics, sound, controls, accessibility",
+      "help": "The gestures and every key",
+      "photo": "The map without the interface, for a picture",
+      "resetWindows": "Windows go back to where they started",
+      "quit": "Back to the main menu"
+    },
+    "used": "{n} of {of} used",
+    "autoEvery": "Autosave every two minutes",
+    "colNo": "No.",
+    "colMap": "Map",
+    "colSaved": "Saved on",
+    "colAction": "Action",
+    "saveHere": "Save here",
+    "overwrite": "Overwrite"
   },
   "help": {
     "intro": "Isoline is played on a living atlas: spread your ink, build an economy, forge alliances and hold the world.",
     "click": "Left click a neighbouring land: land attack. A coast across the water: B or right click → Land troops.",
     "radial": "Right click: context menu (build, weapons, ships, diplomacy). Alt + click: emojis.",
     "drag": "Drag (left or middle button): move the map. Shift + drag: select warships.",
-    "wheel": "Wheel / pinch: zoom. Shift + wheel: attack ratio."
+    "wheel": "Wheel / pinch: zoom. Shift + wheel: attack ratio.",
+    "dateline": "Controls at a glance",
+    "rebind": "Keys can be changed in Settings › Controls",
+    "group": {
+      "mouse": "With the mouse",
+      "attack": "Attack",
+      "build": "Build",
+      "nukes": "Nuclear",
+      "command": "Command",
+      "diplomacy": "Diplomacy",
+      "views": "Map views",
+      "time": "Time",
+      "capture": "Pictures and readings"
+    }
   },
   "hud": {
     "chooseSpawn": "Choose your starting point",
@@ -397,7 +429,11 @@
     "nukeBan.name": "Nuclear ban",
     "nukeBan.desc": "No nuclear launches for 3 minutes.",
     "ceasefire.name": "Ceasefire",
-    "ceasefire.desc": "No new attacks between players for 60 seconds."
+    "ceasefire.desc": "No new attacks between players for 60 seconds.",
+    "kicker": "Vote under way",
+    "cast": "Your vote: {motion}",
+    "notCast": "You have not voted",
+    "motions": "Motions put to the vote"
   },
   "tech": {
     "intro": "Nothing is being researched: click a technology, its missing prerequisites come first.",
@@ -1480,7 +1516,8 @@
     "locked": "Locked",
     "hint": "Tip",
     "need": "You need {gold} gold ({time} to go)",
-    "needGold": "You need {gold} gold"
+    "needGold": "You need {gold} gold",
+    "missionOf": "Mission {n} of {total}"
   },
   "achievement": {
     "unlocked": "Achievement unlocked",
