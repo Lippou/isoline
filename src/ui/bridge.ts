@@ -28,6 +28,8 @@ export interface Bridge {
   openExternal(url: string): void;
   setFullscreen(on: boolean): void;
   screenshot(): Promise<string | null>;
+  /** Page zoom factor (the interface scale): every CSS pixel of the page at once. */
+  zoom?: { get(): number; set(factor: number): void };
   storage: {
     read(category: string, name: string): Promise<Uint8Array | null>;
     write(category: string, name: string, data: string | Uint8Array): Promise<boolean>;

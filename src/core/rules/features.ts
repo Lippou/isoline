@@ -236,7 +236,11 @@ function stabilityGrid(game: Game): Map<number, number> {
     const cx = (b.x / cell) | 0;
     const cy = (b.y / cell) | 0;
     for (let dy = -rc; dy <= rc; dy++)
-      for (let dx = -rc; dx <= rc; dx++) m.set((cy + dy) * cw + cx + dx, b.owner);
+      for (let dx = -rc; dx <= rc; dx++) {
+        // Off the map's edge the index would wrap onto the opposite side, one row away.
+        if (cx + dx < 0 || cx + dx >= cw || cy + dy < 0) continue;
+        m.set((cy + dy) * cw + cx + dx, b.owner);
+      }
   }
   stableCaches.set(game, { version: game.buildingsVersion, map: m });
   return m;

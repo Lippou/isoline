@@ -376,6 +376,9 @@ export class Game {
       q.allies.delete(p.id);
       q.allyRequests.delete(p.id);
     }
+    // Its own pacts and pending offers die with it (a spectating loser kept stale ones).
+    p.allies.clear();
+    p.allyRequests.clear();
     const cause = this.eliminationCause(p, by, tile);
     this.emit({ k: 'eliminated', player: p.id, by, cause });
     if (p.kind !== 'tribe') this.notify(-1, 'event.eliminated', 'info', { player: p.id, by, cause });

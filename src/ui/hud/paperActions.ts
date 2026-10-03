@@ -22,6 +22,17 @@ export function watchFrom(ctl: GameController, tick: number, at?: [number, numbe
   else if (ctl.replayFile) watchReplayAt(ctl.replayFile, target, at);
 }
 
+/**
+ * « Reprendre d'ici » from a turning point: the replay goes to `tick`, pauses and asks
+ * which country to play from there.
+ */
+export function takeOverFrom(ctl: GameController, tick: number, at?: [number, number]): void {
+  const target = Math.max(0, tick);
+  hud.paper = false;
+  if (ctl.session.kind === 'replay') void ctl.seekReplay(target, at, true);
+  else if (ctl.replayFile) watchReplayAt(ctl.replayFile, target, at, true);
+}
+
 /** Mount the game screen anew on the launch request now in `app.launch`. */
 function relaunch(via: 'lobby' | 'campaign'): void {
   go(via);
@@ -37,6 +48,7 @@ export function rematch(): void {
     config: { ...req.config, seed: (Math.random() * 2 ** 31) >>> 0 },
     snapshot: undefined,
     priorTurns: undefined,
+    replayStart: undefined,
   } as typeof req;
   relaunch('lobby');
 }

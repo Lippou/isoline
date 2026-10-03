@@ -10,7 +10,8 @@ import { MAX_LEVEL, buildCost, checkPlacement, levelsOwned } from '../buildings/
 import { hostileSams, launchSilo, maxLaunchable, nukeCost, samRangeOf } from '../units/nukes';
 import { ARC_DOWN, ARC_UP, Trajectory, predictInterception } from '../units/trajectory';
 import { U } from '../units/unit';
-import { warshipCost } from '../units/ships';
+import { planBoat, warshipCost } from '../units/ships';
+import { pathLength } from '../map/nav';
 import { castVote } from '../rules/features';
 import { NATION_RESEARCH, lockFor, planGoal } from '../rules/tech';
 import { maxTroops } from '../game/economy';
@@ -142,6 +143,10 @@ const AI_IDLE_ARMY = 0.85;
 const AI_TRAITOR_MARGIN = 1.2;
 /** Nations turn down 90 % of a traitor's alliance requests (OpenFront). */
 const AI_TRAITOR_REFUSAL = 0.9;
+/** Goodwill (positive relation) adds this much acceptance per point (+60 → +0.24). */
+const AI_GOODWILL_ODDS = 0.004;
+/** Nations never stab an ally they feel this friendly towards (OpenFront's « Friendly »). */
+const AI_FRIENDLY = 50;
 /**
  * An offensive's size, as a share of the target's army. With OpenFront's losses an attack
  * as big as the defender's whole army sweeps it away; nations bite instead (a fifth to a
@@ -372,7 +377,7 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
     m.lastDiplo = game.tick;
     cost += diplomacy(game, p, m, t, nb, prey);
   }
-  answerRequests(game, p, m, t, prey);
+  answerRequests(game, p, m, prey);
 
   // 7. Nukes.
   if (game.config.allowNukes && game.tick - m.lastNuke > 300 / t.nukes) cost += tryNuke(game, p, m, t);
@@ -470,7 +475,8 @@ function pickTarget(
     if (!game.attackAllowed(p.id, q.id, true)) continue;
     const allied = p.allies.has(q.id);
     if (allied) {
-      // Betrayal: rare, only against much weaker allies.
+      // Betrayal: rare, only against much weaker allies, and never a friend of long standing.
+      if (p.relation(q.id) >= AI_FRIENDLY) continue;
       if (!(game.rng.chance(diff.betrayal * 0.1 * t.aggression) && q.troops < p.troops * 0.35)) continue;
     }
     const strength = p.troops / Math.max(1, q.troops);
@@ -622,6 +628,10 @@ function tryBoat(game: Game, p: Player, m: Mem, _t: Traits, idle = false): numbe
     const o = game.owner[tile]!;
     if (o === p.id || (o > 0 && (game.friendly(o, p.id) || !game.attackAllowed(p.id, o, true)))) continue;
     if (o > 0 && game.players[o]!.troops > p.troops * 0.7) continue;
+    // A shore in sight can lie thousands of tiles away by water (around a spiral, up a
+    // long river): such a landing kept a third of the army at sea for over ten minutes.
+    const plan = planBoat(game, p, tile);
+    if (plan.path && pathLength(plan.path, w) > 4 * Math.hypot(x - fx, y - fy) + 200) continue;
     applyCommand(game, p.id, { t: 'boat', tile, ratio: 0.3 });
     return 400;
   }
@@ -705,7 +715,40 @@ function diplomacy(
   return 20;
 }
 
-function answerRequests(game: Game, p: Player, m: Mem, t: Traits, prey: number): void {
+/** What weighs on a nation's answer to an alliance offer (shares of probability). */
+export type OddsFactor = 'temper' | 'stronger' | 'weaker' | 'grudge' | 'betrayed' | 'human' | 'goodwill';
+
+/**
+ * How likely nation p is to accept q's alliance offer, and why. `p` is the probability of
+ * the roll (0.02 … 0.95); `refusal` a reason that turns the offer down whatever the roll:
+ * p resents q (relation below 0, OpenFront) — or q is a traitor, refused 9 times in 10.
+ * `chance` combines them: the honest odds of an offer sent now.
+ */
+export function allianceOdds(
+  game: Game,
+  p: Player,
+  q: Player,
+): { p: number; chance: number; refusal: 'resent' | 'traitor' | null; factors: [OddsFactor, number][] } {
+  const t = TRAITS[p.personality];
+  const diff = game.difficulty();
+  const grudge = game.ai.mem.get(p.id)?.grudge.get(q.id) ?? 0;
+  const factors: [OddsFactor, number][] = [['temper', 0.35 * t.diplomacy]];
+  factors.push(q.troops > p.troops ? ['stronger', 0.25] : ['weaker', -0.1]);
+  if (grudge > 0) factors.push(['grudge', -grudge * 0.05]);
+  if (p.betrayedBy.has(q.id) || q.isTraitor(game.tick)) factors.push(['betrayed', -0.6]);
+  if (q.kind === 'human') factors.push(['human', -0.1 * diff.aggression]);
+  // Isoline's goodwill (alliances, trade, gifts, common enemies) makes a yes likelier.
+  const rel = p.relation(q.id);
+  if (rel > 0) factors.push(['goodwill', rel * AI_GOODWILL_ODDS]);
+  let sum = 0;
+  for (const [, v] of factors) sum += v;
+  const roll = Math.max(0.02, Math.min(0.95, sum));
+  const refusal = rel < 0 ? 'resent' : q.isTraitor(game.tick) ? 'traitor' : null;
+  const chance = refusal === 'resent' ? 0 : refusal === 'traitor' ? roll * (1 - AI_TRAITOR_REFUSAL) : roll;
+  return { p: roll, chance, refusal, factors };
+}
+
+function answerRequests(game: Game, p: Player, m: Mem, prey: number): void {
   for (const [from] of p.allyRequests) {
     if (!m.pendingAnswers.has(from)) m.pendingAnswers.set(from, game.tick + game.rng.int(20, 60));
   }
@@ -717,18 +760,13 @@ function answerRequests(game: Game, p: Player, m: Mem, t: Traits, prey: number):
     if (game.tick < at) continue;
     m.pendingAnswers.delete(from);
     const q = game.players[from]!;
-    const diff = game.difficulty();
-    const betrayed = p.betrayedBy.has(from) || q.isTraitor(game.tick);
-    const grudge = m.grudge.get(from) ?? 0;
-    let pAccept = 0.35 * t.diplomacy + (q.troops > p.troops ? 0.25 : -0.1) - grudge * 0.05;
-    if (betrayed) pAccept -= 0.6;
-    if (q.kind === 'human') pAccept -= 0.1 * diff.aggression;
+    const pAccept = allianceOdds(game, p, q).p;
     // OpenFront: a traitor is nearly always turned down, and so is anyone we feel badly about.
     const distrust = p.relation(from) < 0 || (q.isTraitor(game.tick) && game.rng.chance(AI_TRAITOR_REFUSAL));
     applyCommand(game, p.id, {
       t: 'allyAnswer',
       target: from,
-      accept: !distrust && from !== prey && game.rng.chance(Math.max(0.02, Math.min(0.95, pAccept))),
+      accept: !distrust && from !== prey && game.rng.chance(pAccept),
     });
   }
 }

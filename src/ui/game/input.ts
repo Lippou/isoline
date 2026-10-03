@@ -180,8 +180,14 @@ export class InputController {
 
   private keyDown(e: KeyboardEvent): void {
     const target = e.target as HTMLElement | null;
-    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable))
-      return;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      // Typing is left alone, but a slider or a switch that kept the focus (in-game
+      // settings) used to swallow Escape: the settings could no longer be closed by key.
+      const control =
+        target.tagName === 'INPUT' &&
+        /^(range|checkbox|radio|button|color)$/.test((target as HTMLInputElement).type);
+      if (!control || e.code !== 'Escape') return;
+    }
     const k = settings.keys;
     this.keysHeld.add(e.code);
     const action = Object.keys(k).find((a) => k[a] === e.code);

@@ -31,6 +31,8 @@ export interface MapUniforms {
   loyaltyView: boolean;
   /** 8 cells × (x, y, radius, code): -1 none, 0…1 storm intensity, 2…3 fog bank (2 + intensity). */
   weather: Float32Array;
+  /** Country borders drawn (the photo mode can leave them out). */
+  borders: boolean;
   /** 1: animated weather (lightning flashes); 0 with reduced motion. */
   motion: number;
   ring: [number, number, number, number];
@@ -167,6 +169,7 @@ export class MapLayer {
           uMotion: { value: 1, type: 'f32' },
           uRing: { value: new Float32Array(4), type: 'vec4<f32>' },
           uClouds: { value: 0, type: 'f32' },
+          uBorders: { value: 1, type: 'f32' },
           uWorld: { value: worldCode(state.meta?.palette), type: 'f32' },
         },
       },
@@ -376,6 +379,7 @@ export class MapLayer {
     g.uMotion = u.motion;
     (g.uRing as Float32Array).set(u.ring);
     g.uClouds = u.clouds;
+    g.uBorders = u.borders ? 1 : 0;
   }
 
   destroy(): void {

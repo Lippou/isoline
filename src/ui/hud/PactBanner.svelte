@@ -79,7 +79,7 @@
   .pact {
     position: absolute;
     left: 50%;
-    bottom: calc(250px * var(--ui-scale));
+    bottom: calc(var(--hud-bar-h, 112px) + 138px);
     transform: translateX(-50%);
     z-index: 29;
     display: grid;

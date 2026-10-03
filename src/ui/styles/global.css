@@ -46,6 +46,7 @@
   --bad-text: #f4a3b9;
   --warn-text: #f0c983;
   --radius: 6px;
+  /* Kept at 1: the interface scale is the page zoom now (stores/viewport.svelte.ts). */
   --ui-scale: 1;
   --font-scale: 1;
   --title: 'Fraunces', Georgia, serif;

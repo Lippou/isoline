@@ -3,7 +3,7 @@ import { readJson, writeJson } from '../bridge';
 import { i18n, type Lang } from '../i18n/i18n.svelte';
 import type { ColorVision } from '../../render/colors';
 
-export const SETTINGS_VERSION = 3;
+export const SETTINGS_VERSION = 4;
 
 export const DEFAULT_KEYS: Record<string, string> = {
   attackHover: 'KeyG',
@@ -33,6 +33,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   pause: 'KeyP',
   general: 'KeyE',
   screenshot: 'F12',
+  photoMode: 'F2',
   fps: 'F3',
   panUp: 'KeyW',
   panDown: 'KeyS',
@@ -58,6 +59,7 @@ export interface Settings {
     shaders: boolean;
     vsync: boolean;
     maxFps: number;
+    /** Interface scale (page zoom); 0: automatic, from the window's size (stores/uiScale.ts). */
     uiScale: number;
     fullscreen: boolean;
     autoPerformance: boolean;
@@ -98,7 +100,7 @@ export function defaultSettings(): Settings {
       shaders: true,
       vsync: true,
       maxFps: 0,
-      uiScale: 1,
+      uiScale: 0,
       fullscreen: false,
       autoPerformance: true,
     },
@@ -138,6 +140,9 @@ export function migrateSettings(raw: Partial<Settings> & { version?: number }): 
     s.keys.buildRadar = 'KeyO';
     s.keys.flipArc = 'KeyU';
   }
+  // v3 → v4: the interface scale became automatic by default; the former default (100 %)
+  // was rarely a choice, so it follows the window now. Another value stays the player's.
+  if ((raw.version ?? 1) < 4 && s.graphics.uiScale === 1) s.graphics.uiScale = 0;
   // The separate tutorial is gone (the campaign teaches the game): its flag goes too.
   delete (s.game as Partial<Record<string, unknown>>).tutorialDone;
   return s;
@@ -163,7 +168,6 @@ export function saveSettings(): void {
 
 export function applyCss(): void {
   const root = document.documentElement;
-  root.style.setProperty('--ui-scale', String(settings.graphics.uiScale));
   root.style.setProperty('--font-scale', String(settings.game.fontSize));
   root.classList.toggle('high-contrast', settings.access.highContrast);
   root.classList.toggle('reduced-motion', settings.access.reducedMotion);

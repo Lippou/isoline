@@ -13,7 +13,7 @@ import type { GameEvent } from '../../core/game/events';
 import { portRange, B, N, RAIL_CONNECT_RANGE, FIGHTER_RANGE } from '../../core/game/constants';
 import { launchInfo, type LaunchInfo } from './nukePreview';
 import { audio } from '../../audio/audio';
-import { profile, recordGameEnd, recordMission, score } from '../stores/profile.svelte';
+import { noteLaunch, profile, recordGameEnd, recordMission, score } from '../stores/profile.svelte';
 import { takeSnapshotSave } from './saves';
 import { CampaignDirector } from '../campaign/director';
 import { MISSIONS } from '../campaign/missions';
@@ -22,6 +22,11 @@ import { UNIT_STRIDE } from '../../engine/protocol';
 import { CapitalWatch, clientSpotError } from './capitalWatch';
 import { Chronicle, keepEdition, keptEdition, type Edition } from './chronicle';
 import type { ReplayFile } from '../../engine/replay';
+import type { Snapshot } from '../../core/net/snapshot';
+import { takeOverSnapshot } from '../../core/net/takeover';
+import { photo } from '../stores/photo.svelte';
+import { tick as uiTick } from 'svelte';
+import { startTakeover } from '../screens/launch';
 import { worthPrinting } from '../hud/frontPage';
 import { newAwards } from '../hud/results';
 import type { MissionResult } from './missionResult';
@@ -58,6 +63,7 @@ export class GameController {
       ...(this.req.snapshot ? { snapshot: this.req.snapshot } : {}),
       ...(this.req.replay ? { replay: this.req.replay } : {}),
       ...(this.req.priorTurns ? { priorTurns: this.req.priorTurns } : {}),
+      ...(this.req.replayStart ? { replayStart: this.req.replayStart } : {}),
       ...(this.req.customMap ? { customMap: this.req.customMap } : {}),
       ...(this.lan ? { source: this.lan.source(this.req.viewer) } : {}),
     });
@@ -83,13 +89,20 @@ export class GameController {
       showFps: false,
       maxFps: settings.graphics.maxFps,
       lang: i18n.lang,
-      uiScale: settings.graphics.uiScale,
+      // The interface scale is the page zoom (stores/viewport.svelte.ts): the map's labels
+      // and badges, in CSS pixels, already follow it.
+      uiScale: 1,
     });
     await this.renderer.init(host);
     this.input = new InputController(this.renderer.app.canvas, this.renderer, this.session, {
       onAction: (tile) => this.action(tile),
-      onRadial: (tile, sx, sy) => (hud.radial = { x: sx, y: sy, tile }),
-      onEmoji: (tile, sx, sy) => (hud.radial = { x: sx, y: sy, tile: -tile - 2 }),
+      // (Photo mode: the map only moves, nothing opens.)
+      onRadial: (tile, sx, sy) => {
+        if (!hud.photo) hud.radial = { x: sx, y: sy, tile };
+      },
+      onEmoji: (tile, sx, sy) => {
+        if (!hud.photo) hud.radial = { x: sx, y: sy, tile: -tile - 2 };
+      },
       onKey: (a, e) => this.key(a, e),
     });
     this.renderer.onFrame = (dt) => {
@@ -113,6 +126,14 @@ export class GameController {
       };
     }
     if (this.req.viewer > 0 && ready.phase === 'spawn') this.renderer.camera.fit();
+    // A loaded save or a game taken over from a replay: the camera finds our country.
+    if (this.req.snapshot && this.req.viewer > 0 && ready.phase !== 'spawn') {
+      const off = this.session.onTick(() => {
+        if (!this.session.state.players.get(this.req.viewer)) return;
+        off();
+        this.home();
+      });
+    }
     hud.loading = false;
     hud.ready = true;
     if (this.req.kind === 'solo' && !this.req.missionId) {
@@ -126,7 +147,11 @@ export class GameController {
       hud.replay = { tick: 0, end: this.session.replay.file.endTick, speed: 1, paused: false };
     const at = this.req.replayAt;
     if (this.session.replay && at)
-      void this.seekReplay(at.tick, at.x !== undefined && at.y !== undefined ? [at.x, at.y] : undefined);
+      void this.seekReplay(
+        at.tick,
+        at.x !== undefined && at.y !== undefined ? [at.x, at.y] : undefined,
+        !!at.takeover,
+      );
     audio.setScene('game');
     console.info(`[isoline] map loaded in ${this.session.loadMs.toFixed(0)} ms`);
     // Automation hooks (screenshots / media): ?speed=&zoom=&x=&y=&perf
@@ -196,7 +221,16 @@ export class GameController {
         buildings: () => this.session.state.buildings.map((b) => ({ ...b })),
         units: () => {
           const st = this.session.state;
-          const out: { id: number; type: number; owner: number; x: number; y: number }[] = [];
+          const out: {
+            id: number;
+            type: number;
+            owner: number;
+            x: number;
+            y: number;
+            hp: number;
+            kind: number;
+            level: number;
+          }[] = [];
           for (let k = 0; k < st.unitCount; k++) {
             const o = k * UNIT_STRIDE;
             out.push({
@@ -205,6 +239,9 @@ export class GameController {
               owner: st.units[o + 2]!,
               x: st.units[o + 3]!,
               y: st.units[o + 4]!,
+              hp: st.units[o + 5]!,
+              kind: st.units[o + 6]!,
+              level: st.units[o + 7]!,
             });
           }
           return out;
@@ -223,7 +260,7 @@ export class GameController {
 
   // ------------------------------------------------------------- actions
   action(tile: number): void {
-    if (this.session.kind === 'replay') return;
+    if (this.session.kind === 'replay' || hud.photo) return;
     InputController.defaultAction(this.session, tile, hud.attackRatio);
     if (
       hud.tool.k === 'build' ||
@@ -256,6 +293,17 @@ export class GameController {
   private key(action: string, e: KeyboardEvent): void {
     const s = this.session;
     const hover = hud.hover?.tile ?? -1;
+    // Photo mode: only the camera, the shot and the way out.
+    if (hud.photo) {
+      if (action === 'escape' || action === 'photoMode') this.exitPhoto();
+      else if (action === 'screenshot') void this.photoShot();
+      else if (action === 'pause' && this.canFreeze()) this.setFreeze(!photo.freeze);
+      return;
+    }
+    if (action === 'photoMode') {
+      void this.enterPhoto();
+      return;
+    }
     if (action === 'escape') {
       if (hud.tool.k !== 'none' || hud.radial || hud.selection.length) {
         hud.tool = { k: 'none' };
@@ -393,6 +441,72 @@ export class GameController {
       this.renderer.camera.goTo(me.label[0], me.label[1], Math.max(this.renderer.camera.zoom, 2.5));
   }
 
+  // ------------------------------------------------------------ photo mode
+  private photoWasPaused = false;
+
+  /** Can the world be held still for the shot (solo and replays; not a LAN game)? */
+  canFreeze(): boolean {
+    return this.session.kind === 'solo' || this.session.kind === 'replay';
+  }
+
+  /** May the fog be lifted for the shot (spectators and replays, as with the fog view)? */
+  canLiftFog(): boolean {
+    return this.session.kind === 'replay' || this.session.viewer <= 0;
+  }
+
+  /** Photo mode: the HUD goes, the map stays (free camera), a small bar sets up the shot. */
+  async enterPhoto(): Promise<void> {
+    if (hud.photo || !hud.ready) return;
+    // Close the pause menu first: it resumes the game it paused when it goes.
+    hud.panels.menu = false;
+    hud.radial = null;
+    hud.tool = { k: 'none' };
+    this.input.setSelection([]);
+    await uiTick();
+    this.photoWasPaused = this.session.paused;
+    photo.saved = '';
+    photo.failed = false;
+    photo.fog = this.canLiftFog() ? hud.views.fog : true;
+    photo.routes = settings.game.tradeRoutes;
+    hud.photo = true;
+    if (this.canFreeze()) this.setFreeze(photo.freeze);
+    audio.ui('click');
+  }
+
+  exitPhoto(): void {
+    if (!hud.photo) return;
+    hud.photo = false;
+    photo.capturing = false;
+    if (this.canFreeze() && this.session.paused !== this.photoWasPaused) {
+      this.session.setPaused(this.photoWasPaused);
+      hud.paused = this.photoWasPaused;
+    }
+    audio.ui('click');
+  }
+
+  setFreeze(on: boolean): void {
+    photo.freeze = on;
+    if (!this.canFreeze()) return;
+    const paused = on || this.photoWasPaused;
+    this.session.setPaused(paused);
+    hud.paused = paused;
+  }
+
+  /** The picture: the bar steps aside, the window is captured, the bar says where it went. */
+  async photoShot(): Promise<void> {
+    if (photo.capturing) return;
+    photo.capturing = true;
+    await uiTick();
+    // Two frames: the bar is gone from the page and the map has drawn without it.
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const file = await bridge.screenshot();
+    photo.capturing = false;
+    photo.saved = file ?? '';
+    photo.failed = !file;
+    if (file) audio.ui('confirm');
+    else audio.ui('error');
+  }
+
   async screenshot(): Promise<void> {
     const file = await bridge.screenshot();
     toast(file ? t('hud.screenshotSaved', { file }) : t('hud.screenshotFailed'), file ? 'good' : 'warn');
@@ -471,10 +585,19 @@ export class GameController {
     // Tool previews + layer toggles.
     const ov = this.renderer.overlay;
     ov.terrainView = hud.views.terrain;
-    ov.fogView = hud.views.fog;
     ov.resourcesView = hud.views.resources;
     ov.loyaltyView = hud.views.loyalty;
-    ov.tradeRoutes = settings.game.tradeRoutes;
+    if (hud.photo) {
+      ov.fogView = photo.fog || !this.canLiftFog();
+      ov.tradeRoutes = photo.routes;
+      ov.photo = { labels: photo.labels, borders: photo.borders, weather: photo.weather };
+      ov.night = photo.autoTime ? -1 : photo.night;
+    } else {
+      ov.fogView = hud.views.fog;
+      ov.tradeRoutes = settings.game.tradeRoutes;
+      ov.photo = null;
+      ov.night = -1;
+    }
     const tool = hud.tool;
     const hover = hud.hover?.tile ?? -1;
     ov.ghost = null;
@@ -578,7 +701,7 @@ export class GameController {
       }
     }
     ov.highlightPlayer =
-      hud.hover && hud.hover.owner > 0 && this.renderer.camera.zoom < 6 ? hud.hover.owner : -1;
+      hud.hover && hud.hover.owner > 0 && this.renderer.camera.zoom < 6 && !hud.photo ? hud.hover.owner : -1;
     // A MIRV's warheads fall all over the target country: show which one.
     if (launch && tool.k === 'nuke' && tool.kind === N.Mirv && launch.victim > 0)
       ov.highlightPlayer = launch.victim;
@@ -709,6 +832,8 @@ export class GameController {
           ...this.launches.filter((l) => l.impact > hud.tick - 100),
           { owner: e.owner, impact: e.impact, threatened: e.threatened },
         ];
+        // The H-bomb and MIRV achievements (nothing reported these launches before).
+        if (e.owner === me && this.session.kind !== 'replay') noteLaunch(e.kind);
         if (e.owner === me || targeted) audio.sfx('launch', 0.7);
         else if (this.onScreen(e.sx, e.sy) || this.onScreen(e.tx, e.ty)) audio.sfx('launch', 0.35);
         if (targeted) {
@@ -970,27 +1095,48 @@ export class GameController {
     return build();
   }
 
-  /** Replays: go to `tick` (fast-forward, or re-simulate when it is behind) and look at `at`. */
-  async seekReplay(tick: number, at?: [number, number]): Promise<void> {
+  /**
+   * Replays: go to `tick` (fast-forward, or re-simulate when it is behind) and look at `at`.
+   * With `takeover`, the replay stays paused there and asks which country to play from it.
+   */
+  async seekReplay(tick: number, at?: [number, number], takeover = false): Promise<void> {
     const rp = this.session.replay;
     if (!rp) return;
-    const target = Math.max(0, Math.min(tick, rp.file.endTick));
+    const target = Math.max(rp.startTick, Math.min(tick, rp.file.endTick));
     hud.replaySeek = target;
     if (target >= rp.tick) rp.seekForward(target);
     else await this.restartReplayAt(target);
-    rp.setPaused(false);
-    hud.paused = false;
+    rp.setPaused(takeover);
+    hud.paused = takeover;
+    if (takeover) hud.takeover = true;
     if (at) this.renderer.camera.goTo(at[0], at[1], Math.max(this.renderer.camera.zoom, 2.4));
   }
 
-  /** Replay rewind: re-simulate from tick 0 up to `target`. */
+  /**
+   * « Reprendre d'ici »: a new solo game from the replay's current moment, as `player`
+   * (the others are left to the AI). Returns false when that country cannot be played.
+   */
+  async takeOver(player: number): Promise<boolean> {
+    const rp = this.session.replay;
+    if (!rp) return false;
+    rp.setPaused(true);
+    hud.paused = true;
+    // (Queued after the turns already sent: the state of the moment on screen.)
+    const t = takeOverSnapshot(await this.session.snapshot(), player);
+    if (!t || t.snapshot.core.phase !== 'playing') return false;
+    startTakeover(rp.file, t.snapshot, player, t.changed);
+    return true;
+  }
+
+  /** Replay rewind: re-simulate from its start (tick 0, or its start snapshot) up to `target`. */
   async restartReplayAt(target: number): Promise<void> {
     const rp = this.session.replay;
     if (!rp) return;
     const wasPaused = rp.paused;
     rp.setPaused(true);
     const { src } = await loadMapSource(this.session.config, mapsBase(), this.session.customMap);
-    const ready = await this.session.sim.init(this.session.config, src, this.session.viewer);
+    const start = rp.file.start ? (JSON.parse(JSON.stringify(rp.file.start)) as Snapshot) : undefined;
+    const ready = await this.session.sim.init(this.session.config, src, this.session.viewer, start);
     this.session.state.init(ready);
     this.renderer.rebuildMap();
     rp.reset();

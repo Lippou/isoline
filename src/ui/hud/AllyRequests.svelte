@@ -121,7 +121,7 @@
   .offers {
     position: absolute;
     right: 12px;
-    width: calc(300px * var(--ui-scale));
+    width: 300px;
     display: grid;
     gap: 8px;
     z-index: 29;

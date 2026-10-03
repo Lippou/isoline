@@ -242,6 +242,9 @@
     "counter": "Strike back",
     "counterTip": "Counter-attack with {n} troops: enough to cancel this attack in the clash.",
     "ongoingAttacks": "Ongoing attacks",
+    "attacksShort": "Attacks",
+    "boatsShort": "Boats",
+    "lbTop": "Top {n}",
     "ownedN": "Owned: {n}",
     "armyTip": "Your army: it attacks, defends and regenerates on its own. Land and completed cities raise the ceiling.",
     "readyN": "Ready: {n}",
@@ -253,6 +256,8 @@
     "victoryThresholdTip": "The first country (or team) to control {pct}% of the useful land wins.",
     "youHold": "you: {pct}%",
     "goalMission": "Mission objectives (bottom of the screen)",
+    "goalShort": "{pct}%",
+    "goalMissionShort": "Mission",
     "windowMoveTip": "Drag to move · double-click: back to its place",
     "windowResize": "Resize"
   },
@@ -1243,7 +1248,8 @@
     "flipArc": "Flip missile trajectory",
     "speedDown": "Slow time down (solo)",
     "speedUp": "Speed time up (solo)",
-    "buildLab": "Research centre"
+    "buildLab": "Research centre",
+    "photoMode": "Photo mode"
   },
   "settings": {
     "tab": {
@@ -1265,6 +1271,8 @@
     "vsync": "Vertical sync",
     "maxFps": "Max FPS",
     "uiScale": "Interface scale",
+    "uiScaleAuto": "Auto",
+    "uiScaleAutoTip": "Follows the window size ({pct}% here).",
     "fullscreen": "Fullscreen",
     "autoPerf": "Automatic performance mode on slow machines",
     "vol": {
@@ -1310,7 +1318,7 @@
       "shaders": "Water reflections, relief and light. Turn them off on a modest computer.",
       "vsync": "Matches frames to the screen to avoid tearing.",
       "maxFps": "Caps frames per second to save battery. ∞: no limit.",
-      "uiScale": "Makes the in-game panels larger or smaller.",
+      "uiScale": "“Auto” fits it to the window size. Makes the whole in-game interface larger or smaller; the menus only grow.",
       "fullscreen": "The game fills the whole screen.",
       "autoPerf": "Switches to performance mode if the game slows down.",
       "voiceOn": "Ilse's advice is read aloud.",
@@ -2124,6 +2132,86 @@
       "install": "Installation failed.",
       "bad-token": "This token's format is not valid.",
       "no-keychain": "The system keychain is unavailable: token not saved."
+    }
+  },
+  "opinion": {
+    "title": "What they think of you",
+    "level": {
+      "hostile": "Hostile",
+      "wary": "Wary",
+      "neutral": "Neutral",
+      "cordial": "Cordial",
+      "friendly": "Friendly"
+    },
+    "reason": {
+      "attacked": "You attacked them",
+      "betrayed": "You betrayed them",
+      "traitor": "You betrayed an ally",
+      "gift": "Your gifts",
+      "ally": "Your alliance",
+      "longAlly": "Long-standing alliance",
+      "formerAlly": "Former alliance",
+      "trade": "Thriving trade",
+      "enemy": "Common enemy",
+      "past": "Old memories"
+    },
+    "noReasons": "Nothing in particular: they ignore you.",
+    "oddsTitle": "If offered an alliance",
+    "odds": {
+      "temper": "Temperament ({personality})",
+      "stronger": "You are stronger than them",
+      "weaker": "You are weaker than them",
+      "grudge": "Grudge (the troops you took from them)",
+      "betrayed": "Past betrayal",
+      "human": "Wary of human leaders",
+      "goodwill": "Goodwill"
+    },
+    "refusal": {
+      "resent": "Certain refusal while their opinion stays negative.",
+      "traitor": "You bear the traitor's mark: 9 refusals in 10."
+    },
+    "accept": "≈ {pct} % yes",
+    "acceptTip": "Estimated chance they accept an alliance offered now (they answer within 2–6 s). Details: click their opinion."
+  },
+  "takeover": {
+    "button": "Take over from here",
+    "short": "Play on from here",
+    "tip": "Start a new solo game from this moment, playing the country of your choice.",
+    "notNow": "Available after the spawn phase and before the end of the game.",
+    "title": "Take over at {clock}",
+    "hint": "A new solo game starts at this exact moment: you play the chosen country, the AI runs the others. It can be saved and gets its own replay.",
+    "choose": "Country to play",
+    "recorded": "original player",
+    "go": "Play this country",
+    "failed": "Cannot take over here: this country can no longer be played.",
+    "fromHere": "Play on from {clock}"
+  },
+  "photo": {
+    "open": "Photo mode",
+    "title": "Photo",
+    "labels": "Names",
+    "borders": "Borders",
+    "fog": "Fog",
+    "weather": "Weather",
+    "routes": "Routes",
+    "auto": "Auto",
+    "freeze": "Freeze",
+    "timeOfDay": "Time of the picture (day to night)",
+    "shot": "Capture",
+    "exit": "Leave photo mode",
+    "exitTip": "Leave (Esc)",
+    "saved": "Picture saved:",
+    "failed": "Capture unavailable here (desktop app only).",
+    "fogLocked": "The fog only lifts in replays or when spectating.",
+    "tip": {
+      "labels": "Country names, troops and badges",
+      "borders": "Border lines",
+      "fog": "Fog of war",
+      "weather": "Storms, fog banks and clouds",
+      "routes": "Trade routes",
+      "time": "Auto: the game's clock. The slider sets the picture's time, from broad daylight to night.",
+      "freeze": "Hold the world still while you frame the shot (solo and replays)",
+      "shot": "Saves the picture as PNG ({key})"
     }
   }
 }

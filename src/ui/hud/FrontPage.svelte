@@ -14,7 +14,7 @@
   import { settings } from '../stores/settings.svelte';
   import { inkHex, inkRgb } from '../../render/colors';
   import { flagUrl } from '../../render/flags';
-  import { canWatch as watchable, watchFrom, LEAD_TICKS } from './paperActions';
+  import { canWatch as watchable, watchFrom, takeOverFrom, LEAD_TICKS } from './paperActions';
   import type { GameController } from '../game/controller';
   import type { EdPlayer } from '../game/chronicle';
   import {
@@ -140,6 +140,9 @@
   // -------------------------------------------------------------- replay
   const canWatch = $derived(watchable(ctl));
   const watch = (tick: number, at?: [number, number]) => watchFrom(ctl, tick - LEAD_TICKS, at);
+  /** « Reprendre d'ici »: play on from just before the turning point (solo games and replays). */
+  const canTakeOver = $derived(canWatch && ctl.session.kind !== 'lan' && !hud.end?.mission);
+  const takeOver = (tick: number, at?: [number, number]) => takeOverFrom(ctl, tick - LEAD_TICKS, at);
   const ICONS: Record<TurningKind, IconName> = {
     fall: 'eliminated',
     betrayal: 'betrayal',
@@ -276,6 +279,15 @@
                   aria-label={`${say(p.title)}. ${t('front.replayAt', { clock: clockText(p.tick - ed.startTick) })}`}
                   ><Icon name="rewind" size={12} />{t('front.replay')}</button
                 >
+                {#if canTakeOver && p.kind !== 'end'}
+                  <button
+                    class="go"
+                    onclick={() => takeOver(p.tick, p.at)}
+                    aria-label={`${say(p.title)}. ${t('takeover.fromHere', { clock: clockText(p.tick - LEAD_TICKS - ed.startTick) })}`}
+                    data-testid="front-takeover"
+                    ><Icon name="takeover" size={12} />{t('takeover.short')}</button
+                  >
+                {/if}
               {/if}
             </div>
           </li>
@@ -612,6 +624,9 @@
     text-decoration-color: var(--np-rule);
     text-underline-offset: 2px;
     cursor: pointer;
+  }
+  .go + .go {
+    margin-left: 10px;
   }
   .go:hover,
   .go:focus-visible {

@@ -12,6 +12,7 @@
 //   silently and relaunches (--force-run).
 import { app, BrowserWindow, ipcMain, safeStorage } from 'electron';
 import { execFile, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import https from 'node:https';
 import os from 'node:os';
@@ -43,6 +44,8 @@ interface Asset {
   name: string;
   url: string;
   size: number;
+  /** SHA-256 published by GitHub for the asset (hex), checked after download. */
+  sha256: string;
 }
 
 let status: UpdateStatus = {
@@ -168,6 +171,8 @@ function assetPattern(): RegExp | null {
 async function check(): Promise<UpdateStatus> {
   if (status.state === 'downloading') return status;
   const { token: tk, access } = await token();
+  // A download may have started while the token was being read.
+  if (busy) return status;
   publish({ state: 'checking', error: undefined, detail: undefined, access, installable: installable() });
   if (!tk) return publish({ state: 'error', error: 'no-token' });
   try {
@@ -191,7 +196,8 @@ async function check(): Promise<UpdateStatus> {
     if (!newer(version, app.getVersion())) return publish({ state: 'none', version, notes });
     const pat = assetPattern();
     const a = pat ? rel.assets?.find((x) => pat.test(x.name)) : undefined;
-    asset = a ? { name: a.name, url: a.url, size: a.size } : null;
+    const sha = /^sha256:([0-9a-f]{64})$/.exec(String((a as { digest?: string } | undefined)?.digest ?? ''));
+    asset = a ? { name: a.name, url: a.url, size: a.size, sha256: sha?.[1] ?? '' } : null;
     downloaded = '';
     return publish({ state: 'available', version, notes, error: asset ? undefined : 'no-asset' });
   } catch (err) {
@@ -204,9 +210,16 @@ async function download(): Promise<UpdateStatus> {
   if (!installable()) return publish({ state: 'error', error: 'dev' });
   const { token: tk } = await token();
   if (!tk) return publish({ state: 'error', error: 'no-token' });
+  // Leftovers of earlier downloads go first.
+  for (const f of fs.readdirSync(os.tmpdir()))
+    if (f.startsWith('isoline-update-'))
+      fs.rmSync(path.join(os.tmpdir(), f), { recursive: true, force: true });
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'isoline-update-'));
   const file = path.join(dir, asset.name);
   const out = fs.createWriteStream(file);
+  let writeError: Error | null = null;
+  out.on('error', (e) => (writeError = e));
+  const hash = createHash('sha256');
   let got = 0;
   let last = 0;
   publish({ state: 'downloading', progress: 0 });
@@ -216,6 +229,7 @@ async function download(): Promise<UpdateStatus> {
       { Authorization: `Bearer ${tk}`, Accept: 'application/octet-stream' },
       (chunk, total) => {
         out.write(chunk);
+        hash.update(chunk);
         got += chunk.length;
         const p = (total || asset!.size || 1) > 0 ? got / (total || asset!.size) : 0;
         if (p - last > 0.01) {
@@ -225,14 +239,20 @@ async function download(): Promise<UpdateStatus> {
       },
     );
     await new Promise<void>((r) => out.end(r));
-    if (res.status !== 200)
-      return publish({ state: 'error', error: 'network', detail: `HTTP ${res.status}` });
-    if (asset.size && fs.statSync(file).size !== asset.size)
-      return publish({ state: 'error', error: 'corrupt' });
+    const fail = (error: string, detail?: string) => {
+      fs.rmSync(dir, { recursive: true, force: true });
+      return publish({ state: 'error', error, detail });
+    };
+    if (writeError) return fail('install', String(writeError).slice(0, 200));
+    if (res.status !== 200) return fail('network', `HTTP ${res.status}`);
+    if (asset.size && fs.statSync(file).size !== asset.size) return fail('corrupt');
+    // Integrity: the SHA-256 GitHub published for this file (both platforms).
+    if (asset.sha256 && hash.digest('hex') !== asset.sha256) return fail('corrupt', 'sha256');
     downloaded = file;
     return publish({ state: 'ready', progress: 1 });
   } catch (err) {
     out.destroy();
+    fs.rmSync(dir, { recursive: true, force: true });
     return publish({ state: 'error', error: 'network', detail: String(err).slice(0, 200) });
   }
 }
@@ -294,6 +314,7 @@ async function install(): Promise<UpdateStatus> {
     } else if (process.platform === 'win32') {
       spawn(downloaded, ['/S', '--force-run'], { detached: true, stdio: 'ignore' }).unref();
     } else return publish({ state: 'error', error: 'dev' });
+    quitting = true;
     setTimeout(() => app.quit(), 300);
     return status;
   } catch (err) {
@@ -301,13 +322,35 @@ async function install(): Promise<UpdateStatus> {
   }
 }
 
+/**
+ * A download or an install is under way. The state only changes after awaits (token,
+ * ditto, codesign…), so a second click used to start a second download, or a second
+ * swap script racing the first one over the application bundle; and a check could
+ * reset a running download.
+ */
+let busy = false;
+
+/** Set once the new version is being put in place: the app is about to quit. */
+let quitting = false;
+
+/** Run one step at a time; after a successful install the lock is kept until the app quits. */
+async function exclusive(step: () => Promise<UpdateStatus>): Promise<UpdateStatus> {
+  if (busy) return status;
+  busy = true;
+  try {
+    return await step();
+  } finally {
+    busy = quitting;
+  }
+}
+
 export function registerUpdateIpc(): void {
   status = { ...status, installable: installable() };
   void token().then(({ access }) => publish({ access }));
   ipcMain.handle('update:status', () => status);
-  ipcMain.handle('update:check', () => check());
-  ipcMain.handle('update:download', () => download());
-  ipcMain.handle('update:install', () => install());
+  ipcMain.handle('update:check', () => (busy ? status : check()));
+  ipcMain.handle('update:download', () => exclusive(download));
+  ipcMain.handle('update:install', () => exclusive(install));
   ipcMain.handle('update:setToken', (_e, t: string) => setToken(t));
   ipcMain.handle('update:clearToken', () => clearToken());
 }

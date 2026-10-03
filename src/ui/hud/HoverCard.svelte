@@ -11,6 +11,8 @@
   import { UNIT_STRIDE } from '../../engine/protocol';
   import { U } from '../../core/units/unit';
   import { FOG_SIGHT, STORM_AIR_SPEED, STORM_SHIP_SPEED } from '../../core/rules/weather';
+  import OpinionMeter from './OpinionMeter.svelte';
+  import { pct } from './opinion';
 
   /** Weather over the hovered tile (storms first) and what it does there. */
   const sky = $derived.by(() => {
@@ -51,6 +53,8 @@
     const noTrade = !!p && !!hud.local?.noTrade.includes(p.id);
     // A neighbour massing an army on our border (view-only intelligence from the worker).
     const threat = p ? hud.local?.threats?.find((x) => x.id === p.id) : undefined;
+    // What this nation thinks of us (and why, in short).
+    const op = p ? hud.local?.opinions?.find((o) => o.id === p.id) : undefined;
     // The country's capital marker under the pointer.
     const capital = !!p && h.capital === p.id && p.capital >= 0;
     const terrain = TERRAIN[h.terrain];
@@ -62,6 +66,7 @@
       war,
       noTrade,
       threat,
+      op,
       capital,
       terrain,
       name: s.name(h.owner, i18n.lang),
@@ -134,6 +139,19 @@
             ><Icon name="warning" size={14} /></span
           >{/if}
       </div>
+      {#if info.op}
+        <div class="opinion" data-testid="hover-opinion">
+          <OpinionMeter o={info.op} compact />
+          {#if info.op.accept >= 0}<small class="mono" title={t('opinion.acceptTip')}
+              ><Icon name="alliance" size={11} />{pct(info.op.accept)} %</small
+            >{/if}
+          {#each info.op.reasons.slice(0, 2) as [k, w] (k)}
+            <span class="why" class:neg={w < 0}
+              >{t(`opinion.reason.${k}`)} <b class="mono">{w > 0 ? '+' : ''}{w}</b></span
+            >
+          {/each}
+        </div>
+      {/if}
       {#if info.capital}
         <div class="line capital" data-testid="hover-capital">
           <Icon name="capital" size={13} />{info.p.id === hud.viewer
@@ -286,6 +304,31 @@
   }
   .assets small {
     color: var(--faint);
+  }
+  .opinion {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 8px;
+  }
+  .opinion small {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+    color: var(--muted);
+  }
+  .opinion .why {
+    flex-basis: 100%;
+    color: var(--muted);
+    font-size: 0.94em;
+  }
+  .opinion .why b {
+    color: var(--good-text);
+    font-weight: 600;
+  }
+  .opinion .why.neg b {
+    color: var(--bad-text);
   }
   .stats {
     display: flex;

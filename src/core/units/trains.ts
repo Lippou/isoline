@@ -26,6 +26,7 @@ import { U, makeUnit, type Unit } from './unit';
 import { addGold } from '../game/economy';
 import { addUnit } from './ships';
 import { techTrainBonus } from '../rules/tech';
+import { noteTrade } from '../rules/diplomacy';
 import type { Player } from '../game/player';
 
 export interface Rail {
@@ -307,7 +308,10 @@ function payStop(game: Game, train: Unit, station: Building): void {
     Math.floor(trainStopGold(base, train.level) * game.config.goldMultiplier) * game.features.tradeMult;
   train.level++;
   payTrain(game, p, amount, station);
-  if (station.owner !== p.id) payTrain(game, host, amount, station);
+  if (station.owner !== p.id) {
+    payTrain(game, host, amount, station);
+    noteTrade(game, p, host);
+  }
 }
 
 function startOnRail(train: Unit, r: Rail, fromStation: number): void {

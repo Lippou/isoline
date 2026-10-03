@@ -51,6 +51,7 @@ uniform vec4 uWeather[8];    // x, y, radius, code: -1 none, 0…1 storm (intens
 uniform float uMotion;       // 1 = animated weather (lightning); 0 with reduced motion
 uniform vec4 uRing;          // battle royale: cx, cy, r, active
 uniform float uClouds;       // 0…1 drifting cloud cover (zoomed far out)
+uniform float uBorders;      // 1 = country borders drawn (0: photo mode without borders)
 uniform float uWorld;        // ground & sea palette: 0 Earth, 1 Mars, 2 Moon, 3 Titan, 4 8-bit (map meta "palette")
 
 const float PI = 3.14159265;
@@ -410,7 +411,7 @@ void main() {
       if (d != own) { dist = min(dist, 1.0 - f.y); other = d; }
     }
     float side = own > 0.5 ? own : other;
-    if (dist < 9.0 && side > 0.5 && !water) {
+    if (dist < 9.0 && side > 0.5 && !water && uBorders > 0.5) {
       // Crisp double-stroked border: a solid line in the owner's colour, edged in dark.
       float dpx = dist * pxPerTile;
       vec4 pal = inkOf(side);

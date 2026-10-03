@@ -21,6 +21,7 @@
   import ScreenSweep from './components/ScreenSweep.svelte';
   import { defaultConfig } from '../core/game/config';
   import { withMyFlag, startMission } from './screens/launch';
+  import { applyUiScale, setInGame, startViewport } from './stores/viewport.svelte';
 
   let booted = $state(false);
   // Screen transition: a quick contour sweep, except for the splash and the title's own
@@ -37,6 +38,7 @@
     await Promise.all([loadSettings(), loadProfile()]);
     audio.setVolumes(settings.audio);
     audio.voiceLang = settings.lang;
+    startViewport();
     booted = true;
     autostart();
     // Autoplay policy: the audio context starts on the first gesture (later gestures
@@ -57,6 +59,16 @@
 
   $effect(() => {
     if (booted) audio.setVolumes(settings.audio);
+  });
+
+  // Interface scale: the page zoom follows the window (automatic) or the player's setting;
+  // a game takes it in full, the menus only grow with it (stores/viewport.svelte.ts).
+  $effect(() => {
+    void settings.graphics.uiScale;
+    if (booted) applyUiScale();
+  });
+  $effect(() => {
+    if (booted) setInGame(app.screen === 'game');
   });
 
   /** Automation hooks (tests, screenshots, media): ?autostart=<map>&nations=&tribes=&spectate&screen=<name>, ?mission=<id> */

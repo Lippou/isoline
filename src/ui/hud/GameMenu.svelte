@@ -9,6 +9,7 @@
   import { onMount } from 'svelte';
   import SettingsBody from '../screens/SettingsBody.svelte';
   import PageHeader from '../PageHeader.svelte';
+  import Icon from '../icons/Icon.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   let view = $state<'main' | 'save' | 'settings' | 'help'>('main');
@@ -77,6 +78,7 @@
     'pause',
     'general',
     'screenshot',
+    'photoMode',
     'fps',
   ];
 </script>
@@ -100,6 +102,11 @@
         {#if solo}<button class="btn" onclick={openSave}>{t('menu.save')}</button>{/if}
         <button class="btn" onclick={() => (view = 'settings')}>{t('menu.settings')}</button>
         <button class="btn" onclick={() => (view = 'help')}>{t('menu.help')}</button>
+        <button class="btn" onclick={() => void ctl.enterPhoto()} data-testid="menu-photo"
+          ><Icon name="camera" size={15} />{t('photo.open')}<kbd
+            >{keyLabel(settings.keys.photoMode ?? '')}</kbd
+          ></button
+        >
         <button
           class="btn ghost"
           onclick={() => {
@@ -234,5 +241,10 @@
     border: 1px solid var(--line);
     border-radius: 4px;
     padding: 0 0.4em;
+  }
+  .btn kbd {
+    margin-left: 0.3em;
+    font-size: 0.78em;
+    color: var(--faint);
   }
 </style>

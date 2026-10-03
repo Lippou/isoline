@@ -3,7 +3,8 @@
   import { app, go } from '../stores/app.svelte';
   import { hud, openPaper } from '../stores/game.svelte';
   import { columnPlace } from '../stores/windows.svelte';
-  import { t } from '../i18n/i18n.svelte';
+  import { t, i18n } from '../i18n/i18n.svelte';
+  import { settings } from '../stores/settings.svelte';
   import { GameController } from '../game/controller';
   import TopBar from '../hud/TopBar.svelte';
   import ResourcePanel from '../hud/ResourcePanel.svelte';
@@ -30,6 +31,7 @@
   import EventCard from '../hud/EventCard.svelte';
   import CapitalCard from '../hud/CapitalCard.svelte';
   import Perf from '../hud/Perf.svelte';
+  import PhotoBar from '../hud/PhotoBar.svelte';
   import Icon from '../icons/Icon.svelte';
 
   let host: HTMLDivElement;
@@ -37,6 +39,28 @@
   // The left column moves beside the windows standing at the left edge (Panels.svelte),
   // so nuclear alerts, the council vote and the news stay readable instead of hiding under them.
   const col = $derived(columnPlace());
+
+  // Settings changed during the game reach the map at once (they were only read when it
+  // started): country names in the new language, colour vision, contrast, motion, frame cap.
+  $effect(() => {
+    const live = {
+      lang: i18n.lang,
+      vision: settings.access.vision,
+      highContrast: settings.access.highContrast,
+      reducedMotion: settings.access.reducedMotion,
+      maxFps: settings.graphics.maxFps,
+    };
+    const r = ctl && hud.ready ? ctl.renderer : null;
+    if (!r) return;
+    Object.assign(r.settings, live);
+    r.applySettings();
+  });
+  // Graphics quality apart, so that changing anything else keeps an automatic downgrade.
+  $effect(() => {
+    const live = { quality: settings.graphics.quality, particles: settings.graphics.particles };
+    const r = ctl && hud.ready ? ctl.renderer : null;
+    if (r) Object.assign(r.settings, live);
+  });
 
   onMount(() => {
     const req = app.launch;
@@ -53,9 +77,20 @@
   });
 
   onDestroy(() => ctl?.dispose());
+
+  // The interface scale is the page zoom: when it changes (the window was resized), the
+  // map's canvas follows the new device pixel ratio to stay sharp.
+  function syncResolution(): void {
+    const r = ctl?.renderer?.app?.renderer;
+    if (!r) return;
+    const res = Math.min(2, window.devicePixelRatio || 1);
+    if (Math.abs(r.resolution - res) > 0.01) r.resize(r.screen.width, r.screen.height, res);
+  }
 </script>
 
-<div class="game" data-testid="game-screen">
+<svelte:window onresize={syncResolution} />
+
+<div class="game" class:photo={hud.photo} data-testid="game-screen">
   <div class="canvas-host" bind:this={host}></div>
   {#if hud.loading}
     <div class="loading fade-in">
@@ -102,6 +137,7 @@
     {/if}
     {#if hud.fallen && !hud.end}<FallNotice {ctl} />{/if}
     {#if hud.showPerf}<Perf {ctl} />{/if}
+    {#if hud.photo}<PhotoBar {ctl} />{/if}
   {/if}
 </div>
 
@@ -111,7 +147,7 @@
     position: absolute;
     left: 84px;
     top: 64px;
-    max-height: calc(100vh - 64px - 300px * var(--ui-scale));
+    max-height: calc(100vh - 64px - var(--hud-res-h, 270px) - 24px);
     overflow-y: auto;
     scrollbar-width: none;
     display: grid;
@@ -124,11 +160,18 @@
   .tl > :global(*) {
     pointer-events: auto;
   }
+  /* Short windows: the column scrolls more often, so its scrollbar shows. */
+  @media (max-height: 900px) {
+    .tl {
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-strong) transparent;
+    }
+  }
   /* The folded paper: a newsprint tab above the build bar, clear of the toasts. */
   .reopen {
     position: fixed;
     left: 50%;
-    bottom: calc(12px + 112px * var(--ui-scale));
+    bottom: calc(var(--hud-bar-h, 100px) + 24px);
     transform: translateX(-50%);
     z-index: 30;
     display: inline-flex;
@@ -148,15 +191,38 @@
   .reopen:focus-visible {
     background: var(--np-paper-2);
   }
+  /*
+   * The HUD's layout tokens: the widths of the resources panel (bottom left) and of the
+   * minimap (bottom right), which the build bar is centred between. The interface scale
+   * (page zoom) has already fitted the window to about 1600 × 900; what is still narrow
+   * gets the compact sizes (see also the media queries of each panel).
+   */
   .game {
     position: fixed;
     inset: 0;
     overflow: hidden;
     background: var(--abyss);
+    --res-w: 290px;
+    --mini-w: 270px;
+  }
+  @media (max-width: 1600px) {
+    .game {
+      --res-w: 262px;
+      --mini-w: 236px;
+    }
+  }
+  @media (max-width: 1360px), (max-height: 760px) {
+    .game {
+      --mini-w: 200px;
+    }
   }
   .canvas-host {
     position: absolute;
     inset: 0;
+  }
+  /* Photo mode: only the map and the photo bar (the HUD keeps its state, just hidden). */
+  .game.photo > :global(:not(.canvas-host):not(.photo-bar)) {
+    display: none !important;
   }
   .loading {
     position: absolute;

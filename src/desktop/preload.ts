@@ -1,5 +1,5 @@
 // Preload bridge: exposes a minimal, typed API to the sandboxed renderer.
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webFrame } from 'electron';
 
 const api = {
   info: () => ipcRenderer.invoke('app:info'),
@@ -21,6 +21,11 @@ const api = {
   openExternal: (url: string) => ipcRenderer.send('app:openExternal', url),
   setFullscreen: (on: boolean) => ipcRenderer.send('app:fullscreen', on),
   screenshot: () => ipcRenderer.invoke('app:screenshot'),
+  /** Page zoom: the interface scale (stores/viewport.svelte.ts), the whole page at once. */
+  zoom: {
+    get: (): number => webFrame.getZoomFactor(),
+    set: (factor: number) => webFrame.setZoomFactor(factor),
+  },
   storage: {
     read: (category: string, name: string) => ipcRenderer.invoke('storage:read', category, name),
     write: (category: string, name: string, data: string | Uint8Array) =>

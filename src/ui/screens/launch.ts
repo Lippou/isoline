@@ -5,6 +5,7 @@ import { settings } from '../stores/settings.svelte';
 import { profile, myFlag } from '../stores/profile.svelte';
 import { MISSIONS } from '../campaign/missions';
 import type { ReplayFile } from '../../engine/replay';
+import type { Snapshot } from '../../core/net/snapshot';
 import { loadSave } from '../game/saves';
 import { t } from '../i18n/i18n.svelte';
 import { toast } from '../stores/game.svelte';
@@ -67,13 +68,13 @@ export function startReplay(file: ReplayFile): void {
  * fast-forwards to `tick` and the camera goes to `at`. From inside a game, the game
  * screen is mounted anew (as "Play again" does).
  */
-export function watchReplayAt(file: ReplayFile, tick: number, at?: [number, number]): void {
+export function watchReplayAt(file: ReplayFile, tick: number, at?: [number, number], takeover = false): void {
   app.launch = {
     kind: 'replay',
     config: file.config,
     viewer: -1,
     replay: file,
-    replayAt: { tick, ...(at ? { x: at[0], y: at[1] } : {}) },
+    replayAt: { tick, ...(at ? { x: at[0], y: at[1] } : {}), ...(takeover ? { takeover } : {}) },
     ...(file.customMap ? { customMap: file.customMap } : {}),
   };
   if (app.screen === 'game') {
@@ -94,7 +95,31 @@ export async function startFromSave(slot: number): Promise<void> {
     viewer: s.viewer,
     snapshot: s.snapshot,
     priorTurns: s.turns,
+    ...(s.replayStart ? { replayStart: s.replayStart } : {}),
     ...(s.customMap ? { customMap: s.customMap } : {}),
   };
   go('game');
+}
+
+/**
+ * « Reprendre d'ici »: a new solo game from a replay moment, as `player` (see
+ * core/net/takeover.ts). With the seats unchanged the recorded turns carry over (the new
+ * game's replay still starts at tick 0); otherwise its replay starts from the snapshot.
+ */
+export function startTakeover(file: ReplayFile, snapshot: Snapshot, player: number, changed: boolean): void {
+  audio.ui('confirm');
+  const tick = snapshot.core.tick as number;
+  app.launch = {
+    kind: 'solo',
+    config: snapshot.config,
+    viewer: player,
+    snapshot,
+    priorTurns: changed ? [] : file.turns.filter(([t]) => t < tick),
+    ...(changed ? { replayStart: snapshot } : file.start ? { replayStart: file.start } : {}),
+    ...(file.customMap ? { customMap: file.customMap } : {}),
+  };
+  if (app.screen === 'game') {
+    go('replays');
+    setTimeout(() => go('game'), 0);
+  } else go('game');
 }

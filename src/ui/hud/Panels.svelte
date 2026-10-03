@@ -115,7 +115,7 @@
     position: absolute;
     left: 12px;
     top: 12px;
-    bottom: calc(280px * var(--ui-scale));
+    bottom: calc(var(--hud-res-h, 268px) + 24px);
     display: flex;
     align-items: center;
     pointer-events: none;
@@ -132,7 +132,7 @@
   }
   .rail button {
     position: relative;
-    width: calc(62px * var(--ui-scale));
+    width: 66px;
     padding: 7px 2px 5px;
     display: grid;
     justify-items: center;
@@ -144,7 +144,7 @@
     color: var(--muted);
   }
   .lbl {
-    font-size: 0.62em;
+    font-size: 0.66em;
     line-height: 1.1;
     text-align: center;
     max-width: 100%;
@@ -200,6 +200,19 @@
   @keyframes research-pulse {
     50% {
       opacity: 0.35;
+    }
+  }
+  /* Short windows: icons only (the name is in the tooltip), so the rail fits beside the panels. */
+  @media (max-height: 760px) {
+    .lbl {
+      display: none;
+    }
+    .rail button {
+      width: 44px;
+      padding: 8px 2px;
+    }
+    .dot {
+      right: 6px;
     }
   }
   .wins {

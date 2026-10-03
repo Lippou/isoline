@@ -162,6 +162,10 @@ export const hud = $state({
   fallen: null as null | { tick: number; by: number; cause: EliminationCause },
   /** Replay: tick being fast-forwarded to (-1: none). */
   replaySeek: -1,
+  /** Replay: the « Reprendre d'ici » chooser is open (which country to play from this moment). */
+  takeover: false,
+  /** Photo mode: the HUD is hidden, a small bar sets up the shot (see PhotoBar.svelte). */
+  photo: false,
   spectating: false,
   councilOpen: false,
   subtitles: [] as { id: number; text: string; t: number }[],
@@ -250,6 +254,8 @@ export function resetHud(): void {
   hud.paperPage = 'front';
   hud.fallen = null;
   hud.replaySeek = -1;
+  hud.takeover = false;
+  hud.photo = false;
   hud.spectating = false;
   hud.replay = null;
   hud.objectives = [];

@@ -9,6 +9,7 @@
   import { currentSession } from '../stores/app.svelte';
   import { buildingUnlock, lockFor, nukeUnlock, techKey, type Unlock } from '../../core/rules/tech';
   import ResearchReminder from './ResearchReminder.svelte';
+  import { hudSize } from '../stores/hudBox.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   const cfg = currentSession()!.config;
@@ -112,7 +113,7 @@
 {/snippet}
 
 {#if L}
-  <section class="bar panel" data-testid="build-bar">
+  <section class="bar panel" data-testid="build-bar" use:hudSize={'bar'}>
     <ResearchReminder {ctl} />
     <div class="group">
       <div class="gtitle">{t('hud.groupBuild')}</div>
@@ -300,16 +301,24 @@
 {/if}
 
 <style>
+  /*
+   * Centred in the room between the resources panel and the minimap; when that room is
+   * too narrow for one row, the groups go on two (the panels around read its height).
+   */
   .bar {
     position: absolute;
-    left: 50%;
+    left: calc(12px + var(--res-w, 290px) + 10px);
+    right: calc(12px + var(--hud-mini-w, 278px) + 10px);
     bottom: 12px;
+    width: fit-content;
+    margin-inline: auto;
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     padding: 0;
     z-index: 6;
-    transform-origin: bottom center;
-    transform: translateX(-50%) scale(var(--ui-scale));
   }
+  /* Narrower windows: the tools lose their name (it is in the tooltip), then shrink. */
   @media (max-width: 1750px) {
     .name {
       display: none;
@@ -324,8 +333,9 @@
     align-content: start;
     padding: 6px 8px 8px;
   }
+  /* A rule before each group (one starting a second row has it against the edge). */
   .group + .group {
-    border-left: 1px solid var(--line);
+    box-shadow: -1px 0 0 var(--line);
   }
   .gtitle {
     font-size: 0.76em;
@@ -478,5 +488,22 @@
     gap: 4px 12px;
     font-size: 0.8em;
     color: var(--brass);
+  }
+  /* (After the base rules, which it overrides.) */
+  @media (max-width: 1600px) {
+    .tool {
+      width: 44px !important;
+      height: 48px !important;
+    }
+    .group {
+      padding: 5px 6px 6px;
+    }
+    .vtools {
+      grid-template-columns: repeat(2, 28px);
+    }
+    .vt {
+      width: 28px;
+      height: 28px;
+    }
   }
 </style>

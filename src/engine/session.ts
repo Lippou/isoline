@@ -22,6 +22,8 @@ export interface SessionOptions {
   replay?: ReplayFile;
   /** Previously recorded turns (resumed save) so the replay stays complete. */
   priorTurns?: ReplayFile['turns'];
+  /** State the recorded turns start from (a game taken over from a replay moment). */
+  replayStart?: Snapshot;
   source?: TurnSource;
   customMap?: string; // .isomap JSON
 }
@@ -75,6 +77,8 @@ export class Session {
     this.viewer = opts.viewer;
     this.customMap = opts.customMap;
     if (opts.priorTurns) this.recorder.seed(opts.priorTurns);
+    // (Plain copy: the launch request is reactive UI state.)
+    if (opts.replayStart) this.recorder.start = JSON.parse(JSON.stringify(opts.replayStart)) as Snapshot;
   }
 
   onTick(fn: (u: TickUpdate, events: GameEvent[]) => void): () => void {
@@ -108,9 +112,9 @@ export class Session {
     };
     // A save arrives through the app state as a reactive proxy, which the worker cannot
     // receive either (DataCloneError): hand it a plain copy (saves are plain JSON).
-    const snapshot = this.opts.snapshot
-      ? (JSON.parse(JSON.stringify(this.opts.snapshot)) as Snapshot)
-      : undefined;
+    // A replay recorded from a taken-over moment starts from that moment's state.
+    const start = this.opts.snapshot ?? (this.kind === 'replay' ? this.opts.replay?.start : undefined);
+    const snapshot = start ? (JSON.parse(JSON.stringify(start)) as Snapshot) : undefined;
     const ready = await this.sim.init(this.config, src, this.viewer, snapshot);
     this.loadMs = performance.now() - t0;
     this.state.init(ready);

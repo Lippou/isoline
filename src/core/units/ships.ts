@@ -42,7 +42,7 @@ import {
 } from '../game/constants';
 import { U, makeUnit, sailOnPath, type Unit } from './unit';
 import { launchAttack } from '../rules/combat';
-import { navalHostilities, openHostilities } from '../rules/diplomacy';
+import { navalHostilities, noteTrade, openHostilities } from '../rules/diplomacy';
 import { addGold } from '../game/economy';
 import type { Building } from '../buildings/building';
 import { IS_LAND, T } from '../map/terrain';
@@ -213,12 +213,31 @@ export function launchBoat(game: Game, p: Player, tile: number, ratio: number): 
   return 'ok';
 }
 
-/** Navigable tile under a ship (or the last waypoint it passed, when it cuts a corner of land). */
+/**
+ * Navigable tile under a ship. A leg between waypoints is a straight line that may cut a
+ * corner of land: then the last waypoint it passed, or else the first navigable tile
+ * around it (a ship whose path was cleared on such a corner used to be stranded there).
+ */
 function waterUnder(game: Game, u: Unit): number {
   const t = tileOf(game, u);
-  if (game.map.isNavigable(t)) return t;
+  const map = game.map;
+  if (map.isNavigable(t)) return t;
   const prev = u.path[Math.min(u.pathIdx, u.path.length) - 1];
-  return prev !== undefined && game.map.isNavigable(prev) ? prev : -1;
+  if (prev !== undefined && map.isNavigable(prev)) return prev;
+  const w = map.width;
+  const x = t % w;
+  const y = (t / w) | 0;
+  // A warship belongs to its patrol's body: a lake beside the corner is not its water.
+  const body = u.type === U.Warship && u.patrol >= 0 ? map.navBody[u.patrol]! : 0;
+  for (let pass = body > 0 ? 0 : 1; pass < 2; pass++)
+    for (let r = 1; r <= 2; r++)
+      for (let dy = -r; dy <= r; dy++)
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || !map.inBounds(x + dx, y + dy)) continue;
+          const n = t + dy * w + dx;
+          if (map.isNavigable(n) && (pass === 1 || map.navBody[n] === body)) return n;
+        }
+  return -1;
 }
 
 /** Points a transport at its owner's nearest coast on its sea (OpenFront's bestTransportShipSpawn). */
@@ -371,6 +390,7 @@ function acquireTarget(game: Game, ship: Unit): void {
   const pr2 = WARSHIP_PATROL_RANGE * WARSHIP_PATROL_RANGE;
   const [px, py]: [number, number] = ship.patrol >= 0 ? center(game, ship.patrol) : [ship.x, ship.y];
   let hasPort: boolean | undefined;
+  let shipBody: number | undefined;
   // Weather: across a fog bank (around the warship or its prey) it spots at half range.
   const fogged = inFogBank(game, ship.x, ship.y);
   const fr2 = r2 * FOG_SIGHT * FOG_SIGHT;
@@ -390,6 +410,9 @@ function acquireTarget(game: Game, ship: Unit): void {
       if (dest && game.friendly(ship.owner, dest.owner)) continue;
       hasPort ??= portsNear(game, game.players[ship.owner]!, tileOf(game, ship)).length > 0;
       if (!hasPort) continue;
+      // Across land (another sea, a lake) it could never be reached: the ship parked.
+      shipBody ??= game.map.navBody[waterUnder(game, ship)] ?? -1;
+      if (game.map.navBody[waterUnder(game, v)] !== shipBody) continue;
     }
     const score = priorityOf(v.type) * 1e6 - d2;
     if (score > bestScore) {
@@ -400,17 +423,20 @@ function acquireTarget(game: Game, ship: Unit): void {
   ship.target = best ? best.id : -1;
 }
 
-function moveToward(game: Game, u: Unit, tx: number, ty: number, speed: number): void {
+function moveToward(game: Game, u: Unit, tx: number, ty: number, speed: number, budget = 20_000): void {
   const goal = Math.floor(ty) * game.map.width + Math.floor(tx);
-  const here = tileOf(game, u);
   if (!game.map.isNavigable(goal)) return;
-  if (game.map.nav.lineOfWater(here, goal)) {
+  // Routes start from water: off a land corner, the ship first sails back to that tile.
+  const here = waterUnder(game, u);
+  if (here < 0) return;
+  const onWater = here === tileOf(game, u);
+  if (onWater && game.map.nav.lineOfWater(here, goal)) {
     u.path = [goal];
     u.pathIdx = 0;
   } else if (u.path.length === 0 || u.pathIdx >= u.path.length || u.dest !== goal) {
-    const path = game.map.nav.findPath(here, goal, 20_000);
+    const path = game.map.nav.findPath(here, goal, budget);
     u.path = path ?? [];
-    u.pathIdx = path ? 1 : 0;
+    u.pathIdx = path && onWater ? 1 : 0;
     u.dest = goal;
   }
   sailOnPath(u, speed, game.map.width);
@@ -429,6 +455,12 @@ function patrolStep(game: Game, u: Unit, speed: number): void {
   const py = (u.patrol / w) | 0;
   const half = WARSHIP_PATROL_RANGE >> 1;
   const onRiver = game.map.terrain[u.patrol] === T.River;
+  const here = waterUnder(game, u);
+  // A ship carried onto another body of water (older saves) patrols where it is.
+  if (here >= 0 && game.map.navBody[here] !== game.map.navBody[u.patrol]) {
+    u.patrol = here;
+    return;
+  }
   for (let tries = 0; tries < 6; tries++) {
     const x = px + game.rng.int(-half, half);
     const y = py + game.rng.int(-half, half);
@@ -436,14 +468,23 @@ function patrolStep(game: Game, u: Unit, speed: number): void {
     const t = y * w + x;
     if (!game.map.isNavigable(t) || game.map.navBody[t] !== game.map.navBody[u.patrol]) continue;
     if (!onRiver && game.map.terrain[t] === T.River) continue;
-    const path = game.map.nav.findPath(tileOf(game, u), t, 20_000);
+    const path = here >= 0 ? game.map.nav.findPath(here, t, 20_000) : null;
     if (path) {
       u.path = path;
-      u.pathIdx = 1;
+      u.pathIdx = here === tileOf(game, u) ? 1 : 0;
       u.cooldown = Math.max(u.cooldown, 0);
       return;
     }
   }
+  // Every try failed. Far from its patrol point (back from a repair, after a chase), the
+  // short searches never reach it and the ship stood still for good: head back with a
+  // full search, or else patrol where it is.
+  if (here < 0) return;
+  const back = game.map.nav.findPath(here, u.patrol);
+  if (back) {
+    u.path = back;
+    u.pathIdx = here === tileOf(game, u) ? 1 : 0;
+  } else u.patrol = here;
 }
 
 function fire(game: Game, ship: Unit, target: Unit): void {
@@ -498,6 +539,9 @@ function healWarship(game: Game, u: Unit): void {
   }
   u.hp = Math.min(u.maxHp, u.hp + heal);
 }
+
+/** A warship with no route to a port tries again after 10 s. */
+const WARSHIP_REPAIR_RETRY_TICKS = 100;
 
 function endRepair(u: Unit): void {
   u.kind = WS.Patrolling;
@@ -566,9 +610,13 @@ function sailToRepair(game: Game, u: Unit, speed: number): boolean {
     return false;
   }
   const [wx, wy] = center(game, game.map.adjacentWater(port.tile));
-  moveToward(game, u, wx, wy, speed);
+  // The whole route home: a far port is beyond the chase's short search.
+  moveToward(game, u, wx, wy, speed, 400_000);
   if (u.path.length === 0) {
-    endRepair(u); // no route to the port
+    // No route to the port: patrol on, and only try again a while later (retrying every
+    // tick wiped the patrol route each time, freezing the ship).
+    endRepair(u);
+    u.t1 = game.tick + WARSHIP_REPAIR_RETRY_TICKS;
     return false;
   }
   return true;
@@ -597,13 +645,14 @@ function captureMerchant(game: Game, ship: Unit, m: Unit): void {
     return;
   }
   const dst = game.map.adjacentWater(home.tile);
-  const path = game.map.nav.findPath(tileOf(game, m), dst);
+  const here = waterUnder(game, m);
+  const path = here >= 0 ? game.map.nav.findPath(here, dst) : null;
   if (!path) {
     m.alive = false;
     return;
   }
   m.path = path;
-  m.pathIdx = 1;
+  m.pathIdx = here === tileOf(game, m) ? 1 : 0;
   m.dest = home.id;
   m.kind = 1; // pirated
   game.emit({ k: 'capture', x: m.x, y: m.y, owner: prev, by: ship.owner });
@@ -611,21 +660,22 @@ function captureMerchant(game: Game, ship: Unit, m: Unit): void {
 }
 
 // --------------------------------------------------------------- merchants
-const pathCache = new Map<string, number[] | null>();
-
-export function clearPathCache(): void {
-  pathCache.clear();
-}
+// Keyed by the map object, not its id: two custom or generated maps can share an id
+// (e.g. successive LAN games hosted by the same process), and a lane of one must never
+// be sailed on the other.
+const pathCaches = new WeakMap<Game['map'], Map<number, number[] | null>>();
 
 /** Port-to-port routes are memoised (merchants keep sailing the same lanes). */
 function tradePath(game: Game, from: Building, to: Building): number[] | null {
-  const key = `${game.map.meta.id}:${from.tile}>${to.tile}`;
-  if (pathCache.has(key)) return pathCache.get(key)!;
+  let cache = pathCaches.get(game.map);
+  if (!cache) pathCaches.set(game.map, (cache = new Map()));
+  const key = from.tile * game.map.size + to.tile;
+  if (cache.has(key)) return cache.get(key)!;
   const a = game.map.adjacentWater(from.tile);
   const b = game.map.adjacentWater(to.tile);
   const path = a >= 0 && b >= 0 ? game.map.nav.findPath(a, b) : null;
-  if (pathCache.size > 20_000) pathCache.clear();
-  pathCache.set(key, path);
+  if (cache.size > 20_000) cache.clear();
+  cache.set(key, path);
   return path;
 }
 
@@ -757,6 +807,7 @@ function arriveMerchant(game: Game, m: Unit): void {
   if (!voyageValid(game, m)) return;
   payTrade(game, owner, value, game.buildings.get(m.home) ?? dest);
   payTrade(game, game.players[dest.owner]!, value, dest);
+  noteTrade(game, owner, game.players[dest.owner]!);
 }
 
 // ------------------------------------------------------------------ update

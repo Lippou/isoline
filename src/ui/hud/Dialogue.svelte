@@ -11,6 +11,7 @@
   import type { GameController } from '../game/controller';
   import { audio } from '../../audio/audio';
   import { reserveBottom } from '../stores/windows.svelte';
+  import { hudBox } from '../stores/hudBox.svelte';
   import { settings } from '../stores/settings.svelte';
   import { researchIdle } from './research';
 
@@ -28,7 +29,7 @@
       !settings.game.autoResearch &&
       researchIdle(hud.local, ctl.session.config.features.tech),
   );
-  const bottom = $derived(nudge ? 160 : 128);
+  const bottom = $derived((hudBox.bar || 112) + (nudge ? 48 : 16));
   let dockH = $state(0);
   $effect(() => {
     reserveBottom(dockH > 0 ? bottom + Math.ceil(dockH) + 8 : 0);
@@ -190,7 +191,7 @@
     left: 50%;
     transform: translateX(-50%);
     transition: bottom 0.2s ease-out;
-    width: min(680px, calc(100vw - 640px * var(--ui-scale)));
+    width: min(680px, calc(100vw - 640px));
     min-width: 420px;
     display: grid;
     gap: 6px;

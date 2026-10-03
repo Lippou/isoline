@@ -116,6 +116,8 @@ export function takeSnapshot(game: Game): Snapshot {
       rng: game.rng.getState(),
       usefulLand: game.usefulLand,
       buildingsVersion: game.buildingsVersion,
+      // Capitals taken but not handled yet (a surrender while the match is over waits for 'continue').
+      capitalFalls: game.capitalFalls.slice(),
     },
     owner: rleEncode(game.owner),
     fallout: rleEncode(game.fallout),
@@ -147,6 +149,7 @@ export function restoreSnapshot(map: GameMap, snap: Snapshot): Game {
     rng: number[];
     usefulLand: number;
     buildingsVersion: number;
+    capitalFalls?: number[];
   };
   game.tick = core.tick;
   game.phase = core.phase;
@@ -156,6 +159,7 @@ export function restoreSnapshot(map: GameMap, snap: Snapshot): Game {
   game.rng.setState(core.rng);
   game.usefulLand = core.usefulLand;
   game.buildingsVersion = core.buildingsVersion;
+  game.capitalFalls = Array.isArray(core.capitalFalls) ? core.capitalFalls.slice() : [];
   rleDecodeInto(snap.owner, game.owner);
   rleDecodeInto(snap.fallout, game.fallout);
   rleDecodeInto(snap.loyalty, game.loyalty);

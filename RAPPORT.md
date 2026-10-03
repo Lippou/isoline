@@ -1,8 +1,19 @@
-# Rapport de livraison — Isoline 1.5.0
+# Rapport de livraison — Isoline 1.6.0
 
 Ce rapport fait le point sur ce qui est livré, ce qui a été mesuré, les écarts avec le cahier des charges et les limites connues. Toutes les mesures viennent de scripts du dépôt et peuvent être reproduites (`npm run bench`, `npm run bench:app`, `node scripts/perf-app.mjs soak`, `npm run verify:packages`).
 
 **Machine de mesure** : Mac mini Apple M4 Pro (12 cœurs, 24 Go), macOS 27.2, écran 144 Hz, Node 24.19, Electron 44.5.
+
+## 0. Version 1.6 : huitième lot de retours
+
+| Retour | Réponse |
+|---|---|
+| Adapter le jeu aux résolutions (MacBook Air M2 : tout est serré) | Échelle automatique de l'interface (`min(L/1600, H/900)`, bornée de 85 à 125 %) : 92,5 % sur le MacBook Air (1470×880 ou 956), 85 % en 1366×768, 100 % de 1600×900 à 1920×1080, 115 % en 1440p ; réglage manuel de 75 à 150 %. Barre de construction compacte puis sur deux lignes, classement réduit au top 5, listes d'attaques en pastilles, mini-carte et barre du haut qui se resserrent, panneaux placés selon la hauteur réelle des autres. Vérifié sur une matrice de 108 captures de 1280×720 à 2560×1440. |
+| Refaire les bateaux de troupes et de combat | Nouvelles silhouettes vues de dessus (transport, destroyer, porte-conteneurs) à la couleur du propriétaire, contour sombre ; tourelles qui suivent la cible, éclair au tir, fumée sous 50 % de vie, barre de vie, croix de réparation à quai, chevrons de vétéran ; sillage selon la vitesse ; obus traçants avec impact. 20 à 34 px à l'écran ; au moins 162 FPS sur le Monde avec 640 navires. |
+| Trouver des choses à ajouter | **Opinion des nations** (jauge, raisons chiffrées, chance d'accord calculée par la même formule que l'IA ; les dons, l'alliance, le commerce et l'ennemi commun comptent) ; **« Reprendre d'ici »** depuis un replay ou la une de fin de partie, avec le pays de son choix ; **mode photo** (F2 : interface masquée, calques et heure du jour réglables, capture). |
+| Vérifier qu'il n'y a pas de bug | Parties simulées sur les 41 cartes × 9 variantes avec contrôles d'invariants, de déterminisme, de sauvegarde et de replay ; passage de l'application entière. 15 bugs corrigés, dont des navires de guerre bloqués pour de bon (environ la moitié en fin de partie sur l'Europe et le Monde), des débarquements de l'IA de plus de 10 minutes, les noms restés dans l'ancienne langue après un changement en jeu, deux succès impossibles, des alliances conservées par les éliminés. |
+
+Mesures : 254 tests unitaires et d'intégration, 5 e2e ; 368 parties simulées sur 369 sans anomalie (la dernière est un voyage fluvial de 4 000 tuiles encore en cours).
 
 ## 0. Version 1.5 : septième lot de retours
 

@@ -4,6 +4,13 @@ import type { LocalizedName } from '../map/gamemap';
 import { BUILDING_COUNT } from './constants';
 
 export type PlayerKind = 'human' | 'nation' | 'tribe';
+/**
+ * Why a country feels the way it does about another (the breakdown of a relation):
+ * attacked by it, betrayed by it, it betrayed a neighbour, its gifts, our alliance,
+ * our trade, a common enemy, and older feelings whose cause is no longer known.
+ */
+export type RelationCause =
+  'attacked' | 'betrayed' | 'traitor' | 'gift' | 'ally' | 'trade' | 'enemy' | 'past';
 export type Personality = 'expansionist' | 'builder' | 'merchant' | 'diplomat' | 'isolationist' | 'warmonger';
 export const PERSONALITIES: readonly Personality[] = [
   'expansionist',
@@ -99,6 +106,15 @@ export class Player {
   betrayedBy = new Map<number, number>(); // who betrayed me (id → tick)
   /** OpenFront's relations: my feeling towards each player, −100 … 100 (absent = 0), easing back to 0. */
   relations = new Map<number, number>();
+  /**
+   * Breakdown of each relation by cause (view only: the AI reads `relations`). The parts
+   * always add up to the relation: a clamp or the decay scales them all alike.
+   */
+  relationCauses = new Map<number, Partial<Record<RelationCause, number>>>();
+  /** When each current alliance was first signed (renewals keep it). */
+  allySince = new Map<number, number>();
+  /** Last tick a merchant ship or a train paid out between us and each partner. */
+  lastTrade = new Map<number, number>();
 
   // Tech tree (rules/tech.ts): level reached in each of the 6 branches (beyond 6: levels of
   // the branch's repeatable technology), banked research points, the technology aimed at
@@ -170,9 +186,43 @@ export class Player {
     return this.relations.get(other) ?? 0;
   }
 
-  updateRelation(other: number, delta: number): void {
-    if (other === this.id) return;
-    this.relations.set(other, Math.max(-100, Math.min(100, this.relation(other) + delta)));
+  updateRelation(other: number, delta: number, cause: RelationCause = 'past'): void {
+    if (other === this.id || delta === 0) return;
+    const r = Math.max(-100, Math.min(100, this.relation(other) + delta));
+    this.relations.set(other, r);
+    const c = this.relationCauses.get(other) ?? {};
+    c[cause] = (c[cause] ?? 0) + delta;
+    this.relationCauses.set(other, c);
+    this.reconcileCauses(other, r);
+  }
+
+  /** Relations ease back to neutral by `d` (OpenFront: 0.05 a tick); the causes fade alike. */
+  decayRelations(d: number): void {
+    for (const [id, r] of this.relations) {
+      if (Math.abs(r) <= d) {
+        this.relations.delete(id);
+        this.relationCauses.delete(id);
+      } else {
+        const n = r - Math.sign(r) * d;
+        this.relations.set(id, n);
+        this.reconcileCauses(id, n);
+      }
+    }
+  }
+
+  /** Keeps the causes adding up to the relation `r` (scaled together; else the gap is 'past'). */
+  private reconcileCauses(other: number, r: number): void {
+    const c = this.relationCauses.get(other) ?? {};
+    let sum = 0;
+    for (const v of Object.values(c)) sum += v;
+    if (Math.abs(sum - r) > 1e-9) {
+      if (Math.abs(sum) > 1e-6 && Math.sign(sum) === Math.sign(r)) {
+        const f = r / sum;
+        for (const k of Object.keys(c) as RelationCause[]) c[k] = c[k]! * f;
+      } else c.past = (c.past ?? 0) + (r - sum);
+    }
+    for (const k of Object.keys(c) as RelationCause[]) if (Math.abs(c[k]!) < 0.05) delete c[k];
+    this.relationCauses.set(other, c);
   }
 
   hasEmbargoWith(other: Player, tick: number): boolean {

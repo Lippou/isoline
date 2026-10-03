@@ -144,7 +144,7 @@
     position: absolute;
     right: 12px;
     top: 50%;
-    transform: translateY(-50%) scale(var(--ui-scale));
+    transform: translateY(-50%);
     transform-origin: right center;
     z-index: 7;
     width: min(410px, calc(100vw - 32px));

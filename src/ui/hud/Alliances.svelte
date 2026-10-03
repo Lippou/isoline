@@ -155,4 +155,12 @@
     grid-area: act;
     justify-self: start;
   }
+  /* Short windows: a long list of allies scrolls instead of pushing the column down. */
+  @media (max-height: 900px) {
+    ul {
+      max-height: 168px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+  }
 </style>

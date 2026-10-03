@@ -173,7 +173,7 @@
   h2 {
     font-family: var(--title);
     font-weight: 700;
-    font-size: calc(1.6em * var(--ui-scale));
+    font-size: 1.6em;
     line-height: 1;
     letter-spacing: -0.012em;
     text-align: center;

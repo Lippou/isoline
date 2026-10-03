@@ -17,6 +17,8 @@ export interface SaveFile {
   viewer: number;
   snapshot: Snapshot;
   turns: ReplayFile['turns'];
+  /** State the turns start from (a game taken over from a replay moment; none: tick 0). */
+  replayStart?: Snapshot;
   customMap?: string;
 }
 
@@ -41,15 +43,26 @@ export async function takeSnapshotSave(session: Session, slot: number): Promise<
     tick: session.state.tick,
     viewer: session.viewer,
     snapshot,
-    turns: session.recorder.allTurns,
+    turns: turnsBefore(session.recorder.allTurns, snapshot),
   };
   if (session.customMap) file.customMap = session.customMap;
+  if (session.recorder.start) file.replayStart = session.recorder.start;
   return bridge.storage.write('saves', slotName(slot), JSON.stringify(file));
 }
 
+/**
+ * Only the turns the snapshot already contains. Turns keep flowing to the worker while it
+ * serialises the game, so the recorder may hold a few ticks the snapshot never saw: kept,
+ * they would replay commands the resumed game never ran (and break its replay).
+ */
+function turnsBefore(turns: ReplayFile['turns'], snapshot: Snapshot): ReplayFile['turns'] {
+  const tick = (snapshot.core as { tick?: number }).tick;
+  return typeof tick === 'number' ? turns.filter(([t]) => t < tick) : turns;
+}
+
 export function migrateSave(raw: SaveFile): SaveFile {
-  // v1 is current; future migrations go here.
-  return { ...raw, version: SAVE_VERSION };
+  // v1 is current; future migrations go here. Older saves may hold turns past the snapshot.
+  return { ...raw, version: SAVE_VERSION, turns: turnsBefore(raw.turns ?? [], raw.snapshot) };
 }
 
 export async function loadSave(slot: number): Promise<SaveFile | null> {

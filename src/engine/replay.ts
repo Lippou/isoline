@@ -2,6 +2,7 @@
 import type { GameConfig } from '../core/game/config';
 import type { Command, Turn } from '../core/net/commands';
 import type { TurnSource } from './turns';
+import type { Snapshot } from '../core/net/snapshot';
 
 export const REPLAY_VERSION = 1;
 
@@ -13,6 +14,11 @@ export interface ReplayFile {
   config: GameConfig;
   /** Embedded custom map (.isomap JSON) when the map is not built in. */
   customMap?: string;
+  /**
+   * The state the replay starts from (a game taken over from a replay moment, « Reprendre
+   * d'ici », with seats changed): turns then begin at its tick instead of tick 0.
+   */
+  start?: Snapshot;
   viewer: number;
   endTick: number;
   /** [tick, [[playerId, command], …]] for every turn that had commands. */
@@ -23,6 +29,8 @@ export interface ReplayFile {
 export class ReplayRecorder {
   private turns: [number, [number, Command][]][] = [];
   lastTick = 0;
+  /** State the recorded turns start from (none: tick 0 of the config). */
+  start: Snapshot | undefined;
 
   record(turn: Turn): void {
     this.lastTick = turn.tick;
@@ -59,6 +67,7 @@ export class ReplayRecorder {
       summary: { winner, players, durationTicks: this.lastTick },
     };
     if (customMap) f.customMap = customMap;
+    if (this.start) f.start = this.start;
     return f;
   }
 }
@@ -86,6 +95,8 @@ export class ReplayPlayer implements TurnSource {
   readonly canPause = true;
 
   constructor(readonly file: ReplayFile) {
+    this.tick = this.startTick;
+    this.acked = this.tick - 1;
     for (const [t, cmds] of file.turns)
       this.byTick.set(
         t,
@@ -123,10 +134,15 @@ export class ReplayPlayer implements TurnSource {
     this.acked = Math.max(this.acked, tick - 1);
   }
 
-  /** Rewind bookkeeping after the simulation was re-initialised from tick 0. */
+  /** First tick of the replay: 0, or the tick of its start snapshot. */
+  get startTick(): number {
+    return (this.file.start?.core.tick as number | undefined) ?? 0;
+  }
+
+  /** Rewind bookkeeping after the simulation was re-initialised from its start. */
   reset(): void {
-    this.tick = 0;
-    this.acked = -1;
+    this.tick = this.startTick;
+    this.acked = this.tick - 1;
     this.acc = 0;
   }
 

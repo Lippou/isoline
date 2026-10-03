@@ -5,7 +5,7 @@ import type { Command, Turn } from '../core/net/commands';
 import type { TurnSource } from './turns';
 import type { Snapshot } from '../core/net/snapshot';
 import type { GameConfig } from '../core/game/config';
-import type { PlayerFlag } from '../core/data/flagSpec';
+import { sanitizeFlag, type PlayerFlag } from '../core/data/flagSpec';
 
 export class LanClient {
   private ws: WebSocket | null = null;
@@ -65,12 +65,12 @@ export class LanClient {
         this.slot = m.slot;
         this.token = m.token;
         this.host = m.host;
-        this.lobby = m.lobby;
-        this.onLobby(m.lobby);
+        this.lobby = cleanLobby(m.lobby);
+        this.onLobby(this.lobby);
         break;
       case 'lobby':
-        this.lobby = m.lobby;
-        this.onLobby(m.lobby);
+        this.lobby = cleanLobby(m.lobby);
+        this.onLobby(this.lobby);
         break;
       case 'reject':
         this.closed = true;
@@ -125,6 +125,22 @@ export class LanClient {
     if (this.pingTimer) clearInterval(this.pingTimer);
     this.ws?.close();
   }
+}
+
+/**
+ * Flags as the lobby draws them: the host's server sanitises what players send, but a
+ * modified host could still pass a malformed flag that would throw while rendering.
+ */
+function cleanLobby(l: LobbyState): LobbyState {
+  const players = Array.isArray(l.players) ? l.players : [];
+  return {
+    ...l,
+    players: players.map((p) => {
+      const { flag, ...rest } = p;
+      const f = sanitizeFlag(flag);
+      return f ? { ...rest, flag: f } : rest;
+    }),
+  };
 }
 
 /** The LAN client created in the lobby and handed over to the game screen. */

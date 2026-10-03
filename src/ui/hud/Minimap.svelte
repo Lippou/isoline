@@ -8,6 +8,7 @@
   import { U } from '../../core/units/unit';
   import { t } from '../i18n/i18n.svelte';
   import { minimapPalette } from '../../render/worldPalette';
+  import { hudSize } from '../stores/hudBox.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   let canvas: HTMLCanvasElement;
@@ -166,7 +167,7 @@
   });
 </script>
 
-<aside class="mini panel" class:collapsed data-testid="minimap">
+<aside class="mini panel" class:collapsed data-testid="minimap" use:hudSize={'mini'}>
   <button class="toggle" onclick={() => (collapsed = !collapsed)} title={t('hud.minimap')}
     ><Icon name={collapsed ? 'expand' : 'collapse'} size={13} /></button
   >
@@ -174,7 +175,8 @@
     bind:this={canvas}
     width={W}
     height={H}
-    style="height:{H}px"
+    style:aspect-ratio="{W} / {H}"
+    style:width="min(var(--mini-w, 270px), {((34 * W) / H).toFixed(2)}vh)"
     onpointerdown={(e) => {
       dragging = true;
       goto(e);
@@ -196,9 +198,10 @@
   .mini.collapsed canvas {
     display: none;
   }
+  /* As wide as the layout allows (--mini-w, GameScreen.svelte), never taller than a third of the window. */
   canvas {
     display: block;
-    width: calc(270px * var(--ui-scale));
+    height: auto;
     border-radius: 3px;
     cursor: crosshair;
     image-rendering: pixelated;

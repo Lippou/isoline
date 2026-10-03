@@ -26,11 +26,13 @@ export interface LaunchRequest {
   snapshot?: Snapshot;
   replay?: ReplayFile;
   priorTurns?: ReplayFile['turns'];
+  /** State the recorded turns start from (a game taken over from a replay moment). */
+  replayStart?: Snapshot;
   customMap?: string;
   missionId?: string;
   lanUrl?: string;
   /** Replays: start at this tick (fast-forward), the camera on (x, y). */
-  replayAt?: { tick: number; x?: number; y?: number };
+  replayAt?: { tick: number; x?: number; y?: number; takeover?: boolean };
 }
 
 export const app = $state({

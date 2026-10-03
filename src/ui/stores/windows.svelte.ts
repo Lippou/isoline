@@ -4,7 +4,7 @@
 // Which window is open stays in `hud.panels` (the rest of the HUD reads it).
 import { innerWidth, innerHeight } from 'svelte/reactivity/window';
 import { hud } from './game.svelte';
-import { settings } from './settings.svelte';
+import { hudBox } from './hudBox.svelte';
 
 export type WinId = 'diplomacy' | 'trade' | 'tech' | 'stats' | 'log' | 'chat';
 export const WIN_IDS: readonly WinId[] = ['diplomacy', 'trade', 'tech', 'stats', 'log', 'chat'];
@@ -16,7 +16,7 @@ export interface Rect {
   h: number;
 }
 
-/** Width of each window at UI scale 1 (the journal is a newspaper column, the tree is wide). */
+/** Width of each window (CSS pixels; the page zoom scales them) — the journal is a newspaper column, the tree is wide. */
 const BASE_W: Record<WinId, number> = {
   diplomacy: 400,
   trade: 400,
@@ -34,7 +34,7 @@ const MARGIN = 8;
 export const MIN_W = 300;
 export const MIN_H = 220;
 const LS_KEY = 'isoline.windows.v1';
-/** Width of the leaderboard (Leaderboard.svelte) at UI scale 1. */
+/** Width of the leaderboard (Leaderboard.svelte). */
 const LEADERBOARD_W = 310;
 
 function load(): Partial<Record<WinId, Rect>> {
@@ -78,7 +78,6 @@ export const wm = $state({
 
 const vw = () => innerWidth.current ?? 1280;
 const vh = () => innerHeight.current ?? 800;
-const scale = () => settings.graphics.uiScale || 1;
 
 /** Keeps a window on screen and no larger than it. */
 export function clampRect(r: Rect): Rect {
@@ -99,13 +98,15 @@ const overlaps = (a: Rect, b: Rect) =>
 
 /** The default size of a window: its width, and the height above the resources panel. */
 function defaultSize(id: WinId): { w: number; h: number } {
-  const s = scale();
-  const w = Math.min(BASE_W[id] * s, vw() - wm.railRight - GAP - MARGIN);
+  const w = Math.min(BASE_W[id], vw() - wm.railRight - GAP - MARGIN);
   // The tech tree needs height more than the resources panel needs to stay visible
   // while one plans research: on short screens it goes down to the build bar's height.
-  const room = Math.max((id === 'tech' && vh() < 900 ? 150 : BOTTOM_ROOM) * s, wm.bottomReserve);
+  // (The panels' measured heights, when shown: hudBox.svelte.ts.)
+  const resRoom = hudBox.res ? hudBox.res + 12 + GAP : BOTTOM_ROOM;
+  const barRoom = (hudBox.bar || 112) + 12 + 26;
+  const room = Math.max(id === 'tech' && vh() < 900 ? barRoom : resRoom, wm.bottomReserve);
   const h = Math.max(Math.min(320, vh() - HUD_TOP - MARGIN), vh() - HUD_TOP - room);
-  return { w, h: Math.min(h, 820 * s) };
+  return { w, h: Math.min(h, 820) };
 }
 
 /**
@@ -201,11 +202,15 @@ export function reserveBottom(px: number): void {
   }
 }
 
-/** The screen changed size: every open window stays on it. */
+/**
+ * The screen changed size (or the interface scale): every open window stays on it, and
+ * one the player did not place or resize takes its default size for the new screen.
+ */
 export function clampAll(): void {
   for (const id of wm.order) {
     const r = wm.rects[id];
-    if (r) wm.rects[id] = clampRect(r);
+    if (!r) continue;
+    wm.rects[id] = clampRect(wm.saved[id] ? r : { ...r, ...defaultSize(id) });
   }
 }
 
@@ -240,7 +245,7 @@ export function columnPlace(): { left: number; maxW: number; shifted: boolean; c
   for (const r of rects) if (r.x <= left + 40 && r.x + r.w > left) left = r.x + r.w + GAP;
   const next = rects.find((r) => r.x > left - 40 && r.x + r.w > left);
   // Never over the leaderboard (top right) either.
-  const edge = W - 12 - LEADERBOARD_W * scale() - GAP;
+  const edge = W - 12 - LEADERBOARD_W - GAP;
   const room = Math.min(next ? next.x - GAP : edge, edge) - left;
   if (left === natural) {
     const covered = rects.some((r) => r.x < natural + 300 && r.x + r.w > natural);

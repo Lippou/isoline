@@ -3,7 +3,7 @@
   // generated from the player's name. Previews the flag at the sizes used in game,
   // then saves the choice in the profile.
   import { onMount } from 'svelte';
-  import { t, i18n } from '../i18n/i18n.svelte';
+  import { t, i18n, short, num } from '../i18n/i18n.svelte';
   import Icon from '../icons/Icon.svelte';
   import { profile, setMyFlag, myFlag, type FlagChoice } from '../stores/profile.svelte';
   import {
@@ -173,12 +173,12 @@
             <img src={previewUrl} alt="" />
             <span class="nm">{name}</span>
           </div>
-          <div class="troops mono">48,2k</div>
+          <div class="troops mono">{short(48_200)}</div>
           <div class="row">
             <span class="rk mono">1</span>
             <img src={previewUrl} alt="" />
             <span class="rn">{name}</span>
-            <span class="mono pc">23,4 %</span>
+            <span class="mono pc">{num(23.4, 1)} %</span>
           </div>
           <div class="row sm">
             <img src={previewUrl} alt="" />

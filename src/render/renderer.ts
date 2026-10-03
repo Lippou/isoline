@@ -1,6 +1,6 @@
 import 'pixi.js/unsafe-eval';
 // PixiJS v8 renderer: map shader + vector/sprite layers + particles + labels.
-import { Application, BitmapText, Container, Graphics, Sprite, type Texture } from 'pixi.js';
+import { Application, BitmapText, Container, Graphics, Sprite, TextStyle, type Texture } from 'pixi.js';
 import { MapLayer } from './mapLayer';
 import { Camera } from './camera';
 import { buildIcons, type IconSet, type StatusIcon } from './icons';
@@ -23,6 +23,7 @@ import { Trajectory } from '../core/units/trajectory';
 import type { GameEvent } from '../core/game/events';
 import { dayPhase } from '../core/rules/features';
 import { ParticleSystem } from './particles';
+import { ShipLayer } from './ships';
 import { WeatherLayer } from './weatherLayer';
 import { TradeRouteLayer } from './tradeRoutes';
 import { CapitalLayer } from './capitals';
@@ -73,7 +74,14 @@ export interface Overlay {
   tradeRoutes: boolean;
   /** Choosing a new capital: the hovered tile and whether it may host it. */
   capitalGhost: { tile: number; ok: boolean } | null;
+  /** Photo mode: what the picture keeps (null: not in photo mode, everything shows). */
+  photo: { labels: boolean; borders: boolean; weather: boolean } | null;
+  /** Time of day forced by the photo mode (0 day … 1 deep night); -1: the game's clock. */
+  night: number;
 }
+
+/** No storm nor fog bank (the shader's weather cells, all empty). */
+const NO_WEATHER = new Float32Array(32).fill(-1);
 
 export interface NukePreview {
   kind: number;
@@ -131,13 +139,34 @@ interface FrontBadge {
 }
 
 /** A front badge stays put until its stretch of front has moved this far (tiles). */
+// Outlined bitmap text gets one glyph atlas per TextStyle *instance* (Pixi keys stroked
+// fonts by style uid): inline styles built a new atlas for every label and building
+// badge (dozens of fonts, Pixi warning). Shared instances keep one atlas per look.
+const LEVEL_STYLE = new TextStyle({
+  fontFamily: '"IBM Plex Mono", monospace',
+  fontSize: 40,
+  fill: 0xffffff,
+  fontWeight: '600',
+  stroke: { color: 0x0b0e12, width: 8, join: 'round' },
+});
+const NAME_STYLE = new TextStyle({
+  fontFamily: '"IBM Plex Serif", Georgia, serif',
+  fontSize: 64,
+  fill: 0xffffff,
+  fontWeight: '600',
+  stroke: { color: 0x0b0e12, width: 9, join: 'round' },
+});
+const TROOPS_STYLE = new TextStyle({
+  fontFamily: '"IBM Plex Mono", monospace',
+  fontSize: 40,
+  fill: 0xffffff,
+  stroke: { color: 0x0b0e12, width: 7, join: 'round' },
+});
+
 const FRONT_BADGE_SLACK = 28;
 
-/** Smallest on-screen length (px) of each unit when zoomed out; real size when zoomed in. */
+/** Smallest on-screen length (px) of each aircraft when zoomed out; real size when zoomed in (ships: ships.ts). */
 const UNIT_MIN_PX: Partial<Record<U, number>> = {
-  [U.Warship]: 36,
-  [U.Transport]: 28,
-  [U.Merchant]: 26,
   [U.Fighter]: 26,
   [U.Bomber]: 30,
   [U.Recon]: 24,
@@ -163,6 +192,7 @@ export class GameRenderer {
   private flash = new Graphics();
   private icons!: IconSet;
   private particles!: ParticleSystem;
+  private ships!: ShipLayer;
   private weather!: WeatherLayer;
   private routes!: TradeRouteLayer;
   private capitals!: CapitalLayer;
@@ -214,6 +244,8 @@ export class GameRenderer {
     guideMarker: null,
     tradeRoutes: true,
     capitalGhost: null,
+    photo: null,
+    night: -1,
   };
   onFrame: (dt: number) => void = () => {};
 
@@ -237,6 +269,13 @@ export class GameRenderer {
     this.icons = await buildIcons(this.app.renderer);
     this.map = new MapLayer(this.state, this.app.renderer);
     this.particles = new ParticleSystem(this.icons, 2600);
+    this.ships = new ShipLayer(this.icons, this.particles, {
+      inkOf: (id) => this.inkOf(id),
+      particles: () => this.settings.particles,
+      uiScale: () => this.settings.uiScale,
+      formatTroops: formatShort,
+    });
+    this.units.addChild(this.ships.container);
     this.weather = new WeatherLayer(this.state, this.icons);
     this.routes = new TradeRouteLayer(this.state, {
       ink: (id) => this.inkOf(id),
@@ -269,6 +308,8 @@ export class GameRenderer {
     });
     await this.capitals.init();
     this.world.addChildAt(this.capitals.container, this.world.getChildIndex(this.buildings) + 1);
+    // Ship health bars and selection rings, over the hulls.
+    this.world.addChildAt(this.ships.fx, this.world.getChildIndex(this.units) + 1);
     this.screen.addChild(this.flash);
     this.app.stage.addChild(this.world, this.screen);
     this.camera.setMap(this.state.width, this.state.height);
@@ -387,9 +428,18 @@ export class GameRenderer {
     const tickF = s.tick - 1 + alpha;
     const phase = dayPhase(Math.max(0, s.tick));
     const weatherOn = !!s.world;
-    const night = weatherOn ? Math.max(0, Math.sin((phase - 0.5) * Math.PI * 2)) : 0;
+    const photo = this.overlay.photo;
+    const night =
+      this.overlay.night >= 0
+        ? Math.min(1, this.overlay.night)
+        : weatherOn
+          ? Math.max(0, Math.sin((phase - 0.5) * Math.PI * 2))
+          : 0;
     // Storms and fog banks: packed for the shader, marked with an outline and a glyph.
-    const weather = this.weather.update(tickF, cam.zoom);
+    const skies = !photo || photo.weather;
+    const weather = skies ? this.weather.update(tickF, cam.zoom) : NO_WEATHER;
+    this.weather.container.visible = skies;
+    this.labels.visible = !photo || photo.labels;
     const ring = s.world?.ring;
     const q = this.settings.quality;
     this.map.setUniforms({
@@ -406,11 +456,12 @@ export class GameRenderer {
       contrast: this.settings.highContrast,
       loyaltyView: this.overlay.loyaltyView,
       weather,
+      borders: !photo || photo.borders,
       motion: this.settings.reducedMotion ? 0 : 1,
       ring: ring ? [ring.cx, ring.cy, ring.r, 1] : [0, 0, 0, 0],
       // Clouds fade in as the camera pulls back past the medium zoom.
       clouds:
-        q === 'performance' || this.settings.reducedMotion
+        q === 'performance' || this.settings.reducedMotion || !skies
           ? 0
           : Math.max(0, Math.min(1, (1.1 - cam.zoom) / 0.6)),
     });
@@ -496,13 +547,7 @@ export class GameRenderer {
         // Level number (as in OpenFront: structure levels are uncapped).
         const lvl = new BitmapText({
           text: '',
-          style: {
-            fontFamily: '"IBM Plex Mono", monospace',
-            fontSize: 40,
-            fill: 0xffffff,
-            fontWeight: '600',
-            stroke: { color: 0x0b0e12, width: 8, join: 'round' },
-          },
+          style: LEVEL_STYLE,
         });
         lvl.anchor.set(0.5);
         lvl.position.set(12.5, 12.5);
@@ -676,6 +721,7 @@ export class GameRenderer {
     this.nukesInFlight.clear();
     const missilesSeen = new Set<number>();
     const [vx0, vy0, vx1, vy1] = this.camera.bounds();
+    this.ships.begin(this.frame, z, dt);
     for (let k = 0; k < s.unitCount; k++) {
       const o = k * UNIT_STRIDE;
       const id = buf[o]!;
@@ -693,11 +739,37 @@ export class GameRenderer {
         this.drawMissile(buf, o, tickF, t);
         continue;
       }
+      const inView = x >= vx0 - 5 && x <= vx1 + 5 && y >= vy0 - 5 && y <= vy1 + 5;
       if (type === U.Shell) {
-        this.trails.circle(x, y, Math.max(0.25, 1.5 / z)).fill({ color: 0xffe9a8, alpha: 0.9 });
+        this.ships.shell(id, owner, x, y, this.trails, inView && this.revealed(owner, x, y));
         continue;
       }
-      const inView = x >= vx0 - 5 && x <= vx1 + 5 && y >= vy0 - 5 && y <= vy1 + 5;
+      if (type === U.Transport || type === U.Warship || type === U.Merchant) {
+        // LOD: merchants from medium zoom; enemy transports hide in fog banks.
+        const visible =
+          inView &&
+          z >= (type === U.Merchant ? 1.2 : 0.4) &&
+          this.revealed(owner, x, y) &&
+          !(type === U.Transport && this.hiddenInFogBank(owner, x, y));
+        this.ships.ship(
+          id,
+          type,
+          owner,
+          x,
+          y,
+          buf[o + 3]!,
+          buf[o + 4]!,
+          prev ? prev[0] : NaN,
+          prev ? prev[1] : NaN,
+          buf[o + 5]!,
+          buf[o + 6]!,
+          buf[o + 7]!,
+          buf[o + 14]!,
+          visible,
+          this.overlay.selection.has(id),
+        );
+        continue;
+      }
       if (type === U.Train) {
         this.updateTrain(id, owner, x, y, z, inView);
         continue;
@@ -725,59 +797,34 @@ export class GameRenderer {
       const dx = x - sp.x;
       const dy = y - sp.y;
       if (Math.abs(dx) + Math.abs(dy) > 0.0005) {
-        // Hulls swing round smoothly: up a winding river the legs turn every few tiles.
         const turn = Math.atan2(dy, dx) - sp.rotation;
         const d = turn - Math.PI * 2 * Math.round(turn / (Math.PI * 2));
         sp.rotation += Math.abs(d) > 2.5 ? d : d * Math.min(1, dt * 12);
       }
       sp.position.set(x, y);
-      // LOD: ships visible from medium zoom.
-      const minZoom = type === U.Merchant ? 1.2 : 0.4;
-      sp.visible =
-        inView &&
-        z >= minZoom &&
-        this.revealed(owner, x, y) &&
-        !(type === U.Transport && this.hiddenInFogBank(owner, x, y));
+      // Aircraft (ships: ShipLayer).
+      sp.visible = inView && z >= 0.4 && this.revealed(owner, x, y);
       if (!sp.visible) continue;
       // Real size in tiles when zoomed in; a readable minimum on screen when zoomed out.
       const lenTiles = this.unitArt(type).length;
       sp.scale.set(Math.max(1, (UNIT_MIN_PX[type] ?? 28) / (lenTiles * z)));
       (sp.children[1] as Sprite).tint = this.inkOf(owner);
-      sp.alpha = type === U.Merchant ? 0.85 : 1;
-      // Wakes behind ships; contrails behind planes.
+      // Contrails behind planes.
       us.wakeT += dt;
       const moving = Math.abs(dx) + Math.abs(dy) > 0.001;
-      if (
-        moving &&
-        us.wakeT > 0.08 &&
-        this.settings.particles > 0 &&
-        (type === U.Transport || type === U.Warship || type === U.Merchant || type >= U.Fighter)
-      ) {
+      if (moving && us.wakeT > 0.08 && this.settings.particles > 0 && type >= U.Fighter) {
         us.wakeT = 0;
         this.particles.emit(
           x - Math.cos(sp.rotation) * 0.8,
           y - Math.sin(sp.rotation) * 0.8,
           0,
           0,
-          type >= U.Fighter ? 0xdfe8f0 : 0xbfe6ff,
+          0xdfe8f0,
           0.9,
           0.35,
           'dot',
           0.18,
         );
-      }
-      if (type === U.Transport && z > 1.6) {
-        const troops = buf[o + 14]!;
-        this.trails.circle(x, y - 1.6, 0.0001).fill({ color: 0 });
-        void troops;
-      }
-      if (type === U.Warship && buf[o + 5]! < 0.999) {
-        const hp = buf[o + 5]!;
-        const wbar = 2.4;
-        this.trails.rect(x - wbar / 2, y - 1.8, wbar, 0.3).fill({ color: 0x000000, alpha: 0.6 });
-        this.trails
-          .rect(x - wbar / 2, y - 1.8, wbar * hp, 0.3)
-          .fill({ color: hp > 0.5 ? UI.verdant : UI.signal });
       }
       if (this.overlay.selection.has(id))
         this.trails
@@ -791,6 +838,7 @@ export class GameRenderer {
       }
     }
     for (const id of this.missilePaths.keys()) if (!missilesSeen.has(id)) this.missilePaths.delete(id);
+    this.ships.end();
   }
 
   /**
@@ -878,22 +926,15 @@ export class GameRenderer {
     return false;
   }
 
+  /** Artwork of an aircraft (ships: ShipLayer, trains: updateTrain). */
   private unitArt(type: U): import('./icons').UnitSprite {
     switch (type) {
-      case U.Warship:
-        return this.icons.warship;
-      case U.Merchant:
-        return this.icons.merchant;
-      case U.Train:
-        return this.icons.train;
-      case U.Fighter:
-        return this.icons.fighter;
       case U.Bomber:
         return this.icons.bomber;
       case U.Recon:
         return this.icons.recon;
       default:
-        return this.icons.transport;
+        return this.icons.fighter;
     }
   }
 
@@ -1272,22 +1313,11 @@ export class GameRenderer {
       if (!l) {
         const name = new BitmapText({
           text: '',
-          style: {
-            fontFamily: '"IBM Plex Serif", Georgia, serif',
-            fontSize: 64,
-            fill: 0xffffff,
-            fontWeight: '600',
-            stroke: { color: 0x0b0e12, width: 9, join: 'round' },
-          },
+          style: NAME_STYLE,
         });
         const troops = new BitmapText({
           text: '',
-          style: {
-            fontFamily: '"IBM Plex Mono", monospace',
-            fontSize: 40,
-            fill: 0xffffff,
-            stroke: { color: 0x0b0e12, width: 7, join: 'round' },
-          },
+          style: TROOPS_STYLE,
         });
         name.anchor.set(0.5);
         troops.anchor.set(0.5);

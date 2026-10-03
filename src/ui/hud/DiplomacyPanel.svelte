@@ -9,6 +9,8 @@
   import Icon from '../icons/Icon.svelte';
   import { audio } from '../../audio/audio';
   import { ALLIANCE_REQUEST_TTL } from '../../core/game/constants';
+  import OpinionMeter from './OpinionMeter.svelte';
+  import { pct, oddsLine } from './opinion';
 
   let { ctl }: { ctl: GameController } = $props();
   const s = ctl.session;
@@ -36,6 +38,8 @@
       t('common.cancel'),
     );
   }
+  /** Rows whose opinion breakdown is unfolded. */
+  let why = $state<Record<number, boolean>>({});
   let filter = $state('');
   let all = $state(false);
   const rows = $derived(
@@ -52,6 +56,7 @@
           attacking,
           embargo: hud.local?.embargo.includes(p.id) ?? false,
           noTrade: hud.local?.noTrade.includes(p.id) ?? false,
+          op: hud.local?.opinions?.find((o) => o.id === p.id),
         };
       }),
   );
@@ -93,7 +98,7 @@
           >
         {:else if r.attacking}
           <span class="chip bad"><Icon name="sword" size={13} />{t('diplo.war')}</span>
-        {:else}
+        {:else if !r.op}
           <span class="chip">{t('diplo.neutral')}</span>
         {/if}
         {#if r.noTrade}<span class="chip warn" data-tip={r.embargo ? '' : t('diplo.tempEmbargoTip')}
@@ -102,7 +107,51 @@
         {#if r.p.traitor}<span class="chip warn"
             ><Icon name="brokenShield" size={13} />{t('hud.traitorMark')} · {Math.ceil(r.p.traitorFor / 10)} s</span
           >{/if}
+        {#if r.op}
+          <button
+            class="opbtn"
+            aria-expanded={!!why[r.p.id]}
+            data-tip={t('opinion.title')}
+            data-testid="diplo-opinion"
+            onclick={() => (why[r.p.id] = !why[r.p.id])}
+            ><OpinionMeter o={r.op} /><Icon
+              name={why[r.p.id] ? 'chevronDown' : 'chevronRight'}
+              size={12}
+            /></button
+          >
+        {/if}
       </div>
+      {#if r.op && why[r.p.id]}
+        <div class="why" data-testid="diplo-why">
+          <div>
+            <h5>{t('opinion.title')}</h5>
+            {#if r.op.reasons.length}
+              <ul>
+                {#each r.op.reasons as [k, w] (k)}
+                  <li class:pos={w > 0} class:neg={w < 0}>
+                    <span>{t(`opinion.reason.${k}`)}</span><b class="mono">{w > 0 ? '+' : ''}{w}</b>
+                  </li>
+                {/each}
+              </ul>
+            {:else}<p>{t('opinion.noReasons')}</p>{/if}
+          </div>
+          {#if r.op.accept >= 0}
+            <div>
+              <h5>{t('opinion.oddsTitle')}</h5>
+              {#if r.op.refusal}<p class="neg">{t(`opinion.refusal.${r.op.refusal}`)}</p>{/if}
+              <ul>
+                {#each r.op.odds as [k, w] (k)}
+                  <li class:pos={w > 0} class:neg={w < 0}>
+                    <span>{oddsLine(k, r.p.personality)}</span><b class="mono"
+                      >{w > 0 ? '+' : '−'}{pct(Math.abs(w))}</b
+                    >
+                  </li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
+        </div>
+      {/if}
       <div class="acts">
         {#if r.ally}
           <button class="btn small" onclick={() => order({ t: 'allyRequest', target: r.p.id })}
@@ -128,6 +177,13 @@
               pending(r.p.id) ? 'diplo.proposed' : 'diplo.propose',
             )}</button
           >
+          {#if r.op && r.op.accept >= 0}<span
+              class="chip odds"
+              class:bad={r.op.accept < 0.1}
+              class:good={r.op.accept >= 0.5}
+              data-tip={t('opinion.acceptTip')}
+              data-testid="diplo-odds">{t('opinion.accept', { pct: pct(r.op.accept) })}</span
+            >{/if}
         {/if}
         <button class="btn small" onclick={() => order({ t: 'embargo', target: r.p.id, on: !r.embargo })}
           >{r.embargo ? t('radial.embargoOff') : t('radial.embargoOn')}</button
@@ -190,7 +246,7 @@
   li {
     display: grid;
     grid-template-columns: 30px 1fr;
-    grid-template-areas: 'flag who' 'flag rel' 'acts acts';
+    grid-template-areas: 'flag who' 'flag rel' 'why why' 'acts acts';
     gap: 4px 10px;
     align-items: center;
     padding: 8px;
@@ -240,6 +296,69 @@
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+  }
+  .opbtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 4px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: none;
+    color: var(--faint);
+    cursor: var(--cursor-pointer, pointer);
+  }
+  .opbtn:hover,
+  .opbtn[aria-expanded='true'] {
+    border-color: var(--line);
+    background: var(--panel-3);
+  }
+  .why {
+    grid-area: why;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 4px 14px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: var(--input-bg);
+    font-size: 0.84em;
+  }
+  .why h5 {
+    margin: 0 0 3px;
+    font-size: 0.92em;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .why ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+  }
+  .why li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--muted);
+  }
+  .why p {
+    margin: 0 0 3px;
+    color: var(--faint);
+  }
+  .why .pos b {
+    color: var(--good-text);
+  }
+  .why .neg b,
+  .why p.neg {
+    color: var(--bad-text);
+  }
+  .odds {
+    align-self: center;
   }
   .acts {
     grid-area: acts;

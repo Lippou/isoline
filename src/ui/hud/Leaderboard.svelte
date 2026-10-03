@@ -10,6 +10,8 @@
   let { ctl }: { ctl: GameController } = $props();
   let open = $state(true);
   let all = $state(false);
+  /** Short windows show the top 5 (and us): this unfolds the top 10. */
+  let more = $state(false);
   const rows = $derived.by(() => {
     const list = hud.players
       .filter((p) => p.alive && p.tiles > 0 && (all || p.kind !== 'tribe'))
@@ -33,13 +35,25 @@
   }
 </script>
 
-<aside class="lb panel" class:closed={!open} data-testid="leaderboard">
+<aside class="lb panel" class:closed={!open} class:more data-testid="leaderboard">
   <header>
     <button class="title" onclick={() => (open = !open)}
       ><Icon name={open ? 'chevronDown' : 'chevronRight'} size={15} />{t('hud.leaderboard')}</button
     >
-    {#if open}<label class="all"><input type="checkbox" bind:checked={all} /> {t('hud.showTribes')}</label
-      >{/if}
+    {#if open}
+      <span class="tools">
+        {#if rows.length > 5}<button
+            class="more-btn"
+            aria-pressed={more}
+            onclick={() => (more = !more)}
+            data-testid="leaderboard-more"
+            ><Icon name={more ? 'chevronDown' : 'chevronRight'} size={12} />{t('hud.lbTop', {
+              n: more ? 5 : 10,
+            })}</button
+          >{/if}
+        <label class="all"><input type="checkbox" bind:checked={all} /> {t('hud.showTribes')}</label>
+      </span>
+    {/if}
   </header>
   {#if open}
     <div class="cols">
@@ -49,7 +63,7 @@
     </div>
     <ol>
       {#each rows as r (r.p.id)}
-        <li class:me={r.p.id === hud.viewer}>
+        <li class:me={r.p.id === hud.viewer} class:extra={r.rank > 5}>
           <button onclick={() => focus(r.p.id)} title={t('hud.centerOn')}>
             <span class="rank mono">{r.rank}</span>
             <span class="who">
@@ -77,10 +91,45 @@
     position: absolute;
     right: 12px;
     top: 12px;
-    width: calc(310px * var(--ui-scale));
+    width: 310px;
     padding: 0;
     z-index: 6;
-    font-size: calc(0.86em * var(--ui-scale));
+    font-size: 0.86em;
+  }
+  @media (max-width: 1400px) {
+    .lb {
+      width: 270px;
+    }
+  }
+  .tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  /* Short windows: the top 5 (and our row), the top 10 on demand. */
+  .more-btn {
+    display: none;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    background: none;
+    color: var(--muted);
+    font-size: 0.85em;
+    cursor: var(--cursor-pointer, pointer);
+  }
+  .more-btn:hover {
+    color: var(--parchment);
+    border-color: var(--aurora);
+  }
+  @media (max-height: 940px) {
+    .more-btn {
+      display: inline-flex;
+    }
+    .lb:not(.more) li.extra:not(.me) {
+      display: none;
+    }
   }
   .lb.closed {
     width: auto;

@@ -101,6 +101,13 @@ import {
   CloudLightning,
   CloudFog,
   Route,
+  Camera,
+  EyeOff,
+  Type,
+  Spline,
+  SunMoon,
+  HeartHandshake,
+  Gamepad2,
   type IconNode,
 } from 'lucide';
 
@@ -253,6 +260,16 @@ export const ICONS = {
   arcUp: ArcUp,
   arcDown: ArcDown,
   flip: ArrowUpDown,
+  // what a nation thinks of you
+  opinion: HeartHandshake,
+  // replays: take over from here
+  takeover: Gamepad2,
+  // photo mode
+  camera: Camera,
+  eyeOff: EyeOff,
+  labels: Type,
+  borders: Spline,
+  dayNight: SunMoon,
 } satisfies Record<string, IconNode>;
 
 export type IconName = keyof typeof ICONS;

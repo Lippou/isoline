@@ -147,6 +147,33 @@ export const RELATION_BETRAYED = -100;
 export const RELATION_TRAITOR_NEIGHBOR = -40;
 export const RELATION_DECAY = 0.05;
 export const RELATION_HOSTILE = -50;
+/**
+ * Isoline's goodwill (OpenFront has none besides gifts): while a condition holds, the
+ * relation climbs by `rate` a second (net of the decay) up to `ceiling` — an alliance,
+ * one that has lasted past its first term (ALLIANCE_TICKS), trade between the two in
+ * the last TRADE_WARMTH_WINDOW ticks, a common enemy (both fighting the same country).
+ * Ceilings do not add up: the highest condition holding wins.
+ */
+export const WARMTH = {
+  ally: { rate: 0.5, ceiling: 40 },
+  longAlly: { rate: 0.5, ceiling: 60 },
+  trade: { rate: 0.25, ceiling: 25 },
+  enemy: { rate: 0.25, ceiling: 25 },
+} as const;
+export const TRADE_WARMTH_WINDOW = 600;
+/**
+ * Gifts (OpenFront's DonateGold/TroopExecution): +5 per chunk of gold (by difficulty,
+ * growing by one chunk every 5 minutes of play), at most +100; troops: +50 once the gift
+ * reaches a random share of the recipient's troop ceiling (1/divisor, between the two).
+ */
+export const GIFT_GOLD_CHUNK = { easy: 2_500, normal: 5_000, hard: 12_500, impossible: 25_000 } as const;
+export const GIFT_TROOP_DIVISORS = {
+  easy: [13, 11],
+  normal: [11, 9],
+  hard: [9, 7],
+  impossible: [7, 5],
+} as const;
+export const GIFT_TROOP_RELATION = 50;
 /** Attacking another country makes the defender stop trading with the attacker for 5 min. */
 export const TEMP_EMBARGO_TICKS = min(5);
 export const ALLIANCE_TICKS = 3_000;

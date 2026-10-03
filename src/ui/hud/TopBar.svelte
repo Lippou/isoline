@@ -12,7 +12,7 @@
   const solo = ctl.session.kind === 'solo';
   const SPEEDS = [0.5, 1, 2, 4];
 
-  const shares = $derived.by(() => {
+  const allShares = $derived.by(() => {
     const total = hud.world?.usefulLand ?? 1;
     const ps = hud.players.filter((p) => p.alive && p.tiles > 0 && p.kind !== 'tribe');
     const teams = new Map<string, { key: string; share: number; color: string; name: string; me: boolean }>();
@@ -29,9 +29,11 @@
       if (p.id === hud.viewer) e.me = true;
       teams.set(key, e);
     }
-    return [...teams.values()].sort((a, b) => b.share - a.share).slice(0, 14);
+    return [...teams.values()].sort((a, b) => b.share - a.share);
   });
-  const myShare = $derived(shares.find((s) => s.me)?.share ?? 0);
+  const shares = $derived(allShares.slice(0, 14));
+  // From every country, not just the 14 drawn: outside them "you" read 0.0 %.
+  const myShare = $derived(allShares.find((s) => s.me)?.share ?? 0);
 
   const elapsed = $derived(hud.world ? Math.max(0, hud.tick - hud.world.startTick) : 0);
   const spawnLeft = $derived(hud.world ? Math.max(0, hud.world.spawnEndTick - hud.tick) : 0);
@@ -82,12 +84,20 @@
           {/each}
         </span>
       {/if}
-      <span class="item">{t(`mode.${mode}`)}</span>
+      <span class="item mode">{t(`mode.${mode}`)}</span>
       <span class="item goal-txt" data-tip={t('hud.victoryThresholdTip', { pct: threshold })}>
         <Icon name="target" size={15} />
-        {#if mode === 'campaign'}{t('hud.goalMission')}{:else if threshold > 100}{t(
-            'hud.noVictory',
-          )}{:else}{t('hud.goal', { pct: threshold })}{/if}
+        <!-- Narrow windows: the short form (the full one is in the tooltip). -->
+        <span class="full"
+          >{#if mode === 'campaign'}{t('hud.goalMission')}{:else if threshold > 100}{t(
+              'hud.noVictory',
+            )}{:else}{t('hud.goal', { pct: threshold })}{/if}</span
+        >
+        <span class="short"
+          >{#if mode === 'campaign'}{t('hud.goalMissionShort')}{:else if threshold > 100}{t(
+              'hud.noVictory',
+            )}{:else}{t('hud.goalShort', { pct: threshold })}{/if}</span
+        >
         {#if hud.viewer > 0}<span class="mine mono"
             >{t('hud.youHold', { pct: (myShare * 100).toFixed(1) })}</span
           >{/if}
@@ -136,17 +146,24 @@
 </header>
 
 <style>
+  /* Centred, clear of the leaderboard (top right, 310 px; 270 px below 1400 px). */
   .top {
     position: absolute;
     top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    width: min(760px, 56vw);
+    width: min(760px, calc(100vw - 680px));
     display: grid;
     justify-items: center;
     gap: 5px;
     pointer-events: none;
     z-index: 5;
+    container-type: inline-size;
+  }
+  @media (max-width: 1400px) {
+    .top {
+      width: min(760px, calc(100vw - 600px));
+    }
   }
   .spawn {
     display: flex;
@@ -182,6 +199,7 @@
     gap: 6px;
     padding: 5px 12px;
     color: var(--muted);
+    white-space: nowrap;
   }
   .item + .item {
     border-left: 1px solid var(--line);
@@ -266,5 +284,25 @@
   .status .chip[data-tip]:hover::after {
     top: calc(100% + 6px);
     bottom: auto;
+  }
+  .short {
+    display: none;
+  }
+  /* Narrow (after the base rules, which it overrides): the game mode goes (it is in the menu), then the goal takes its short form. */
+  @container (max-width: 700px) {
+    .mode {
+      display: none;
+    }
+  }
+  @container (max-width: 600px) {
+    .full {
+      display: none;
+    }
+    .short {
+      display: inline;
+    }
+    .item {
+      padding: 5px 9px;
+    }
   }
 </style>

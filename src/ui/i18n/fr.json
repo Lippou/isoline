@@ -242,6 +242,9 @@
     "counter": "Riposter",
     "counterTip": "Contre-attaquer avec {n} troupes : assez pour annuler cette attaque dans le choc.",
     "ongoingAttacks": "Attaques en cours",
+    "attacksShort": "Attaques",
+    "boatsShort": "Bateaux",
+    "lbTop": "Top {n}",
     "ownedN": "Possédés : {n}",
     "armyTip": "Votre armée : elle attaque, défend et se régénère seule. Le territoire et les villes achevées relèvent le plafond.",
     "readyN": "Prêts : {n}",
@@ -253,6 +256,8 @@
     "victoryThresholdTip": "Le premier pays (ou la première équipe) à contrôler {pct} % des terres utiles l'emporte.",
     "youHold": "vous : {pct} %",
     "goalMission": "Objectifs de mission (en bas de l'écran)",
+    "goalShort": "{pct} %",
+    "goalMissionShort": "Mission",
     "windowMoveTip": "Glisser pour déplacer · double-clic : remettre à sa place",
     "windowResize": "Redimensionner"
   },
@@ -1243,7 +1248,8 @@
     "flipArc": "Inverser la trajectoire des missiles",
     "speedDown": "Ralentir le temps (solo)",
     "speedUp": "Accélérer le temps (solo)",
-    "buildLab": "Centre de recherche"
+    "buildLab": "Centre de recherche",
+    "photoMode": "Mode photo"
   },
   "settings": {
     "tab": {
@@ -1265,6 +1271,8 @@
     "vsync": "Synchronisation verticale",
     "maxFps": "FPS maximum",
     "uiScale": "Échelle de l'interface",
+    "uiScaleAuto": "Auto",
+    "uiScaleAutoTip": "Suit la taille de la fenêtre (ici {pct} %).",
     "fullscreen": "Plein écran",
     "autoPerf": "Mode performance automatique sur machine lente",
     "vol": {
@@ -1310,7 +1318,7 @@
       "shaders": "Reflets de l'eau, relief et lumière. Désactivez-les sur une machine modeste.",
       "vsync": "Aligne les images sur l'écran pour éviter les déchirures.",
       "maxFps": "Limite les images par seconde pour économiser la batterie. ∞ : sans limite.",
-      "uiScale": "Agrandit ou réduit les panneaux pendant la partie.",
+      "uiScale": "« Auto » l'adapte à la taille de la fenêtre. Agrandit ou réduit toute l'interface pendant la partie ; les menus ne font que grandir.",
       "fullscreen": "Le jeu occupe tout l'écran.",
       "autoPerf": "Passe en mode performance si la partie ralentit.",
       "voiceOn": "Les conseils d'Ilse sont lus à voix haute.",
@@ -2124,6 +2132,86 @@
       "install": "L'installation a échoué.",
       "bad-token": "Ce jeton n'a pas un format valide.",
       "no-keychain": "Le trousseau du système est indisponible : jeton non enregistré."
+    }
+  },
+  "opinion": {
+    "title": "Ce qu'ils pensent de vous",
+    "level": {
+      "hostile": "Hostile",
+      "wary": "Méfiant",
+      "neutral": "Neutre",
+      "cordial": "Cordial",
+      "friendly": "Amical"
+    },
+    "reason": {
+      "attacked": "Vous l'avez attaqué",
+      "betrayed": "Vous l'avez trahi",
+      "traitor": "Vous avez trahi un allié",
+      "gift": "Vos dons",
+      "ally": "Votre alliance",
+      "longAlly": "Alliance de longue date",
+      "formerAlly": "Ancienne alliance",
+      "trade": "Commerce florissant",
+      "enemy": "Ennemi commun",
+      "past": "Vieux souvenirs"
+    },
+    "noReasons": "Rien de particulier : il vous ignore.",
+    "oddsTitle": "S'il reçoit une offre d'alliance",
+    "odds": {
+      "temper": "Tempérament ({personality})",
+      "stronger": "Vous êtes plus fort que lui",
+      "weaker": "Vous êtes plus faible que lui",
+      "grudge": "Rancune (les troupes que vous lui avez prises)",
+      "betrayed": "Trahison passée",
+      "human": "Méfiance envers les dirigeants humains",
+      "goodwill": "Bonne entente"
+    },
+    "refusal": {
+      "resent": "Refus certain tant que son opinion reste négative.",
+      "traitor": "Vous portez la marque du traître : 9 refus sur 10."
+    },
+    "accept": "≈ {pct} % d'accord",
+    "acceptTip": "Chance estimée qu'il accepte une alliance proposée maintenant (il répond en 2 à 6 s). Le détail : cliquez sur son opinion."
+  },
+  "takeover": {
+    "button": "Reprendre d'ici",
+    "short": "Reprendre d'ici",
+    "tip": "Lancer une nouvelle partie solo à partir de cet instant, en jouant le pays de votre choix.",
+    "notNow": "Possible une fois la phase de placement terminée, avant la fin de la partie.",
+    "title": "Reprendre à {clock}",
+    "hint": "Une nouvelle partie solo commence à cet instant exact : vous jouez le pays choisi, l'IA reprend les autres. Elle se sauvegarde et a son propre replay.",
+    "choose": "Pays à jouer",
+    "recorded": "joueur d'origine",
+    "go": "Jouer ce pays",
+    "failed": "Impossible de reprendre ici : ce pays ne peut plus être joué.",
+    "fromHere": "Reprendre la partie à {clock}"
+  },
+  "photo": {
+    "open": "Mode photo",
+    "title": "Photo",
+    "labels": "Noms",
+    "borders": "Frontières",
+    "fog": "Brouillard",
+    "weather": "Météo",
+    "routes": "Routes",
+    "auto": "Auto",
+    "freeze": "Figer",
+    "timeOfDay": "Heure de la photo (du jour à la nuit)",
+    "shot": "Capturer",
+    "exit": "Quitter le mode photo",
+    "exitTip": "Quitter (Échap)",
+    "saved": "Image enregistrée :",
+    "failed": "Capture impossible ici (application de bureau seulement).",
+    "fogLocked": "Le brouillard ne se lève qu'en replay ou en spectateur.",
+    "tip": {
+      "labels": "Noms des pays, troupes et badges",
+      "borders": "Lignes de frontière",
+      "fog": "Brouillard de guerre",
+      "weather": "Orages, bancs de brouillard et nuages",
+      "routes": "Routes commerciales",
+      "time": "Auto : l'heure de la partie. Le curseur fixe l'heure de la photo, du plein jour à la nuit.",
+      "freeze": "Figer le monde pendant la prise de vue (solo et replays)",
+      "shot": "Enregistre l'image en PNG ({key})"
     }
   }
 }

@@ -62,15 +62,18 @@
   };
 
   // Layout (px): tier labels on the left, branch headers on top, gutters for the links.
-  const TL = 24;
-  const G = 10;
+  let gw = $state(600);
+  // A narrow window (a small screen, or the window resized): the compact tree, with
+  // tighter gutters and smaller print (the inspector below keeps the details).
+  const compact = $derived(gw < 520);
+  const TL = $derived(compact ? 18 : 24);
+  const G = $derived(compact ? 6 : 10);
   const RH = 44;
   const V = 12;
   const HEAD = 30;
   const ROWS = TIERS + 1;
-  let gw = $state(600);
   const COLS = BRANCH_ROWS.length;
-  const W = $derived(Math.max(60, (gw - TL - G * (COLS - 1)) / COLS));
+  const W = $derived(Math.max(48, (gw - TL - G * (COLS - 1)) / COLS));
   const H = HEAD + ROWS * (RH + V) - V;
   const colOf = (n: TechNode): number => BRANCH_ROWS.indexOf(n.branch);
   const colX = (c: number): number => TL + c * (W + G);
@@ -176,7 +179,7 @@
 </script>
 
 {#if L}
-  <div class="tech">
+  <div class="tech" class:compact>
     <div class="status" data-testid="tech-status">
       <div class="figures">
         <span class="rate"
@@ -395,6 +398,20 @@
   .tech {
     display: grid;
     gap: 8px;
+  }
+  /* Compact tree (narrow window): the cost and the level count go to the inspector. */
+  .compact .nm {
+    font-size: 0.68em;
+  }
+  .compact .bname {
+    font-size: 0.72em;
+  }
+  .compact .blv,
+  .compact .node .cost {
+    display: none;
+  }
+  .compact .node {
+    padding: 3px 4px 4px;
   }
   /* Branch accents: gold for the economy, magenta for the nuclear branch (BRAND.md §4.1). */
   .b-economy,

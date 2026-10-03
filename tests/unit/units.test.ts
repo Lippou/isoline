@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asciiMap, testGame, startWith, cmd, invariants } from '../helpers';
+import { asciiMap, testGame, startWith, cmd, invariants, mapFromDisk } from '../helpers';
 import {
   B,
   N,
@@ -214,6 +214,54 @@ describe('naval rules (OpenFront)', () => {
     }
     expect(left).toBeGreaterThan(40);
     expect(Math.abs(ticks - left)).toBeLessThanOrEqual(1);
+  });
+
+  it('a warship far from its patrol point (beyond the short searches) sails back to it', () => {
+    // Back from a repair across the world, every short search for a patrol waypoint
+    // failed: the ship stood still for good (and spent six searches a tick on it).
+    const g = testGame(mapFromDisk('world'), 1);
+    let land = 0;
+    while (!g.map.isLand(land) || g.map.isCoastalLand(land)) land += 997;
+    startWith(g, [[g.map.x(land), g.map.y(land)]]);
+    const ws = sail(g, U.Warship, 1, 20, 50, 20, 50);
+    ws.path = [];
+    ws.patrol = g.map.idx(1860, 290);
+    expect(g.map.nav.findPath(g.map.idx(20, 50), ws.patrol, 20_000)).toBeNull();
+    for (let k = 0; k < 120; k++) g.step([]);
+    expect(Math.abs(ws.x - 20.5) + Math.abs(ws.y - 50.5)).toBeGreaterThan(60);
+  });
+
+  it('water lines never slip through a land corner into another body of water', () => {
+    // Sea (top left) and a lake (bottom right) touch only by a diagonal between two
+    // land tiles: a straight leg used to cross from one to the other.
+    const g = testGame(asciiMap(['~~~....', '~~~....', '...ooo.', '...ooo.', '.......'], 1), 1);
+    const sea = g.map.idx(2, 1);
+    const lake = g.map.idx(3, 2);
+    expect(g.map.navBody[sea]).not.toBe(g.map.navBody[lake]);
+    expect(g.map.nav.lineOfWater(sea, lake)).toBe(false);
+    expect(g.map.nav.lineOfWater(g.map.idx(0, 0), g.map.idx(2, 1))).toBe(true);
+    expect(g.map.nav.lineOfWater(lake, g.map.idx(5, 3))).toBe(true);
+  });
+
+  it('a warship caught on a corner of land with no route sails off it again', () => {
+    // Legs are straight lines between waypoints: a ship can stand over a land corner.
+    // With its route cleared there (new order, end of a chase), routes used to start
+    // from that land tile and fail forever: the ship never moved again.
+    const g = sea();
+    const ws = sail(g, U.Warship, 2, 144, 54, 144, 54);
+    expect(g.map.isNavigable(g.map.idx(144, 54))).toBe(false);
+    ws.path = [];
+    ws.patrol = g.map.idx(150, 30);
+    for (let k = 0; k < 60; k++) g.step([]);
+    expect(Math.abs(ws.y - 54.5)).toBeGreaterThan(5);
+    expect(g.map.isNavigable(g.map.idx(Math.floor(ws.x), Math.floor(ws.y)))).toBe(true);
+    // Same with a move order given while over the land corner.
+    ws.x = 144.5;
+    ws.y = 54.5;
+    ws.path = [];
+    g.step([cmd(2, { t: 'shipMove', ids: [ws.id], tile: g.map.idx(100, 40), patrol: false })]);
+    for (let k = 0; k < 80; k++) g.step([]);
+    expect(Math.hypot(ws.x - 100.5, ws.y - 40.5)).toBeLessThan(WARSHIP_PATROL_RANGE);
   });
 
   it('warships shell transports within range while staying on patrol (no chase)', () => {

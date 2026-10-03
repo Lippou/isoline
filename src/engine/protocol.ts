@@ -9,6 +9,7 @@ import type { GenParams } from '../core/map/generator';
 import type { WeatherCell } from '../core/rules/features';
 import type { Threat } from './threats';
 import type { PlayerFlag } from '../core/data/flagSpec';
+import type { Opinion } from '../core/rules/opinion';
 
 /** Commerce panel: trade income is summed over this sliding window (5 minutes). */
 export const TRADE_WINDOW_TICKS = 3000;
@@ -178,6 +179,8 @@ export interface LocalView {
   capitalHint: number;
   /** Threatened borders: land neighbours massing a much bigger army with hostile intent. */
   threats: Threat[];
+  /** What each living nation thinks of me, why, and its odds of accepting an alliance (every second). */
+  opinions: Opinion[];
 }
 
 export interface WorldView {

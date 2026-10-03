@@ -11,6 +11,8 @@
   import { isDesktop, type UpdateStatus } from '../bridge';
   import { app } from '../stores/app.svelte';
   import { update, checkUpdate, saveUpdateToken, clearUpdateToken } from '../stores/update.svelte';
+  import { view } from '../stores/viewport.svelte';
+  import { MANUAL_MIN, MANUAL_MAX } from '../stores/uiScale';
   const TAB_ICONS: Record<string, IconName> = {
     graphics: 'eye',
     audio: 'sound',
@@ -56,6 +58,15 @@
     listening = null;
   }
   const tabs = ['graphics', 'audio', 'game', 'controls', 'access', 'lang'] as const;
+
+  // Interface scale: automatic (0, from the window's size) or the player's. The page zoom
+  // follows on release only, so the slider does not move under the pointer while dragged.
+  let uiDraft = $state<number | null>(null);
+  const uiAuto = $derived(!(settings.graphics.uiScale > 0));
+  function setUiAuto(on: boolean): void {
+    settings.graphics.uiScale = on ? 0 : Math.round(view.scale * 20) / 20;
+    change();
+  }
 </script>
 
 <svelte:window onkeydowncapture={capture} />
@@ -167,16 +178,31 @@
                 <div class="sl">
                   <label for="set-ui">{t('settings.uiScale')}</label><small>{t('settings.d.uiScale')}</small>
                 </div>
-                <div class="rng">
-                  <b class="mono">{Math.round(settings.graphics.uiScale * 100)} %</b><input
+                <div class="rng ui">
+                  <button
+                    class="btn small auto"
+                    class:selected={uiAuto}
+                    aria-pressed={uiAuto}
+                    data-tip={t('settings.uiScaleAutoTip', { pct: Math.round(view.auto * 100) })}
+                    data-testid="ui-scale-auto"
+                    onclick={() => setUiAuto(!uiAuto)}>{t('settings.uiScaleAuto')}</button
+                  >
+                  <b class="mono" data-testid="ui-scale-value"
+                    >{Math.round((uiDraft ?? view.scale) * 100)} %</b
+                  ><input
                     id="set-ui"
                     type="range"
-                    min="0.8"
-                    max="1.5"
+                    min={MANUAL_MIN}
+                    max={MANUAL_MAX}
                     step="0.05"
-                    bind:value={settings.graphics.uiScale}
-                    onchange={change}
-                    use:rangeFill={settings.graphics.uiScale}
+                    value={uiDraft ?? (uiAuto ? view.auto : settings.graphics.uiScale)}
+                    oninput={(e) => (uiDraft = Number(e.currentTarget.value))}
+                    onchange={(e) => {
+                      settings.graphics.uiScale = Number(e.currentTarget.value);
+                      uiDraft = null;
+                      change();
+                    }}
+                    use:rangeFill={uiDraft ?? (uiAuto ? view.auto : settings.graphics.uiScale)}
                   />
                 </div>
               </div>
@@ -630,6 +656,9 @@
     text-align: right;
     font-weight: 600;
     color: var(--aurora);
+  }
+  .rng.ui {
+    grid-template-columns: auto 4.2em 1fr;
   }
   .srow select,
   .srow input[type='text'],

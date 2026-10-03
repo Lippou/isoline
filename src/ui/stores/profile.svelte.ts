@@ -238,10 +238,12 @@ export async function recordGameEnd(
   await saveProfile();
 }
 
-/** Track individual nuke kinds as they are launched (called by the campaign / HUD). */
+/** Track individual nuke kinds as they are launched (called by the game controller). */
 export function noteLaunch(kind: number): void {
+  const had = Object.keys(profile.achievements).length;
   if (kind === 1) unlock('hydrogen');
   if (kind === 2) unlock('mirv');
+  if (Object.keys(profile.achievements).length !== had) void saveProfile();
 }
 
 export function checkCampaignAchievements(): void {

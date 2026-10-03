@@ -406,7 +406,12 @@ export class NavGrid {
     return out;
   }
 
-  /** Bresenham walk: true if every tile between a and b is navigable. */
+  /**
+   * Bresenham walk: true if every tile between a and b belongs to a's naval body. Any
+   * navigable tile was accepted before: the walk's diagonal steps slip between two land
+   * corners, so a leg could cross a lake or river of another body and leave a ship
+   * stranded there (no route from that body back to its patrol).
+   */
   lineOfWater(a: number, b: number): boolean {
     const W = this.map.width;
     let x0 = a % W;
@@ -419,8 +424,10 @@ export class NavGrid {
     const sy = y0 < y1 ? 1 : -1;
     let err = dx + dy;
     const nav = this.map.navBody;
+    const body = nav[a]!;
+    if (body <= 0) return false;
     while (true) {
-      if (nav[y0 * W + x0]! <= 0) return false;
+      if (nav[y0 * W + x0] !== body) return false;
       if (x0 === x1 && y0 === y1) return true;
       const e2 = 2 * err;
       if (e2 >= dy) {

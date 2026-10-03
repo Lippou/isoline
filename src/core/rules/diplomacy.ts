@@ -6,6 +6,9 @@ import {
   ALLIANCE_REQUEST_TTL,
   ALLIANCE_TICKS,
   ATTACK_RELATION,
+  GIFT_GOLD_CHUNK,
+  GIFT_TROOP_DIVISORS,
+  GIFT_TROOP_RELATION,
   RELATION_BETRAYED,
   RELATION_DECAY,
   RELATION_TRAITOR_NEIGHBOR,
@@ -13,6 +16,8 @@ import {
   TRAITOR_DEBUFF_TICKS,
   TRAITOR_EMBARGO_TICKS,
   TRAITOR_MARK_TICKS,
+  TRADE_WARMTH_WINDOW,
+  WARMTH,
 } from '../game/constants';
 import { IS_LAND } from '../map/terrain';
 import { U } from '../units/unit';
@@ -56,6 +61,10 @@ function form(game: Game, a: Player, b: Player): void {
   const exp = game.tick + ALLIANCE_TICKS;
   a.allies.set(b.id, exp);
   b.allies.set(a.id, exp);
+  if (!renew) {
+    a.allySince.set(b.id, game.tick);
+    b.allySince.set(a.id, game.tick);
+  }
   a.allyRequests.delete(b.id);
   b.allyRequests.delete(a.id);
   // Temporary embargoes are lifted and missiles already flying between them are called off.
@@ -83,6 +92,8 @@ export function breakAlliance(game: Game, a: Player, b: Player, silent = false):
   if (!a.allies.has(b.id)) return;
   a.allies.delete(b.id);
   b.allies.delete(a.id);
+  a.allySince.delete(b.id);
+  b.allySince.delete(a.id);
   game.emit({ k: 'alliance', a: a.id, b: b.id, on: false });
   if (!silent) {
     game.notify(a.id, 'notify.allianceEnded', 'warn', { with: b.id });
@@ -126,10 +137,10 @@ export function betray(game: Game, traitor: Player, victim: Player): void {
   victim.embargoUntil.set(traitor.id, game.tick + TRAITOR_EMBARGO_TICKS);
   traitor.stats.betrayals++;
   victim.betrayedBy.set(traitor.id, game.tick);
-  victim.updateRelation(traitor.id, RELATION_BETRAYED);
+  victim.updateRelation(traitor.id, RELATION_BETRAYED, 'betrayed');
   for (const id of landNeighbors(game, traitor)) {
     if (!game.sameTeam(id, victim.id))
-      game.players[id]!.updateRelation(traitor.id, RELATION_TRAITOR_NEIGHBOR);
+      game.players[id]!.updateRelation(traitor.id, RELATION_TRAITOR_NEIGHBOR, 'traitor');
   }
   game.emit({ k: 'betrayal', traitor: traitor.id, victim: victim.id });
   game.notify(-1, 'event.betrayal', 'danger', { traitor: traitor.id, victim: victim.id });
@@ -166,7 +177,7 @@ export function navalHostilities(game: Game, attacker: Player, defender: Player)
 export function openHostilities(game: Game, attacker: Player, defender: Player): void {
   if (attacker.allies.has(defender.id)) betray(game, attacker, defender);
   tempEmbargo(game, attacker, defender);
-  defender.updateRelation(attacker.id, ATTACK_RELATION[game.config.difficulty]);
+  defender.updateRelation(attacker.id, ATTACK_RELATION[game.config.difficulty], 'attacked');
   refuseRequest(game, attacker, defender);
 }
 
@@ -198,12 +209,103 @@ export function donate(game: Game, from: Player, to: Player, gold: number, troop
   to.gold += g;
   from.troops -= t;
   to.troops += t;
+  // OpenFront: a gift earns goodwill (gold by chunks, troops past a threshold).
+  to.updateRelation(from.id, giftRelation(game, to, g, t), 'gift');
   if (g > 0 || t > 0)
     game.notify(to.id, 'notify.donation', 'good', {
       from: from.id,
       gold: Math.round(g),
       troops: Math.round(t),
     });
+}
+
+/**
+ * Goodwill a gift earns from its recipient (OpenFront's DonateGold/TroopExecution): +5 per
+ * chunk of gold (the chunk grows by its size every 5 minutes of play), at most +100; and
+ * +50 for troops reaching a random share of the recipient's troop ceiling.
+ */
+export function giftRelation(game: Game, to: Player, gold: number, troops: number): number {
+  const d = game.config.difficulty;
+  let r = 0;
+  if (gold > 0) {
+    const chunk = Math.round(GIFT_GOLD_CHUNK[d] * (1 + game.tick / (ALLIANCE_TICKS + game.startTick)));
+    r += Math.min(100, Math.floor(gold / chunk) * 5);
+  }
+  if (troops > 0) {
+    const [lo, hi] = GIFT_TROOP_DIVISORS[d];
+    const cap = Math.max(1, to.popCap);
+    if (troops >= game.rng.int(Math.floor(cap / lo), Math.floor(cap / hi))) r += GIFT_TROOP_RELATION;
+  }
+  return r;
+}
+
+/** Merchant ships and trains between a and b keep their trade goodwill alive. */
+export function noteTrade(game: Game, a: Player, b: Player): void {
+  if (a.id === b.id) return;
+  a.lastTrade.set(b.id, game.tick);
+  b.lastTrade.set(a.id, game.tick);
+}
+
+/** Countries each country is fighting right now (land attacks either way, tribes aside). */
+export function enemiesOf(game: Game): Map<number, Set<number>> {
+  const out = new Map<number, Set<number>>();
+  const add = (a: number, b: number) => {
+    let s = out.get(a);
+    if (!s) out.set(a, (s = new Set()));
+    s.add(b);
+  };
+  for (const at of game.attacks) {
+    if (at.done || at.target <= 0) continue;
+    const a = game.players[at.attacker];
+    const b = game.players[at.target];
+    if (!a || !b || a.kind === 'tribe' || b.kind === 'tribe') continue;
+    add(a.id, b.id);
+    add(b.id, a.id);
+  }
+  return out;
+}
+
+/** Whether a and b both fight a third country (and not each other). */
+export function commonEnemy(enemies: Map<number, Set<number>>, a: number, b: number): boolean {
+  const ea = enemies.get(a);
+  const eb = enemies.get(b);
+  if (!ea || !eb || ea.has(b)) return false;
+  for (const e of ea) if (eb.has(e)) return true;
+  return false;
+}
+
+/**
+ * Isoline's goodwill, once a second (see WARMTH): allies, trade partners and countries
+ * fighting a common enemy warm to each other, each up to its own ceiling.
+ */
+function updateWarmth(game: Game, decay: number): void {
+  const enemies = enemiesOf(game);
+  const warm = (
+    p: Player,
+    q: number,
+    w: { rate: number; ceiling: number },
+    cause: 'ally' | 'trade' | 'enemy',
+  ) => {
+    const r = p.relation(q);
+    if (r >= w.ceiling) return;
+    p.updateRelation(q, Math.min(w.ceiling - r, w.rate + (r >= 0 ? decay : 0)), cause);
+  };
+  for (const p of game.alivePlayers()) {
+    if (p.kind === 'tribe') continue;
+    for (const id of p.allies.keys()) {
+      const since = p.allySince.get(id) ?? game.tick;
+      warm(p, id, game.tick - since >= ALLIANCE_TICKS ? WARMTH.longAlly : WARMTH.ally, 'ally');
+    }
+    for (const [id, last] of p.lastTrade) {
+      if (game.tick - last > TRADE_WARMTH_WINDOW || !game.players[id]?.alive) p.lastTrade.delete(id);
+      else warm(p, id, WARMTH.trade, 'trade');
+    }
+    const mine = enemies.get(p.id);
+    if (!mine) continue;
+    for (const [id] of enemies) {
+      if (id !== p.id && commonEnemy(enemies, p.id, id)) warm(p, id, WARMTH.enemy, 'enemy');
+    }
+  }
 }
 
 export function updateDiplomacy(game: Game): void {
@@ -235,10 +337,7 @@ export function updateDiplomacy(game: Game): void {
       }
     for (const [id, exp] of p.embargoUntil) if (exp <= game.tick) p.embargoUntil.delete(id);
     // Relations ease back to neutral (OpenFront: 0.05 a tick).
-    const decay = RELATION_DECAY * 10;
-    for (const [id, r] of p.relations) {
-      if (Math.abs(r) <= decay) p.relations.delete(id);
-      else p.relations.set(id, r - Math.sign(r) * decay);
-    }
+    p.decayRelations(RELATION_DECAY * 10);
   }
+  updateWarmth(game, RELATION_DECAY * 10);
 }

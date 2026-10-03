@@ -1,8 +1,27 @@
 // Map textures: building markers (Lucide glyph on a dark badge with an owner
-// ring), top-down unit sprites drawn as SVG (neutral hull + owner-coloured mark),
-// deposits and particle sprites.
-import { Graphics, Texture, type Renderer } from 'pixi.js';
+// ring), top-down unit sprites drawn as SVG (neutral hull + owner-coloured mark; ships
+// in shipArt.ts), deposits and particle sprites.
+import { CanvasSource, Graphics, Texture, type Renderer } from 'pixi.js';
 import { BUILDING_ICONS, SIGNALS, iconMarkup, iconSvg, type IconName } from '../ui/icons/icons';
+import {
+  CHEVRON_SVG,
+  FLASH_SVG,
+  MERCHANT_ART,
+  REPAIR_SVG,
+  SHIP_H,
+  SHIP_RASTER,
+  SHIP_W,
+  TRANSPORT_ART,
+  TURRET_H,
+  TURRET_SVG,
+  TURRET_W,
+  WAKE_H,
+  WAKE_SVG,
+  WAKE_W,
+  WARSHIP_ART,
+  svgDoc,
+  type ShipArt,
+} from './shipArt';
 
 export interface UnitSprite {
   base: Texture;
@@ -19,9 +38,14 @@ export interface IconSet {
   /** Owner ring around the badge (white, tinted). */
   badgeRing: Texture;
   ring: Texture;
-  warship: UnitSprite;
-  transport: UnitSprite;
-  merchant: UnitSprite;
+  /** Ships: transport, warship and merchant layers, warship turret, flash and wake. */
+  ships: { transport: ShipTextures; warship: ShipTextures; merchant: ShipTextures };
+  turret: Texture;
+  flash: Texture;
+  wake: Texture;
+  /** Veterancy chevron and repair cross over warships. */
+  chevron: Texture;
+  repair: Texture;
   train: UnitSprite;
   trainCar: UnitSprite;
   fighter: UnitSprite;
@@ -110,59 +134,58 @@ export async function svgTexture(svg: string, width: number, height: number): Pr
   return Texture.from(canvas);
 }
 
-const svgDoc = (w: number, h: number, body: string) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${body}</svg>`;
+/**
+ * Like svgTexture, with mipmaps: ship art is drawn large (crisp when zoomed in) and shown
+ * at 16–34 px, which plain linear filtering would alias.
+ */
+export async function svgTextureMip(svg: string, width: number, height: number): Promise<Texture> {
+  const img = new Image();
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  await img.decode();
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+  return new Texture({
+    source: new CanvasSource({ resource: canvas, autoGenerateMipmaps: true, scaleMode: 'linear' }),
+  });
+}
+
+/**
+ * A ship in two layers: the owner's mark (white, tinted; drawn first, a little wider so no
+ * seam shows) and the hull with its details, open over the mark. Geometry in art units.
+ */
+export interface ShipTextures {
+  mark: Texture;
+  hull: Texture;
+  stern: number;
+  bow: number;
+  turrets: number[];
+}
+
+async function ship(art: ShipArt): Promise<ShipTextures> {
+  const W = SHIP_W * SHIP_RASTER;
+  const H = SHIP_H * SHIP_RASTER;
+  const cut = art.mark.replaceAll('fill="#fff"', 'fill="#000"');
+  const hull =
+    `<defs><mask id="d" maskUnits="userSpaceOnUse" x="0" y="0" width="${SHIP_W}" height="${SHIP_H}">` +
+    `<rect width="${SHIP_W}" height="${SHIP_H}" fill="#fff"/>${cut}</mask></defs>` +
+    `<g mask="url(#d)">${art.base}</g>${art.top}`;
+  const mark = art.mark.replaceAll(
+    'fill="#fff"',
+    'fill="#fff" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"',
+  );
+  return {
+    mark: await svgTextureMip(svgDoc(SHIP_W, SHIP_H, mark), W, H),
+    hull: await svgTextureMip(svgDoc(SHIP_W, SHIP_H, hull), W, H),
+    stern: art.stern,
+    bow: art.bow,
+    turrets: art.turrets,
+  };
+}
 
 // ------------------------------------------------------------- unit artwork
 // All units point to the right (+x); 1 SVG unit = 1/4 px at the 4× raster.
-
-const WARSHIP = {
-  w: 100,
-  h: 24,
-  base: `
-    <path d="M3 12 L13 4.5 L80 4.5 Q93 7 98 12 Q93 17 80 19.5 L13 19.5 Z" fill="#59626b" stroke="#22282e" stroke-width="1.2"/>
-    <path d="M15 7.5 L79 7.5 Q88 9.5 92 12 Q88 14.5 79 16.5 L15 16.5 Z" fill="#76808a"/>
-    <rect x="38" y="8.5" width="22" height="7" rx="1" fill="#9aa3ab" stroke="#3a4148" stroke-width="0.6"/>
-    <rect x="54" y="9.5" width="5" height="5" fill="#c5ccd2"/>
-    <rect x="44" y="9.6" width="4.5" height="4.8" rx="1" fill="#2d3237"/>
-    <circle cx="25" cy="12" r="3.4" fill="#4a525a" stroke="#22282e" stroke-width="0.6"/>
-    <rect x="13" y="11.2" width="10" height="1.6" fill="#3a4148"/>
-    <circle cx="72" cy="12" r="3.4" fill="#4a525a" stroke="#22282e" stroke-width="0.6"/>
-    <rect x="74" y="11.2" width="11" height="1.6" fill="#3a4148"/>
-    <line x1="33" y1="12" x2="36" y2="12" stroke="#c5ccd2" stroke-width="0.8"/>`,
-  mark: `<rect x="6" y="9" width="5" height="6" rx="0.8" fill="#fff"/><path d="M62 8.5 h3 v7 h-3 z" fill="#fff"/>`,
-  length: 5,
-};
-
-const TRANSPORT = {
-  w: 64,
-  h: 26,
-  base: `
-    <path d="M3 4 L52 4 L61 9 L61 17 L52 22 L3 22 Z" fill="#6c6a5c" stroke="#2c2b24" stroke-width="1.2"/>
-    <rect x="12" y="7" width="38" height="12" rx="1.5" fill="#4d4b40"/>
-    <g fill="#a39c7c">${Array.from({ length: 12 }, (_, k) => `<circle cx="${16 + (k % 6) * 6}" cy="${k < 6 ? 10.5 : 15.5}" r="1.7"/>`).join('')}</g>
-    <rect x="4" y="8" width="7" height="10" rx="1" fill="#8a8672"/>`,
-  mark: `<rect x="52" y="8" width="4" height="10" fill="#fff"/>`,
-  length: 3.4,
-};
-
-const CONTAINERS = ['#b5452f', '#2f6e9e', '#c9a227', '#3d8b5a', '#8a4f9e', '#d07a2a'];
-const MERCHANT = {
-  w: 96,
-  h: 22,
-  base: `
-    <path d="M4 3.5 L80 3.5 Q92 6 95 11 Q92 16 80 18.5 L4 18.5 Q2 11 4 3.5 Z" fill="#2f3439" stroke="#15181b" stroke-width="1"/>
-    <path d="M6 5.5 L79 5.5 Q88 7.5 91 11 Q88 14.5 79 16.5 L6 16.5 Z" fill="#7e3b30"/>
-    <g>${Array.from({ length: 16 }, (_, k) => {
-      const col = Math.floor(k / 2);
-      const row = k % 2;
-      return `<rect x="${24 + col * 7}" y="${6.5 + row * 4.8}" width="6.2" height="4.2" fill="${CONTAINERS[(k * 5 + col) % CONTAINERS.length]}"/>`;
-    }).join('')}</g>
-    <rect x="7" y="6" width="13" height="10" rx="1" fill="#e9e6dc" stroke="#6d6a62" stroke-width="0.5"/>
-    <rect x="9" y="7.5" width="9" height="2" fill="#2d3237"/>`,
-  mark: `<rect x="13" y="12" width="5" height="3" fill="#fff"/>`,
-  length: 4.2,
-};
 
 // Trains are articulated: a locomotive and wagons drawn one by one along the track.
 const TRAIN_LOCO = {
@@ -285,9 +308,16 @@ export async function buildIcons(renderer: Renderer): Promise<IconSet> {
       128,
     ),
     ring: gen(renderer, (g) => g.circle(64, 64, 62).stroke({ width: 3, color: 0xffffff })),
-    warship: await unit(WARSHIP),
-    transport: await unit(TRANSPORT),
-    merchant: await unit(MERCHANT),
+    ships: {
+      transport: await ship(TRANSPORT_ART),
+      warship: await ship(WARSHIP_ART),
+      merchant: await ship(MERCHANT_ART),
+    },
+    turret: await svgTextureMip(svgDoc(TURRET_W, TURRET_H, TURRET_SVG), TURRET_W * 4, TURRET_H * 4),
+    flash: await svgTextureMip(svgDoc(32, 32, FLASH_SVG), 128, 128),
+    wake: await svgTextureMip(svgDoc(WAKE_W, WAKE_H, WAKE_SVG), WAKE_W * 4, WAKE_H * 4),
+    chevron: await svgTextureMip(svgDoc(16, 16, CHEVRON_SVG), 64, 64),
+    repair: await svgTextureMip(svgDoc(16, 16, REPAIR_SVG), 64, 64),
     train: await unit(TRAIN_LOCO),
     trainCar: await unit(TRAIN_CAR),
     fighter: await unit(FIGHTER),

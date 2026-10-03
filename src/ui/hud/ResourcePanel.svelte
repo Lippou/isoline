@@ -4,6 +4,8 @@
   import { settings, keyLabel } from '../stores/settings.svelte';
   import type { GameController } from '../game/controller';
   import Icon from '../icons/Icon.svelte';
+  import { MediaQuery } from 'svelte/reactivity';
+  import { hudSize } from '../stores/hudBox.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   const L = $derived(hud.local);
@@ -58,10 +60,17 @@
   const incomePs = $derived(L ? L.income * 10 + tradePs + trainsPs : 0);
   let showIncome = $state(false);
   const generalReady = $derived(L ? L.generalReadyIn === 0 : false);
+  // Short windows: the lists of our attacks and boats fold into badges that open them, so
+  // the panel does not climb into the dock and the column of cards (incoming attacks stay
+  // listed: they call for an answer).
+  const folded = new MediaQuery('max-height: 900px');
+  let unfolded = $state<'' | 'attacks' | 'boats'>('');
+  const shows = (k: 'attacks' | 'boats') => !folded.current || unfolded === k;
+  const unfold = (k: 'attacks' | 'boats') => (unfolded = unfolded === k ? '' : k);
 </script>
 
 {#if L}
-  <section class="res panel" data-testid="resource-panel">
+  <section class="res panel" data-testid="resource-panel" use:hudSize={'res'}>
     <div class="block">
       <div class="head">
         <span class="section-title" data-tip={t('hud.armyTip')}
@@ -153,7 +162,29 @@
         >{/if}
     </div>
 
-    {#if L.attacks.length}
+    {#if folded.current && (L.attacks.length || L.transports.length)}
+      <div class="badges" data-testid="res-badges">
+        {#if L.attacks.length}<button
+            class="badge"
+            class:on={unfolded === 'attacks'}
+            aria-expanded={unfolded === 'attacks'}
+            onclick={() => unfold('attacks')}
+            ><Icon name="war" size={13} />{t('hud.attacksShort')}<b class="mono">{L.attacks.length}</b><Icon
+              name={unfolded === 'attacks' ? 'chevronDown' : 'chevronRight'}
+              size={12}
+            /></button
+          >{/if}
+        {#if L.transports.length}<button
+            class="badge"
+            class:on={unfolded === 'boats'}
+            aria-expanded={unfolded === 'boats'}
+            onclick={() => unfold('boats')}
+            ><Icon name="transport" size={13} />{t('hud.boatsShort')}<b class="mono">{L.transports.length}</b
+            ><Icon name={unfolded === 'boats' ? 'chevronDown' : 'chevronRight'} size={12} /></button
+          >{/if}
+      </div>
+    {/if}
+    {#if L.attacks.length && shows('attacks')}
       <div class="block">
         <span class="section-title"><Icon name="war" size={14} />{t('hud.ongoingAttacks')}</span>
         <ul class="attacks">
@@ -176,7 +207,7 @@
         </ul>
       </div>
     {/if}
-    {#if L.transports.length}
+    {#if L.transports.length && shows('boats')}
       <div class="block">
         <span class="section-title"
           ><Icon name="transport" size={14} />{t('hud.boatsAtSea', { n: L.transports.length })}</span
@@ -237,7 +268,7 @@
     position: absolute;
     left: 12px;
     bottom: 12px;
-    width: calc(290px * var(--ui-scale));
+    width: var(--res-w, 290px);
     padding: 0;
     display: grid;
     z-index: 6;
@@ -376,6 +407,39 @@
     display: flex;
     gap: 8px;
     align-items: center;
+  }
+  /* Folded lists (short windows): one row of badges that open them. */
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--line);
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--panel-2);
+    color: var(--muted);
+    font-size: 0.92em;
+    cursor: var(--cursor-pointer, pointer);
+  }
+  .badge b {
+    color: var(--parchment);
+  }
+  .badge:hover,
+  .badge.on {
+    color: var(--parchment);
+    border-color: var(--aurora);
+  }
+  @media (max-height: 900px) {
+    .attacks {
+      max-height: 76px;
+    }
   }
   .general.ready {
     border-color: var(--brass);

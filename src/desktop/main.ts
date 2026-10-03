@@ -35,7 +35,10 @@ function mapsRoot(): string {
 
 function safeJoin(root: string, rel: string): string | null {
   const target = path.normalize(path.join(root, decodeURIComponent(rel)));
-  return target.startsWith(root) ? target : null;
+  // With the separator: `<userData>-other/…` also starts with `<userData>`.
+  return target === root || target.startsWith(root.endsWith(path.sep) ? root : root + path.sep)
+    ? target
+    : null;
 }
 
 function registerProtocol(): void {
@@ -58,12 +61,17 @@ function registerProtocol(): void {
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
-  const display = screen.getPrimaryDisplay().workAreaSize;
+  // Sized to the screen: a small laptop (1366 × 768, a 13" MacBook Air) gets the whole work
+  // area, a desktop 1600 × 960 or three quarters of a large screen. The interface scale
+  // follows the window (ui/stores/viewport.svelte.ts); below 1100 × 680 the HUD is cramped.
+  const work = screen.getPrimaryDisplay().workAreaSize;
+  const fit = (want: number, room: number) => Math.min(room, Math.max(want, Math.round(room * 0.75)));
   mainWindow = new BrowserWindow({
-    width: Math.min(1600, display.width),
-    height: Math.min(960, display.height),
-    minWidth: 1024,
-    minHeight: 640,
+    width: fit(1600, work.width),
+    height: fit(960, work.height),
+    minWidth: Math.min(1100, work.width),
+    minHeight: Math.min(680, work.height),
+    center: true,
     backgroundColor: '#EEF3F2', // chart paper, like the splash (no dark flash at start-up)
     title: 'Isoline',
     show: false,

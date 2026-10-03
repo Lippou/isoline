@@ -36,6 +36,7 @@ import { TradeLedger, embargoesOf } from './tradeLedger';
 import { TradeRoutes } from './tradeRoutes';
 import { ThreatWatch } from './threats';
 import { bestCapitalSpot, capitalCooldown } from '../core/rules/capital';
+import { opinionsOf, type Opinion } from '../core/rules/opinion';
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 let game: Game | null = null;
@@ -52,6 +53,8 @@ const routes = new TradeRoutes();
 const threats = new ThreatWatch();
 /** Safest spot for a new capital while the viewer has none (recomputed every 2 s). */
 let capitalHint = { tick: -1, tile: -1 };
+/** What the nations think of the viewer (recomputed every second). */
+let opinions: { tick: number; list: Opinion[] } = { tick: -1, list: [] };
 
 function post(msg: FromWorker, transfer: Transferable[] = []): void {
   ctx.postMessage(msg, transfer);
@@ -83,6 +86,7 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
         routes.reset();
         threats.reset();
         capitalHint = { tick: -1, tile: -1 };
+        opinions = { tick: -1, list: [] };
         computeLabels(game);
         const ready: FromWorker = {
           type: 'ready',
@@ -126,6 +130,7 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
         routes.resetViewer();
         threats.reset();
         capitalHint = { tick: -1, tile: -1 };
+        opinions = { tick: -1, list: [] };
         if (game) sendUpdate(game, [], [], 0, true);
         break;
       case 'layers':
@@ -537,7 +542,15 @@ function localView(g: Game): LocalView | undefined {
     capitalCooldown: capitalCooldown(g, p),
     capitalHint: capitalHintOf(g, p),
     threats: threats.update(g, p),
+    opinions: opinionsFor(g, p),
   };
+}
+
+function opinionsFor(g: Game, p: Player): Opinion[] {
+  const t = g.tick;
+  if (opinions.tick < 0 || t < opinions.tick || t - opinions.tick >= 10)
+    opinions = { tick: t, list: p.alive ? opinionsOf(g, p) : [] };
+  return opinions.list;
 }
 
 /** While the viewer has no capital: the spot a nation would choose (the prompt's « safest » button). */
