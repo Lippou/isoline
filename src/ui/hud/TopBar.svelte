@@ -40,17 +40,19 @@
   const mode = $derived(currentSession()?.config.mode ?? 'ffa');
   const threshold = $derived(hud.world?.threshold ?? 80);
   const secs = (ticks: number) => Math.ceil(ticks / 10);
+  /** The World Council's nuclear ban: time left (0: none). */
+  const banLeft = $derived(Math.max(0, (hud.world?.nukeBanUntil ?? 0) - hud.tick));
 </script>
 
 <header class="top">
   {#if hud.phase === 'spawn'}
     <div class="spawn panel" data-testid="spawn-countdown">
-      <Icon name="pin" size={20} />
+      <span class="pin"><Icon name="pin" size={18} /></span>
       <div>
         <b>{t('hud.chooseSpawn')}</b>
-        <span class="hint">{hud.viewer > 0 ? t('hud.spawnHelp') : t('hud.spawnWait')}</span>
+        <span class="help">{hud.viewer > 0 ? t('hud.spawnHelp') : t('hud.spawnWait')}</span>
       </div>
-      <span class="mono left" data-tip={t('hud.spawnTimerTip')}>{secs(spawnLeft)} s</span>
+      <span class="left" data-tip={t('hud.spawnTimerTip')}>{secs(spawnLeft)}<small> s</small></span>
     </div>
   {:else}
     <div class="strip panel">
@@ -130,8 +132,12 @@
       {#if (hud.world?.ceasefireUntil ?? 0) > hud.tick}<span class="chip good"
           ><Icon name="ceasefire" size={13} />{t('hud.ceasefire')}</span
         >{/if}
-      {#if (hud.world?.nukeBanUntil ?? 0) > hud.tick}<span class="chip warn"
-          ><Icon name="embargo" size={13} />{t('hud.nukeBan')}</span
+      {#if banLeft > 0}<span
+          class="chip bad"
+          data-testid="nuke-ban-chip"
+          data-tip={t('ban.tip', { clock: clock(banLeft) })}
+          ><Icon name="embargo" size={13} />{t('hud.nukeBan')}
+          <span class="mono">{clock(banLeft)}</span></span
         >{/if}
       {#if hud.local && hud.local.immuneFor > 0}<span class="chip good" data-tip={t('hud.immuneTip')}
           ><Icon name="immune" size={13} />{t('hud.immune', { s: secs(hud.local.immuneFor) })}</span
@@ -165,28 +171,58 @@
       width: min(760px, calc(100vw - 600px));
     }
   }
+  /* Before the start: a notice under the ink rule, the seconds left in the margin. */
   .spawn {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 16px;
+    padding: 9px 16px 10px;
+    border-top: 3px solid var(--np-ink);
     pointer-events: auto;
-    color: var(--brass);
+  }
+  .pin {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 1.5px solid var(--np-ink);
+    border-radius: 50%;
+    color: var(--np-ink);
+    flex: none;
   }
   .spawn div {
     display: grid;
+    gap: 1px;
   }
   .spawn b {
-    color: var(--parchment);
     font-family: var(--title);
-    font-size: 1.05em;
+    font-weight: 700;
+    font-size: 1.15em;
+    line-height: 1.1;
+    color: var(--np-ink);
+  }
+  .help {
+    font-family: var(--np-serif);
+    font-size: 0.86em;
+    color: var(--np-ink-2);
   }
   .spawn .left {
-    font-size: 1.1em;
-    color: var(--muted);
-    padding-left: 12px;
-    border-left: 1px solid var(--line);
+    padding-left: 14px;
+    border-left: 1px solid var(--np-rule);
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 1.7em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums lining-nums;
+    color: var(--np-ink);
   }
+  .left small {
+    font-family: var(--text);
+    font-size: 0.5em;
+    font-weight: 500;
+    color: var(--np-ink-2);
+  }
+  /* The strip: clock, speed, mode and goal, separated by fine rules. */
   .strip {
     display: flex;
     align-items: stretch;
@@ -198,15 +234,16 @@
     align-items: center;
     gap: 6px;
     padding: 5px 12px;
-    color: var(--muted);
+    color: var(--np-ink-2);
     white-space: nowrap;
   }
   .item + .item {
-    border-left: 1px solid var(--line);
+    border-left: 1px solid var(--np-rule);
   }
   .clock {
-    color: var(--parchment);
+    font-weight: 600;
     font-size: 1.05em;
+    color: var(--np-ink);
   }
   .time {
     gap: 2px;
@@ -220,36 +257,41 @@
     height: 24px;
     padding: 0 6px;
     border: 1px solid transparent;
-    border-radius: 4px;
+    border-radius: 2px;
     background: transparent;
-    color: var(--muted);
+    color: var(--np-ink-2);
     cursor: pointer;
     font-size: 0.92em;
+    font-weight: 500;
     transition:
       background 0.12s,
       color 0.12s;
   }
   .tbtn:hover {
-    background: var(--panel-3);
-    color: var(--parchment);
+    background: var(--np-paper-2);
+    color: var(--np-ink);
   }
+  /* The speed in use: reversed, as the journal prints what is current. */
   .tbtn.on {
-    background: var(--select-bg);
-    border-color: var(--aurora);
-    color: var(--parchment);
+    background: var(--np-ink);
+    border-color: var(--np-ink);
+    color: var(--np-paper);
   }
   .mine {
-    color: var(--parchment);
     margin-left: 4px;
+    font-weight: 600;
+    color: var(--np-ink);
   }
+  /* The shares of the land: each country in its ink, the goal as a rule. */
   .bar {
     position: relative;
     width: 100%;
     height: 8px;
     display: flex;
-    background: var(--glass);
-    border: 1px solid var(--line);
-    border-radius: 2px;
+    background: var(--np-paper-2);
+    border: 1px solid var(--np-edge);
+    border-radius: 1px;
+    box-shadow: 0 1px 3px rgba(3, 10, 16, 0.25);
     overflow: hidden;
     pointer-events: auto;
   }
@@ -258,14 +300,16 @@
     transition: width 0.6s ease;
   }
   .seg.me {
-    box-shadow: inset 0 0 0 1px #fff;
+    box-shadow:
+      inset 0 0 0 1px var(--np-ink),
+      inset 0 0 0 2px var(--np-paper);
   }
   .goal {
     position: absolute;
     top: 0;
     bottom: 0;
     width: 2px;
-    background: var(--parchment);
+    background: var(--np-ink);
   }
   .status {
     display: flex;
@@ -275,9 +319,23 @@
     pointer-events: auto;
   }
   .status .chip {
-    background: var(--glass);
+    background: var(--np-paper);
+    border-color: var(--np-edge);
+    box-shadow: 0 1px 3px rgba(3, 10, 16, 0.22);
   }
-  /* At the top of the window: explanations open below the chips, above the toasts. */
+  .status .chip.bad {
+    border-color: color-mix(in srgb, var(--np-spot) 70%, transparent);
+  }
+  .status .chip.good {
+    border-color: color-mix(in srgb, var(--np-good) 60%, transparent);
+  }
+  .status .chip.warn {
+    border-color: color-mix(in srgb, var(--np-warn) 60%, transparent);
+  }
+  .status .chip .mono {
+    font-weight: 600;
+  }
+  /* At the top of the window: explanations open below the chips, above the dispatches. */
   .top:has(.status [data-tip]:hover) {
     z-index: 31;
   }

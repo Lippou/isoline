@@ -6,6 +6,7 @@
   import { flagUrl } from '../../render/flags';
   import type { GameController } from '../game/controller';
   import Icon from '../icons/Icon.svelte';
+  import { hudSize } from '../stores/hudBox.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   let open = $state(true);
@@ -25,7 +26,7 @@
   });
 </script>
 
-<aside class="lb panel" class:closed={!open} class:more data-testid="leaderboard">
+<aside class="lb panel" class:closed={!open} class:more data-testid="leaderboard" use:hudSize={'lb'}>
   <header>
     <button class="title" onclick={() => (open = !open)}
       ><Icon name={open ? 'chevronDown' : 'chevronRight'} size={15} />{t('hud.leaderboard')}</button
@@ -77,6 +78,7 @@
 </aside>
 
 <style>
+  /* Top right: the standings, as the journal prints a table. */
   .lb {
     position: absolute;
     right: 12px;
@@ -102,16 +104,16 @@
     align-items: center;
     gap: 3px;
     padding: 1px 6px;
-    border: 1px solid var(--line-strong);
-    border-radius: 3px;
+    border: 1px solid var(--np-rule-2);
+    border-radius: 2px;
     background: none;
-    color: var(--muted);
+    color: var(--np-ink-2);
     font-size: 0.85em;
     cursor: var(--cursor-pointer, pointer);
   }
   .more-btn:hover {
-    color: var(--parchment);
-    border-color: var(--aurora);
+    color: var(--np-ink);
+    border-color: var(--np-ink);
   }
   @media (max-height: 940px) {
     .more-btn {
@@ -124,13 +126,17 @@
   .lb.closed {
     width: auto;
   }
+  /* The title over a heavy rule. */
   header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--line);
-    background: var(--panel-2);
+    margin: 0 10px;
+    padding: 6px 0 5px;
+    border-bottom: 2px solid var(--np-ink);
+  }
+  .lb.closed header {
+    border-bottom: 0;
   }
   .title {
     display: inline-flex;
@@ -138,10 +144,10 @@
     gap: 6px;
     background: none;
     border: 0;
-    color: var(--parchment);
+    color: var(--np-ink);
     font-family: var(--title);
-    font-weight: 600;
-    font-size: 1.05em;
+    font-weight: 700;
+    font-size: 1.12em;
     cursor: var(--cursor-pointer, pointer);
     padding: 0;
   }
@@ -150,7 +156,7 @@
     align-items: center;
     gap: 5px;
     font-size: 0.85em;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .cols,
   li button {
@@ -160,9 +166,16 @@
     align-items: center;
   }
   .cols {
-    padding: 5px 10px 3px;
-    font-size: 0.8em;
-    color: var(--faint);
+    margin: 0 10px;
+    padding: 4px 0 3px;
+    border-bottom: 1px solid var(--np-rule);
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.82em;
+    color: var(--np-ink-2);
+  }
+  .cols > :first-child {
+    padding-left: 0;
   }
   .r {
     text-align: right;
@@ -170,27 +183,32 @@
   ol {
     list-style: none;
     margin: 0;
-    padding: 0 4px 6px;
+    padding: 2px 4px 6px;
   }
   li button {
     width: 100%;
-    padding: 4px 6px;
+    padding: 3px 6px;
     background: none;
     border: 0;
-    border-radius: 3px;
-    color: var(--parchment);
+    border-radius: 1px;
+    color: var(--np-ink);
     cursor: var(--cursor-pointer, pointer);
     text-align: left;
   }
   li button:hover {
-    background: var(--panel-3);
+    background: var(--np-card);
   }
+  li + li button {
+    box-shadow: 0 -1px 0 color-mix(in srgb, var(--np-rule) 55%, transparent);
+  }
+  /* Our own line: brass in the margin, on the darker paper. */
   li.me button {
-    background: rgba(209, 166, 74, 0.12);
-    box-shadow: inset 2px 0 0 var(--brass);
+    background: var(--np-paper-2);
+    box-shadow: inset 3px 0 0 var(--np-gold);
+    font-weight: 600;
   }
   .rank {
-    color: var(--faint);
+    color: var(--np-ink-3);
   }
   .who {
     display: flex;
@@ -199,16 +217,16 @@
     min-width: 0;
   }
   .ink {
-    width: 4px;
-    height: 16px;
-    border-radius: 1px;
+    width: 3px;
+    height: 14px;
     flex-shrink: 0;
   }
   img {
     width: 22px;
-    height: 16px;
+    height: 15px;
     object-fit: cover;
-    border: 1px solid #0006;
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
     flex-shrink: 0;
   }
   .name {
@@ -217,15 +235,18 @@
     white-space: nowrap;
   }
   .st {
-    color: var(--muted);
+    color: var(--np-ink-3);
     display: inline-flex;
+  }
+  .st.bad {
+    color: var(--np-spot);
   }
   .pct {
     text-align: right;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .troops {
     text-align: right;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
 </style>

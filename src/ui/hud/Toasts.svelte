@@ -1,66 +1,210 @@
 <script lang="ts">
-  import { hud } from '../stores/game.svelte';
+  // The dispatches: the game's notifications, printed as slips of the Courier's paper in
+  // the right column (GameScreen.svelte), above the alliance offers — never over the
+  // middle of the map. The newest at the foot; each is dated with the game clock and its
+  // rule says what it is (ink: news, green: good, brass: a warning, magenta: danger).
+  // A slip that points at a place centres the map on it; one that does not is put away
+  // by a click. They stay while the pointer is on them, then leave after a few seconds.
+  import { flip } from 'svelte/animate';
+  import { fly, fade } from 'svelte/transition';
+  import { hud, holdToasts, dropToast, type Toast } from '../stores/game.svelte';
+  import { t, clock } from '../i18n/i18n.svelte';
+  import { settings } from '../stores/settings.svelte';
+  import Icon from '../icons/Icon.svelte';
   import type { GameController } from '../game/controller';
   let { ctl }: { ctl: GameController } = $props();
 
-  function go(tile?: number): void {
-    if (tile === undefined) return;
-    const w = ctl.session.state.width;
-    ctl.renderer.camera.goTo((tile % w) + 0.5, ((tile / w) | 0) + 0.5, Math.max(ctl.renderer.camera.zoom, 3));
+  const still = () => settings.access.reducedMotion || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const enter = (node: Element) =>
+    still() ? fade(node, { duration: 120 }) : fly(node, { x: 24, duration: 220 });
+  const leave = (node: Element) => fade(node, { duration: still() ? 120 : 260 });
+
+  /** The game clock when it arrived (none before the game starts). */
+  function stamp(d: Toast): string {
+    const start = hud.world?.startTick ?? 0;
+    return hud.phase === 'playing' && d.tick >= start ? clock(d.tick - start) : '';
   }
+
+  function open(d: Toast): void {
+    if (d.tile === undefined) {
+      dropToast(d.id);
+      return;
+    }
+    const w = ctl.session.state.width;
+    ctl.renderer.camera.goTo(
+      (d.tile % w) + 0.5,
+      ((d.tile / w) | 0) + 0.5,
+      Math.max(ctl.renderer.camera.zoom, 3),
+    );
+  }
+  $effect(() => () => holdToasts(false));
+
+  // Short of room, the oldest slips leave the clip at the top: they fade out there.
+  let tray: HTMLDivElement | undefined = $state();
+  let clipped = $state(false);
+  // (Packed at the foot, what overflows goes above the top, out of the scroll range.)
+  const measure = () => {
+    const first = tray?.firstElementChild;
+    clipped = !!tray && !!first && first.getBoundingClientRect().top < tray.getBoundingClientRect().top - 1;
+  };
+  $effect(() => {
+    void hud.toasts.length;
+    const raf = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(raf);
+  });
+  $effect(() => {
+    if (!tray) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(tray);
+    return () => ro.disconnect();
+  });
 </script>
 
-<div class="toasts" aria-live="polite">
-  {#each hud.toasts as tst (tst.id)}
+<div
+  class="dispatches"
+  class:clipped
+  bind:this={tray}
+  aria-live="polite"
+  aria-label={t('dispatch.title')}
+  role="log"
+  data-testid="dispatches"
+  onpointerenter={() => holdToasts(true)}
+  onpointerleave={() => holdToasts(false)}
+>
+  {#each hud.toasts as d (d.id)}
+    {@const at = stamp(d)}
     <button
-      class="toast glass rise-in {tst.level}"
-      onclick={() => go(tst.tile)}
-      class:link={tst.tile !== undefined}>{tst.text}</button
+      class="slip {d.level}"
+      class:link={d.tile !== undefined}
+      onclick={() => open(d)}
+      title={d.tile !== undefined ? t('dispatch.show') : t('dispatch.dismiss')}
+      data-testid="dispatch"
+      animate:flip={{ duration: still() ? 0 : 200 }}
+      in:enter
+      out:leave
     >
-  {/each}
-  {#each hud.subtitles as s (s.id)}
-    <div class="subtitle fade-in">[{s.text}]</div>
+      {#if at}<time>{at}</time>{/if}
+      <span class="txt">{d.text}</span>
+      {#if d.tile !== undefined}<span class="go" aria-hidden="true"><Icon name="target" size={13} /></span
+        >{/if}
+    </button>
   {/each}
 </div>
 
+<!-- The advisor's words while she speaks (campaign): a caption under the top bar. -->
+{#if hud.subtitles.length}
+  <div class="subtitles" aria-hidden="true">
+    {#each hud.subtitles as s (s.id)}
+      <p class="subtitle fade-in">{s.text}</p>
+    {/each}
+  </div>
+{/if}
+
 <style>
-  .toasts {
-    position: absolute;
+  /* In the right column: the slips sit at its foot; when room runs short the oldest go first. */
+  .dispatches {
+    width: 300px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 5px;
+    overflow: hidden;
+    /* Room for the slips' shadow inside the clip. */
+    padding: 2px 4px 6px;
+    margin: -2px -4px -6px;
+  }
+  .dispatches:not(:has(> *)) {
+    display: none;
+  }
+  .dispatches.clipped {
+    mask-image: linear-gradient(to bottom, transparent 0, #000 30px);
+  }
+  .slip {
+    appearance: none;
+    flex: none;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 10px 7px 9px;
+    border: 1px solid var(--np-edge);
+    border-left: 3px solid var(--np-ink);
+    border-radius: 1px;
+    background: var(--np-paper);
+    box-shadow:
+      0 1px 2px rgba(3, 10, 16, 0.2),
+      0 4px 12px rgba(3, 10, 16, 0.22);
+    font-family: var(--np-serif);
+    font-size: 0.84em;
+    line-height: 1.35;
+    text-align: left;
+    color: var(--np-ink);
+    cursor: var(--cursor-pointer, pointer);
+  }
+  .slip:not(:has(time)) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .slip:hover,
+  .slip:focus-visible {
+    background: var(--np-card);
+  }
+  .slip.good {
+    border-left-color: var(--np-good);
+  }
+  .slip.warn {
+    border-left-color: var(--np-gold);
+  }
+  .slip.danger {
+    border-left-color: var(--np-spot);
+  }
+  .slip.danger .txt {
+    font-weight: 600;
+    color: var(--np-spot);
+  }
+  time {
+    font-family: var(--text);
+    font-size: 0.86em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--np-ink-3);
+  }
+  .txt {
+    text-wrap: pretty;
+  }
+  .go {
+    align-self: center;
+    display: inline-flex;
+    color: var(--np-ink-3);
+  }
+  .slip.link:hover .go,
+  .slip.link:focus-visible .go {
+    color: var(--np-ink);
+  }
+  .subtitles {
+    position: fixed;
     top: 86px;
     left: 50%;
     transform: translateX(-50%);
-    display: grid;
-    gap: 6px;
-    justify-items: center;
     z-index: 30;
-    pointer-events: none;
+    display: grid;
+    justify-items: center;
+    gap: 4px;
     width: min(560px, 60vw);
-  }
-  .toast {
-    pointer-events: auto;
-    padding: 0.5rem 0.9rem;
-    font-size: 0.9em;
-    border-left: 3px solid var(--aurora);
-    cursor: default;
-    text-align: center;
-  }
-  .toast.link {
-    cursor: var(--cursor-pointer, pointer);
-  }
-  .toast.good {
-    border-left-color: var(--verdant);
-  }
-  .toast.warn {
-    border-left-color: var(--brass);
-  }
-  .toast.danger {
-    border-left-color: var(--signal);
-    background: rgba(60, 14, 20, 0.82);
+    pointer-events: none;
   }
   .subtitle {
-    background: rgba(0, 0, 0, 0.75);
-    padding: 0.2rem 0.6rem;
-    border-radius: 6px;
-    font-size: 0.85em;
+    margin: 0;
+    padding: 3px 10px;
+    border: 1px solid var(--np-edge);
+    border-radius: 1px;
+    background: var(--np-paper);
+    box-shadow: 0 2px 8px rgba(3, 10, 16, 0.25);
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.9em;
+    color: var(--np-ink);
+    text-align: center;
   }
 </style>

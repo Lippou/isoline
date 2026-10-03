@@ -18,6 +18,7 @@
 </div>
 
 <style>
+  /* Measures, set in small type on a slip of paper. */
   .perf {
     position: absolute;
     left: 50%;
@@ -26,13 +27,15 @@
     display: flex;
     gap: 0.8rem;
     font-size: 0.75em;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--np-paper);
+    border: 1px solid var(--np-edge);
     padding: 0.2rem 0.6rem;
-    border-radius: 6px;
+    border-radius: 1px;
+    box-shadow: 0 2px 8px rgba(3, 10, 16, 0.25);
     z-index: 50;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   b {
-    color: var(--aurora);
+    color: var(--np-ink);
   }
 </style>

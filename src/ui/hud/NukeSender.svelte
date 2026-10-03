@@ -126,7 +126,7 @@
       aria-hidden="true"><Icon name="chevronRight" size={20} stroke={3} /></span
     >
     <button
-      class="sender"
+      class="sender newsprint"
       class:still
       style:left="{at.x}px"
       style:top="{at.y}px"
@@ -148,7 +148,7 @@
 {/each}
 
 <style>
-  /* Red light on the edge facing the silo. */
+  /* Magenta light on the edge facing the silo (the chart's danger colour). */
   .glow {
     position: absolute;
     z-index: 27;
@@ -157,28 +157,31 @@
     margin: -320px 0 0 -320px;
     border-radius: 50%;
     pointer-events: none;
-    background: radial-gradient(circle, rgb(232 52 44 / 0.7) 0, rgb(232 52 44 / 0.32) 28%, transparent 64%);
+    background: radial-gradient(circle, rgb(214 40 98 / 0.62) 0, rgb(214 40 98 / 0.28) 28%, transparent 64%);
     animation: glow 0.9s ease-in-out infinite alternate;
   }
+  /* A medallion of paper pinned towards the silo: who fired, what, and when it lands. */
   .sender {
     position: absolute;
     z-index: 28;
     transform: translate(-50%, -50%);
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 7px 12px 7px 9px;
-    border-radius: 8px;
-    border: 1px solid var(--signal);
-    background: linear-gradient(180deg, rgba(58, 12, 16, 0.96), rgba(34, 8, 11, 0.96));
-    color: var(--parchment);
+    gap: 9px;
+    padding: 6px 12px 7px 8px;
+    border: 1.5px solid var(--np-spot);
+    border-radius: 2px;
     box-shadow:
-      0 10px 26px rgba(0, 0, 0, 0.55),
-      0 0 18px rgba(255, 90, 95, 0.35);
+      0 1px 2px rgba(3, 10, 16, 0.25),
+      0 8px 22px rgba(3, 10, 16, 0.4);
     cursor: var(--cursor-pointer, pointer);
     text-align: left;
     white-space: nowrap;
     animation: beat 0.9s ease-in-out infinite alternate;
+  }
+  .sender:hover,
+  .sender:focus-visible {
+    background: var(--np-card);
   }
   .still,
   .sender.still {
@@ -190,38 +193,45 @@
     z-index: 28;
     display: grid;
     place-items: center;
-    color: var(--signal);
-    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8));
+    color: var(--np-spot);
+    filter: drop-shadow(0 0 2px rgba(241, 236, 226, 0.95));
     pointer-events: none;
   }
   img {
-    width: 34px;
-    height: 23px;
+    width: 32px;
+    height: 22px;
     object-fit: cover;
-    border: 1px solid #0008;
-    border-radius: 2px;
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
   }
   .copy {
     display: grid;
-    gap: 1px;
+    gap: 0;
   }
   .kicker {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 0.72em;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--signal);
+    font-family: var(--text);
+    font-size: 0.74em;
+    font-weight: 600;
+    color: var(--np-spot);
   }
   b {
     font-family: var(--title);
-    font-size: 1.05em;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 1.08em;
+    line-height: 1.15;
+    color: var(--np-ink);
   }
   small {
+    font-family: var(--text);
     font-size: 0.8em;
-    color: #f1c9c4;
+    color: var(--np-ink-2);
+  }
+  small .mono {
+    font-weight: 600;
+    color: var(--np-spot);
   }
   @keyframes glow {
     from {
@@ -234,8 +244,9 @@
   @keyframes beat {
     to {
       box-shadow:
-        0 10px 26px rgba(0, 0, 0, 0.55),
-        0 0 30px rgba(255, 90, 95, 0.7);
+        0 1px 2px rgba(3, 10, 16, 0.25),
+        0 0 0 3px color-mix(in srgb, var(--np-spot) 35%, transparent),
+        0 8px 22px rgba(3, 10, 16, 0.4);
     }
   }
 </style>

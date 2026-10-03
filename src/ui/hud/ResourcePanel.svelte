@@ -104,7 +104,7 @@
         <span class="mono inc">+{short(incomePs)}/s</span>
       </div>
       {#if showIncome}
-        <div class="tip panel rise-in">
+        <div class="tip newsprint rise-in">
           <div class="section-title">{t('hud.incomeTitle')}</div>
           <div><span>{t('hud.income.base')}</span><b class="mono">{short(L.incomeBreakdown.base)}/s</b></div>
           <div>
@@ -129,7 +129,7 @@
       <label class="slider">
         <span class="section-title" data-tip={t('hud.attackRatioTip')}
           ><Icon name="war" size={14} />{t('hud.attackRatio')}
-          <kbd>{keyLabel(settings.keys.ratioDown ?? '')}</kbd><kbd
+          <kbd class="np-kbd">{keyLabel(settings.keys.ratioDown ?? '')}</kbd><kbd class="np-kbd"
             >{keyLabel(settings.keys.ratioUp ?? '')}</kbd
           ></span
         >
@@ -264,6 +264,7 @@
 {/if}
 
 <style>
+  /* Bottom left: the army, the treasury and the orders, on the paper. */
   .res {
     position: absolute;
     left: 12px;
@@ -276,13 +277,13 @@
   }
   .block {
     position: relative;
-    padding: 10px 12px;
+    padding: 9px 12px 10px;
     display: grid;
-    gap: 6px;
+    gap: 5px;
   }
   .block + .block,
   .actions {
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--np-rule);
   }
   .head {
     display: flex;
@@ -299,10 +300,11 @@
     font-size: 1.45em;
     font-weight: 600;
     line-height: 1.1;
+    color: var(--np-ink);
   }
   .value small {
     font-size: 0.55em;
-    color: var(--faint);
+    color: var(--np-ink-3);
     font-weight: 400;
   }
   .spark {
@@ -311,18 +313,18 @@
   }
   .spark polyline {
     fill: none;
-    stroke: var(--aurora);
+    stroke: var(--np-sea);
     stroke-width: 1.5;
   }
+  /* Troops against the population cap: a printed gauge. */
   .cap {
     height: 4px;
-    background: var(--panel-3);
-    border-radius: 2px;
-    overflow: hidden;
+    background: var(--np-paper-2);
+    box-shadow: inset 0 0 0 1px var(--np-rule);
   }
   .cap div {
     height: 100%;
-    background: linear-gradient(90deg, var(--aurora), var(--brass));
+    background: var(--np-ink);
   }
   .troops-row {
     display: flex;
@@ -330,11 +332,12 @@
     justify-content: space-between;
   }
   .growth {
-    color: var(--verdant);
+    color: var(--np-good);
     font-size: 0.92em;
+    font-weight: 500;
   }
   .growth.neg {
-    color: var(--signal);
+    color: var(--np-spot);
   }
   .gold {
     cursor: default;
@@ -345,37 +348,51 @@
     justify-content: space-between;
   }
   .brass {
-    color: var(--brass);
+    color: var(--np-brass);
   }
   .inc {
-    color: var(--muted);
+    color: var(--np-ink-2);
+    font-weight: 500;
   }
+  /* The income, line by line: a card laid beside the panel. */
   .tip {
     position: absolute;
     left: calc(100% + 8px);
     bottom: 0;
     width: 230px;
-    padding: 10px 12px;
+    padding: 9px 12px 10px;
     display: grid;
     gap: 4px;
     z-index: 10;
+    border: 1px solid var(--np-edge);
+    border-radius: 1px;
+    box-shadow: var(--np-lift);
+    pointer-events: none;
   }
   .tip div:not(.section-title) {
     display: flex;
     justify-content: space-between;
-    color: var(--muted);
+    font-size: 0.94em;
+    color: var(--np-ink-2);
+  }
+  .tip .section-title {
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--np-ink);
+    color: var(--np-ink);
   }
   .tip b {
-    color: var(--parchment);
+    color: var(--np-ink);
+    font-weight: 600;
   }
   .tip small {
-    color: var(--faint);
+    color: var(--np-ink-3);
     font-weight: 400;
   }
   .exact {
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--np-rule);
     padding-top: 4px;
-    color: var(--brass) !important;
+    font-weight: 600;
+    color: var(--np-brass) !important;
     justify-content: flex-end !important;
   }
   .slider {
@@ -386,21 +403,19 @@
   }
   .slider .section-title {
     grid-column: 1 / -1;
+    gap: 5px;
+  }
+  .slider .np-kbd {
+    font-size: 0.82em;
+  }
+  .slider .np-kbd:first-of-type {
+    margin-left: 2px;
   }
   .pct {
-    color: var(--muted);
+    color: var(--np-ink-2);
     font-size: 0.9em;
     min-width: 90px;
     text-align: right;
-  }
-  kbd {
-    font-family: var(--mono);
-    font-size: 0.9em;
-    border: 1px solid var(--line-strong);
-    border-radius: 3px;
-    padding: 0 4px;
-    color: var(--muted);
-    letter-spacing: 0;
   }
   .actions {
     padding: 8px 12px;
@@ -414,76 +429,91 @@
     flex-wrap: wrap;
     gap: 6px;
     padding: 8px 12px;
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--np-rule);
   }
   .badge {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 3px 8px;
-    border: 1px solid var(--line-strong);
-    border-radius: 4px;
-    background: var(--panel-2);
-    color: var(--muted);
-    font-size: 0.92em;
+    padding: 2px 8px;
+    border: 1px solid var(--np-rule-2);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--np-ink-2);
+    font-size: 0.9em;
     cursor: var(--cursor-pointer, pointer);
   }
   .badge b {
-    color: var(--parchment);
+    color: var(--np-ink);
   }
   .badge:hover,
   .badge.on {
-    color: var(--parchment);
-    border-color: var(--aurora);
+    color: var(--np-ink);
+    border-color: var(--np-ink);
+    background: var(--np-paper-2);
   }
   @media (max-height: 900px) {
     .attacks {
       max-height: 76px;
     }
   }
+  /* The general's order, ready: brass, the main action of the moment. */
   .general.ready {
-    border-color: var(--brass);
-    color: var(--brass);
+    border-color: var(--np-brass-fill);
+    color: var(--np-brass);
+    font-weight: 600;
   }
   .attacks {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 3px;
+    gap: 2px;
     max-height: 120px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--np-rule-2) transparent;
   }
   .attacks li {
     display: flex;
     align-items: center;
     gap: 6px;
-    color: var(--muted);
+    color: var(--np-ink-2);
+  }
+  .attacks .mono {
+    font-weight: 500;
+    color: var(--np-ink);
   }
   .tgt {
     flex: 1;
-    color: var(--parchment);
+    color: var(--np-ink);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   li.back {
-    opacity: 0.7;
+    opacity: 0.65;
   }
   .state {
-    color: var(--faint);
+    color: var(--np-ink-3);
+    font-style: italic;
     font-size: 0.8em;
   }
   .counter {
     padding: 0.15em 0.5em;
-    border-color: color-mix(in srgb, var(--signal) 60%, transparent);
-    color: var(--bad-text);
+    border-color: color-mix(in srgb, var(--np-spot) 60%, transparent);
+    color: var(--np-spot);
+  }
+  .counter:hover,
+  .counter:focus-visible {
+    border-color: var(--np-spot);
+    background: color-mix(in srgb, var(--np-spot) 8%, transparent);
   }
   .section-title.in {
-    color: var(--signal);
+    color: var(--np-spot);
   }
   li.in .mono {
-    color: var(--bad-text);
+    color: var(--np-spot);
   }
   .link {
     appearance: none;
@@ -494,16 +524,20 @@
     cursor: var(--cursor-pointer, pointer);
   }
   .link:hover {
-    color: var(--bad-text);
+    text-decoration: underline;
+    text-decoration-color: var(--np-rule-2);
+    text-underline-offset: 2px;
   }
   .x {
+    display: inline-grid;
+    place-items: center;
     background: none;
     border: 0;
-    color: var(--faint);
+    color: var(--np-ink-3);
     cursor: var(--cursor-pointer, pointer);
     padding: 2px;
   }
   .x:hover {
-    color: var(--signal);
+    color: var(--np-spot);
   }
 </style>

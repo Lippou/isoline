@@ -365,8 +365,10 @@ input[type='checkbox'] {
  * Newsprint: the in-game news (journal, special edition, news flash) is the one
  * paper surface of the ink HUD, printed in the survey's two inks: marine navy for
  * the text, chart magenta (the danger colour of sea charts) for what is breaking.
+ * Since 1.8.0 the whole HUD is printed on it (.np-hud on the game screen, hud/hud.css).
  */
-.newsprint {
+.newsprint,
+.np-hud {
   --np-paper: #f1ece2;
   --np-paper-2: #e6dfd1;
   --np-ink: #172a3c;

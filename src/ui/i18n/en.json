@@ -1145,6 +1145,17 @@
     "arcDownToast": "Missiles: arc down",
     "locked": "Requires research: {tech}"
   },
+  "dispatch": {
+    "title": "Dispatches",
+    "show": "Show on the map",
+    "dismiss": "Put this dispatch away"
+  },
+  "ban": {
+    "kicker": "Nuclear ban",
+    "left": "{clock} left",
+    "tip": "The World Council bans nuclear weapons: no launch for another {clock}.",
+    "short": "Banned · {clock}"
+  },
   "nuke": {
     "incoming": "Incoming missile",
     "senderShow": "Show the silo that fired",

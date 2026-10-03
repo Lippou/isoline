@@ -1,11 +1,11 @@
 <script lang="ts">
-  // Alliance offers received: a small card slides in at the bottom right, above the
-  // minimap, in the pact banner's language (both flags around the handshake seal), with
+  // Alliance offers received: a small card printed on the Courier's paper slides in at
+  // the foot of the right column, above the minimap, in the pact banner's language (both
+  // flags around the handshake seal, the alliance's green rule), with
   // Show (centres the camera on the country, lit up while the pointer is on the card),
   // Accept (K) / Refuse (L) and a bar draining over the offer's 20 seconds. Several
   // offers stack; a card leaves as soon as its offer lapses or is answered elsewhere
   // (radial menu, diplomacy window, keyboard).
-  import { onMount } from 'svelte';
   import { fly, fade } from 'svelte/transition';
   import { hud } from '../stores/game.svelte';
   import { t, i18n } from '../i18n/i18n.svelte';
@@ -59,17 +59,6 @@
   });
   $effect(() => () => (ctl.spotlight = -1));
 
-  // Stacked above the minimap, whatever its height (collapsed or not).
-  let above = $state(200);
-  onMount(() => {
-    const mini = document.querySelector<HTMLElement>('[data-testid="minimap"]');
-    if (!mini) return;
-    const ro = new ResizeObserver(() => (above = mini.offsetHeight));
-    ro.observe(mini);
-    above = mini.offsetHeight;
-    return () => ro.disconnect();
-  });
-
   const enter = (node: Element) =>
     still() ? fade(node, { duration: 120 }) : fly(node, { x: 40, duration: 260 });
   const leave = (node: Element) =>
@@ -77,7 +66,7 @@
 </script>
 
 <!-- Always there (empty without offers) so that each card slides in and out by itself. -->
-<div class="offers" style:bottom="{above + 24}px" aria-live="polite" data-testid="ally-offers">
+<div class="offers" aria-live="polite" data-testid="ally-offers">
   {#if offers.length > SHOWN}
     <p class="more" transition:fade={{ duration: 120 }}>
       {t('offer.more', { n: offers.length - SHOWN })}
@@ -88,7 +77,7 @@
     {@const first = o.from === offers[0]!.from}
     {@const name = s.state.name(o.from, i18n.lang)}
     <div
-      class="offer"
+      class="offer newsprint"
       class:renew={o.renew}
       role="group"
       aria-label={t(o.renew ? 'offer.renewTitle' : 'offer.title')}
@@ -98,178 +87,211 @@
       in:enter
       out:leave
     >
-      <div class="flags">
-        {#if me}<img src={flagUrl(me, 48)} alt="" />{/if}
-        <span class="seal"><Icon name={o.renew ? 'renew' : 'alliance'} size={17} /></span>
-        {#if o.pv}<img src={flagUrl(o.pv, 48)} alt="" />{/if}
-      </div>
-      <div class="copy">
-        <span class="kicker"
-          >{t(o.renew ? 'offer.renewTitle' : 'offer.title')}<span class="secs mono"
-            >{Math.ceil(o.left / 10)} s</span
-          ></span
-        >
-        <b>{name}</b>
-        <span class="terms">{t(o.renew ? 'offer.renewTerms' : 'offer.terms')}</span>
+      <p class="kicker">
+        <Icon name={o.renew ? 'renew' : 'alliance'} size={13} />{t(
+          o.renew ? 'offer.renewTitle' : 'offer.title',
+        )}
+        <span class="secs">{Math.ceil(o.left / 10)} s</span>
+      </p>
+      <div class="who">
+        <div class="flags" aria-hidden="true">
+          {#if me}<img src={flagUrl(me, 48)} alt="" />{/if}
+          <span class="seal"><Icon name={o.renew ? 'renew' : 'alliance'} size={15} /></span>
+          {#if o.pv}<img src={flagUrl(o.pv, 48)} alt="" />{/if}
+        </div>
+        <div class="copy">
+          <b>{name}</b>
+          <span class="terms">{t(o.renew ? 'offer.renewTerms' : 'offer.terms')}</span>
+        </div>
       </div>
       <div class="acts">
         <button
-          class="btn small ghost show"
+          class="act show"
           onclick={() => show(o.from)}
           aria-label={t('offer.show', { name })}
           data-tip={t('offer.show', { name })}
           data-testid="ally-show"><Icon name="target" size={14} /></button
         >
-        <button class="btn primary small" onclick={() => answer(o.from, true)} data-testid="ally-accept"
-          ><Icon name="check" size={14} />{t('common.accept')}{#if first}<kbd
+        <button class="act yes" onclick={() => answer(o.from, true)} data-testid="ally-accept"
+          ><Icon name="check" size={14} stroke={2.4} />{t('common.accept')}{#if first}<kbd class="np-kbd"
               >{keyLabel(settings.keys.allyAccept ?? '')}</kbd
             >{/if}</button
         >
-        <button class="btn small" onclick={() => answer(o.from, false)} data-testid="ally-refuse"
-          ><Icon name="close" size={14} />{t('common.refuse')}{#if first}<kbd
+        <button class="act no" onclick={() => answer(o.from, false)} data-testid="ally-refuse"
+          ><Icon name="close" size={14} />{t('common.refuse')}{#if first}<kbd class="np-kbd"
               >{keyLabel(settings.keys.allyRefuse ?? '')}</kbd
             >{/if}</button
         >
       </div>
-      <div class="time" aria-hidden="true">
+      <span class="drain" aria-hidden="true">
         <i style:width="{Math.min(100, (o.left / ALLIANCE_REQUEST_TTL) * 100)}%"></i>
-      </div>
+      </span>
     </div>
   {/each}
 </div>
 
 <style>
-  /* Bottom right, over the minimap; above the windows (an offer does not wait). */
+  /* At the foot of the right column (GameScreen.svelte), over the minimap; above the windows. */
   .offers {
-    position: absolute;
-    right: 12px;
     width: 300px;
     display: grid;
     gap: 8px;
-    z-index: 29;
-    pointer-events: none;
   }
+  .offers:not(:has(> *)) {
+    display: none;
+  }
+  /* A card on the paper: the green rule of an alliance over it, the time left draining under it. */
   .offer {
     position: relative;
-    pointer-events: auto;
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-areas: 'flags copy' 'acts acts';
-    align-items: center;
-    gap: 8px 10px;
-    padding: 10px 12px 13px;
-    border-radius: 8px;
-    border: 1px solid rgba(91, 224, 138, 0.55);
-    background: linear-gradient(180deg, rgba(24, 33, 28, 0.97), rgba(15, 20, 18, 0.97));
-    box-shadow:
-      0 12px 28px rgba(0, 0, 0, 0.5),
-      0 0 22px rgba(91, 224, 138, 0.14);
-    font-size: 0.88em;
+    padding: 6px 12px 12px;
+    border: 1px solid var(--np-edge);
+    border-top: 3px solid var(--np-good);
+    border-radius: 1px;
+    font-family: var(--np-serif);
+    font-size: 0.9em;
+    box-shadow: var(--np-lift);
   }
-  .flags {
-    grid-area: flags;
+  .kicker {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
+    margin: 0;
+    font-family: var(--text);
+    font-size: 0.78em;
+    font-weight: 600;
+    color: var(--np-good);
+  }
+  .secs {
+    margin-left: auto;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--np-ink-3);
+  }
+  .who {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .flags {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
   }
   .flags img {
-    width: 30px;
-    height: 21px;
+    width: 26px;
+    height: 18px;
     object-fit: cover;
-    border: 1px solid #0008;
-    border-radius: 2px;
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
   }
   .seal {
     display: grid;
     place-items: center;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    color: #5be08a;
-    border: 1.5px solid #5be08a;
-    background: rgba(91, 224, 138, 0.12);
+    border: 1.5px solid var(--np-good);
+    color: var(--np-good);
   }
   .copy {
-    grid-area: copy;
     display: grid;
-    gap: 1px;
     min-width: 0;
   }
-  .kicker {
-    display: flex;
-    justify-content: space-between;
-    gap: 6px;
-    font-size: 0.8em;
-    color: #8fd3a8;
-  }
-  .secs {
-    color: var(--faint);
-  }
   b {
-    font-family: var(--title);
-    font-size: 1.12em;
-    font-weight: 600;
-    color: #b9f3cc;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 1.22em;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--np-ink);
   }
   .terms {
-    color: var(--muted);
+    font-size: 0.86em;
     line-height: 1.3;
+    color: var(--np-ink-2);
   }
+  /* Printed buttons: accept in the alliance's green, refuse in ink. */
   .acts {
-    grid-area: acts;
     display: grid;
     grid-template-columns: auto 1fr 1fr;
     gap: 6px;
+    margin-top: 10px;
   }
-  .acts .show {
-    padding-inline: 8px;
-  }
-  .acts .btn {
+  .act {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
     gap: 5px;
+    padding: 5px 8px;
+    border: 1px solid var(--np-ink-2);
+    border-radius: 2px;
+    background: transparent;
+    font-family: var(--text);
+    font-size: 0.86em;
+    font-weight: 600;
+    color: var(--np-ink);
+    cursor: var(--cursor-pointer, pointer);
+    white-space: nowrap;
   }
-  kbd {
-    font-family: var(--mono);
-    font-size: 0.8em;
-    opacity: 0.7;
+  .act:hover,
+  .act:focus-visible {
+    background: var(--np-paper-2);
+    border-color: var(--np-ink);
+  }
+  .act.show {
+    padding-inline: 7px;
+    border-color: var(--np-rule);
+    color: var(--np-ink-2);
+  }
+  .act.yes {
+    background: var(--np-good);
+    border-color: var(--np-good);
+    color: #f8f4ec;
+  }
+  .act.yes:hover,
+  .act.yes:focus-visible {
+    background: #1f5a3c;
+    border-color: #1f5a3c;
+  }
+  .act.yes .np-kbd {
+    border-color: rgba(248, 244, 236, 0.45);
+    color: #f8f4ec;
+  }
+  .act .np-kbd {
     margin-left: 2px;
   }
-  /* The offer's lifetime, draining. It clips itself to the card's rounded corners (the card
-     does not clip, or the buttons' tooltips would be cut). */
-  .time {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    overflow: hidden;
-    pointer-events: none;
-  }
-  .time::before,
-  .time i {
-    content: '';
+  /* The offer's lifetime, draining along the foot of the card. */
+  .drain {
     position: absolute;
     left: 0;
+    right: 0;
     bottom: 0;
     height: 3px;
+    background: color-mix(in srgb, var(--np-good) 14%, transparent);
+    pointer-events: none;
   }
-  .time::before {
-    right: 0;
-    background: rgba(91, 224, 138, 0.12);
-  }
-  .time i {
-    background: #5be08a;
+  .drain i {
+    display: block;
+    height: 100%;
+    background: var(--np-good);
     transition: width 0.1s linear;
   }
   .more {
     margin: 0;
     justify-self: end;
-    padding: 2px 8px;
-    border-radius: 3px;
-    font-size: 0.78em;
-    color: var(--muted);
-    background: var(--glass);
-    border: 1px solid var(--line);
+    padding: 1px 8px;
+    border: 1px solid var(--np-edge);
+    border-radius: 2px;
+    background: var(--np-paper);
+    font-family: var(--np-serif);
+    font-style: italic;
+    font-size: 0.8em;
+    color: var(--np-ink-2);
   }
 </style>

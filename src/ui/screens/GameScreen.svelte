@@ -35,6 +35,8 @@
   import InvasionFlash from '../hud/InvasionFlash.svelte';
   import NukeSender from '../hud/NukeSender.svelte';
   import Icon from '../icons/Icon.svelte';
+  import '../hud/paper.css';
+  import '../hud/hud.css';
 
   let host: HTMLDivElement;
   let ctl: GameController | null = $state(null);
@@ -92,12 +94,13 @@
 
 <svelte:window onresize={syncResolution} />
 
-<div class="game" class:photo={hud.photo} data-testid="game-screen">
+<!-- The whole HUD is printed on the Courier's paper (hud/hud.css). -->
+<div class="game np-hud" class:photo={hud.photo} data-testid="game-screen">
   <div class="canvas-host" bind:this={host}></div>
   {#if hud.loading}
     <div class="loading fade-in">
       <div class="ripple" aria-hidden="true">
-        <Isolines mode="ripple" count={7} r0={14} step={16} color="var(--aurora)" stroke={1.4} />
+        <Isolines mode="ripple" count={7} r0={14} step={16} color="var(--np-ink-2)" stroke={1.2} />
       </div>
       <p>{hud.loadingText || t('loading.map')}</p>
     </div>
@@ -109,7 +112,6 @@
     {#if !hud.spectating && hud.replay === null}
       <ResourcePanel {ctl} />
       <BuildBar {ctl} />
-      <NukePanel {ctl} />
     {/if}
     <Minimap {ctl} />
     <Leaderboard {ctl} />
@@ -124,11 +126,17 @@
       {#if !hud.spectating && !col.covered}<Alliances {ctl} />{/if}
     </div>
     <PactBanner {ctl} />
-    {#if !hud.spectating && hud.replay === null}<AllyRequests {ctl} />{/if}
+    <!-- Right column, between the leaderboard and the minimap: the launch panel while
+         aiming, then the dispatches (notifications) and, nearest the minimap, the
+         alliance offers. The dispatches give way first when the room runs short. -->
+    <div class="tr">
+      {#if !hud.spectating && hud.replay === null}<NukePanel {ctl} />{/if}
+      <Toasts {ctl} />
+      {#if !hud.spectating && hud.replay === null}<AllyRequests {ctl} />{/if}
+    </div>
     <Panels {ctl} />
     <RadialMenu {ctl} />
     <Dialogue {ctl} />
-    <Toasts {ctl} />
     {#if hud.replay}<ReplayBar {ctl} />{/if}
     {#if hud.panels.menu}<GameMenu {ctl} />{/if}
     <!-- The end of the game: the final edition of the Courier (front page or mission
@@ -168,8 +176,35 @@
   @media (max-height: 900px) {
     .tl {
       scrollbar-width: thin;
-      scrollbar-color: var(--line-strong) transparent;
+      scrollbar-color: var(--np-rule-2) transparent;
     }
+  }
+  /* Right column: under the leaderboard, down to the minimap; its pieces sit at the foot. */
+  .tr {
+    position: absolute;
+    right: 12px;
+    top: calc(12px + var(--hud-lb-h, 240px) + 12px);
+    bottom: calc(var(--hud-mini-h, 200px) + 24px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 8px;
+    z-index: 29;
+    pointer-events: none;
+  }
+  .tr > :global(:is(.launch, .dispatches, .offers)) {
+    flex: none;
+    pointer-events: auto;
+  }
+  /* The launch panel at the head of the column, the rest at its foot. */
+  .tr > :global(.launch) {
+    margin-bottom: auto;
+  }
+  /* The dispatches give way first: the oldest slips leave the clip. */
+  .tr > :global(.dispatches) {
+    flex: 0 1 auto;
+    min-height: 0;
   }
   /* The folded paper: a newsprint tab above the build bar, clear of the toasts. */
   .reopen {
@@ -235,8 +270,10 @@
     place-content: center;
     justify-items: center;
     gap: 1rem;
-    color: var(--muted);
-    background: radial-gradient(circle at 50% 45%, #15405e, var(--abyss));
+    color: var(--np-ink-2);
+    font-family: var(--np-serif);
+    font-style: italic;
+    background: var(--np-paper);
   }
   .ripple {
     width: 220px;

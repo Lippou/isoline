@@ -250,9 +250,10 @@
 {/if}
 
 <style>
+  /* What is under the pointer: a small card of paper that follows it (it never takes the pointer). */
   .card {
     position: absolute;
-    padding: 8px 10px;
+    padding: 7px 10px 8px;
     font-size: 0.82em;
     pointer-events: none;
     z-index: 25;
@@ -265,12 +266,15 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--np-ink);
   }
   .who img {
     width: 26px;
-    height: 19px;
+    height: 18px;
     object-fit: cover;
-    border: 1px solid #0006;
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
   }
   .who div {
     display: grid;
@@ -278,35 +282,45 @@
   }
   .who b {
     font-family: var(--title);
-    font-size: 1.08em;
+    font-weight: 700;
+    font-size: 1.12em;
+    line-height: 1.15;
+    color: var(--np-ink);
   }
   .who small {
-    color: var(--faint);
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.94em;
+    color: var(--np-ink-2);
   }
   .tag {
     display: inline-flex;
     align-items: center;
     gap: 2px;
+    color: var(--np-ink-2);
   }
   .tag small {
     color: inherit;
   }
-  .ally {
-    color: #6ee7a0;
+  .who .ally,
+  .tag.ally {
+    color: var(--np-good);
   }
-  .war {
-    color: #ff7a7a;
+  .who .war,
+  .tag.war {
+    color: var(--np-spot);
   }
-  .traitor {
-    color: #ffd84d;
+  .who .traitor,
+  .tag.traitor {
+    color: var(--np-warn);
   }
   .assets {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 10px;
     padding-top: 4px;
-    border-top: 1px solid var(--line);
-    color: var(--muted);
+    border-top: 1px solid var(--np-rule);
+    color: var(--np-ink-2);
   }
   .assets span {
     display: inline-flex;
@@ -314,11 +328,11 @@
     gap: 3px;
   }
   .assets b {
-    color: var(--parchment);
+    color: var(--np-ink);
     font-weight: 600;
   }
   .assets small {
-    color: var(--faint);
+    color: var(--np-ink-3);
   }
   .opinion {
     display: flex;
@@ -331,24 +345,31 @@
     align-items: center;
     gap: 2px;
     margin-left: auto;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .opinion .why {
     flex-basis: 100%;
-    color: var(--muted);
+    font-family: var(--np-serif);
+    color: var(--np-ink-2);
     font-size: 0.94em;
   }
   .opinion .why b {
-    color: var(--good-text);
+    font-family: var(--text);
+    color: var(--np-good);
     font-weight: 600;
   }
   .opinion .why.neg b {
-    color: var(--bad-text);
+    color: var(--np-spot);
   }
   .stats {
     display: flex;
     gap: 12px;
-    color: var(--parchment);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--np-ink);
+  }
+  .stats :global(svg) {
+    color: var(--np-ink-2);
   }
   .stats span,
   .line,
@@ -357,41 +378,50 @@
     align-items: center;
     gap: 5px;
   }
+  .line {
+    color: var(--np-ink);
+  }
+  .line.bad {
+    color: var(--np-spot);
+  }
   .terrain {
-    color: var(--muted);
-    border-top: 1px solid var(--line);
+    color: var(--np-ink-2);
+    border-top: 1px solid var(--np-rule);
     padding-top: 5px;
   }
   .cost {
     margin-left: auto;
-    color: var(--brass);
+    font-weight: 600;
+    color: var(--np-brass);
   }
   .note {
-    color: var(--brass);
+    color: var(--np-warn);
     font-size: 0.92em;
   }
   .capital {
-    color: var(--parchment);
+    color: var(--np-ink);
     font-weight: 600;
   }
   .capital :global(svg) {
-    color: var(--brass);
+    color: var(--np-brass);
   }
-  /* Threatened border: the amber of the map's border glow. */
-  .threat {
-    color: #f3b24a;
+  /* Threatened border: the amber of the map's border glow, in the paper's brass. */
+  .threat,
+  .tag.threat {
+    color: var(--np-warn);
   }
   .line.threat {
     align-items: flex-start;
   }
   .border {
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .border.shared {
-    color: #e8c37a;
+    color: var(--np-warn);
   }
   .up {
-    color: #e8c37a;
+    font-weight: 600;
+    color: var(--np-warn);
   }
   .line.threat :global(svg) {
     flex: none;
@@ -401,14 +431,15 @@
     display: grid;
   }
   .line.threat small {
-    color: var(--muted);
+    font-style: italic;
+    color: var(--np-ink-2);
   }
   .res {
-    color: var(--aurora);
+    color: var(--np-sea);
   }
   .sky {
     align-items: flex-start;
-    color: #c9d6e8;
+    color: var(--np-sea);
   }
   .sky :global(svg) {
     flex: none;

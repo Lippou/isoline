@@ -123,9 +123,10 @@
     pointer-events: none;
     z-index: 29;
   }
+  /* The dock: a strip of paper along the edge, its sections as the journal's index. */
   .rail {
     display: grid;
-    gap: 2px;
+    gap: 1px;
     padding: 3px;
     pointer-events: auto;
     max-height: 100%;
@@ -139,14 +140,15 @@
     display: grid;
     justify-items: center;
     gap: 3px;
-    border-radius: 4px;
+    border-radius: 1px;
     border: 1px solid transparent;
     background: transparent;
     cursor: pointer;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .lbl {
     font-size: 0.66em;
+    font-weight: 500;
     line-height: 1.1;
     text-align: center;
     max-width: 100%;
@@ -154,49 +156,50 @@
     text-overflow: ellipsis;
   }
   .rail button:hover {
-    color: var(--parchment);
-    background: var(--panel-2);
+    color: var(--np-ink);
+    background: var(--np-card);
   }
+  /* An open window: its section shaded, an ink tab in the margin. */
   .rail button.active {
-    color: var(--parchment);
-    background: var(--select-bg);
-    border-color: var(--line-strong);
+    color: var(--np-ink);
+    background: var(--np-paper-2);
   }
-  /* The window in front: its button carries the shoal-blue edge. */
+  /* The window in front: reversed, as the journal prints what is current. */
   .rail button.front {
-    border-color: var(--aurora);
+    color: var(--np-paper);
+    background: var(--np-ink);
+    border-color: var(--np-ink);
   }
   .rail button.active::before {
     content: '';
     position: absolute;
     left: -3px;
-    top: 9px;
-    bottom: 9px;
-    width: 2px;
-    border-radius: 1px;
-    background: var(--aurora);
+    top: 7px;
+    bottom: 7px;
+    width: 3px;
+    background: var(--np-ink);
   }
   .sep {
     height: 1px;
-    background: var(--line);
+    background: var(--np-rule);
     margin: 3px 6px;
   }
   .dot {
     position: absolute;
     top: 6px;
     right: 13px;
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: var(--brass);
+    background: var(--np-gold);
+    box-shadow: 0 0 0 1.5px var(--np-paper);
   }
   .dot.head {
-    background: var(--signal);
-    box-shadow: 0 0 0 2px var(--glass);
+    background: var(--np-spot);
   }
-  /* Research stopped: a slow aurora pulse. */
+  /* Research stopped: a slow pulse in the sea's blue. */
   .dot.research {
-    background: var(--aurora);
+    background: var(--np-sea);
     animation: research-pulse 1.6s ease-in-out infinite;
   }
   @keyframes research-pulse {
