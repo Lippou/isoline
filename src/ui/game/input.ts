@@ -226,13 +226,13 @@ export class InputController {
     const y = (tile / w) | 0;
     // The badge under the pointer, as drawn (badges cover several tiles when zoomed out);
     // else a building on the hovered tile or right next to it (one whose badge gave way).
-    let building: { type: number; level: number; owner: number } | null = null;
+    let building: { type: number; level: number; owner: number; upgrade: number } | null = null;
     const hit = this.r.buildingAtScreen(sx, sy);
-    if (hit) building = { type: hit.type, level: hit.level, owner: hit.owner };
+    if (hit) building = { type: hit.type, level: hit.level, owner: hit.owner, upgrade: hit.upgrade };
     else
       for (const b of s.buildings) {
         if (Math.abs(b.x - x) <= 1 && Math.abs(b.y - y) <= 1) {
-          building = { type: b.type, level: b.level, owner: b.owner };
+          building = { type: b.type, level: b.level, owner: b.owner, upgrade: b.upgrade };
           break;
         }
       }

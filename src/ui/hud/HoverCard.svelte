@@ -57,6 +57,9 @@
     const op = p ? hud.local?.opinions?.find((o) => o.id === p.id) : undefined;
     // The country's capital marker under the pointer.
     const capital = !!p && h.capital === p.id && p.capital >= 0;
+    // Land border with us (what a land attack needs); spectators have no "us".
+    const border =
+      !p || p.id === hud.viewer || !hud.local ? null : (hud.local.neighbors?.includes(p.id) ?? false);
     const terrain = TERRAIN[h.terrain];
     return {
       h,
@@ -68,6 +71,7 @@
       threat,
       op,
       capital,
+      border,
       terrain,
       name: s.name(h.owner, i18n.lang),
     };
@@ -159,6 +163,11 @@
             : t('hover.capital')}
         </div>
       {/if}
+      {#if info.border !== null}
+        <div class="line border" class:shared={info.border} data-testid="hover-border">
+          <Icon name="borders" size={13} />{info.border ? t('hover.border') : t('hover.noBorder')}
+        </div>
+      {/if}
       <div class="stats">
         <span><Icon name="troops" size={13} />{short(info.p.troops)}</span>
         <span><Icon name="territory" size={13} />{short(info.p.tiles)}</span>
@@ -220,6 +229,12 @@
         <Icon name={BUILDING_ICONS[info.h.building.type] ?? 'city'} size={13} />
         {t(`building.${BUILDING_KEYS[info.h.building.type]}.name`)} · {t('hud.level')}
         {info.h.building.level}
+        {#if info.h.building.upgrade >= 0}<span class="up mono" data-testid="hover-upgrading"
+            >{t('hover.upgrading', {
+              next: info.h.building.level + 1,
+              pct: Math.floor(info.h.building.upgrade * 100),
+            })}</span
+          >{/if}
       </div>
     {/if}
     {#if info.h.resource > 0}
@@ -368,6 +383,15 @@
   }
   .line.threat {
     align-items: flex-start;
+  }
+  .border {
+    color: var(--muted);
+  }
+  .border.shared {
+    color: #e8c37a;
+  }
+  .up {
+    color: #e8c37a;
   }
   .line.threat :global(svg) {
     flex: none;

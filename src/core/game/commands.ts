@@ -104,7 +104,8 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       // Building on (or next to) one of your own buildings of that type upgrades it.
       const existing = buildingToUpgrade(game, p, kind, c.tile);
       if (existing && existing.level < MAX_LEVEL[kind]) {
-        if (existing.buildLeft === 0 && !upgradeBuilding(game, p, existing))
+        if (existing.upgradeLeft > 0) game.notify(p.id, 'error.build.upgrading', 'warn');
+        else if (existing.buildLeft === 0 && !upgradeBuilding(game, p, existing))
           game.notify(p.id, 'error.build.gold', 'warn');
         return;
       }

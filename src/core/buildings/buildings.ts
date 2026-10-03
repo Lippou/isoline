@@ -40,11 +40,11 @@ const PRICE_GROUP: readonly (readonly B[])[] = [
   [B.Lab],
 ];
 
-/** Levels of p's buildings of `type`; a building still under construction counts as 1. */
+/** Levels of p's buildings of `type`; one under construction counts as 1, an upgrade under way as done. */
 export function levelsOwned(game: Game, p: Player, type: B): number {
   let n = 0;
   for (const b of game.buildings.values())
-    if (b.owner === p.id && b.type === type) n += b.buildLeft > 0 ? 1 : b.level;
+    if (b.owner === p.id && b.type === type) n += b.buildLeft > 0 ? 1 : paidLevels(b);
   return n;
 }
 
@@ -254,9 +254,7 @@ export function placeBuilding(game: Game, p: Player, type: B, tile: number, free
   p.gold -= cost;
   const w = game.map.width;
   // Megaprojects (tech): construction goes faster.
-  const ticks = game.config.features.tech
-    ? Math.round(BUILD_TICKS[type] * techBuildTime(p))
-    : BUILD_TICKS[type];
+  const ticks = buildTicks(game, p, type);
   const b: Building = {
     id: game.nextId(),
     type,
@@ -274,6 +272,8 @@ export function placeBuilding(game: Game, p: Player, type: B, tile: number, free
     createdTick: game.tick,
     alive: true,
     invested: cost,
+    upgradeLeft: 0,
+    upgradeTotal: 0,
   };
   game.buildings.set(b.id, b);
   game.grid.add(b);
@@ -286,6 +286,11 @@ export function placeBuilding(game: Game, p: Player, type: B, tile: number, free
   game.buildingsVersion++;
   if (b.buildLeft === 0) completeBuilding(game, b);
   return b;
+}
+
+/** Construction time of `type` for p (Megaprojects, tech tree: faster); upgrades take as long. */
+export function buildTicks(game: Game, p: Player, type: B): number {
+  return game.config.features.tech ? Math.round(BUILD_TICKS[type] * techBuildTime(p)) : BUILD_TICKS[type];
 }
 
 function completeBuilding(game: Game, b: Building): void {
@@ -302,20 +307,40 @@ function labNotice(game: Game, b: Building): void {
   game.notify(b.owner, 'notify.labReady', 'good', { n: RESEARCH_PER_LAB_LEVEL * b.level });
 }
 
+/**
+ * Pays for the next level. Isoline (the player's request; OpenFront levels up at once): the
+ * new level is built like a new building, in the type's construction time, while the
+ * building keeps working at its current level; one upgrade at a time. The price ladder
+ * counts the paid level right away.
+ */
 export function upgradeBuilding(game: Game, p: Player, b: Building): boolean {
-  if (b.owner !== p.id || b.buildLeft > 0 || b.level >= MAX_LEVEL[b.type]) return false;
+  if (b.owner !== p.id || b.buildLeft > 0 || b.upgradeLeft > 0 || b.level >= MAX_LEVEL[b.type]) return false;
   if (buildingLock(game, p, b.type) >= 0) return false; // captured before researching it
   const cost = upgradeCost(game, p, b);
   if (p.gold < cost) return false;
   p.gold -= cost;
   b.invested += cost;
-  b.level++;
   p.levelsBuilt[b.type]++;
   if (b.type === B.City) p.cityLevels++;
+  b.upgradeTotal = buildTicks(game, p, b.type);
+  b.upgradeLeft = b.upgradeTotal;
+  game.buildingsDirty = true;
+  if (b.upgradeLeft === 0) completeUpgrade(game, b);
+  return true;
+}
+
+/** Levels paid for: the current one plus an upgrade under way (Player.cityLevels counts both). */
+export function paidLevels(b: Building): number {
+  return b.level + (b.upgradeLeft > 0 ? 1 : 0);
+}
+
+function completeUpgrade(game: Game, b: Building): void {
+  b.upgradeLeft = 0;
+  b.level++;
   if (b.type === B.Silo) b.tubes.push(0);
   game.buildingsDirty = true;
+  game.buildingsVersion++;
   game.emit({ k: 'built', owner: b.owner, kind: b.type, tile: b.tile });
-  return true;
 }
 
 export function demolishBuilding(game: Game, p: Player, b: Building): boolean {
@@ -331,7 +356,7 @@ export function removeBuilding(game: Game, b: Building, _voluntary: boolean): vo
   const p = game.players[b.owner];
   if (p) {
     p.buildingCount[b.type]--;
-    if (b.type === B.City) p.cityLevels -= b.level;
+    if (b.type === B.City) p.cityLevels -= paidLevels(b);
   }
   game.buildings.delete(b.id);
   game.grid.remove(b);
@@ -348,6 +373,7 @@ export function updateBuildings(game: Game): void {
       if (b.buildLeft === 0) completeBuilding(game, b);
       continue;
     }
+    if (b.upgradeLeft > 0 && --b.upgradeLeft === 0) completeUpgrade(game, b);
     if (b.cooldown > 0) b.cooldown--;
     if (b.type === B.Silo) {
       for (let k = 0; k < b.tubes.length; k++) if (b.tubes[k]! > 0) b.tubes[k]!--;

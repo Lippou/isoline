@@ -353,7 +353,11 @@
           group: 'main',
           label: t('radial.upgradeNamed', { name: t(`building.${BUILDING_KEYS[b.type]}.name`) }),
           icon: 'upgrade',
-          hint: `${t('radial.level')} ${b.level}`,
+          hint:
+            b.upgrade >= 0
+              ? t('radial.upgrading', { next: b.level + 1, pct: Math.floor(b.upgrade * 100) })
+              : `${t('radial.level')} ${b.level}`,
+          disabled: b.upgrade >= 0 || !b.ready,
           run: act(() => s.cmd({ t: 'upgrade', id: b.id })),
         });
         out.push({

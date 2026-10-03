@@ -705,6 +705,12 @@ export class GameRenderer {
         prog
           .arc(0, 0, 17.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * b.progress)
           .stroke({ width: 3, color: 0xf2f0e8 });
+      } else if (b.upgrade >= 0) {
+        // Next level under construction: a brass ring fills while the building keeps working.
+        prog.circle(0, 0, 17.5).stroke({ width: 3, color: UI.brass, alpha: 0.25 });
+        prog
+          .arc(0, 0, 17.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * b.upgrade)
+          .stroke({ width: 3, color: UI.brass });
       }
       const lvl = c.children[4] as BitmapText;
       lvl.visible = b.level > 1;

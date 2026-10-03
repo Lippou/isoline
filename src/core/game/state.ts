@@ -27,7 +27,7 @@ import type { StampedCommand } from '../net/commands';
 import { applyCommand } from './commands';
 import { addGold, updateEconomy } from './economy';
 import { setupPlayers, updateSpawnPhase } from './spawn';
-import { updateBuildings, removeBuilding } from '../buildings/buildings';
+import { updateBuildings, removeBuilding, paidLevels } from '../buildings/buildings';
 import { updateShips } from '../units/ships';
 import { updateRails, cutRailsAt, type Rail } from '../units/trains';
 import { updateNukes } from '../units/nukes';
@@ -252,10 +252,10 @@ export class Game {
     const pn = this.players[newOwner]!;
     if (po) {
       po.buildingCount[b.type]--;
-      if (b.type === B.City) po.cityLevels -= b.level;
+      if (b.type === B.City) po.cityLevels -= paidLevels(b);
     }
     pn.buildingCount[b.type]++;
-    if (b.type === B.City) pn.cityLevels += b.level;
+    if (b.type === B.City) pn.cityLevels += paidLevels(b);
     b.owner = newOwner;
     this.buildingsDirty = true;
     this.buildingsVersion++;

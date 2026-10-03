@@ -146,7 +146,8 @@ export const hud = $state({
     y: number;
     sx: number;
     sy: number;
-    building: { type: number; level: number; owner: number } | null;
+    /** `upgrade`: next level under construction, 0..1 (−1: none). */
+    building: { type: number; level: number; owner: number; upgrade: number } | null;
     fallout: number;
     resource: number;
     /** Owner of the capital marker under the pointer (0: none). */

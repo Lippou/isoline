@@ -49,7 +49,8 @@ export function hashGame(game: Game): number {
     for (const [a, e] of p.allies) h = mix(mix(h, a), e);
   }
   for (const a of game.attacks) h = mix(mix(mix(h, a.id), q(a.troops)), a.frontierSize);
-  for (const b of game.buildings.values()) h = mix(mix(mix(mix(h, b.id), b.owner), b.level), b.buildLeft);
+  for (const b of game.buildings.values())
+    h = mix(mix(mix(mix(mix(h, b.id), b.owner), b.level), b.buildLeft), b.upgradeLeft);
   for (const u of game.units) h = mix(mix(mix(mix(h, u.id), u.owner), q(u.x)), q(u.y));
   h = mix(h, game.rails.length);
   return h >>> 0;

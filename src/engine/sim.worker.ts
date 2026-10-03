@@ -16,6 +16,7 @@ import { resourceBonus } from '../core/rules/resources';
 import { isNight } from '../core/rules/features';
 import { sightAt } from '../core/rules/weather';
 import { U } from '../core/units/unit';
+import { IS_LAND } from '../core/map/terrain';
 import type { Player } from '../core/game/player';
 import type {
   BuildingView,
@@ -88,6 +89,7 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
         threats.reset();
         capitalHint = { tick: -1, tile: -1 };
         opinions = { tick: -1, list: [] };
+        neighbors = { tick: -1, id: -1, list: [] };
         labels = computeLabels(game);
         const ready: FromWorker = {
           type: 'ready',
@@ -231,7 +233,7 @@ function sendUpdate(
     events.some((e) => e.k === 'gameOver' || e.k === 'worldEvent' || e.k === 'council')
   )
     up.world = worldView(g);
-  const constructing = [...g.buildings.values()].some((b) => b.buildLeft > 0);
+  const constructing = [...g.buildings.values()].some((b) => b.buildLeft > 0 || b.upgradeLeft > 0);
   if (
     full ||
     g.buildingsDirty ||
@@ -440,6 +442,32 @@ function frontsOf(g: Game, p: Player): LocalView['fronts'] {
 const warContact = new Map<number, number>();
 const WAR_LINGER = 100;
 
+/** Land neighbours of the viewer, as combat's sharesBorder sees them (recomputed every second). */
+let neighbors: { tick: number; id: number; list: number[] } = { tick: -1, id: -1, list: [] };
+const NB4 = new Int32Array(4);
+
+function neighborsOf(g: Game, p: Player): number[] {
+  if (
+    neighbors.id === p.id &&
+    neighbors.tick >= 0 &&
+    g.tick - neighbors.tick < 10 &&
+    g.tick >= neighbors.tick
+  )
+    return neighbors.list;
+  const found = new Set<number>();
+  const map = g.map;
+  for (const t of p.border) {
+    const n = map.neighbors4(t, NB4);
+    for (let k = 0; k < n; k++) {
+      const j = NB4[k]!;
+      const o = g.owner[j]!;
+      if (o > 0 && o !== p.id && IS_LAND[map.terrain[j]!] && !g.isDead(j)) found.add(o);
+    }
+  }
+  neighbors = { tick: g.tick, id: p.id, list: [...found] };
+  return neighbors.list;
+}
+
 function warsOf(g: Game, p: Player): number[] {
   const t = g.tick;
   const touch = (id: number) => {
@@ -522,6 +550,7 @@ function localView(g: Game): LocalView | undefined {
         retreating: u.kind === TRANSPORT_RETREATING,
       })),
     wars: warsOf(g, p),
+    neighbors: neighborsOf(g, p),
     noTrade: g.players
       .filter((q) => q && q.alive && q.id !== p.id && p.hasEmbargoWith(q, t))
       .map((q) => q!.id),
@@ -602,6 +631,7 @@ function buildingViews(g: Game): BuildingView[] {
       level: b.level,
       progress: b.buildTotal > 0 ? 1 - b.buildLeft / b.buildTotal : 1,
       ready: b.buildLeft === 0,
+      upgrade: b.upgradeLeft > 0 ? 1 - b.upgradeLeft / b.upgradeTotal : -1,
       tubesReady: b.tubes.filter((x) => x === 0).length,
       cooldown: b.cooldown,
     });
@@ -724,7 +754,14 @@ function answer(g: Game, q: import('./protocol').Query): unknown {
         dead: g.isDead(t),
         defended: g.owner[t]! > 0 ? g.defenseMagMult(t, g.owner[t]!) > 1 : false,
         building: b
-          ? { id: b.id, type: b.type, owner: b.owner, level: b.level, ready: b.buildLeft === 0 }
+          ? {
+              id: b.id,
+              type: b.type,
+              owner: b.owner,
+              level: b.level,
+              ready: b.buildLeft === 0,
+              upgrading: b.upgradeLeft > 0,
+            }
           : null,
       };
     }

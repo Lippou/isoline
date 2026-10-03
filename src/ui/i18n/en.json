@@ -289,6 +289,7 @@
     "7": "Well played!"
   },
   "radial": {
+    "upgrading": "Level {next} under construction · {pct}%",
     "spawn": "Spawn here",
     "attack": "Attack ({pct}%)",
     "boat": "Land troops",
@@ -1202,6 +1203,7 @@
       "tooClose": "Too close to another building.",
       "notCoastal": "A port must be on the coast or on the bank of a navigable river.",
       "gold": "Not enough gold.",
+      "upgrading": "Upgrade already under way.",
       "locked": "Requires research: {tech}."
     },
     "capital": {
@@ -1751,6 +1753,9 @@
     }
   },
   "hover": {
+    "border": "Shares a border with you",
+    "noBorder": "No shared border with you",
+    "upgrading": "→ level {next} under construction · {pct}%",
     "ally": "Your ally",
     "war": "At war with you",
     "levels": "{n} levels in total",

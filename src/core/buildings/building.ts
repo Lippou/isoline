@@ -23,6 +23,12 @@ export interface Building {
   alive: boolean;
   /** Gold actually paid (for the 25 % demolition refund). */
   invested: number;
+  /**
+   * Upgrade under way: ticks left before `level` goes up by one (0 = none). Until then the
+   * building keeps working at its current level.
+   */
+  upgradeLeft: number;
+  upgradeTotal: number;
 }
 
 const CELL = 32;

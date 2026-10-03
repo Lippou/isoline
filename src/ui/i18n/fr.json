@@ -289,6 +289,7 @@
     "7": "Bien joué !"
   },
   "radial": {
+    "upgrading": "Niveau {next} en construction · {pct} %",
     "spawn": "Apparaître ici",
     "attack": "Attaquer ({pct} %)",
     "boat": "Débarquer",
@@ -1202,6 +1203,7 @@
       "tooClose": "Trop près d'un autre bâtiment.",
       "notCoastal": "Un port doit être sur la côte ou au bord d'une rivière navigable.",
       "gold": "Or insuffisant.",
+      "upgrading": "Amélioration déjà en cours.",
       "locked": "Recherche nécessaire : {tech}."
     },
     "capital": {
@@ -1751,6 +1753,9 @@
     }
   },
   "hover": {
+    "border": "Frontière commune avec vous",
+    "noBorder": "Aucune frontière commune avec vous",
+    "upgrading": "→ niveau {next} en construction · {pct} %",
     "ally": "Votre allié",
     "war": "En guerre contre vous",
     "levels": "{n} niveaux au total",

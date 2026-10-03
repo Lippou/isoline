@@ -188,14 +188,21 @@ describe('tech tree: research centres', () => {
     expect(buildCost(g, p, B.Lab)).toBe(500_000);
     for (let k = 0; k < BUILD_TICKS[B.Lab]; k++) g.step([]);
     expect(lab.buildLeft).toBe(0);
-    expect(upgradeBuilding(g, p, lab)).toBe(true);
-    expect(upgradeBuilding(g, p, lab)).toBe(true);
+    // Each upgrade is built in turn (one at a time); the price counts it once paid.
+    const upgrade = () => {
+      expect(upgradeBuilding(g, p, lab)).toBe(true);
+      expect(upgradeBuilding(g, p, lab)).toBe(false);
+      for (let k = 0; k < BUILD_TICKS[B.Lab]; k++) g.step([]);
+    };
+    upgrade();
+    upgrade();
+    expect(lab.level).toBe(3);
     expect(buildCost(g, p, B.Lab)).toBe(2_000_000);
-    expect(upgradeBuilding(g, p, lab)).toBe(true);
+    upgrade();
     expect(buildCost(g, p, B.Lab)).toBe(4_000_000);
-    expect(upgradeBuilding(g, p, lab)).toBe(true);
+    upgrade();
     expect(buildCost(g, p, B.Lab)).toBe(5_000_000); // capped
-    expect(upgradeBuilding(g, p, lab)).toBe(true);
+    upgrade();
     expect(buildCost(g, p, B.Lab)).toBe(5_000_000);
     const off = field(false);
     expect(checkPlacement(off, off.players[1]!, B.Lab, tile)).toBe('disabled');
@@ -213,9 +220,12 @@ describe('tech tree: research centres', () => {
     expect(p.labLevels).toBe(0); // still under construction
     for (let k = 0; k < BUILD_TICKS[B.Lab]; k++) g.step([]);
     expect(p.labLevels).toBe(1);
-    upgradeBuilding(g, p, lab);
-    upgradeBuilding(g, p, lab);
-    g.step([]);
+    for (let n = 0; n < 2; n++) {
+      upgradeBuilding(g, p, lab);
+      g.step([]);
+      expect(p.labLevels).toBe(1 + n); // the new level produces once built
+      for (let k = 0; k < BUILD_TICKS[B.Lab]; k++) g.step([]);
+    }
     expect(p.labLevels).toBe(3);
     expect(researchRate(p) * 10).toBeCloseTo(RESEARCH_BASE + 3 * RESEARCH_PER_LAB_LEVEL);
     // Universities and Atomic physics speed it up.

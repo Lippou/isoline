@@ -528,7 +528,14 @@ const AI_UPGRADE_DENSITY = 1 / 1500;
 function upgradeTarget(game: Game, p: Player, kind: B): Building | null {
   let best: Building | null = null;
   for (const b of game.buildings.values()) {
-    if (b.owner !== p.id || b.type !== kind || b.buildLeft > 0 || b.level >= MAX_LEVEL[kind]) continue;
+    if (
+      b.owner !== p.id ||
+      b.type !== kind ||
+      b.buildLeft > 0 ||
+      b.upgradeLeft > 0 ||
+      b.level >= MAX_LEVEL[kind]
+    )
+      continue;
     if (!best || b.level < best.level) best = b;
   }
   return best;

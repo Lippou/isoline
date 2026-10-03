@@ -3,12 +3,15 @@ import { asciiMap, testGame, startWith, cmd, invariants, makeGame } from '../hel
 import { maxTroops } from '../../src/core/game/economy';
 import {
   B,
+  BUILD_TICKS,
   RETREAT_DELAY_TICKS,
   RETREAT_MALUS,
   SPAWN_IMMUNITY_TICKS,
   TRAITOR_DEBUFF_TICKS,
 } from '../../src/core/game/constants';
 import { buildCost, checkPlacement, placeBuilding, upgradeCost } from '../../src/core/buildings/buildings';
+import { restoreSnapshot, snapshotFromJson, snapshotToJson, takeSnapshot } from '../../src/core/net/snapshot';
+import { hashGame } from '../../src/core/net/hash';
 import { attackLogic, largeTerritoryBonus, launchAttack } from '../../src/core/rules/combat';
 import { claimDisc } from '../../src/core/game/spawn';
 import type { Game } from '../../src/core/game/state';
@@ -456,6 +459,12 @@ describe('economy', () => {
     for (let k = 0; k < 25; k++) g.step([]);
     expect(maxTroops(g, p)).toBeCloseTo(humanMax(p.usefulTiles, 1), 6);
     g.step([cmd(1, { t: 'upgrade', id: city.id })]);
+    // The new level is built in the city's construction time; until then, still level 1.
+    expect(city.level).toBe(1);
+    expect(city.upgradeLeft).toBeGreaterThan(0);
+    g.step([]);
+    expect(p.popCap).toBeCloseTo(humanMax(p.usefulTiles, 1), 6);
+    for (let k = 0; k < 25; k++) g.step([]);
     expect(city.level).toBe(2);
     expect(p.popCap).toBeCloseTo(humanMax(p.usefulTiles, 2), 6);
     // Tribes hold a third, nations scale with the difficulty (easy: ×0.5).
@@ -572,9 +581,14 @@ describe('buildings', () => {
     const gold = p1.gold;
     // Building next to one's own city upgrades it (OpenFront: within 15 tiles).
     g.step([cmd(1, { t: 'build', kind: B.City, tile: g.map.idx(33, 22) })]);
-    expect(city.level).toBe(2);
     expect(gold - p1.gold).toBe(250_000 - 100); // one tick of income
+    // The paid level raises the price at once; the city reaches it once built.
+    expect(city.level).toBe(1);
     expect(buildCost(g, p1, B.City)).toBe(500_000);
+    g.step([cmd(1, { t: 'upgrade', id: city.id })]); // one upgrade at a time
+    expect(buildCost(g, p1, B.City)).toBe(500_000);
+    for (let k = 0; k < 25; k++) g.step([]);
+    expect(city.level).toBe(2);
     expect(upgradeCost(g, p1, city)).toBe(500_000);
     // Player 2 captures it: p1 is back to the first price, p2 has never built a city.
     g.setOwner(city.tile, 2);
@@ -667,6 +681,31 @@ describe('buildings', () => {
     expect((factory.x - 40) ** 2 + (factory.y - 28) ** 2).toBeGreaterThanOrEqual(15 * 15);
   });
 
+  it('an upgraded SAM keeps working at level 1 until level 2 is built (saved and restored mid-way)', () => {
+    const g = bigField(2); // two players: the game goes on (one alone wins at once)
+    const p = g.players[1]!;
+    p.gold = 50_000_000;
+    const sam = placeBuilding(g, p, B.Sam, g.map.idx(40, 20), true)!;
+    expect(sam.level).toBe(1);
+    g.step([cmd(1, { t: 'upgrade', id: sam.id })]);
+    expect(sam.buildLeft).toBe(0); // still operational
+    expect(sam.level).toBe(1);
+    expect(sam.upgradeLeft).toBe(BUILD_TICKS[B.Sam] - 1);
+    for (let k = 0; k < 40; k++) g.step([]);
+    const r = restoreSnapshot(g.map, snapshotFromJson(snapshotToJson(takeSnapshot(g))));
+    expect(hashGame(r)).toBe(hashGame(g));
+    const sam2 = r.buildings.get(sam.id)!;
+    expect(sam2.level).toBe(1);
+    for (let k = 0; k < BUILD_TICKS[B.Sam]; k++) {
+      g.step([]);
+      r.step([]);
+    }
+    expect(sam.level).toBe(2);
+    expect(sam.upgradeLeft).toBe(0);
+    expect(sam2.level).toBe(2);
+    expect(hashGame(r)).toBe(hashGame(g));
+  });
+
   it('upgrades by building on the same tile and transfers/destroys on capture', () => {
     const g = testGame(asciiMap(FIELD, 6), 2);
     startWith(g, [
@@ -680,6 +719,8 @@ describe('buildings', () => {
     for (let k = 0; k < 25; k++) g.step([]);
     g.step([cmd(2, { t: 'build', kind: B.City, tile: t })]);
     const city = g.buildings.get(g.buildingAt[t]!)!;
+    expect(p2.cityLevels).toBe(2); // the level under way counts
+    for (let k = 0; k < 25; k++) g.step([]);
     expect(city.level).toBe(2);
     expect(p2.cityLevels).toBe(2);
     const post = placeBuilding(g, p2, B.DefensePost, g.map.idx(40, 16), true)!;

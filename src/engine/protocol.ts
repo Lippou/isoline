@@ -145,6 +145,8 @@ export interface LocalView {
   }[];
   /** Countries at war with me: fighting on our border, landing troops or launching missiles (lingers 10 s). */
   wars: number[];
+  /** Countries sharing a land border with me (those a land attack can reach), refreshed every second. */
+  neighbors: number[];
   /** Countries I cannot trade with (embargo in either direction, manual or temporary). */
   noTrade: number[];
   /**
@@ -215,6 +217,8 @@ export interface BuildingView {
   level: number;
   progress: number; // 0..1 construction
   ready: boolean;
+  /** Upgrade to level + 1 under way: 0..1 done, −1 when none. */
+  upgrade: number;
   tubesReady: number;
   cooldown: number;
 }
