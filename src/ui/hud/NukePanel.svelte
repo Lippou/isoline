@@ -2,7 +2,7 @@
   // Missile launch panel (shown while aiming): salvo size, arc direction (flip with U to
   // fly around SAMs), and what the preview predicts for the hovered target.
   import { hud } from '../stores/game.svelte';
-  import { t, i18n, short } from '../i18n/i18n.svelte';
+  import { t, i18n, short, clock } from '../i18n/i18n.svelte';
   import { settings, keyLabel } from '../stores/settings.svelte';
   import Icon from '../icons/Icon.svelte';
   import { N } from '../../core/game/constants';
@@ -15,7 +15,8 @@
   const max = $derived(tool ? (hud.local?.maxLaunch[tool.kind] ?? 0) : 0);
   const cost = $derived(tool ? (hud.local?.nukeCosts[tool.kind] ?? 0) : 0);
   const counts = $derived(tool?.kind === N.Mirv ? [] : [1, 2, 5]);
-  const banned = $derived((hud.world?.nukeBanUntil ?? 0) > hud.tick);
+  const banLeft = $derived(Math.max(0, (hud.world?.nukeBanUntil ?? 0) - hud.tick));
+  const banned = $derived(banLeft > 0);
   const broke = $derived((hud.local?.gold ?? 0) < cost);
   const name = (id: number) => ctl.session.state.name(id, i18n.lang);
   /** Tech tree: the technology this bomb still needs (-1: researched, or no tech tree). */
@@ -34,7 +35,19 @@
 </script>
 
 {#if tool}
-  <section class="launch panel rise-in" data-testid="launch-panel" aria-label={t('launch.title')}>
+  <section
+    class="launch newsprint rise-in"
+    class:banned
+    data-testid="launch-panel"
+    aria-label={t('launch.title')}
+  >
+    {#if banned}
+      <p class="ban" data-testid="launch-ban" data-tip={t('ban.tip', { clock: clock(banLeft) })}>
+        <Icon name="embargo" size={14} />{t('ban.kicker')}<span class="mono"
+          >{t('ban.left', { clock: clock(banLeft) })}</span
+        >
+      </p>
+    {/if}
     <header>
       <span class="ico"><Icon name="nuke" size={18} /></span>
       <b>{t(`nuke.${NAMES[tool.kind]}.name`)}</b>
@@ -78,7 +91,8 @@
             onclick={() => setArc(false)}><Icon name="arcDown" size={15} />{t('launch.arcDown')}</button
           >
           <button class="btn small ghost" data-tip={t('launch.flipTip')} onclick={() => ctl.flipArc()}
-            ><Icon name="flip" size={15} /><kbd>{keyLabel(settings.keys.flipArc ?? '')}</kbd></button
+            ><Icon name="flip" size={15} /><kbd class="np-kbd">{keyLabel(settings.keys.flipArc ?? '')}</kbd
+            ></button
           >
         </div>
       </div>
@@ -139,36 +153,64 @@
 {/if}
 
 <style>
-  /* Right edge, between the leaderboard and the minimap: never over the target. */
+  /* Top of the right column (GameScreen.svelte), under the leaderboard: never over the target. */
   .launch {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    transform-origin: right center;
-    z-index: 7;
-    width: min(410px, calc(100vw - 32px));
-    padding: 10px 12px 9px;
+    width: min(400px, calc(100vw - 32px));
+    padding: 8px 12px 9px;
     display: grid;
     gap: 7px;
-    border-color: rgba(210, 84, 75, 0.55);
+    border: 1px solid var(--np-edge);
+    border-top: 3px solid var(--np-spot);
+    border-radius: 1px;
+    box-shadow: var(--np-lift);
+    font-family: var(--text);
+  }
+  /* Nuclear ban (World Council): a magenta band across the head of the panel. */
+  .ban {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: -8px -12px 0;
+    padding: 5px 12px 4px;
+    background: var(--np-spot);
+    font-size: 0.82em;
+    font-weight: 600;
+    color: #fff7f9;
+  }
+  .ban .mono {
+    margin-left: auto;
+  }
+  .ban[data-tip]:hover::after {
+    top: calc(100% + 6px);
+    bottom: auto;
   }
   header {
     display: flex;
     align-items: center;
     gap: 0.5rem;
   }
+  header b {
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 1.12em;
+    color: var(--np-ink);
+  }
   .ico {
-    color: var(--signal);
+    color: var(--np-spot);
     display: inline-flex;
   }
   .cost {
-    color: var(--brass);
+    font-weight: 600;
+    color: var(--np-brass);
+  }
+  .banned .cost {
+    color: var(--np-ink-3);
+    text-decoration: line-through;
   }
   .avail {
     margin-left: auto;
     font-size: 0.82em;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .row {
     display: flex;
@@ -177,25 +219,21 @@
   }
   .lbl {
     width: 82px;
-    font-size: 0.82em;
-    color: var(--faint);
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.84em;
+    color: var(--np-ink-2);
   }
   .seg {
     display: flex;
     gap: 4px;
     flex-wrap: wrap;
   }
-  kbd {
-    font-family: var(--mono);
-    font-size: 0.85em;
-    padding: 0 0.3em;
-    border: 1px solid var(--line-strong);
-    border-radius: 3px;
-  }
   .note {
     margin: 0;
-    font-size: 0.85em;
-    color: var(--muted);
+    font-family: var(--np-serif);
+    font-size: 0.84em;
+    color: var(--np-ink-2);
   }
   .verdict {
     display: flex;
@@ -207,14 +245,17 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.4rem 0.9rem;
+    padding-top: 6px;
+    border-top: 1px solid var(--np-rule);
     font-size: 0.74em;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .key {
     display: inline-flex;
     align-items: center;
     gap: 0.35em;
   }
+  /* The map's own marks for the blast preview (render/overlay). */
   .dot {
     width: 9px;
     height: 9px;
@@ -222,16 +263,17 @@
     border: 2px dashed currentColor;
   }
   .own {
-    color: #4ade80;
+    color: #2f9e5b;
   }
   .friend {
-    color: #facc15;
+    color: #c99a06;
   }
   .foe {
-    color: #ef4444;
+    color: #d6343a;
   }
   .help {
     margin-left: auto;
-    color: var(--faint);
+    font-style: italic;
+    color: var(--np-ink-3);
   }
 </style>

@@ -124,11 +124,11 @@
       const o = k * UNIT_STRIDE;
       const type = st.units[o + 1];
       if (type === U.Nuke) {
-        ctx.fillStyle = '#ff5a5f';
+        ctx.fillStyle = '#e0456f';
         ctx.beginPath();
         ctx.arc(st.units[o + 3]! * sx, st.units[o + 4]! * sy, 2.4, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255,90,95,0.6)';
+        ctx.strokeStyle = 'rgba(224,69,111,0.7)';
         ctx.beginPath();
         ctx.arc(st.units[o + 10]! * sx, st.units[o + 11]! * sy, 4, 0, Math.PI * 2);
         ctx.stroke();
@@ -137,9 +137,13 @@
         ctx.fillRect(st.units[o + 3]! * sx - 1, st.units[o + 4]! * sy - 1, 2, 2);
       }
     }
+    // The view: a paper-white frame, ruled in ink so it reads on sea and land alike.
     const [x0, y0, x1, y1] = ctl.renderer.camera.bounds();
-    ctx.strokeStyle = 'rgba(79,227,193,0.95)';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(23,42,60,0.85)';
+    ctx.strokeRect(x0 * sx, y0 * sy, (x1 - x0) * sx, (y1 - y0) * sy);
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = '#f8f4ec';
     ctx.strokeRect(x0 * sx, y0 * sy, (x1 - x0) * sx, (y1 - y0) * sy);
   }
 
@@ -188,6 +192,7 @@
 </aside>
 
 <style>
+  /* Bottom right: the map in a paper mount. */
   .mini {
     position: absolute;
     right: 12px;
@@ -202,22 +207,32 @@
   canvas {
     display: block;
     height: auto;
-    border-radius: 3px;
+    border: 1px solid var(--np-ink);
+    border-radius: 1px;
     cursor: crosshair;
     image-rendering: pixelated;
   }
   .toggle {
     position: absolute;
-    top: -12px;
-    left: -12px;
-    width: 24px;
-    height: 24px;
+    top: -11px;
+    left: -11px;
+    width: 22px;
+    height: 22px;
     display: grid;
     place-items: center;
-    border-radius: 3px;
-    border: 1px solid var(--line-strong);
-    background: var(--glass-strong);
-    color: var(--muted);
+    border-radius: 2px;
+    border: 1px solid var(--np-edge);
+    background: var(--np-paper);
+    box-shadow: 0 1px 3px rgba(3, 10, 16, 0.3);
+    color: var(--np-ink-2);
     cursor: var(--cursor-pointer, pointer);
+  }
+  .toggle:hover,
+  .toggle:focus-visible {
+    color: var(--np-ink);
+    border-color: var(--np-ink);
+  }
+  .mini.collapsed .toggle {
+    position: static;
   }
 </style>

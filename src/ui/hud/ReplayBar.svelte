@@ -66,7 +66,7 @@
       hud.paused = rp.paused;
     }}><Icon name={hud.paused ? 'play' : 'pause'} size={16} /></button
   >
-  <span class="mono">{clock(hud.replay?.tick ?? 0)} / {clock(hud.replay?.end ?? 0)}</span>
+  <span class="mono at">{clock(hud.replay?.tick ?? 0)}<small> / {clock(hud.replay?.end ?? 0)}</small></span>
   <input
     type="range"
     min={rp.startTick}
@@ -125,7 +125,7 @@
       })}</span
     >{/if}
   {#if hud.takeover}
-    <div class="pop glass" role="dialog" aria-labelledby="tk-title" data-testid="takeover-pop">
+    <div class="pop newsprint" role="dialog" aria-labelledby="tk-title" data-testid="takeover-pop">
       <h3 id="tk-title">
         <Icon name="takeover" size={16} />{t('takeover.title', {
           clock: clock(hud.replay?.tick ?? 0),
@@ -162,6 +162,7 @@
 </div>
 
 <style>
+  /* The replay's bar: a strip of paper at the foot of the map. */
   .rb {
     position: absolute;
     left: 50%;
@@ -171,8 +172,23 @@
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.5rem 0.8rem;
+    padding: 0.45rem 0.8rem;
+    border-top: 3px solid var(--np-ink);
     z-index: 20;
+  }
+  .rb > .btn {
+    padding: 0.4em 0.6em;
+  }
+  .at {
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--np-ink);
+  }
+  .at small {
+    margin-left: 0.25em;
+    font-size: 1em;
+    font-weight: 400;
+    color: var(--np-ink-2);
   }
   input[type='range'] {
     flex: 1;
@@ -185,43 +201,61 @@
     background: none;
     cursor: var(--cursor-pointer, pointer);
   }
+  .chip:hover {
+    border-color: var(--np-ink);
+    color: var(--np-ink);
+  }
+  /* The speed in use: reversed. */
   .chip.on {
-    color: var(--aurora);
-    border-color: var(--aurora);
+    background: var(--np-ink);
+    border-color: var(--np-ink);
+    color: var(--np-paper);
+  }
+  select {
+    padding: 0.35em 0.5em;
   }
   .takeover-btn {
     white-space: nowrap;
   }
   .takeover-btn.on {
-    border-color: var(--aurora);
-    color: var(--aurora);
+    background: var(--np-ink);
+    border-color: var(--np-ink);
+    color: var(--np-paper);
   }
   @media (max-width: 1180px) {
     .lbl {
       display: none;
     }
   }
-  /* The chooser opens above the bar, on its right (where the button is). */
+  /* The chooser opens above the bar, on its right (where the button is): a card of paper. */
   .pop {
     position: absolute;
     right: 0;
     bottom: calc(100% + 8px);
     width: min(360px, 90vw);
-    padding: 12px;
+    padding: 10px 12px 12px;
     display: grid;
     gap: 8px;
+    border: 1px solid var(--np-edge);
+    border-top: 3px solid var(--np-ink);
+    border-radius: 1px;
+    box-shadow: var(--np-lift);
   }
   .pop h3 {
     margin: 0;
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 1.02em;
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 1.1em;
+    color: var(--np-ink);
   }
   .hint {
     margin: 0;
-    font-size: 0.86em;
-    color: var(--muted);
+    font-family: var(--np-serif);
+    font-size: 0.84em;
+    color: var(--np-ink-2);
     line-height: 1.4;
   }
   .who {
@@ -229,9 +263,11 @@
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 3px;
+    gap: 0;
     max-height: min(300px, 40vh);
     overflow-y: auto;
+    overflow-x: hidden;
+    border-top: 1px solid var(--np-rule);
   }
   .who button {
     width: 100%;
@@ -239,25 +275,34 @@
     align-items: center;
     gap: 8px;
     padding: 5px 8px;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    background: var(--panel-2);
-    color: var(--parchment);
+    border: 0;
+    border-bottom: 1px solid var(--np-rule);
+    border-radius: 0;
+    background: transparent;
+    color: var(--np-ink);
     text-align: left;
     cursor: var(--cursor-pointer, pointer);
   }
   .who button:hover {
-    border-color: var(--line-strong);
+    background: var(--np-card);
   }
   .who button.on {
-    border-color: var(--aurora);
-    background: var(--select-bg);
+    background: var(--np-ink);
+    color: var(--np-paper);
+  }
+  .who button.on .num,
+  .who button.on .chip {
+    color: color-mix(in srgb, var(--np-paper) 85%, transparent);
+  }
+  .who button.on .chip {
+    background: transparent;
+    border-color: color-mix(in srgb, var(--np-paper) 45%, transparent);
   }
   .who img {
     width: 24px;
-    height: 17px;
+    height: 16px;
     object-fit: cover;
-    border: 1px solid #0006;
+    border: 1px solid rgba(23, 42, 60, 0.35);
   }
   .pn {
     flex: 1;
@@ -265,12 +310,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-family: var(--title);
+    font-weight: 600;
   }
   .num {
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    color: var(--faint);
+    color: var(--np-ink-2);
     font-size: 0.86em;
   }
   .acts {

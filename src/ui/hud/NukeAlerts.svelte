@@ -1,4 +1,7 @@
 <script lang="ts">
+  // Nukes heading for our land: a dispatch each at the head of the left column, printed
+  // in the chart's magenta (the danger colour), with the time to impact. A click shows
+  // where it falls.
   import Icon from '../icons/Icon.svelte';
   import { hud } from '../stores/game.svelte';
   import { t, i18n } from '../i18n/i18n.svelte';
@@ -11,11 +14,16 @@
   <div class="alerts" role="alert">
     {#each hud.nukeAlerts as a (a.id)}
       <button
-        class="alert"
+        class="alert newsprint"
         onclick={() => ctl.renderer.camera.goTo(a.tx, a.ty, Math.max(ctl.renderer.camera.zoom, 2))}
       >
-        <span class="icon"><Icon name="nuke" size={18} /></span>
-        <span>{t(`nuke.${names[a.kind]}.name`)} — {ctl.session.state.name(a.by, i18n.lang)}</span>
+        <span class="icon"><Icon name="nuke" size={17} /></span>
+        <span class="copy">
+          <small>{t('nuke.incoming')}</small>
+          <span class="what"
+            >{t(`nuke.${names[a.kind]}.name`)} — {ctl.session.state.name(a.by, i18n.lang)}</span
+          >
+        </span>
         <b class="mono">{Math.max(0, (a.impact - hud.tick) / 10).toFixed(1)} s</b>
       </button>
     {/each}
@@ -28,28 +36,72 @@
     gap: 6px;
   }
   .alert {
-    display: flex;
+    appearance: none;
+    width: 300px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.5rem 0.8rem;
-    border-radius: 10px;
-    border: 1px solid var(--signal);
-    background: rgba(70, 10, 16, 0.85);
-    color: var(--parchment);
+    gap: 10px;
+    padding: 7px 12px 7px 10px;
+    border: 1px solid var(--np-spot);
+    border-left: 4px solid var(--np-spot);
+    border-radius: 1px;
+    box-shadow: var(--np-lift);
+    text-align: left;
     cursor: var(--cursor-pointer, pointer);
-    animation: pulse 0.8s ease-in-out infinite alternate;
+    animation: pulse 0.9s ease-in-out infinite alternate;
+  }
+  .alert:hover,
+  .alert:focus-visible {
+    background: var(--np-card);
   }
   .icon {
-    font-size: 1.3em;
-    color: var(--signal);
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid var(--np-spot);
+    color: var(--np-spot);
+  }
+  .copy {
+    display: grid;
+    min-width: 0;
+  }
+  small {
+    font-family: var(--text);
+    font-size: 0.74em;
+    font-weight: 600;
+    color: var(--np-spot);
+  }
+  .what {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--title);
+    font-weight: 600;
+    font-size: 0.98em;
+    color: var(--np-ink);
   }
   b {
-    color: var(--signal);
-    font-size: 1.1em;
+    font-size: 1.15em;
+    font-weight: 700;
+    color: var(--np-spot);
   }
   @keyframes pulse {
     to {
-      box-shadow: 0 0 22px rgba(255, 90, 95, 0.55);
+      box-shadow:
+        0 1px 2px rgba(3, 10, 16, 0.22),
+        0 0 0 3px color-mix(in srgb, var(--np-spot) 30%, transparent),
+        0 6px 18px rgba(3, 10, 16, 0.3);
     }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .alert {
+      animation: none;
+    }
+  }
+  :global(.reduced-motion) .alert {
+    animation: none;
   }
 </style>

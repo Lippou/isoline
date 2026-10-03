@@ -1,7 +1,8 @@
 <script lang="ts">
-  // A wave of troops is sent at us: the screen's edges flash red three times, then fade
-  // (about 1.8 s; once per wave, not for the whole attack). The glow is brightest on the
-  // edge facing the attack. Reduced motion: one slow pulse, no blinking.
+  // A wave of troops is sent at us: the screen's edges flash in the chart's magenta (the
+  // danger colour) three times, then fade (about 1.8 s; once per wave, not for the whole
+  // attack). The glow is brightest on the edge facing the attack. Reduced motion: one slow
+  // pulse, no blinking.
   import { hud } from '../stores/game.svelte';
   import { settings } from '../stores/settings.svelte';
 
@@ -32,12 +33,12 @@
     pointer-events: none;
     opacity: 0;
     box-shadow:
-      inset 0 0 110px 26px rgb(232 52 44 / calc(0.7 * var(--k))),
-      inset 0 0 0 4px rgb(255 90 80 / calc(0.85 * var(--k)));
+      inset 0 0 110px 26px rgb(214 40 98 / calc(0.7 * var(--k))),
+      inset 0 0 0 4px rgb(232 72 122 / calc(0.85 * var(--k)));
     background: radial-gradient(
       circle at var(--ex) var(--ey),
-      rgb(232 52 44 / calc(0.5 * var(--k))) 0,
-      rgb(232 52 44 / calc(0.14 * var(--k))) 22%,
+      rgb(214 40 98 / calc(0.5 * var(--k))) 0,
+      rgb(214 40 98 / calc(0.14 * var(--k))) 22%,
       transparent 42%
     );
     animation: blink 1.8s ease-out forwards;

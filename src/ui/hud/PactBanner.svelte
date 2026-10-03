@@ -1,6 +1,6 @@
 <script lang="ts">
-  // Alliance signed (or renewed): both flags sealed by a handshake, a signature
-  // drawn on the parchment, then the banner fades out by itself. An offer turned down
+  // Alliance signed (or renewed): a notice printed on the Courier's paper, both flags
+  // sealed by a handshake, a signature drawn in ink, then it fades out by itself. An offer turned down
   // gets a « Refusé » stamp slammed across it; a pact betrayed is torn in two (flags
   // drawn apart, red tear instead of a signature).
   import { hud, nextPact } from '../stores/game.svelte';
@@ -38,7 +38,7 @@
   {#key pact.id}
     {@const name = ctl.session.state.name(them.id, i18n.lang)}
     <div
-      class="pact"
+      class="pact newsprint"
       class:refused={pact.refused}
       class:betrayed={pact.betrayed}
       role="status"
@@ -75,7 +75,7 @@
 {/if}
 
 <style>
-  /* Lower centre, above the build bar and the campaign guide: clear of the toasts and the launch panel. */
+  /* Lower centre, above the build bar and the campaign guide: clear of the dispatches and the launch panel. */
   .pact {
     position: absolute;
     left: 50%;
@@ -84,15 +84,16 @@
     z-index: 29;
     display: grid;
     justify-items: center;
-    gap: 4px;
-    padding: 12px 22px 8px;
+    gap: 3px;
+    padding: 12px 24px 8px;
     min-width: 300px;
-    border-radius: 8px;
-    border: 1px solid rgba(91, 224, 138, 0.55);
-    background: linear-gradient(180deg, rgba(24, 33, 28, 0.96), rgba(15, 20, 18, 0.96));
+    border: 1px solid var(--np-edge);
+    border-top: 3px solid var(--np-good);
+    border-radius: 1px;
     box-shadow:
-      0 12px 32px rgba(0, 0, 0, 0.5),
-      0 0 26px rgba(91, 224, 138, 0.18);
+      0 1px 0 rgba(255, 255, 255, 0.45) inset,
+      0 10px 24px rgba(3, 10, 16, 0.42);
+    font-family: var(--np-serif);
     pointer-events: none;
     animation: appear 4.6s ease both;
   }
@@ -102,78 +103,74 @@
     gap: 12px;
   }
   .flags img {
-    width: 46px;
-    height: 32px;
+    width: 42px;
+    height: 29px;
     object-fit: cover;
-    border: 1px solid #0008;
-    border-radius: 2px;
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
   }
   .seal {
     display: grid;
     place-items: center;
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    color: #5be08a;
-    border: 2px solid #5be08a;
-    background: rgba(91, 224, 138, 0.12);
+    color: var(--np-good);
+    border: 2px solid var(--np-good);
     animation: stamp 0.5s 0.15s cubic-bezier(0.3, 1.6, 0.5, 1) both;
   }
   b {
+    margin-top: 3px;
     font-family: var(--title);
-    font-size: 1.15em;
-    color: #b9f3cc;
-    letter-spacing: 0.02em;
+    font-weight: 700;
+    font-size: 1.3em;
+    line-height: 1.1;
+    color: var(--np-ink);
   }
   .terms {
-    font-size: 0.82em;
-    color: var(--muted);
+    font-size: 0.84em;
+    color: var(--np-ink-2);
   }
+  /* The signature, in the journal's ink. */
   .sig {
     width: 180px;
     height: 26px;
   }
   .sig path {
     fill: none;
-    stroke: #e8e5dd;
-    stroke-width: 1.6;
+    stroke: var(--np-ink);
+    stroke-width: 1.5;
     stroke-linecap: round;
     stroke-linejoin: round;
     stroke-dasharray: 420;
     stroke-dashoffset: 420;
     animation: sign 1.6s 0.35s ease-out forwards;
   }
-  /* Turned down: cold red edge, the seal struck through, the flags drawn apart. */
+  /* Turned down or betrayed: the magenta rule, the seal struck through, the flags drawn apart. */
   .pact.refused,
   .pact.betrayed {
-    border-color: rgba(240, 96, 112, 0.6);
-    background: linear-gradient(180deg, rgba(36, 22, 26, 0.96), rgba(20, 14, 16, 0.96));
-    box-shadow:
-      0 12px 32px rgba(0, 0, 0, 0.5),
-      0 0 26px rgba(240, 96, 112, 0.16);
+    border-top-color: var(--np-spot);
   }
   .refused .seal,
   .betrayed .seal {
     position: relative;
-    color: #f06070;
-    border-color: #f06070;
-    background: rgba(240, 96, 112, 0.1);
+    color: var(--np-spot);
+    border-color: var(--np-spot);
   }
   .refused .seal::after,
   .betrayed .seal::after {
     content: '';
     position: absolute;
-    left: 6px;
-    right: 6px;
+    left: 5px;
+    right: 5px;
     top: 50%;
     height: 2px;
-    background: #f06070;
+    background: var(--np-spot);
     transform: rotate(-40deg);
-    border-radius: 1px;
   }
   .refused b,
   .betrayed b {
-    color: #ffc2c8;
+    color: var(--np-spot);
   }
   .betrayed .mine {
     animation: apart-l 0.6s 0.5s ease-out both;
@@ -182,28 +179,28 @@
     animation: apart-r 0.6s 0.5s ease-out both;
   }
   .sig.tear path {
-    stroke: #f06070;
+    stroke: var(--np-spot);
     stroke-width: 1.8;
     stroke-dasharray: 520;
     stroke-dashoffset: 520;
     animation: sign 0.7s 0.3s ease-in forwards;
   }
-  /* « Refusé »: a rubber stamp slammed across the document. */
+  /* « Refusé »: a rubber stamp slammed across the notice, its ink soaked into the paper. */
   .stamp {
     position: absolute;
     right: 10px;
     top: 14px;
     padding: 2px 12px 3px;
-    border: 2.5px solid #f06070;
-    border-radius: 4px;
-    color: #f06070;
+    border: 2.5px solid var(--np-spot);
+    border-radius: 3px;
+    color: var(--np-spot);
     font-family: var(--title);
     font-weight: 700;
     font-size: 1.1em;
     letter-spacing: 0.04em;
     transform: rotate(-9deg);
-    opacity: 0.92;
-    mix-blend-mode: screen;
+    opacity: 0.85;
+    mix-blend-mode: multiply;
     animation: slam 0.32s 0.25s cubic-bezier(0.2, 1.4, 0.4, 1) both;
   }
   @keyframes slam {
@@ -213,7 +210,7 @@
     }
     to {
       transform: rotate(-9deg) scale(1);
-      opacity: 0.92;
+      opacity: 0.85;
     }
   }
   @keyframes apart-l {
@@ -231,16 +228,16 @@
   @keyframes appear {
     0% {
       opacity: 0;
-      transform: translateX(-50%) translateY(-8px) scale(0.96);
+      transform: translateX(-50%) translateY(-8px);
     }
     8%,
     85% {
       opacity: 1;
-      transform: translateX(-50%) translateY(0) scale(1);
+      transform: translateX(-50%) translateY(0);
     }
     100% {
       opacity: 0;
-      transform: translateX(-50%) translateY(-6px) scale(0.98);
+      transform: translateX(-50%) translateY(-6px);
     }
   }
   @keyframes stamp {

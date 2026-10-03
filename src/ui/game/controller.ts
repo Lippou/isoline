@@ -276,6 +276,21 @@ export class GameController {
         weather: () => this.session.state.world?.weather ?? [],
         routes: () => this.session.state.routes,
         /** QA: back to the menus with a confirmation open (the dialog in the menus' theme). */
+        /** QA: a notification (the dispatches tray). */
+        toast: (text: string, level: 'info' | 'good' | 'warn' | 'danger' = 'info', tile?: number) =>
+          toast(text, level, tile),
+        /** QA: fields laid over the worker's view every tick (offers, a nuclear ban…); null clears. */
+        patch: (p: { local?: Record<string, unknown>; world?: Record<string, unknown> } | null) =>
+          (this.qaPatch = p),
+        /** QA: the pact banner with a country (`kind`: signed, renewed, refused, silent, betrayed). */
+        pact: (id: number, kind = 'signed') =>
+          showPact({
+            with: id,
+            renewed: kind === 'renewed',
+            refused: kind === 'refused' || kind === 'silent',
+            silent: kind === 'silent',
+            betrayed: kind === 'betrayed',
+          }),
         menuConfirm: () => {
           go('title');
           confirmModal(t('menu.quitTitle'), t('menu.quitBody'), () => {}, t('menu.quit'), t('common.cancel'));
@@ -593,6 +608,10 @@ export class GameController {
     hud.phase = st.phase;
     hud.local = st.local;
     if (st.world) hud.world = this.qaEvent ? { ...st.world, event: this.qaEvent } : st.world;
+    if (this.qaPatch) {
+      if (hud.local && this.qaPatch.local) hud.local = { ...hud.local, ...this.qaPatch.local };
+      if (hud.world && this.qaPatch.world) hud.world = { ...hud.world, ...this.qaPatch.world };
+    }
     hud.players = st.playerList;
     hud.tickMs = st.tickMs;
     if (st.local && tick % 50 === 0) {
@@ -630,6 +649,8 @@ export class GameController {
     audio.setIntensity(this.lastIntensity);
   }
 
+  /** QA (?automation): fields laid over the worker's view every tick. */
+  private qaPatch: { local?: Record<string, unknown>; world?: Record<string, unknown> } | null = null;
   private slowSeconds = 0;
   private lastCoin = 0;
   private finished = false;

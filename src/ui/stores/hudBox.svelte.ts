@@ -1,11 +1,12 @@
 // The HUD panels the others lay out around: the resources panel (bottom left), the build
-// bar (bottom centre) and the minimap (bottom right) change height with the game (lists
-// of attacks, a bar folded on two rows, a tall map). Their sizes are published here and
-// as CSS variables on the document (--hud-res-h, --hud-bar-h, --hud-mini-h, --hud-mini-w),
-// so the dock, the column of cards, the windows and the banners keep clear of them.
-export type HudBoxKey = 'res' | 'bar' | 'mini';
+// bar (bottom centre), the minimap (bottom right) and the leaderboard (top right) change
+// height with the game (lists of attacks, a bar folded on two rows, a tall map, a folded
+// ranking). Their sizes are published here and as CSS variables on the document
+// (--hud-res-h, --hud-bar-h, --hud-mini-h, --hud-mini-w, --hud-lb-h), so the dock, the
+// columns of cards, the windows and the banners keep clear of them.
+export type HudBoxKey = 'res' | 'bar' | 'mini' | 'lb';
 
-export const hudBox = $state({ res: 0, bar: 0, mini: 0, miniW: 0 });
+export const hudBox = $state({ res: 0, bar: 0, mini: 0, miniW: 0, lb: 0 });
 
 function publish(key: HudBoxKey, node: HTMLElement): void {
   const h = Math.round(node.offsetHeight);

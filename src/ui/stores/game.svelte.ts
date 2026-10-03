@@ -37,6 +37,8 @@ export interface Toast {
   level: 'info' | 'good' | 'warn' | 'danger';
   tile?: number;
   t: number;
+  /** Game tick it arrived at (its dispatch is dated with the game clock). */
+  tick: number;
 }
 
 export interface LogEntry {
@@ -220,11 +222,27 @@ export function openPaper(page?: PaperPage): void {
 }
 
 let toastId = 1;
+/** The pointer is on the dispatches: they stay until it leaves (Toasts.svelte). */
+let toastsHeld = false;
+export function holdToasts(on: boolean): void {
+  toastsHeld = on;
+}
+/** A dispatch leaves after its time, or a moment after the pointer has left the tray. */
+function expire(id: number, ms: number): void {
+  setTimeout(() => {
+    if (toastsHeld && hud.toasts.some((x) => x.id === id)) expire(id, 1500);
+    else hud.toasts = hud.toasts.filter((x) => x.id !== id);
+  }, ms);
+}
+/** Puts a dispatch away at once (clicked). */
+export function dropToast(id: number): void {
+  hud.toasts = hud.toasts.filter((x) => x.id !== id);
+}
 export function toast(text: string, level: Toast['level'] = 'info', tile?: number): void {
-  const t: Toast = { id: toastId++, text, level, t: performance.now() };
+  const t: Toast = { id: toastId++, text, level, t: performance.now(), tick: hud.tick };
   if (tile !== undefined) t.tile = tile;
   hud.toasts = [...hud.toasts.slice(-4), t];
-  setTimeout(() => (hud.toasts = hud.toasts.filter((x) => x.id !== t.id)), level === 'danger' ? 7000 : 4500);
+  expire(t.id, level === 'danger' ? 9000 : 6000);
 }
 
 export function subtitle(text: string): void {

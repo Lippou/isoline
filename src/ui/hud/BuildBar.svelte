@@ -1,6 +1,6 @@
 <script lang="ts">
   import { hud, openPanel } from '../stores/game.svelte';
-  import { t, short } from '../i18n/i18n.svelte';
+  import { t, short, clock } from '../i18n/i18n.svelte';
   import { settings, keyLabel } from '../stores/settings.svelte';
   import Icon from '../icons/Icon.svelte';
   import { BUILDING_ICONS, type IconName } from '../icons/icons';
@@ -54,6 +54,8 @@
     hud.tool =
       hud.tool.k === 'nuke' && hud.tool.kind === kind ? { k: 'none' } : { k: 'nuke', kind, count: 1 };
   }
+  /** The World Council's nuclear ban: the bombs print in magenta while it lasts (time left, 0: none). */
+  const banLeft = $derived(Math.max(0, (hud.world?.nukeBanUntil ?? 0) - hud.tick));
   const active = (k: string, kind: number) =>
     hud.tool.k === k && 'kind' in hud.tool && hud.tool.kind === kind;
 
@@ -70,9 +72,10 @@
   void ctl;
 </script>
 
-{#snippet tip(title: string, body: string, meta: string[], req: string = '')}
-  <div class="tip panel rise-in">
+{#snippet tip(title: string, body: string, meta: string[], req: string = '', ban: string = '')}
+  <div class="tip newsprint rise-in">
     <h4>{title}</h4>
+    {#if ban}<p class="ban" data-testid="nuke-ban-tip"><Icon name="embargo" size={13} />{ban}</p>{/if}
     <p>{body}</p>
     {#if req}<p class="req"><Icon name="lock" size={13} />{req}</p>
       <p class="reqhint">{t('tech.openTree')}</p>{/if}
@@ -93,12 +96,14 @@
   danger: boolean,
   onclick: () => void,
   testid: string,
+  banned: boolean = false,
 )}
   <button
     class="tool"
     class:active={isActive}
-    class:poor
+    class:poor={poor && !banned}
     class:danger
+    class:banned
     {onclick}
     onmouseenter={() => (hovered = id)}
     onmouseleave={() => (hovered = null)}
@@ -109,6 +114,7 @@
     <span class="name">{label}</span>
     <span class="cost mono">{cost}</span>
     {#if key}<kbd>{key}</kbd>{/if}
+    {#if banned}<span class="banmark" aria-hidden="true"><Icon name="embargo" size={11} /></span>{/if}
   </button>
 {/snippet}
 
@@ -180,7 +186,11 @@
     {/if}
     {#if nukes.length}
       <div class="group">
-        <div class="gtitle">{t('hud.groupNukes')}</div>
+        <div class="gtitle" class:spot={banLeft > 0}>
+          {t('hud.groupNukes')}{#if banLeft > 0}<span class="mono"
+              >{`· ${t('ban.short', { clock: clock(banLeft) })}`}</span
+            >{/if}
+        </div>
         <div class="tools">
           {#each nukes as n (n.kind)}
             {@const lock = lockOf(nukeUnlock(n.kind))}
@@ -196,6 +206,7 @@
                 true,
                 () => (lock >= 0 ? openTech(lock) : pickNuke(n.kind)),
                 `nuke-${n.key}`,
+                banLeft > 0,
               )}
               {#if lock >= 0}<span class="lock" aria-hidden="true"><Icon name="lock" size={11} /></span>{/if}
               {#if active('nuke', n.kind) && hud.tool.k === 'nuke'}<span class="count mono"
@@ -210,6 +221,7 @@
                     t('hud.readyN', { n: L.maxLaunch[n.kind] ?? 0 }),
                   ],
                   requires(lock),
+                  banLeft > 0 ? t('ban.tip', { clock: clock(banLeft) }) : '',
                 )}
               {/if}
             </div>
@@ -331,17 +343,29 @@
   .group {
     display: grid;
     align-content: start;
-    padding: 6px 8px 8px;
+    padding: 5px 8px 8px;
   }
   /* A rule before each group (one starting a second row has it against the edge). */
   .group + .group {
-    box-shadow: -1px 0 0 var(--line);
+    box-shadow: -1px 0 0 var(--np-rule);
   }
+  /* Each group under its kicker, in the journal's italic. */
   .gtitle {
-    font-size: 0.76em;
-    font-weight: 500;
-    color: var(--faint);
-    margin: 0 0 5px 2px;
+    margin: 0 0 4px 2px;
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.8em;
+    white-space: nowrap;
+    color: var(--np-ink-2);
+  }
+  .gtitle.spot {
+    color: var(--np-spot);
+  }
+  .gtitle .mono {
+    margin-left: 0.35em;
+    font-family: var(--text);
+    font-style: normal;
+    font-weight: 600;
   }
   .tools {
     display: flex;
@@ -356,14 +380,27 @@
   .slot.locked .tool:hover {
     opacity: 0.8;
   }
+  /* The ban speaks louder than the lock: in full magenta, its mark in place of the padlock. */
+  .slot.locked .tool.banned {
+    opacity: 1;
+  }
+  .slot:has(.banned) .lock {
+    display: none;
+  }
+  /* The first group's explanations open to the right, the others' to the left (over the bar). */
+  .group:first-of-type .tip {
+    left: 0;
+    right: auto;
+  }
   .lock {
     position: absolute;
     top: 3px;
     left: 4px;
     display: inline-flex;
-    color: var(--parchment);
+    color: var(--np-ink);
     pointer-events: none;
   }
+  /* A tool: its pictogram, name and price printed on the paper; nothing moves on hover. */
   .tool {
     position: relative;
     width: 62px;
@@ -372,10 +409,10 @@
     justify-items: center;
     align-content: center;
     gap: 1px;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    color: var(--parchment);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    color: var(--np-ink);
     cursor: pointer;
     padding: 4px 2px;
     transition:
@@ -383,22 +420,62 @@
       border-color 0.12s;
   }
   .tool:hover {
-    background: var(--panel-3);
-    border-color: var(--line-strong);
+    background: var(--np-card);
+    border-color: var(--np-rule-2);
   }
+  /* The tool in hand: reversed. */
   .tool.active {
-    border-color: var(--aurora);
-    background: rgba(127, 169, 214, 0.18);
+    background: var(--np-ink);
+    border-color: var(--np-ink);
+    color: var(--np-paper);
+  }
+  .tool.active .name {
+    color: color-mix(in srgb, var(--np-paper) 82%, transparent);
+  }
+  .tool.active .cost {
+    color: #e6c67e;
+  }
+  .tool.active kbd {
+    color: color-mix(in srgb, var(--np-paper) 70%, transparent);
   }
   .tool.poor {
-    opacity: 0.5;
+    opacity: 0.45;
   }
   .tool.danger {
-    color: #f0a49c;
+    color: var(--np-spot);
+  }
+  .tool.danger.active {
+    background: var(--np-spot);
+    border-color: var(--np-spot);
+    color: #fff7f9;
+  }
+  /* Nuclear ban (World Council): the bombs are printed in magenta, struck by the ban's mark. */
+  .tool.banned {
+    background: color-mix(in srgb, var(--np-spot) 10%, transparent);
+    border-color: color-mix(in srgb, var(--np-spot) 55%, transparent);
+    color: var(--np-spot);
+  }
+  .tool.banned:hover {
+    background: color-mix(in srgb, var(--np-spot) 16%, transparent);
+    border-color: var(--np-spot);
+  }
+  .tool.banned .name,
+  .tool.banned .cost {
+    color: var(--np-spot);
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, var(--np-spot) 60%, transparent);
+  }
+  .banmark {
+    position: absolute;
+    top: 3px;
+    left: 4px;
+    display: inline-flex;
+    color: var(--np-spot);
+    pointer-events: none;
   }
   .name {
     font-size: 0.66em;
-    color: var(--muted);
+    color: var(--np-ink-2);
     max-width: 58px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -406,22 +483,25 @@
   }
   .cost {
     font-size: 0.68em;
-    color: var(--brass);
+    font-weight: 600;
+    color: var(--np-brass);
   }
   kbd {
     position: absolute;
     top: 2px;
     right: 3px;
     font-size: 0.58em;
-    color: var(--faint);
-    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--np-ink-3);
+    font-family: var(--text);
   }
   .count {
     position: absolute;
     top: 2px;
     left: 4px;
     font-size: 0.65em;
-    color: var(--signal);
+    font-weight: 600;
+    color: var(--np-spot);
   }
   .vtools {
     display: grid;
@@ -433,41 +513,49 @@
     height: 30px;
     display: grid;
     place-items: center;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--np-rule);
+    border-radius: 2px;
+    color: var(--np-ink-2);
     cursor: pointer;
   }
   .vt:hover {
-    color: var(--parchment);
-    border-color: var(--line-strong);
+    color: var(--np-ink);
+    border-color: var(--np-ink-2);
+    background: var(--np-card);
   }
   .vt.active {
-    color: var(--parchment);
-    border-color: var(--aurora);
-    background: rgba(127, 169, 214, 0.18);
+    color: var(--np-paper);
+    border-color: var(--np-ink);
+    background: var(--np-ink);
   }
+  /* What a tool does: a card laid above the bar (it never takes the pointer). */
   .tip {
     position: absolute;
     bottom: calc(100% + 10px);
     right: 0;
     width: 270px;
-    padding: 10px 12px;
+    padding: 9px 12px 10px;
     text-align: left;
     z-index: 20;
     pointer-events: none;
+    border: 1px solid var(--np-edge);
+    border-top: 3px solid var(--np-ink);
+    border-radius: 1px;
+    box-shadow: var(--np-lift);
   }
   .tip h4 {
     margin: 0 0 4px;
     font-family: var(--title);
-    font-size: 1em;
-    color: var(--parchment);
+    font-weight: 700;
+    font-size: 1.05em;
+    color: var(--np-ink);
   }
   .tip p {
     margin: 0 0 6px;
-    font-size: 0.84em;
-    color: var(--muted);
+    font-family: var(--np-serif);
+    font-size: 0.82em;
+    color: var(--np-ink-2);
     line-height: 1.45;
   }
   .tip .req {
@@ -475,19 +563,41 @@
     align-items: center;
     gap: 6px;
     margin: 0 0 2px;
-    color: var(--warn-text);
+    font-family: var(--text);
+    font-weight: 600;
+    color: var(--np-warn);
+  }
+  .tip .ban {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 4px 0 5px;
+    border-top: 1px solid var(--np-spot);
+    border-bottom: 1px solid var(--np-spot);
+    font-family: var(--text);
+    font-weight: 600;
+    color: var(--np-spot);
+  }
+  .tip .ban :global(svg) {
+    flex: none;
+    margin-top: 2px;
   }
   .tip .reqhint {
     margin: 0 0 6px;
     font-size: 0.78em;
-    color: var(--faint);
+    font-style: italic;
+    color: var(--np-ink-3);
   }
   .meta {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 12px;
+    padding-top: 5px;
+    border-top: 1px solid var(--np-rule);
     font-size: 0.8em;
-    color: var(--brass);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--np-brass);
   }
   /* (After the base rules, which it overrides.) */
   @media (max-width: 1600px) {

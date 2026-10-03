@@ -29,6 +29,8 @@
     danger?: boolean;
     /** Highlighted at the top of the menu (alliance offers). */
     featured?: boolean;
+    /** Forbidden for now (the World Council's nuclear ban): printed in magenta, not greyed. */
+    banned?: boolean;
     group?: string;
   };
   let openSub: string | null = $state(null);
@@ -50,9 +52,15 @@
   const NUKE_NAMES = ['nukeA', 'nukeH', 'nukeMirv'];
   const gold = (n: number) => `${formatShort(n)}`;
 
+  /** The World Council's nuclear ban: time left (0: none). */
+  const banLeft = $derived(Math.max(0, (hud.world?.nukeBanUntil ?? 0) - hud.tick));
+
   function nukeItems(tile: number, own: boolean): Item[] {
     const L = hud.local;
     if (!L || !cfg.allowNukes) return [];
+    const ban = banLeft > 0;
+    const banHint = ban ? t('ban.short', { clock: clock(banLeft) }) : '';
+    const banTip = ban ? t('ban.tip', { clock: clock(banLeft) }) : '';
     // On our own land: A and H bombs only, each behind a confirmation.
     const guard = (fn: () => void) => (own ? selfGuard(fn) : act(fn));
     return (own ? [N.Atom, N.Hydrogen] : [N.Atom, N.Hydrogen, N.Mirv]).map((kind) => {
@@ -62,9 +70,11 @@
         id: `n${kind}`,
         label: t(`nuke.${NUKE_NAMES[kind]}.name`),
         icon: 'nuke' as IconName,
-        hint: max > 0 ? `${max}` : t('radial.unavailable'),
-        disabled: max === 0,
+        hint: ban ? banHint : max > 0 ? `${max}` : t('radial.unavailable'),
+        disabled: ban || max === 0,
         danger: true,
+        banned: ban,
+        ...(ban ? { desc: banTip } : {}),
         sub: counts.map((c, k) => ({
           id: `n${kind}x${k}`,
           label:
@@ -419,6 +429,13 @@
         icon: 'nuke',
         sub: nukes,
         danger: true,
+        ...(banLeft > 0
+          ? {
+              banned: true,
+              hint: t('ban.short', { clock: clock(banLeft) }),
+              desc: t('ban.tip', { clock: clock(banLeft) }),
+            }
+          : {}),
       });
     out.push(...diplomacyItems(owner));
     out.push({
@@ -439,15 +456,19 @@
   });
   const sub = $derived(items.find((it) => it.id === openSub)?.sub ?? null);
 
-  // Keep the menu on screen.
+  // Keep the menu on screen. It never moves while open (opening a sub-menu used to push it
+  // left under the pointer, which then opened another one: the menu shook); the sub-menu
+  // opens on the side that has room.
   const pos = $derived.by(() => {
     const r = hud.radial;
-    if (!r) return { x: 0, y: 0 };
+    if (!r) return { x: 0, y: 0, subLeft: false };
     const w = 260;
     const h = 64 + items.length * 34;
+    const x = Math.max(8, Math.min(r.x + 6, window.innerWidth - w - 12));
     return {
-      x: Math.min(r.x + 6, window.innerWidth - w * (sub ? 2 : 1) - 12),
+      x,
       y: Math.max(8, Math.min(r.y + 6, window.innerHeight - h - 12)),
+      subLeft: x + w + 4 + 280 > window.innerWidth - 12,
     };
   });
 </script>
@@ -492,6 +513,7 @@
           <button
             class="item"
             class:danger={it.danger}
+            class:banned={it.banned}
             class:featured={it.featured}
             class:open={openSub === it.id}
             disabled={it.disabled}
@@ -517,11 +539,12 @@
       {/each}
     </div>
     {#if sub}
-      <div class="menu panel subm fade-in">
+      <div class="menu panel subm fade-in" class:left={pos.subLeft}>
         {#each sub as it (it.id)}
           <button
             class="item"
             class:danger={it.danger}
+            class:banned={it.banned}
             disabled={it.disabled}
             role="menuitem"
             title={it.desc ?? ''}
@@ -548,34 +571,44 @@
   .ctx {
     position: absolute;
     z-index: 41;
-    display: flex;
-    align-items: flex-start;
-    gap: 4px;
   }
+  /* The context menu: a legend printed on the paper (pictogram, label, figure). */
   .menu {
     width: 260px;
     padding: 4px;
     display: grid;
   }
+  /* The sub-menu beside it, on the side with room; the menu itself never moves. */
   .subm {
+    position: absolute;
+    top: 0;
+    left: calc(100% + 4px);
     width: 280px;
     max-height: 70vh;
     overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--np-rule-2) transparent;
+  }
+  .subm.left {
+    left: auto;
+    right: calc(100% + 4px);
   }
   header {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 6px 8px;
-    border-bottom: 1px solid var(--line);
-    margin-bottom: 4px;
-    color: var(--muted);
+    margin: 0 4px 4px;
+    padding: 5px 2px 6px;
+    border-bottom: 2px solid var(--np-ink);
+    color: var(--np-ink-2);
   }
   header .flag {
     width: 26px;
-    height: 19px;
+    height: 18px;
     object-fit: cover;
-    border: 1px solid #0006;
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
   }
   .who {
     display: grid;
@@ -583,73 +616,113 @@
     min-width: 0;
   }
   .who b {
-    color: var(--parchment);
-    font-weight: 600;
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 1.08em;
+    line-height: 1.15;
+    color: var(--np-ink);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .who small {
-    font-size: 0.8em;
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.84em;
   }
   .x {
+    display: inline-grid;
+    place-items: center;
     background: none;
     border: 0;
-    color: var(--faint);
+    color: var(--np-ink-3);
     cursor: var(--cursor-pointer, pointer);
     padding: 2px;
   }
   .x:hover {
-    color: var(--parchment);
+    color: var(--np-ink);
   }
   .item {
     display: flex;
     align-items: center;
     gap: 10px;
     width: 100%;
-    padding: 7px 8px;
+    padding: 6px 8px;
     border: 0;
-    border-radius: 4px;
+    border-radius: 1px;
     background: none;
     text-align: left;
     cursor: var(--cursor-pointer, pointer);
-    color: var(--parchment);
+    color: var(--np-ink);
+  }
+  .item > :global(svg:first-child) {
+    flex: none;
+    color: var(--np-ink-2);
   }
   .item:hover:not(:disabled),
   .item.open {
-    background: var(--panel-3);
+    background: var(--np-paper-2);
   }
-  .item.danger {
-    color: var(--bad-text);
+  .item:hover:not(:disabled) > :global(svg:first-child),
+  .item.open > :global(svg:first-child) {
+    color: var(--np-ink);
   }
-  /* Alliance offers stand out: green, framed, at the top. */
+  .item.danger,
+  .item.danger > :global(svg:first-child) {
+    color: var(--np-spot);
+  }
+  .item.danger:hover:not(:disabled),
+  .item.danger.open {
+    background: color-mix(in srgb, var(--np-spot) 8%, transparent);
+  }
+  /* Alliance offers stand out: the alliance's green, ruled, at the top. */
   .item.featured {
     margin: 2px 0;
-    padding: 9px 10px;
-    border: 1px solid color-mix(in srgb, var(--verdant) 70%, transparent);
-    background: color-mix(in srgb, var(--verdant) 14%, transparent);
-    color: var(--good-text);
+    padding: 8px 10px;
+    border: 1px solid var(--np-good);
+    background: color-mix(in srgb, var(--np-good) 7%, transparent);
+    color: var(--np-good);
     font-weight: 600;
   }
+  .item.featured > :global(svg:first-child) {
+    color: var(--np-good);
+  }
   .item.featured:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--verdant) 26%, transparent);
+    background: color-mix(in srgb, var(--np-good) 14%, transparent);
   }
   .sub {
     display: block;
+    font-family: var(--np-serif);
     font-weight: 400;
     font-size: 0.82em;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .item:disabled {
-    opacity: 0.4;
+    opacity: 0.42;
     cursor: not-allowed;
+  }
+  /* Nuclear ban: forbidden, printed in magenta (not greyed), the time left as its figure. */
+  .item.banned,
+  .item.banned:disabled {
+    opacity: 1;
+    color: var(--np-spot);
+    background: color-mix(in srgb, var(--np-spot) 7%, transparent);
+  }
+  .item.banned:disabled .lab {
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, var(--np-spot) 55%, transparent);
+  }
+  .item.banned .hint {
+    font-weight: 600;
+    color: var(--np-spot);
   }
   .lab {
     flex: 1;
     min-width: 0;
   }
   .hint {
-    color: var(--brass);
+    font-weight: 600;
+    color: var(--np-brass);
     font-size: 0.85em;
   }
   .sp {
@@ -657,13 +730,14 @@
   }
   .sep {
     height: 1px;
-    background: var(--line);
-    margin: 4px 6px;
+    background: var(--np-rule);
+    margin: 3px 6px;
   }
   .desc {
     margin: -2px 8px 6px 35px;
+    font-family: var(--np-serif);
     font-size: 0.78em;
-    color: var(--faint);
+    color: var(--np-ink-2);
     line-height: 1.35;
   }
 </style>

@@ -240,7 +240,7 @@
   .dock > :global(*) {
     pointer-events: auto;
   }
-  /* One compact row: the tally (folds the list), then the objectives side by side. */
+  /* One compact row of paper: the tally (folds the list), then the objectives side by side. */
   .obj {
     padding: 0;
     font-size: 0.84em;
@@ -256,9 +256,9 @@
     gap: 6px;
     padding: 6px 10px;
     border: 0;
-    border-right: 1px solid var(--line);
-    background: var(--panel-2);
-    color: var(--muted);
+    border-right: 1px solid var(--np-rule);
+    background: var(--np-paper-2);
+    color: var(--np-ink-2);
     font: inherit;
     cursor: var(--cursor-pointer, pointer);
   }
@@ -266,13 +266,14 @@
     border-right: 0;
   }
   .head:hover {
-    color: var(--parchment);
+    color: var(--np-ink);
   }
   .head .section-title {
     margin: 0;
   }
   .tally {
-    color: var(--parchment);
+    font-weight: 600;
+    color: var(--np-ink);
   }
   .obj ul {
     flex: 1;
@@ -290,6 +291,7 @@
     gap: 5px;
     min-width: 0;
     line-height: 1.3;
+    color: var(--np-ink);
   }
   .prog {
     display: flex;
@@ -301,65 +303,73 @@
     margin: 0;
   }
   .mark {
-    color: var(--muted);
+    color: var(--np-ink-2);
     padding-top: 1px;
   }
   li.bonus .mark {
-    color: var(--brass);
+    color: var(--np-brass);
   }
   li.done .mark,
   li.done .txt {
-    color: var(--verdant);
+    color: var(--np-good);
   }
+  li.done .txt {
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, var(--np-good) 45%, transparent);
+  }
+  /* Progress: a printed gauge filled in brass. */
   .meter {
-    height: 5px;
+    height: 4px;
     margin: 4px 0 2px;
-    background: var(--panel-3);
-    border-radius: 2px;
-    overflow: hidden;
+    background: var(--np-paper-2);
+    box-shadow: inset 0 0 0 1px var(--np-rule);
   }
   .meter div {
     height: 100%;
-    background: var(--brass);
+    background: var(--np-gold);
     transition: width 0.4s;
   }
   .val {
     font-size: 0.85em;
-    color: var(--faint);
+    color: var(--np-ink-2);
     white-space: nowrap;
   }
   .mini {
+    display: inline-grid;
+    place-items: center;
     background: none;
     border: 0;
-    color: var(--muted);
+    color: var(--np-ink-3);
     cursor: var(--cursor-pointer, pointer);
     padding: 2px;
   }
   .mini:hover {
-    color: var(--parchment);
+    color: var(--np-ink);
   }
+  /* The advisor's word: a card ruled in brass (in the sea's blue for a passing hint). */
   .guide {
     display: grid;
     grid-template-columns: auto 1fr auto;
     gap: 12px;
-    padding: 11px 14px;
+    padding: 10px 14px 11px;
     align-items: start;
-    border-left: 3px solid var(--brass);
+    border-left: 3px solid var(--np-gold);
   }
   .guide.hint {
-    border-left-color: var(--aurora);
+    border-left-color: var(--np-sea);
   }
   .avatar {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     display: grid;
     place-items: center;
-    background: var(--panel-3);
-    color: var(--brass);
+    border: 1.5px solid var(--np-brass);
+    color: var(--np-brass);
   }
   .guide.hint .avatar {
-    color: var(--aurora);
+    border-color: var(--np-sea);
+    color: var(--np-sea);
   }
   .who {
     display: flex;
@@ -368,28 +378,32 @@
   }
   .who b {
     font-family: var(--title);
-    color: var(--brass);
+    font-weight: 700;
+    color: var(--np-brass);
   }
   .step {
     font-size: 0.8em;
-    color: var(--faint);
+    color: var(--np-ink-3);
   }
   .guide p {
     margin: 4px 0 0;
+    font-family: var(--np-serif);
     line-height: 1.5;
+    color: var(--np-ink);
   }
-  .need {
+  .guide .need {
     display: flex;
     gap: 6px;
     align-items: center;
-    color: var(--brass);
+    font-family: var(--text);
+    color: var(--np-brass);
     font-weight: 600;
   }
   .meter.gold {
     margin: 6px 0 4px;
   }
-  .later {
-    color: var(--faint);
+  .guide .later {
+    color: var(--np-ink-2);
     font-size: 0.92em;
   }
   .side {

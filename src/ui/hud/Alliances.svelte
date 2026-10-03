@@ -22,7 +22,7 @@
 </script>
 
 {#if rows.length}
-  <section class="allies panel" data-testid="alliances" aria-label={t('alliances.title')}>
+  <section class="allies newsprint" data-testid="alliances" aria-label={t('alliances.title')}>
     <button class="head" onclick={() => (open = !open)} aria-expanded={open}>
       <Icon name="alliance" size={15} />
       <b>{t('alliances.title')}</b>
@@ -44,8 +44,8 @@
             >
             {#if renew}
               <button
-                class="btn small renewbtn"
-                class:primary={asked}
+                class="renewbtn"
+                class:asked
                 onclick={() => {
                   audio.ui('confirm');
                   s.cmd({ t: 'allyRequest', target: r.id });
@@ -64,9 +64,14 @@
 {/if}
 
 <style>
+  /* A card of the column: the alliance's green rule over it, each pact with its time draining. */
   .allies {
     width: 268px;
-    padding: 4px 0 6px;
+    padding: 2px 0 8px;
+    border: 1px solid var(--np-edge);
+    border-top: 3px solid var(--np-good);
+    border-radius: 1px;
+    box-shadow: var(--np-lift);
     font-size: 0.86em;
   }
   .head {
@@ -75,26 +80,33 @@
     align-items: center;
     gap: 7px;
     width: 100%;
-    padding: 5px 10px;
+    padding: 5px 10px 4px;
     border: 0;
     background: transparent;
-    color: var(--verdant);
+    color: var(--np-good);
     cursor: var(--cursor-pointer, pointer);
   }
   .head b {
-    color: var(--parchment);
-    font-weight: 600;
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 1.08em;
+    color: var(--np-ink);
+  }
+  .head:hover b {
+    text-decoration: underline;
+    text-decoration-color: var(--np-rule-2);
+    text-underline-offset: 3px;
   }
   .n {
     margin-right: auto;
-    color: var(--muted);
+    font-weight: 600;
+    color: var(--np-ink-3);
   }
   ul {
     list-style: none;
     margin: 0;
     padding: 0 10px;
     display: grid;
-    gap: 6px;
   }
   li {
     display: grid;
@@ -103,13 +115,16 @@
     column-gap: 7px;
     row-gap: 3px;
     align-items: center;
+    padding: 5px 0 6px;
+    border-top: 1px solid var(--np-rule);
   }
   img {
     grid-area: flag;
     width: 22px;
     height: 15px;
     object-fit: cover;
-    border: 1px solid #0007;
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
   }
   .name {
     grid-area: name;
@@ -117,7 +132,10 @@
     border: 0;
     padding: 0;
     background: transparent;
-    color: var(--parchment);
+    font-family: var(--title);
+    font-weight: 600;
+    font-size: 1.04em;
+    color: var(--np-ink);
     text-align: left;
     cursor: var(--cursor-pointer, pointer);
     overflow: hidden;
@@ -125,41 +143,72 @@
     white-space: nowrap;
   }
   .name:hover {
-    color: var(--verdant);
+    text-decoration: underline;
+    text-decoration-color: var(--np-rule-2);
+    text-underline-offset: 3px;
   }
   .time {
     grid-area: time;
-    color: var(--muted);
+    font-weight: 600;
+    color: var(--np-ink-2);
   }
+  /* The pact's time left: a printed bar in the alliance's green, brass once renewal opens. */
   .bar {
     grid-area: bar;
     height: 3px;
-    border-radius: 2px;
-    background: var(--panel-3);
-    overflow: hidden;
+    background: var(--np-paper-2);
+    box-shadow: inset 0 0 0 1px var(--np-rule);
   }
   .bar i {
     display: block;
     height: 100%;
-    background: var(--verdant);
+    background: var(--np-good);
     transition: width 0.5s linear;
   }
   li.renew .bar i {
-    background: var(--warn);
+    background: var(--np-gold);
   }
   li.renew .time {
-    color: var(--warn-text);
+    color: var(--np-warn);
   }
   .renewbtn {
     grid-area: act;
     justify-self: start;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border: 1px solid var(--np-good);
+    border-radius: 2px;
+    background: transparent;
+    font-family: var(--text);
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--np-good);
+    cursor: var(--cursor-pointer, pointer);
+  }
+  .renewbtn:hover,
+  .renewbtn:focus-visible {
+    background: color-mix(in srgb, var(--np-good) 9%, transparent);
+  }
+  /* They asked first: renewing is accepting (filled, as the offers' Accept). */
+  .renewbtn.asked {
+    background: var(--np-good);
+    color: #f8f4ec;
+  }
+  .renewbtn.asked:hover,
+  .renewbtn.asked:focus-visible {
+    background: #1f5a3c;
   }
   /* Short windows: a long list of allies scrolls instead of pushing the column down. */
   @media (max-height: 900px) {
     ul {
       max-height: 168px;
       overflow-y: auto;
+      overflow-x: hidden;
       scrollbar-width: thin;
+      scrollbar-color: var(--np-rule-2) transparent;
     }
   }
 </style>

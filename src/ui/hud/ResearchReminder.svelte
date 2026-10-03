@@ -30,7 +30,7 @@
 </script>
 
 {#if idle && L && !settings.game.autoResearch && !hud.panels.tech}
-  <button class="nudge glass" onclick={() => openPanel('tech')} data-testid="research-idle">
+  <button class="nudge newsprint" onclick={() => openPanel('tech')} data-testid="research-idle">
     <i class="pulse" aria-hidden="true"></i>
     <Icon name="tech" size={14} />
     <b>{t('tech.idle')}</b>
@@ -42,6 +42,7 @@
 {/if}
 
 <style>
+  /* A slip pinned over the build bar: research has stopped, choose what comes next. */
   .nudge {
     position: absolute;
     left: 50%;
@@ -50,46 +51,54 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 9px 4px 8px;
-    border: 1px solid color-mix(in srgb, var(--aurora) 45%, var(--line));
-    border-radius: 4px;
-    color: var(--parchment);
+    padding: 4px 10px 4px 9px;
+    border: 1px solid var(--np-edge);
+    border-left: 3px solid var(--np-sea);
+    border-radius: 1px;
+    box-shadow: var(--np-lift);
+    color: var(--np-ink);
     font-size: 0.8em;
     white-space: nowrap;
     cursor: pointer;
     animation: rise 0.25s ease-out;
   }
-  .nudge:hover {
-    border-color: var(--aurora);
+  .nudge:hover,
+  .nudge:focus-visible {
+    background: var(--np-card);
   }
   .nudge :global(svg) {
-    color: var(--aurora);
+    color: var(--np-sea);
   }
   b {
+    font-family: var(--title);
     font-weight: 600;
   }
   .bank {
-    color: var(--muted);
+    color: var(--np-ink-2);
     font-size: 0.92em;
   }
   .go {
     display: inline-flex;
     align-items: center;
     gap: 1px;
-    color: var(--aurora);
+    font-weight: 600;
+    color: var(--np-sea);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--np-sea) 40%, transparent);
+    text-underline-offset: 2px;
   }
   .pulse {
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: var(--aurora);
+    background: var(--np-sea);
     animation: pulse 1.6s ease-in-out infinite;
   }
   @keyframes pulse {
     0%,
     100% {
       opacity: 1;
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--aurora) 60%, transparent);
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--np-sea) 50%, transparent);
     }
     50% {
       opacity: 0.55;

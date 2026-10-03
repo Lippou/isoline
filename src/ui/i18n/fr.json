@@ -1145,6 +1145,17 @@
     "arcDownToast": "Missiles : arc vers le bas",
     "locked": "Nécessite la recherche : {tech}"
   },
+  "dispatch": {
+    "title": "Dépêches",
+    "show": "Voir sur la carte",
+    "dismiss": "Écarter cette dépêche"
+  },
+  "ban": {
+    "kicker": "Interdiction nucléaire",
+    "left": "encore {clock}",
+    "tip": "Le Conseil mondial interdit les armes nucléaires : aucun lancement pendant encore {clock}.",
+    "short": "Interdit · {clock}"
+  },
   "nuke": {
     "incoming": "Missile en approche",
     "senderShow": "Voir le silo qui a tiré",

@@ -1,0 +1,214 @@
+/*
+ * The in-game HUD printed on the Courier's paper (1.8.0). Every panel, card, bar and
+ * button over the map is a piece of the journal's newsprint, like the news flash and
+ * the windows: paper, ink rules, Fraunces heads, Plex figures; brass for gold and the
+ * main action, magenta for danger, war and the nuclear, a sounding green for alliances.
+ * A hairline of ink and a short shadow keep each piece readable over any colour of the
+ * map. `.np-hud` is set on the game screen; the newsprint inks come from global.css.
+ */
+.np-hud {
+  /* The ink HUD's tokens, remapped to the paper's inks (as the windows do). */
+  --parchment: var(--np-ink);
+  --muted: var(--np-ink-2);
+  --faint: var(--np-ink-3);
+  --line: var(--np-rule);
+  --line-strong: var(--np-rule-2);
+  --panel: var(--np-paper);
+  --panel-2: var(--np-paper-2);
+  --panel-3: #ddd4c3;
+  --glass: var(--np-paper);
+  --glass-strong: var(--np-card);
+  --input-bg: var(--np-card);
+  --select-bg: rgba(23, 42, 60, 0.09);
+  --aurora: var(--np-ink);
+  --brass: var(--np-brass);
+  --brass-hover: var(--np-brass-fill);
+  --on-brass: #fffdf6;
+  --signal: var(--np-spot);
+  --verdant: var(--np-good);
+  --warn: var(--np-warn);
+  --good-text: var(--np-good);
+  --bad-text: var(--np-spot);
+  --warn-text: var(--np-warn);
+  --cordial-text: #3f7d5c;
+  --tip-bg: var(--np-ink);
+  --shadow: var(--np-lift);
+  /* Pieces laid on the map. */
+  --np-brass: #80590f; /* gold as text and figures (raw brass is too light on paper) */
+  --np-brass-fill: #946919; /* the main action's fill, with paper text */
+  --np-edge: rgba(23, 42, 60, 0.42); /* the hairline around a piece */
+  --np-lift:
+    0 1px 0 rgba(255, 255, 255, 0.45) inset, 0 1px 2px rgba(3, 10, 16, 0.22), 0 6px 18px rgba(3, 10, 16, 0.3);
+}
+.np-hud :focus-visible {
+  outline-color: var(--np-ink);
+}
+
+/* A piece of paper on the map (the legacy class names "panel" and "glass"). */
+.np-hud .panel,
+.np-hud .glass {
+  background: var(--np-paper);
+  border: 1px solid var(--np-edge);
+  border-radius: 2px;
+  box-shadow: var(--np-lift);
+  color: var(--np-ink);
+}
+
+/* Heads of a piece's sections: the title face, small, in the second ink. */
+.np-hud .section-title {
+  font-family: var(--title);
+  font-weight: 600;
+  font-size: 0.88em;
+  font-variant-numeric: lining-nums;
+  color: var(--np-ink-2);
+}
+.np-hud .hint {
+  color: var(--np-ink-2);
+}
+
+/* Buttons printed on the paper (as .np-btn): a fine ink rule, nothing moves on hover. */
+.np-hud .btn {
+  border: 1px solid var(--np-ink-2);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--np-ink);
+  font-family: var(--text);
+}
+.np-hud .btn:hover,
+.np-hud .btn:focus-visible {
+  background: var(--np-paper-2);
+  border-color: var(--np-ink);
+}
+.np-hud .btn:active {
+  transform: none;
+}
+.np-hud .btn.primary {
+  background: var(--np-brass-fill);
+  border-color: var(--np-brass-fill);
+  color: #fffdf6;
+}
+.np-hud .btn.primary:hover,
+.np-hud .btn.primary:focus-visible {
+  background: #7d5810;
+  border-color: #7d5810;
+}
+.np-hud .btn.danger {
+  border-color: color-mix(in srgb, var(--np-spot) 55%, transparent);
+  background: transparent;
+  color: var(--np-spot);
+}
+.np-hud .btn.danger:hover,
+.np-hud .btn.danger:focus-visible {
+  border-color: var(--np-spot);
+  background: color-mix(in srgb, var(--np-spot) 8%, transparent);
+}
+.np-hud .btn.ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--np-ink-2);
+}
+.np-hud .btn.ghost:hover,
+.np-hud .btn.ghost:focus-visible {
+  border-color: var(--np-rule);
+  color: var(--np-ink);
+}
+/* Chosen: reversed, as the journal prints what is current. */
+.np-hud .btn.selected {
+  background: var(--np-ink);
+  border-color: var(--np-ink);
+  color: var(--np-paper);
+}
+.np-hud .btn:disabled {
+  opacity: 0.45;
+}
+
+/* Tags: a fine rule around a word or a figure. */
+.np-hud .chip {
+  gap: 4px;
+  padding: 1px 7px;
+  border: 1px solid var(--np-rule-2);
+  border-radius: 2px;
+  background: var(--np-card);
+  font-family: var(--text);
+  font-size: 0.78em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--np-ink-2);
+}
+.np-hud .chip.good {
+  color: var(--np-good);
+  border-color: color-mix(in srgb, var(--np-good) 50%, transparent);
+}
+.np-hud .chip.bad {
+  color: var(--np-spot);
+  border-color: color-mix(in srgb, var(--np-spot) 50%, transparent);
+}
+.np-hud .chip.warn {
+  color: var(--np-warn);
+  border-color: color-mix(in srgb, var(--np-warn) 50%, transparent);
+}
+
+/* Explanations on hover: a slip printed in navy, readable over paper and map alike. */
+.np-hud [data-tip]:hover::after {
+  background: var(--np-ink);
+  border-color: var(--np-ink);
+  border-radius: 2px;
+  color: var(--np-paper);
+  font-family: var(--text);
+  box-shadow: 0 4px 14px rgba(3, 10, 16, 0.32);
+}
+
+/* Fields and gauges on paper. */
+.np-hud input[type='range'],
+.np-hud input[type='checkbox'] {
+  accent-color: var(--np-ink);
+}
+.np-hud select {
+  border-radius: 2px;
+  border-color: var(--np-rule-2);
+  background: var(--np-card);
+  color: var(--np-ink);
+}
+.np-hud select:hover,
+.np-hud select:focus {
+  border-color: var(--np-ink);
+}
+.np-hud .scroll {
+  scrollbar-color: var(--np-rule-2) transparent;
+}
+
+/* A key of the keyboard, printed small in a fine box (shortcuts on buttons and tools). */
+.np-hud .np-kbd {
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0 3px;
+  border: 1px solid var(--np-rule-2);
+  border-radius: 2px;
+  font-family: var(--text);
+  font-size: 0.78em;
+  font-weight: 600;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  text-align: center;
+  color: var(--np-ink-2);
+}
+
+/* A printed gauge: a ruled track, filled with ink (or the piece's own colour). */
+.np-hud .np-gauge {
+  display: block;
+  height: 4px;
+  background: var(--np-paper-2);
+  box-shadow: inset 0 0 0 1px var(--np-rule);
+}
+.np-hud .np-gauge > i {
+  display: block;
+  height: 100%;
+  background: var(--np-ink);
+  transition: width 0.5s linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-hud .np-gauge > i {
+    transition: none;
+  }
+}
