@@ -152,14 +152,46 @@
     "noSavesTitle": "Aucune sauvegarde pour l'instant",
     "noSavesHint": "Pendant une partie, ouvrez le menu de pause (Échap) pour sauvegarder. En solo, une sauvegarde automatique est aussi faite toutes les deux minutes.",
     "resetWindows": "Replacer les fenêtres",
-    "windowsReset": "Fenêtres remises à leur place"
+    "windowsReset": "Fenêtres remises à leur place",
+    "held": "Partie suspendue",
+    "running": "La partie continue",
+    "d": {
+      "resume": "Retour à la carte",
+      "save": "Dix emplacements pour reprendre plus tard",
+      "settings": "Graphismes, son, contrôles, accessibilité",
+      "help": "Les gestes et toutes les touches",
+      "photo": "La carte sans l'interface, pour une image",
+      "resetWindows": "Les fenêtres reprennent leur place d'origine",
+      "quit": "Retour au menu principal"
+    },
+    "used": "{n} sur {of} utilisés",
+    "autoEvery": "Sauvegarde automatique toutes les deux minutes",
+    "colNo": "N°",
+    "colMap": "Carte",
+    "colSaved": "Enregistrée le",
+    "colAction": "Action",
+    "saveHere": "Sauvegarder ici",
+    "overwrite": "Remplacer"
   },
   "help": {
     "intro": "Isoline se joue sur un atlas vivant : étendez votre encre, bâtissez une économie, nouez des alliances et tenez le monde.",
     "click": "Clic gauche sur une terre voisine : attaque terrestre. Côte au-delà de l'eau : B ou clic droit → Débarquer.",
     "radial": "Clic droit : menu contextuel (construire, armes, navires, diplomatie). Alt + clic : emojis.",
     "drag": "Glisser (gauche ou bouton du milieu) : déplacer la carte. Maj + glisser : sélectionner des navires de guerre.",
-    "wheel": "Molette / pincement : zoom. Maj + molette : ratio d'attaque."
+    "wheel": "Molette / pincement : zoom. Maj + molette : ratio d'attaque.",
+    "dateline": "Aide-mémoire des commandes",
+    "rebind": "Touches modifiables dans Paramètres › Contrôles",
+    "group": {
+      "mouse": "À la souris",
+      "attack": "Attaque",
+      "build": "Construire",
+      "nukes": "Nucléaire",
+      "command": "Commandement",
+      "diplomacy": "Diplomatie",
+      "views": "Vues de la carte",
+      "time": "Temps",
+      "capture": "Images et mesures"
+    }
   },
   "hud": {
     "chooseSpawn": "Choisissez votre point de départ",
@@ -397,7 +429,11 @@
     "nukeBan.name": "Interdiction nucléaire",
     "nukeBan.desc": "Aucun lancement nucléaire pendant 3 minutes.",
     "ceasefire.name": "Cessez-le-feu",
-    "ceasefire.desc": "Aucune nouvelle attaque entre joueurs pendant 60 secondes."
+    "ceasefire.desc": "Aucune nouvelle attaque entre joueurs pendant 60 secondes.",
+    "kicker": "Vote en cours",
+    "cast": "Votre voix : {motion}",
+    "notCast": "Vous n'avez pas voté",
+    "motions": "Motions soumises au vote"
   },
   "tech": {
     "intro": "Aucune recherche en cours : cliquez sur une technologie, ses prérequis manquants passent d'abord.",
@@ -1480,7 +1516,8 @@
     "locked": "Verrouillée",
     "hint": "Conseil",
     "need": "Il vous faut {gold} d'or (encore {time})",
-    "needGold": "Il vous faut {gold} d'or"
+    "needGold": "Il vous faut {gold} d'or",
+    "missionOf": "Mission {n} sur {total}"
   },
   "achievement": {
     "unlocked": "Succès débloqué",
