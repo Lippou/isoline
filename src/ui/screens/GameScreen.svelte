@@ -32,6 +32,7 @@
   import CapitalCard from '../hud/CapitalCard.svelte';
   import Perf from '../hud/Perf.svelte';
   import PhotoBar from '../hud/PhotoBar.svelte';
+  import InvasionFlash from '../hud/InvasionFlash.svelte';
   import Icon from '../icons/Icon.svelte';
 
   let host: HTMLDivElement;
@@ -101,6 +102,8 @@
     </div>
   {/if}
   {#if ctl && hud.ready}
+    <!-- Under the panels' cards and windows, over the map and the HUD's edges. -->
+    {#if !hud.photo}<InvasionFlash />{/if}
     <TopBar {ctl} />
     {#if !hud.spectating && hud.replay === null}
       <ResourcePanel {ctl} />

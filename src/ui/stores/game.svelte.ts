@@ -116,6 +116,11 @@ export const hud = $state({
   toasts: [] as Toast[],
   log: [] as LogEntry[],
   nukeAlerts: [] as NukeAlert[],
+  /**
+   * Last wave of troops sent at us (InvasionFlash.svelte): `n` restarts the flash; `ex`, `ey`
+   * place the glow on the screen edge facing the attack (fractions of the screen).
+   */
+  invasion: null as null | { n: number; ex: number; ey: number; strength: number },
   panels: {
     diplomacy: false,
     tech: false,
@@ -245,6 +250,7 @@ export function resetHud(): void {
   hud.breaking = null;
   hud.journalSeen = 0;
   hud.nukeAlerts = [];
+  hud.invasion = null;
   hud.radial = null;
   hud.hover = null;
   hud.selection = [];

@@ -449,6 +449,14 @@ export function launchAttack(
     return null;
   }
   if (fresh) game.attacks.push(a);
+  if (targetId > 0)
+    game.emit({
+      k: 'attackWave',
+      attacker: attackerId,
+      target: targetId,
+      troops: Math.round(troops),
+      tile: landing ?? a.heapTiles[0] ?? -1,
+    });
   return a;
 }
 

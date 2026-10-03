@@ -116,6 +116,27 @@ describe('diplomacy', () => {
     expect(a.hasEmbargoWith(b, g.tick)).toBe(false);
   });
 
+  it('each wave sent at a country is announced to it (screen-edge flash), reinforcements included', () => {
+    const g = testGame(asciiMap(FIELD, 6), 2);
+    startWith(g, [
+      [25, 20],
+      [45, 20],
+    ]);
+    for (let y = 6; y < 36; y++) for (let x = 6; x < 80; x++) g.setOwner(g.map.idx(x, y), x < 41 ? 1 : 2);
+    g.players[1]!.troops = 200_000;
+    const waves = () => g.events.filter((e) => e.k === 'attackWave');
+    g.step([cmd(1, { t: 'attack', tile: g.map.idx(45, 20), ratio: 0.2 })]);
+    const [w1] = waves();
+    expect(w1).toMatchObject({ attacker: 1, target: 2 });
+    expect(w1!.k === 'attackWave' && w1!.troops).toBeGreaterThan(30_000);
+    expect(w1!.k === 'attackWave' && g.map.x(w1!.tile)).toBeGreaterThanOrEqual(40); // on the front
+    g.step([]);
+    expect(waves()).toHaveLength(0);
+    // A second wave joins the attack under way: announced again.
+    g.step([cmd(1, { t: 'attack', tile: g.map.idx(45, 20), ratio: 0.2 })]);
+    expect(waves()).toHaveLength(1);
+  });
+
   it('validates command shapes', () => {
     expect(isWellFormed({ t: 'attack', tile: 3, ratio: 0.5 })).toBe(true);
     expect(isWellFormed({ t: 'attack', tile: 3, ratio: 2 })).toBe(false);

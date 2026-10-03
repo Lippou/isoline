@@ -441,6 +441,35 @@ export class GameController {
       this.renderer.camera.goTo(me.label[0], me.label[1], Math.max(this.renderer.camera.zoom, 2.5));
   }
 
+  private lastWave = -Infinity;
+
+  /**
+   * A wave of troops was sent at us: the screen's edges flash red (InvasionFlash.svelte),
+   * brightest on the side facing the attack, stronger for a bigger wave. Waves closer than
+   * 2 s apart (a landing and a land push together) make one flash.
+   */
+  private invasionFlash(troops: number, tile: number): void {
+    const now = performance.now();
+    if (hud.photo || hud.end || now - this.lastWave < 2000) return;
+    this.lastWave = now;
+    const me = this.session.state.players.get(this.session.viewer);
+    const strength = Math.max(0.8, Math.min(1, 0.7 + troops / Math.max(1, me?.troops ?? 1)));
+    // Direction from the screen's centre to the attack, carried out to the screen's edge.
+    let ex = 0.5;
+    let ey = 0;
+    const cam = this.renderer.camera;
+    if (tile >= 0 && cam.viewW > 1) {
+      const w = this.session.state.width;
+      const [sx, sy] = cam.worldToScreen((tile % w) + 0.5, ((tile / w) | 0) + 0.5);
+      const dx = sx / cam.viewW - 0.5;
+      const dy = sy / cam.viewH - 0.5;
+      const k = 0.5 / Math.max(Math.abs(dx), Math.abs(dy), 1e-6);
+      ex = 0.5 + dx * k;
+      ey = 0.5 + dy * k;
+    }
+    hud.invasion = { n: (hud.invasion?.n ?? 0) + 1, ex, ey, strength };
+  }
+
   /** Country lit up on the map while the pointer rests on a panel about it (−1: none). */
   spotlight = -1;
 
@@ -873,6 +902,9 @@ export class GameController {
         } else if (e.owner === me || this.onScreen(e.x, e.y)) audio.sfx('blast', 0.5);
         break;
       // Battles elsewhere stay silent: only what concerns us or what we are looking at.
+      case 'attackWave':
+        if (e.target === me) this.invasionFlash(e.troops, e.tile);
+        break;
       case 'intercept':
         if (e.owner === me || this.onScreen(e.x, e.y)) audio.sfx('intercept', 0.8);
         break;
