@@ -10,15 +10,7 @@ import { inkNum, inkRgb, type ColorVision, UI } from './colors';
 import type { ClientState } from '../engine/clientState';
 import { UNIT_STRIDE, type BuildingView } from '../engine/protocol';
 import { U } from '../core/units/unit';
-import {
-  B,
-  DEFENSE_POST_RANGE,
-  N,
-  NUKE_FALLOUT_RADIUS,
-  NUKE_RADIUS,
-  NUKE_TARGETABLE_RANGE,
-  RADAR_RANGE,
-} from '../core/game/constants';
+import { B, N, NUKE_FALLOUT_RADIUS, NUKE_RADIUS, NUKE_TARGETABLE_RANGE } from '../core/game/constants';
 import { Trajectory } from '../core/units/trajectory';
 import type { GameEvent } from '../core/game/events';
 import { dayPhase } from '../core/rules/features';
@@ -53,7 +45,8 @@ export interface RenderSettings {
 export interface Overlay {
   hoverTile: number;
   ghost: { kind: number; tile: number; ok: boolean } | null;
-  ranges: { x: number; y: number; r: number; color: number }[];
+  /** Radii of action; `strong`: the one of a building being placed (bolder). */
+  ranges: { x: number; y: number; r: number; color: number; strong?: boolean }[];
   boatPath: number[] | null;
   /** Missile launch preview: path from the silo that would fire, predicted interception, blast. */
   nukePreview: NukePreview | null;
@@ -578,6 +571,13 @@ export class GameRenderer {
     }
   }
 
+  /** Build-bar filter: only the viewer's own buildings of the filtered types light up (a way to find them). */
+  private pickedByFilter(b: BuildingView): boolean {
+    const filter = this.overlay.buildingFilter;
+    const viewer = this.state.viewer;
+    return !!filter && filter.includes(b.type) && (viewer <= 0 || b.owner === viewer);
+  }
+
   /**
    * Map badges never pile up: each frame (when the view changed) the candidates in view are
    * ranked — the viewer's own first, then cities, silos, ports… — and a badge is drawn only
@@ -597,7 +597,7 @@ export class GameRenderer {
       const b = (c as Container & { info?: BuildingView }).info!;
       if (b.x < x0 - m || b.x > x1 + m || b.y < y0 - m || b.y > y1 + m) continue;
       if (!this.revealed(b.owner, b.x, b.y)) continue;
-      const picked = !!filter && filter.includes(b.type);
+      const picked = this.pickedByFilter(b);
       if (!picked && z < MINOR_BADGE_ZOOM && !majorBuilding(b.type)) continue;
       if (!picked && z < DEFENSE_BADGE_ZOOM && b.type === B.DefensePost) continue;
       cands.push({
@@ -670,7 +670,7 @@ export class GameRenderer {
       const b = (c as Container & { info?: BuildingView }).info!;
       const inView = b.x >= x0 - 2 && b.x <= x1 + 2 && b.y >= y0 - 2 && b.y <= y1 + 2;
       const filter = this.overlay.buildingFilter;
-      const picked = !!filter && filter.includes(b.type);
+      const picked = this.pickedByFilter(b);
       c.visible = inView && this.badgeShown.has(b.id);
       // Filter: matching buildings stand out (bigger, pulsing halo), the others fade.
       c.alpha = filter && !picked ? 0.18 : 1;
@@ -1169,8 +1169,8 @@ export class GameRenderer {
     }
     for (const r of ov.ranges)
       g.circle(r.x, r.y, r.r)
-        .fill({ color: r.color, alpha: 0.06 })
-        .stroke({ width: lw(1.5), color: r.color, alpha: 0.6 });
+        .fill({ color: r.color, alpha: r.strong ? 0.12 : 0.06 })
+        .stroke({ width: lw(r.strong ? 2.5 : 1.5), color: r.color, alpha: r.strong ? 0.95 : 0.6 });
     if (ov.capitalGhost) this.capitals.drawGhost(g, ov.capitalGhost, z);
     if (ov.ghost) {
       const x = (ov.ghost.tile % w) + 0.5;
@@ -1180,15 +1180,6 @@ export class GameRenderer {
       g.circle(x, y, rad)
         .fill({ color, alpha: 0.25 })
         .stroke({ width: lw(2), color });
-      const range =
-        ov.ghost.kind === B.DefensePost
-          ? DEFENSE_POST_RANGE
-          : ov.ghost.kind === B.Sam
-            ? this.state.samReach(this.state.viewer, 1)
-            : ov.ghost.kind === B.Radar
-              ? RADAR_RANGE
-              : 0;
-      if (range) g.circle(x, y, range).stroke({ width: lw(1.5), color, alpha: 0.5 });
     }
     if (ov.boatPath && ov.boatPath.length > 1) {
       const p = ov.boatPath;

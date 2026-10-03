@@ -30,6 +30,7 @@ import { startTakeover } from '../screens/launch';
 import { worthPrinting } from '../hud/frontPage';
 import { newAwards } from '../hud/results';
 import { IS_LAND } from '../../core/map/terrain';
+import { UI } from '../../render/colors';
 import type { MissionResult } from './missionResult';
 
 const PLAYER_PARAMS = new Set(['player', 'by', 'from', 'with', 'traitor', 'victim', 'target']);
@@ -748,15 +749,18 @@ export class GameController {
       const r = rangeOf(b.type, b.level, hud.hover.owner);
       if (r > 0) ov.ranges.push({ x: hud.hover.x + 0.5, y: hud.hover.y + 0.5, r, color: colorOf(b.type) });
     }
-    if (hover >= 0 && tool.k === 'build' && tool.kind === B.Port) {
-      // (SAM, radar and defence-post ghosts draw their own ring.)
+    if (hover >= 0 && tool.k === 'build') {
+      // Placing a building: its radius of action around the cursor, bold (red where it can't go).
       const w = this.session.state.width;
-      ov.ranges.push({
-        x: (hover % w) + 0.5,
-        y: Math.floor(hover / w) + 0.5,
-        r: portRange(1),
-        color: colorOf(B.Port),
-      });
+      const r = rangeOf(tool.kind, 1, this.session.viewer);
+      if (r > 0)
+        ov.ranges.push({
+          x: (hover % w) + 0.5,
+          y: Math.floor(hover / w) + 0.5,
+          r,
+          color: ov.ghost?.ok === false ? UI.signal : colorOf(tool.kind),
+          strong: true,
+        });
     }
     // Reach of our own buildings of the filtered types (SAMs: the coverage view above).
     if (filter) {
