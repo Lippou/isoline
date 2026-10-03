@@ -32,6 +32,7 @@ import { newAwards } from '../hud/results';
 import { IS_LAND } from '../../core/map/terrain';
 import { UI } from '../../render/colors';
 import type { MissionResult } from './missionResult';
+import { WORLD_EVENT_TICKS, type WorldEventId } from '../../core/rules/features';
 
 const PLAYER_PARAMS = new Set(['player', 'by', 'from', 'with', 'traitor', 'victim', 'target']);
 
@@ -51,6 +52,8 @@ export class GameController {
   replayFile: ReplayFile | null = null;
   private lastIntensity = 0;
   private disposed = false;
+  /** QA (?automation): a world event printed without waiting for the draw. */
+  private qaEvent: { id: string; until: number } | null = null;
 
   constructor(private readonly req: LaunchRequest) {}
 
@@ -224,6 +227,13 @@ export class GameController {
             ...hud.nukeAlerts,
             { id: -hud.nukeAlerts.length - 1, by, kind, impact: hud.tick + secs * 10, tx, ty, sx, sy },
           ];
+        },
+        /** QA: print a world event (the Flash info card, the journal's article) right away. */
+        worldEvent: (id: string) => {
+          this.qaEvent = { id, until: hud.tick + (WORLD_EVENT_TICKS[id as WorldEventId] ?? 1200) };
+          const key = `worldEvent.${id}`;
+          const level = id === 'boom' ? 'good' : 'warn';
+          hud.log = [...hud.log, { tick: hud.tick, text: t(key), level, key, params: {} }];
         },
         /** QA: show the dispatch of a fall while the game goes on (LAN only in play). */
         fallNotice: (by = 0) => (hud.fallen = { tick: hud.tick, by, cause: 'conquered' }),
@@ -582,7 +592,7 @@ export class GameController {
     hud.tick = tick;
     hud.phase = st.phase;
     hud.local = st.local;
-    if (st.world) hud.world = st.world;
+    if (st.world) hud.world = this.qaEvent ? { ...st.world, event: this.qaEvent } : st.world;
     hud.players = st.playerList;
     hud.tickMs = st.tickMs;
     if (st.local && tick % 50 === 0) {

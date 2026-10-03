@@ -2294,5 +2294,24 @@
       "freeze": "Figer le monde pendant la prise de vue (solo et replays)",
       "shot": "Enregistre l'image en PNG ({key})"
     }
+  },
+  "pressPhoto": {
+    "credit": "Photo : {author} / Wikimedia Commons, {licence}",
+    "publicDomain": "domaine public",
+    "open": "Lire l'article dans le journal",
+    "caption": {
+      "crisis": "À la Bourse, les tableaux des cours virent au rouge.",
+      "pandemic": "Un gymnase transformé en hôpital de campagne pour accueillir les malades.",
+      "boom": "Les portiques ne s'arrêtent plus : les cargos se succèdent à quai.",
+      "solarStorm": "Une aurore boréale au-dessus d'une batterie antiaérienne : les radars ne voient plus rien.",
+      "peaceSummit": "La salle du Conseil attend les délégations du sommet."
+    },
+    "alt": {
+      "crisis": "Tableau électronique des cours de la Bourse, couvert de chiffres en rouge",
+      "pandemic": "Rangées de lits de camp installés par des soldats dans un gymnase",
+      "boom": "Portiques à conteneurs chargeant un cargo à quai",
+      "solarStorm": "Aurore boréale au-dessus d'un lanceur de missiles antiaériens dans la neige",
+      "peaceSummit": "Salle vide du Conseil de sécurité des Nations unies et sa table en fer à cheval"
+    }
   }
 }

@@ -2294,5 +2294,24 @@
       "freeze": "Hold the world still while you frame the shot (solo and replays)",
       "shot": "Saves the picture as PNG ({key})"
     }
+  },
+  "pressPhoto": {
+    "credit": "Photo: {author} / Wikimedia Commons, {licence}",
+    "publicDomain": "public domain",
+    "open": "Read the article in the journal",
+    "caption": {
+      "crisis": "At the stock exchange, the price boards turn red.",
+      "pandemic": "A sports hall turned into a field hospital to take in the sick.",
+      "boom": "The cranes never stop: cargo ships follow one another at the quay.",
+      "solarStorm": "Northern lights over an air-defence battery: the radars can no longer see.",
+      "peaceSummit": "The Council chamber awaits the summit's delegations."
+    },
+    "alt": {
+      "crisis": "Electronic stock exchange board covered in red figures",
+      "pandemic": "Rows of camp beds set up by soldiers in a sports hall",
+      "boom": "Container cranes loading a cargo ship at the quay",
+      "solarStorm": "Northern lights over an air-defence missile launcher in the snow",
+      "peaceSummit": "The empty United Nations Security Council chamber and its horseshoe table"
+    }
   }
 }

@@ -1,11 +1,13 @@
 <script lang="ts">
   // News flash: the world event under way, in plain words with its figures, the time
   // left (a draining bar) and when it began; then the World Council's decisions in force.
-  import { hud } from '../stores/game.svelte';
+  import { hud, openPanel } from '../stores/game.svelte';
   import { columnPlace } from '../stores/windows.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
   import { flagUrl } from '../../render/flags';
   import Icon from '../icons/Icon.svelte';
+  import PressPhoto from './PressPhoto.svelte';
+  import { hasPressPhoto } from './pressPhotos';
   import type { IconName } from '../icons/icons';
   import type { GameController } from '../game/controller';
   import { WORLD_EVENT_TICKS, type WorldEventId } from '../../core/rules/features';
@@ -111,6 +113,16 @@
       {#if ev}
         <article class="story">
           <h3>{t(`worldEvent.${ev.id}.title`)}</h3>
+          <!-- The press photo: a strip of it here, the whole picture in the journal. -->
+          {#if hasPressPhoto(ev.id)}
+            <PressPhoto
+              id={ev.id}
+              size="banner"
+              caption={false}
+              onopen={() => openPanel('log')}
+              openLabel={t('pressPhoto.open')}
+            />
+          {/if}
           <p class="fx"><Icon name={ICON[ev.id] ?? 'event'} size={15} />{t(`worldEvent.${ev.id}.fx`)}</p>
           <p class="desc">{t(`worldEvent.${ev.id}.desc`)}</p>
           <p class="when">
@@ -220,6 +232,9 @@
   }
   .story {
     padding-top: 8px;
+  }
+  .story :global(.press) {
+    margin-top: 7px;
   }
   h3 {
     font-family: var(--title);

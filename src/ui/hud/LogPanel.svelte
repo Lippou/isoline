@@ -5,6 +5,7 @@
   import { clock, t, i18n } from '../i18n/i18n.svelte';
   import { flagUrl } from '../../render/flags';
   import Icon from '../icons/Icon.svelte';
+  import PressPhoto from './PressPhoto.svelte';
   import type { GameController } from '../game/controller';
   import { inPaper, minuteLabel, storyOf, type Story } from './news';
 
@@ -104,6 +105,7 @@
             <div class="copy">
               <h4>{s.title}</h4>
               {#if s.deck}<p class="deck">{s.deck}</p>{/if}
+              {#if s.photo}<PressPhoto id={s.photo} size={lead ? 'full' : 'banner'} />{/if}
               <p class="meta">
                 <time>{when(s.entry)}</time>
                 {#if s.entry.tile !== undefined}
@@ -337,6 +339,9 @@
     font-size: 1em;
     line-height: 1.38;
     color: var(--np-ink);
+  }
+  .copy :global(.press) {
+    margin-top: 8px;
   }
   .meta {
     display: flex;

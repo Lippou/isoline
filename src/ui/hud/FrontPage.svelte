@@ -9,6 +9,8 @@
   import EmpireMaps from './EmpireMaps.svelte';
   import ShareChart from './ShareChart.svelte';
   import Masthead from './Masthead.svelte';
+  import PressPhoto from './PressPhoto.svelte';
+  import { hasPressPhoto } from './pressPhotos';
   import { hud, openPaper } from '../stores/game.svelte';
   import { t, i18n } from '../i18n/i18n.svelte';
   import { settings } from '../stores/settings.svelte';
@@ -272,6 +274,9 @@
                 {#if pictured}<img src={flagUrl(pictured, 32)} alt="" />{/if}{say(p.title)}
               </h4>
               <p class="deck">{say(p.deck)}</p>
+              {#if p.photo && hasPressPhoto(p.photo)}
+                <PressPhoto id={p.photo} size="banner" caption={false} />
+              {/if}
               {#if canWatch}
                 <button
                   class="go"
@@ -600,6 +605,9 @@
     object-fit: cover;
     border: 1px solid rgba(23, 42, 60, 0.35);
     mix-blend-mode: multiply;
+  }
+  .points :global(.press) {
+    margin-top: 6px;
   }
   .points .deck {
     margin: 3px 0 0;
