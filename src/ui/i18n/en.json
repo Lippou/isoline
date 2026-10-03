@@ -1085,6 +1085,8 @@
     "locked": "Requires research: {tech}"
   },
   "nuke": {
+    "incoming": "Incoming missile",
+    "senderShow": "Show the silo that fired",
     "nukeA": {
       "name": "A-bomb",
       "desc": "750,000 gold. Razes everything within 12 tiles and half the land up to 30. Interceptable near its silo and its target.",
@@ -1755,7 +1757,7 @@
   "hover": {
     "border": "Shares a border with you",
     "noBorder": "No shared border with you",
-    "upgrading": "→ level {next} under construction · {pct}%",
+    "upgrading": "→ lv. {next} · {pct}%",
     "ally": "Your ally",
     "war": "At war with you",
     "levels": "{n} levels in total",

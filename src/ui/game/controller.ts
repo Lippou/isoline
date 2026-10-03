@@ -29,6 +29,7 @@ import { tick as uiTick } from 'svelte';
 import { startTakeover } from '../screens/launch';
 import { worthPrinting } from '../hud/frontPage';
 import { newAwards } from '../hud/results';
+import { IS_LAND } from '../../core/map/terrain';
 import type { MissionResult } from './missionResult';
 
 const PLAYER_PARAMS = new Set(['player', 'by', 'from', 'with', 'traitor', 'victim', 'target']);
@@ -214,6 +215,15 @@ export class GameController {
           return out;
         },
         hud: () => ({ tick: hud.tick, end: !!hud.end, paper: hud.paper, page: hud.paperPage }),
+        /** QA: a nuke from `by`'s silo at (sx, sy) heading for our land (alert, sender medallion). */
+        nukeAlert: (by: number, sx: number, sy: number, kind = 1, secs = 20) => {
+          const me = this.session.state.players.get(this.session.viewer);
+          const [tx, ty] = me ? [me.label[0], me.label[1]] : [0, 0];
+          hud.nukeAlerts = [
+            ...hud.nukeAlerts,
+            { id: -hud.nukeAlerts.length - 1, by, kind, impact: hud.tick + secs * 10, tx, ty, sx, sy },
+          ];
+        },
         /** QA: show the dispatch of a fall while the game goes on (LAN only in play). */
         fallNotice: (by = 0) => (hud.fallen = { tick: hud.tick, by, cause: 'conquered' }),
         /** QA: end the game as a campaign mission would. */
@@ -650,13 +660,24 @@ export class GameController {
         ? { tile: hover, ok: clientSpotError(this.session.state, this.session.viewer, hover) === 'ok' }
         : null;
     // SAM coverage while aiming a missile or placing a silo / SAM.
-    // Map cursor: surveyor's reticle, brass to build or send units, magenta to aim a missile.
+    // Map cursor: a pointing hand, a sword over an enemy country (a click attacks it), the
+    // surveyor's reticle in brass to build or send units, in magenta to aim a missile.
+    const st = this.session.state;
+    const enemy =
+      tool.k === 'none' &&
+      st.phase === 'playing' &&
+      hover >= 0 &&
+      IS_LAND[st.terrain[hover]!] === 1 &&
+      st.owner[hover]! > 0 &&
+      this.renderer.relation(st.owner[hover]!) === 'foe';
     const cur =
       tool.k === 'nuke'
         ? 'var(--cursor-aim)'
-        : tool.k === 'none' || tool.k === 'shipMove'
-          ? 'var(--cursor-map)'
-          : 'var(--cursor-build)';
+        : enemy
+          ? 'var(--cursor-attack)'
+          : tool.k === 'none' || tool.k === 'shipMove'
+            ? 'var(--cursor-map)'
+            : 'var(--cursor-build)';
     const canvas = this.renderer.app.canvas;
     if (canvas.style.cursor !== cur) canvas.style.cursor = cur;
     // Build-bar filter: the hovered button (or the active tool) lights up the matching buildings.
@@ -881,7 +902,7 @@ export class GameController {
         if (targeted) {
           hud.nukeAlerts = [
             ...hud.nukeAlerts,
-            { id: e.id, by: e.owner, kind: e.kind, impact: e.impact, tx: e.tx, ty: e.ty },
+            { id: e.id, by: e.owner, kind: e.kind, impact: e.impact, tx: e.tx, ty: e.ty, sx: e.sx, sy: e.sy },
           ];
           if (performance.now() - this.lastSiren > 4000) {
             this.lastSiren = performance.now();

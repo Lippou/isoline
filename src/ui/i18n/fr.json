@@ -1085,6 +1085,8 @@
     "locked": "Nécessite la recherche : {tech}"
   },
   "nuke": {
+    "incoming": "Missile en approche",
+    "senderShow": "Voir le silo qui a tiré",
     "nukeA": {
       "name": "Bombe A",
       "desc": "750 000 or. Rase tout sur 12 tuiles et la moitié des terres jusqu'à 30. Interceptable près du silo et de la cible.",
@@ -1755,7 +1757,7 @@
   "hover": {
     "border": "Frontière commune avec vous",
     "noBorder": "Aucune frontière commune avec vous",
-    "upgrading": "→ niveau {next} en construction · {pct} %",
+    "upgrading": "→ niv. {next} · {pct} %",
     "ally": "Votre allié",
     "war": "En guerre contre vous",
     "levels": "{n} niveaux au total",

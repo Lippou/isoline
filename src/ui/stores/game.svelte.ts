@@ -68,6 +68,9 @@ export interface NukeAlert {
   impact: number;
   tx: number;
   ty: number;
+  /** Launch site (the silo), for NukeSender.svelte's marker on the screen's edge. */
+  sx: number;
+  sy: number;
 }
 
 export const hud = $state({
