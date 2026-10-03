@@ -33,7 +33,7 @@
     --c: var(--warn-text);
   }
   .cordial {
-    --c: #b8dccb;
+    --c: var(--cordial-text, #b8dccb);
   }
   .friendly {
     --c: var(--good-text);

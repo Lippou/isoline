@@ -276,7 +276,12 @@
     "placeholder": "Écrire un message…",
     "mute": "Cliquer pour masquer ce joueur",
     "muted": "{n} joueur(s) masqué(s)",
-    "send": "Envoyer"
+    "send": "Envoyer",
+    "countOne": "1 message",
+    "count": "{n} messages",
+    "empty": "Aucun message pour l'instant.",
+    "quick": "Messages rapides",
+    "to": "Envoyer à"
   },
   "quick": {
     "0": "Bonjour !",
@@ -364,7 +369,20 @@
     "search": "Rechercher un pays…",
     "showAllN": "Afficher les {n} pays",
     "showLess": "Afficher moins",
-    "proposed": "Proposée…"
+    "proposed": "Proposée…",
+    "alliesNone": "Aucun allié",
+    "alliesOne": "1 allié",
+    "alliesMany": "{n} alliés",
+    "atWar": "{n} en guerre",
+    "atPeace": "En paix",
+    "countriesOne": "1 pays",
+    "countries": "{n} pays",
+    "sectionAllies": "Alliés",
+    "sectionWar": "En guerre",
+    "sectionOthers": "Autres pays",
+    "sectionAll": "Tous les pays",
+    "noMatch": "Aucun pays ne correspond.",
+    "rules": "Règles des alliances"
   },
   "council": {
     "title": "Conseil mondial",

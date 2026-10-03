@@ -102,3 +102,166 @@
   font-weight: 500;
   color: var(--np-ink);
 }
+
+/*
+ * Windows printed on the paper (technologies, diplomacy, messages), the journal's
+ * siblings. The ink HUD's tokens are remapped to the newsprint inks, so the shared
+ * pieces they still use (the opinion gauge, tooltips' rules) print in the same inks.
+ */
+.newsprint.np-window {
+  --parchment: var(--np-ink);
+  --muted: var(--np-ink-2);
+  --faint: var(--np-ink-3);
+  --line: var(--np-rule);
+  --line-strong: var(--np-rule-2);
+  --panel-2: var(--np-paper-2);
+  --panel-3: #ddd4c3;
+  --input-bg: var(--np-card);
+  --select-bg: rgba(23, 42, 60, 0.08);
+  --aurora: var(--np-ink);
+  --brass: var(--np-warn);
+  --signal: var(--np-spot);
+  --verdant: var(--np-good);
+  --warn: var(--np-warn);
+  --good-text: var(--np-good);
+  --bad-text: var(--np-spot);
+  --warn-text: var(--np-warn);
+  --cordial-text: #3f7d5c;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  font-family: var(--text);
+}
+/* The window's column of copy, under the masthead. */
+.newsprint .np-body {
+  min-height: 0;
+  padding: 2px 18px 16px;
+  scrollbar-color: var(--np-rule) transparent;
+}
+
+/* Section heads inside a window: the journal's minute marks (a title on a rule). */
+.newsprint .np-mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 4px;
+  font-family: var(--title);
+  font-weight: 600;
+  font-size: 0.86em;
+  font-variant-numeric: lining-nums;
+  color: var(--np-ink-2);
+}
+.newsprint .np-mark::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--np-rule);
+}
+.newsprint .np-mark .n {
+  font-family: var(--text);
+  font-weight: 500;
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
+  color: var(--np-ink-3);
+}
+.newsprint .np-mark.spot {
+  color: var(--np-spot);
+}
+.newsprint .np-mark.good {
+  color: var(--np-good);
+}
+
+/* Small buttons, text links and tags printed on the paper. */
+.newsprint .np-btn.small {
+  gap: 5px;
+  padding: 3px 8px;
+  font-size: 0.8em;
+}
+.newsprint .np-btn.spot {
+  border-color: color-mix(in srgb, var(--np-spot) 55%, transparent);
+  color: var(--np-spot);
+}
+.newsprint .np-btn.spot:hover,
+.newsprint .np-btn.spot:focus-visible {
+  border-color: var(--np-spot);
+  background: color-mix(in srgb, var(--np-spot) 8%, transparent);
+}
+.newsprint .np-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.newsprint .np-link {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--np-ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--np-rule);
+  text-underline-offset: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.newsprint .np-link:hover,
+.newsprint .np-link:focus-visible {
+  color: var(--np-ink);
+  text-decoration-color: currentColor;
+}
+.newsprint .np-link.spot {
+  color: var(--np-spot);
+}
+.newsprint .np-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  min-height: 19px;
+  border: 1px solid var(--np-rule);
+  border-radius: 2px;
+  font-family: var(--text);
+  font-size: 0.76em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--np-ink-2);
+  white-space: nowrap;
+}
+.newsprint .np-tag.good {
+  color: var(--np-good);
+  border-color: color-mix(in srgb, var(--np-good) 45%, transparent);
+}
+.newsprint .np-tag.spot {
+  color: var(--np-spot);
+  border-color: color-mix(in srgb, var(--np-spot) 45%, transparent);
+}
+.newsprint .np-tag.warn {
+  color: var(--np-warn);
+  border-color: color-mix(in srgb, var(--np-warn) 45%, transparent);
+}
+
+/* Fields: a lighter card with a fine rule; the ink rule when focused. */
+.newsprint .np-field {
+  min-width: 0;
+  padding: 5px 9px;
+  border: 1px solid var(--np-rule-2);
+  border-radius: 2px;
+  background: var(--np-card);
+  font-family: var(--text);
+  font-size: 0.86em;
+  color: var(--np-ink);
+  outline: none;
+  user-select: text;
+}
+.newsprint .np-field::placeholder {
+  color: var(--np-ink-3);
+}
+.newsprint .np-field:hover,
+.newsprint .np-field:focus {
+  border-color: var(--np-ink);
+}
+.newsprint input[type='checkbox'] {
+  accent-color: var(--np-ink);
+}

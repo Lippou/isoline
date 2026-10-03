@@ -373,6 +373,9 @@ input[type='checkbox'] {
   --np-ink-2: #46535f;
   --np-ink-3: #5c636a;
   --np-rule: #bdb4a2;
+  --np-rule-2: #a89e8a;
+  /* A card laid on the sheet: a shade lighter than the paper. */
+  --np-card: #f8f4ec;
   --np-spot: #b3245f;
   --np-good: #276b48;
   --np-warn: #8f5c0e;

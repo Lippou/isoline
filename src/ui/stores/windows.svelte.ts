@@ -100,11 +100,12 @@ const overlaps = (a: Rect, b: Rect) =>
 function defaultSize(id: WinId): { w: number; h: number } {
   const w = Math.min(BASE_W[id], vw() - wm.railRight - GAP - MARGIN);
   // The tech tree needs height more than the resources panel needs to stay visible
-  // while one plans research: on short screens it goes down to the build bar's height.
+  // while one plans research: it goes down to the build bar's height (its newsprint
+  // masthead and inspector take room, the tree should still show five tiers).
   // (The panels' measured heights, when shown: hudBox.svelte.ts.)
   const resRoom = hudBox.res ? hudBox.res + 12 + GAP : BOTTOM_ROOM;
   const barRoom = (hudBox.bar || 112) + 12 + 26;
-  const room = Math.max(id === 'tech' && vh() < 900 ? barRoom : resRoom, wm.bottomReserve);
+  const room = Math.max(id === 'tech' ? barRoom : resRoom, wm.bottomReserve);
   const h = Math.max(Math.min(320, vh() - HUD_TOP - MARGIN), vh() - HUD_TOP - room);
   return { w, h: Math.min(h, 820) };
 }
