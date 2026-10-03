@@ -56,7 +56,7 @@
   const myTeam = $derived(hud.players.find((p) => p.id === hud.viewer)?.team ?? 0);
 
   const nameOf = (p: PlayerView) => p.name[i18n.lang] || p.name.en;
-  const center = (p: PlayerView) => ctl.renderer.camera.goTo(p.label[0], p.label[1], 2.4);
+  const center = (p: PlayerView) => ctl.focusPlayer(p.id);
   /** Every order given from this window is acknowledged by a sound. */
   const order = (c: Parameters<typeof s.cmd>[0]) => {
     audio.ui('confirm');

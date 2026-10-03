@@ -102,7 +102,9 @@ const tradeAndTrains = (c: MissionCtx) => (c.local ? c.local.stats.trainGold + c
 
 /** Weakest living rival nation (target suggestion). */
 export function weakest(c: MissionCtx): [number, number] | null {
-  const rivals = c.players.filter((p) => p.kind === 'nation' && p.alive && p.tiles > 0 && p.id !== c.me);
+  const rivals = c.players.filter(
+    (p) => p.kind === 'nation' && p.alive && p.tiles > 0 && p.label[2] > 0 && p.id !== c.me,
+  );
   rivals.sort((a, b) => a.troops - b.troops);
   const r = rivals[0];
   return r ? [r.label[0], r.label[1]] : null;

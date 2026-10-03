@@ -37,6 +37,7 @@ import { TradeRoutes } from './tradeRoutes';
 import { ThreatWatch } from './threats';
 import { bestCapitalSpot, capitalCooldown } from '../core/rules/capital';
 import { opinionsOf, type Opinion } from '../core/rules/opinion';
+import { computeLabels, type Label } from '../core/game/labels';
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 let game: Game | null = null;
@@ -44,7 +45,7 @@ let viewer = 0;
 let fogEnabled = false;
 let loyaltyLayer = false;
 let seen: Uint8Array | null = null;
-let labels = new Map<number, [number, number, number]>();
+let labels = new Map<number, Label>();
 let unitBuf = new Float32Array(UNIT_STRIDE * 256);
 let lastBuildingSend = -1;
 const ledger = new TradeLedger();
@@ -87,7 +88,7 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
         threats.reset();
         capitalHint = { tick: -1, tile: -1 };
         opinions = { tick: -1, list: [] };
-        computeLabels(game);
+        labels = computeLabels(game);
         const ready: FromWorker = {
           type: 'ready',
           meta: map.meta,
@@ -207,7 +208,7 @@ function sendUpdate(
     events,
     tickMs,
   };
-  if (full || tick % 20 === 0) computeLabels(g);
+  if (full || tick % 20 === 0) labels = computeLabels(g);
   if (
     full ||
     tick % 5 === 0 ||
@@ -606,67 +607,6 @@ function buildingViews(g: Game): BuildingView[] {
     });
   }
   return out;
-}
-
-// --------------------------------------------------------------- labels
-/** Approximate "pole of inaccessibility" per player on a coarse grid. */
-function computeLabels(g: Game): void {
-  const C = Math.max(4, Math.round(Math.sqrt(g.map.size) / 240));
-  const w = Math.ceil(g.map.width / C);
-  const h = Math.ceil(g.map.height / C);
-  const own = new Uint16Array(w * h);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const tx = Math.min(g.map.width - 1, x * C + (C >> 1));
-      const ty = Math.min(g.map.height - 1, y * C + (C >> 1));
-      own[y * w + x] = g.owner[ty * g.map.width + tx]!;
-    }
-  }
-  const INF = 1e9;
-  const d = new Float32Array(w * h);
-  for (let i = 0; i < w * h; i++) {
-    const o = own[i]!;
-    if (o === 0) {
-      d[i] = 0;
-      continue;
-    }
-    const x = i % w;
-    const edge =
-      x === 0 ||
-      x === w - 1 ||
-      i < w ||
-      i >= w * (h - 1) ||
-      own[i - 1] !== o ||
-      own[i + 1] !== o ||
-      own[i - w] !== o ||
-      own[i + w] !== o;
-    d[i] = edge ? 1 : INF;
-  }
-  for (let i = 0; i < w * h; i++) {
-    if (d[i] === 0) continue;
-    const x = i % w;
-    if (x > 0) d[i] = Math.min(d[i]!, d[i - 1]! + 1);
-    if (i >= w) d[i] = Math.min(d[i]!, d[i - w]! + 1);
-    if (i >= w && x > 0) d[i] = Math.min(d[i]!, d[i - w - 1]! + 1.414);
-    if (i >= w && x < w - 1) d[i] = Math.min(d[i]!, d[i - w + 1]! + 1.414);
-  }
-  for (let i = w * h - 1; i >= 0; i--) {
-    if (d[i] === 0) continue;
-    const x = i % w;
-    if (x < w - 1) d[i] = Math.min(d[i]!, d[i + 1]! + 1);
-    if (i < w * (h - 1)) d[i] = Math.min(d[i]!, d[i + w]! + 1);
-    if (i < w * (h - 1) && x < w - 1) d[i] = Math.min(d[i]!, d[i + w + 1]! + 1.414);
-    if (i < w * (h - 1) && x > 0) d[i] = Math.min(d[i]!, d[i + w - 1]! + 1.414);
-  }
-  const best = new Map<number, [number, number, number]>();
-  for (let i = 0; i < w * h; i++) {
-    const o = own[i]!;
-    if (o === 0) continue;
-    const b = best.get(o);
-    if (!b || d[i]! > b[2]) best.set(o, [((i % w) + 0.5) * C, (((i / w) | 0) + 0.5) * C, d[i]!]);
-  }
-  labels = new Map();
-  for (const [o, [x, y, dist]] of best) labels.set(o, [x, y, dist * C]);
 }
 
 // -------------------------------------------------------------- loyalty

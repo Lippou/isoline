@@ -434,7 +434,7 @@
       },
       "4": {
         "name": "Marchés mondiaux",
-        "desc": "+20 % de revenus du commerce et des trains"
+        "desc": "+10 % de revenus du commerce et des trains"
       },
       "5": {
         "name": "Bourse",
@@ -442,7 +442,7 @@
       },
       "6": {
         "name": "Mondialisation",
-        "desc": "+20 % de revenus du commerce et des trains"
+        "desc": "+10 % de revenus du commerce et des trains"
       },
       "r": {
         "name": "Prospérité",
@@ -527,7 +527,7 @@
       },
       "4": {
         "name": "Compagnies maritimes",
-        "desc": "+25 % de revenu commercial"
+        "desc": "+10 % de revenu commercial"
       },
       "5": {
         "name": "Chantiers navals",
@@ -535,7 +535,7 @@
       },
       "6": {
         "name": "Porte-conteneurs",
-        "desc": "+25 % de revenu commercial"
+        "desc": "+10 % de revenu commercial"
       },
       "r": {
         "name": "Fret",
@@ -810,6 +810,9 @@
     "difficulty": "Difficulté",
     "nations": "Nations",
     "nationsShort": "nations",
+    "randomMap": "Carte aléatoire",
+    "randomMapCount": "{n} cartes",
+    "randomMapDesc": "Tirée au sort parmi les {n} cartes au lancement de la partie.",
     "tribes": "Tribus",
     "victory": "Seuil de victoire",
     "spawn": "Phase d'apparition",
@@ -2093,7 +2096,8 @@
     "renewTitle": "Renouvellement d'alliance",
     "terms": "vous propose une alliance",
     "renewTerms": "souhaite renouveler votre alliance",
-    "more": "+{n} autres propositions"
+    "more": "+{n} autres propositions",
+    "show": "Voir {name} sur la carte"
   },
   "update": {
     "title": "Mises à jour",

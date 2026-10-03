@@ -437,8 +437,20 @@ export class GameController {
 
   home(): void {
     const me = this.session.state.players.get(this.session.viewer);
-    if (me && me.tiles > 0)
+    if (me && me.tiles > 0 && me.label[2] > 0)
       this.renderer.camera.goTo(me.label[0], me.label[1], Math.max(this.renderer.camera.zoom, 2.5));
+  }
+
+  /** Country lit up on the map while the pointer rests on a panel about it (−1: none). */
+  spotlight = -1;
+
+  /** Centres the camera on a country, zoomed so that it fills the view (tiny ones included). */
+  focusPlayer(id: number): void {
+    const p = this.session.state.players.get(id);
+    // A country without an anchor yet (label [0, 0, 0]) would send the camera to the map's corner.
+    if (!p || p.tiles === 0 || p.label[2] <= 0) return;
+    const fit = 400 / Math.max(10, p.label[2] * 4);
+    this.renderer.camera.goTo(p.label[0], p.label[1], Math.max(1.2, Math.min(6, fit)));
   }
 
   // ------------------------------------------------------------ photo mode
@@ -702,6 +714,7 @@ export class GameController {
     }
     ov.highlightPlayer =
       hud.hover && hud.hover.owner > 0 && this.renderer.camera.zoom < 6 && !hud.photo ? hud.hover.owner : -1;
+    if (this.spotlight > 0) ov.highlightPlayer = this.spotlight;
     // A MIRV's warheads fall all over the target country: show which one.
     if (launch && tool.k === 'nuke' && tool.kind === N.Mirv && launch.victim > 0)
       ov.highlightPlayer = launch.victim;

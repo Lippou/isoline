@@ -51,6 +51,8 @@
   let loadingMaps = $state(true);
   let category = $state<MapCategory>('continents');
   let customs: MapEntry[] = $state([]);
+  /** "Random map": drawn among the shipped maps at launch, a surprise until then. */
+  let randomMap = $state(app.lobby.randomMap);
   let gen = $state(defaultGenParams(cfg.seed));
   let chat = $state<{ name: string; text: string }[]>([]);
   let chatText = $state('');
@@ -146,23 +148,41 @@
   function pickMap(m: MapEntry): void {
     cfg.mapId = m.id;
     delete cfg.procedural;
+    randomMap = false;
     cfg.nations = Math.min(cfg.nations, Math.max(0, m.nations));
     push();
     audio.ui('click');
   }
 
+  function pickRandom(): void {
+    delete cfg.procedural;
+    randomMap = true;
+    push();
+    audio.ui('click');
+  }
+
+  /** Draws the random map (any shipped map but the one just played, when there is a choice). */
+  function drawMap(): void {
+    const pool = maps.length > 1 ? maps.filter((m) => m.id !== cfg.mapId) : maps;
+    const m = pool[Math.floor(Math.random() * pool.length)];
+    if (m) cfg.mapId = m.id;
+  }
+
   function pickProcedural(): void {
+    randomMap = false;
     cfg.mapId = `procedural-${gen.seed}`;
     cfg.procedural = { ...gen };
     push();
   }
 
   function push(): void {
+    app.lobby.randomMap = randomMap;
     app.lobby.config = $state.snapshot(cfg) as GameConfig;
     if (client && isHost) client.send({ t: 'config', config: $state.snapshot(cfg) as GameConfig });
   }
 
   function start(): void {
+    if (randomMap && !cfg.procedural) drawMap();
     push();
     if (client) {
       client.send({ t: 'start' });
@@ -183,13 +203,19 @@
   const featureCount = $derived(FEATURES.filter((f) => cfg.features[f]).length);
   const me = $derived(lobby?.players.find((p) => p.slot === client?.slot));
   const mapLabel = $derived(
-    cfg.procedural ? t('mapcat.procedural') : selected ? selected.name[i18n.lang] || selected.name.en : '—',
+    cfg.procedural
+      ? t('mapcat.procedural')
+      : randomMap
+        ? t('lobby.randomMap')
+        : selected
+          ? selected.name[i18n.lang] || selected.name.en
+          : '—',
   );
   // The selected map's nations, in file order: the game places the first cfg.nations of them.
   let nations = $state<MapNation[]>([]);
   $effect(() => {
     const m = selected;
-    if (!m || cfg.procedural) {
+    if (!m || cfg.procedural || randomMap) {
       nations = [];
       return;
     }
@@ -358,11 +384,40 @@
         </div>
       {:else}
         <div class="grid scroll">
+          {#if category !== 'custom' && !loadingMaps && maps.length}
+            <button
+              class="map random"
+              class:on={randomMap}
+              aria-pressed={randomMap}
+              onclick={pickRandom}
+              disabled={!isHost}
+              data-testid="map-random"
+              title={t('lobby.randomMapDesc', { n: maps.length })}
+            >
+              <span class="thumb">
+                <Isolines
+                  mode="static"
+                  count={7}
+                  r0={10}
+                  step={11}
+                  seed={7}
+                  wobble={1.4}
+                  indexEvery={3}
+                  color="var(--contour-ink)"
+                />
+                <span class="die"><Icon name="dice" size={30} /></span>
+                {#if randomMap}<span class="tick"><Icon name="check" size={13} stroke={3} /></span>{/if}
+              </span>
+              <span class="mname">{t('lobby.randomMap')}</span>
+              <span class="msize mono">{t('lobby.randomMapCount', { n: maps.length })}</span>
+            </button>
+          {/if}
           {#each shown as m (m.id)}
+            {@const on = !randomMap && cfg.mapId === m.id}
             <button
               class="map"
-              class:on={cfg.mapId === m.id}
-              aria-pressed={cfg.mapId === m.id}
+              class:on
+              aria-pressed={on}
               onclick={() => pickMap(m)}
               disabled={!isHost}
               data-testid="map-{m.id}"
@@ -377,8 +432,7 @@
                   width={340}
                   fit={m.width / m.height >= 1.25 ? 'cover' : 'contain'}
                 />
-                {#if cfg.mapId === m.id}<span class="tick"><Icon name="check" size={13} stroke={3} /></span
-                  >{/if}
+                {#if on}<span class="tick"><Icon name="check" size={13} stroke={3} /></span>{/if}
               </span>
               <span class="mname">{m.name[i18n.lang] || m.name.en}</span>
               <span class="msize mono">{m.nations} {t('lobby.nationsShort')}</span>
@@ -636,6 +690,21 @@
                 />
                 <span>{t('lobby.procPreview', { seed: cfg.procedural.seed })}</span>
               </div>
+            {:else if randomMap}
+              <div class="proc">
+                <Isolines
+                  mode="static"
+                  count={9}
+                  r0={18}
+                  step={15}
+                  seed={7}
+                  wobble={1.4}
+                  indexEvery={4}
+                  color="var(--contour-ink)"
+                />
+                <span class="die big"><Icon name="dice" size={52} /></span>
+                <span>{t('lobby.randomMapDesc', { n: maps.length })}</span>
+              </div>
             {:else if selected}
               <ChartMap
                 mapId={selected.id}
@@ -651,11 +720,11 @@
           </div>
           <div class="cap">
             <span class="mapname">{mapLabel}</span>
-            {#if selected && !cfg.procedural}<span class="dims mono"
+            {#if selected && !cfg.procedural && !randomMap}<span class="dims mono"
                 >{selected.width} × {selected.height}</span
               >{/if}
           </div>
-          {#if selected?.desc && !cfg.procedural}
+          {#if selected?.desc && !cfg.procedural && !randomMap}
             <p class="mdesc">{selected.desc[i18n.lang] || selected.desc.en}</p>
           {/if}
           {#if nations.length && !cfg.procedural}
@@ -1033,6 +1102,38 @@
     from {
       transform: scale(0);
     }
+  }
+  /* The random map's tile: contour lines and a die. */
+  .random .thumb {
+    background: #f7fafa;
+  }
+  .die {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--contour-ink);
+    opacity: 0.75;
+  }
+  .die :global(svg) {
+    box-sizing: content-box;
+    padding: 8px;
+    border-radius: 50%;
+    background: #f7fafa;
+    box-shadow: 0 0 0 6px #f7fafa;
+  }
+  .map.random:hover:not(:disabled) .die {
+    animation: roll 0.5s var(--ease-out);
+  }
+  @keyframes roll {
+    from {
+      transform: rotate(-90deg) scale(0.8);
+    }
+  }
+  .proc .die.big {
+    position: absolute;
+    background: none;
+    padding: 0;
   }
   .mname {
     font-weight: 600;

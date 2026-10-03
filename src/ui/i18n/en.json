@@ -434,7 +434,7 @@
       },
       "4": {
         "name": "World markets",
-        "desc": "+20% trade and train income"
+        "desc": "+10% trade and train income"
       },
       "5": {
         "name": "Stock exchange",
@@ -442,7 +442,7 @@
       },
       "6": {
         "name": "Globalisation",
-        "desc": "+20% trade and train income"
+        "desc": "+10% trade and train income"
       },
       "r": {
         "name": "Prosperity",
@@ -527,7 +527,7 @@
       },
       "4": {
         "name": "Shipping lines",
-        "desc": "+25% trade income"
+        "desc": "+10% trade income"
       },
       "5": {
         "name": "Shipyards",
@@ -535,7 +535,7 @@
       },
       "6": {
         "name": "Container ships",
-        "desc": "+25% trade income"
+        "desc": "+10% trade income"
       },
       "r": {
         "name": "Freight",
@@ -810,6 +810,9 @@
     "difficulty": "Difficulty",
     "nations": "Nations",
     "nationsShort": "nations",
+    "randomMap": "Random map",
+    "randomMapCount": "{n} maps",
+    "randomMapDesc": "Drawn among the {n} maps when the game starts.",
     "tribes": "Tribes",
     "victory": "Victory threshold",
     "spawn": "Spawn phase",
@@ -2093,7 +2096,8 @@
     "renewTitle": "Alliance renewal",
     "terms": "offers you an alliance",
     "renewTerms": "wants to renew your alliance",
-    "more": "+{n} more offers"
+    "more": "+{n} more offers",
+    "show": "Show {name} on the map"
   },
   "update": {
     "title": "Updates",

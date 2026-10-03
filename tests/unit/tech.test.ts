@@ -192,7 +192,11 @@ describe('tech tree: research centres', () => {
     expect(upgradeBuilding(g, p, lab)).toBe(true);
     expect(buildCost(g, p, B.Lab)).toBe(2_000_000);
     expect(upgradeBuilding(g, p, lab)).toBe(true);
-    expect(buildCost(g, p, B.Lab)).toBe(2_000_000); // capped
+    expect(buildCost(g, p, B.Lab)).toBe(4_000_000);
+    expect(upgradeBuilding(g, p, lab)).toBe(true);
+    expect(buildCost(g, p, B.Lab)).toBe(5_000_000); // capped
+    expect(upgradeBuilding(g, p, lab)).toBe(true);
+    expect(buildCost(g, p, B.Lab)).toBe(5_000_000);
     const off = field(false);
     expect(checkPlacement(off, off.players[1]!, B.Lab, tile)).toBe('disabled');
   });

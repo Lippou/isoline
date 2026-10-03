@@ -38,7 +38,8 @@ export interface LaunchRequest {
 export const app = $state({
   screen: 'splash' as Screen,
   previous: 'title' as Screen,
-  lobby: { config: defaultConfig(Date.now() >>> 0), lan: false, host: false },
+  /** `randomMap`: the map is drawn among the shipped ones when the game starts. */
+  lobby: { config: defaultConfig(Date.now() >>> 0), lan: false, host: false, randomMap: false },
   launch: null as LaunchRequest | null,
   modal: null as null | {
     title: string;

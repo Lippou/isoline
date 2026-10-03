@@ -1,6 +1,7 @@
 <script lang="ts">
   // Alliance offers received: a small card slides in at the bottom right, above the
   // minimap, in the pact banner's language (both flags around the handshake seal), with
+  // Show (centres the camera on the country, lit up while the pointer is on the card),
   // Accept (K) / Refuse (L) and a bar draining over the offer's 20 seconds. Several
   // offers stack; a card leaves as soon as its offer lapses or is answered elsewhere
   // (radial menu, diplomacy window, keyboard).
@@ -43,8 +44,20 @@
 
   function answer(from: number, accept: boolean): void {
     audio.ui(accept ? 'confirm' : 'click');
+    if (ctl.spotlight === from) ctl.spotlight = -1;
     s.cmd({ t: 'allyAnswer', target: from, accept });
   }
+
+  function show(from: number): void {
+    audio.ui('click');
+    ctl.focusPlayer(from);
+  }
+
+  // The lit country follows the pointer; a card that leaves takes its light with it.
+  $effect(() => {
+    if (ctl.spotlight > 0 && !offers.some((o) => o.from === ctl.spotlight)) ctl.spotlight = -1;
+  });
+  $effect(() => () => (ctl.spotlight = -1));
 
   // Stacked above the minimap, whatever its height (collapsed or not).
   let above = $state(200);
@@ -80,6 +93,8 @@
       role="group"
       aria-label={t(o.renew ? 'offer.renewTitle' : 'offer.title')}
       data-testid="ally-request"
+      onpointerenter={() => (ctl.spotlight = o.from)}
+      onpointerleave={() => ctl.spotlight === o.from && (ctl.spotlight = -1)}
       in:enter
       out:leave
     >
@@ -98,6 +113,13 @@
         <span class="terms">{t(o.renew ? 'offer.renewTerms' : 'offer.terms')}</span>
       </div>
       <div class="acts">
+        <button
+          class="btn small ghost show"
+          onclick={() => show(o.from)}
+          aria-label={t('offer.show', { name })}
+          data-tip={t('offer.show', { name })}
+          data-testid="ally-show"><Icon name="target" size={14} /></button
+        >
         <button class="btn primary small" onclick={() => answer(o.from, true)} data-testid="ally-accept"
           ><Icon name="check" size={14} />{t('common.accept')}{#if first}<kbd
               >{keyLabel(settings.keys.allyAccept ?? '')}</kbd
@@ -142,7 +164,6 @@
     box-shadow:
       0 12px 28px rgba(0, 0, 0, 0.5),
       0 0 22px rgba(91, 224, 138, 0.14);
-    overflow: hidden;
     font-size: 0.88em;
   }
   .flags {
@@ -200,8 +221,11 @@
   .acts {
     grid-area: acts;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: auto 1fr 1fr;
     gap: 6px;
+  }
+  .acts .show {
+    padding-inline: 8px;
   }
   .acts .btn {
     justify-content: center;
@@ -213,18 +237,28 @@
     opacity: 0.7;
     margin-left: 2px;
   }
-  /* The offer's lifetime, draining. */
+  /* The offer's lifetime, draining. It clips itself to the card's rounded corners (the card
+     does not clip, or the buttons' tooltips would be cut). */
   .time {
     position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .time::before,
+  .time i {
+    content: '';
+    position: absolute;
     left: 0;
-    right: 0;
     bottom: 0;
     height: 3px;
+  }
+  .time::before {
+    right: 0;
     background: rgba(91, 224, 138, 0.12);
   }
   .time i {
-    display: block;
-    height: 100%;
     background: #5be08a;
     transition: width 0.1s linear;
   }

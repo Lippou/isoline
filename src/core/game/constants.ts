@@ -197,12 +197,12 @@ export const RADAR_COST = 300_000;
 export const AIRFIELD_COST = 800_000;
 /**
  * Research centres (Isoline's own, tech tree on): min(LAB_COST_CAP, LAB_COST_BASE × 2^n),
- * n over research centre levels — 250k, 500k, 1M, then 2M: research competes with
+ * n over research centre levels — 250k, 500k, 1M, 2M, 4M, then 5M: research competes with
  * cities, ports and the army for gold. Each completed level yields RESEARCH_PER_LAB_LEVEL
  * points a second (rules/tech.ts).
  */
 export const LAB_COST_BASE = 250_000;
-export const LAB_COST_CAP = 2_000_000;
+export const LAB_COST_CAP = 5_000_000;
 export const enum B {
   City = 0,
   Port = 1,
@@ -416,7 +416,8 @@ export const RECON_TICKS = sec(40);
 export const AIRFIELD_CAPACITY = 4;
 
 // --------------------------------------------------------------- loyalty
-export const LOYALTY_CONQUERED = 70;
+/** Below the secession threshold (60): a fresh conquest stays at risk ~24 s (one sweep near a city). */
+export const LOYALTY_CONQUERED = 45;
 export const LOYALTY_MAX = 255;
 export const LOYALTY_GAIN_PERIOD = 6; // full map sweep chunks
 export const LOYALTY_SECESSION_THRESHOLD = 60;

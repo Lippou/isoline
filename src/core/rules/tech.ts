@@ -494,9 +494,9 @@ export function techEconomy(p: Player): number {
 export function techTrainBonus(p: Player): number {
   let m = techIncome(p);
   if (lv(p, IND) >= 1) m *= 1.1;
-  if (lv(p, ECO) >= 4) m *= 1.2;
+  if (lv(p, ECO) >= 4) m *= 1.1;
   if (lv(p, IND) >= 5) m *= 1.1;
-  if (lv(p, ECO) >= 6) m *= 1.2;
+  if (lv(p, ECO) >= 6) m *= 1.1;
   return m;
 }
 
@@ -521,10 +521,11 @@ export function techNaval(p: Player): {
   shipCost: number;
 } {
   let trade = techIncome(p) * (1 + 0.03 * reps(p, NAV)); // Freight: +3% a level
-  if (lv(p, NAV) >= 4) trade *= 1.25;
-  if (lv(p, ECO) >= 4) trade *= 1.2;
-  if (lv(p, NAV) >= 6) trade *= 1.25;
-  if (lv(p, ECO) >= 6) trade *= 1.2;
+  // Kept modest: the full stack (×1.6) must not undo the halved trade pay (GAME_DESIGN §5).
+  if (lv(p, NAV) >= 4) trade *= 1.1;
+  if (lv(p, ECO) >= 4) trade *= 1.1;
+  if (lv(p, NAV) >= 6) trade *= 1.1;
+  if (lv(p, ECO) >= 6) trade *= 1.1;
   return {
     hp: lv(p, NAV) >= 1 ? 1.2 : 1,
     damage: lv(p, NAV) >= 2 ? 1.2 : 1,

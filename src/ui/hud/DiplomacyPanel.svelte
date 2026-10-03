@@ -194,7 +194,7 @@
           data-tip={t('hud.centerOn')}
           onclick={() => {
             audio.ui('click');
-            ctl.renderer.camera.goTo(r.p.label[0], r.p.label[1], 2.5);
+            ctl.focusPlayer(r.p.id);
           }}><Icon name="target" size={14} /></button
         >
       </div>

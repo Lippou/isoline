@@ -23,16 +23,6 @@
       top.push({ p: list[meIdx]!, rank: meIdx + 1, share: (list[meIdx]!.usefulTiles / total) * 100 });
     return top;
   });
-
-  function focus(id: number): void {
-    const p = ctl.session.state.players.get(id);
-    if (p)
-      ctl.renderer.camera.goTo(
-        p.label[0],
-        p.label[1],
-        Math.max(1.2, Math.min(6, 400 / Math.max(10, p.label[2] * 4))),
-      );
-  }
 </script>
 
 <aside class="lb panel" class:closed={!open} class:more data-testid="leaderboard">
@@ -64,7 +54,7 @@
     <ol>
       {#each rows as r (r.p.id)}
         <li class:me={r.p.id === hud.viewer} class:extra={r.rank > 5}>
-          <button onclick={() => focus(r.p.id)} title={t('hud.centerOn')}>
+          <button onclick={() => ctl.focusPlayer(r.p.id)} title={t('hud.centerOn')}>
             <span class="rank mono">{r.rank}</span>
             <span class="who">
               <span class="ink" style="background:{inkHex(r.p.color, settings.access.vision)}"></span>

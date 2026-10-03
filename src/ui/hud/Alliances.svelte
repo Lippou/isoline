@@ -36,8 +36,7 @@
           {@const asked = hud.local?.allyRequests.includes(r.id) ?? false}
           <li class:renew>
             <img src={flagUrl(r.p!, 24)} alt="" />
-            <button class="name" onclick={() => ctl.renderer.camera.goTo(r.p!.label[0], r.p!.label[1], 2.2)}
-              >{s.state.name(r.id, i18n.lang)}</button
+            <button class="name" onclick={() => ctl.focusPlayer(r.id)}>{s.state.name(r.id, i18n.lang)}</button
             >
             <span class="time mono" data-tip={t('alliances.left')}>{clock(Math.max(0, r.expiresIn))}</span>
             <span class="bar" aria-hidden="true"
