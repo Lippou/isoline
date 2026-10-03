@@ -1,0 +1,204 @@
+/*
+ * The Technologies window's pieces shared by its layouts (planche, ladder, the box at the
+ * foot): the branches' inks, and the states of a technology as the cards print them.
+ * Available: printed in ink on a card. Researched: shaded, ticked. In progress: reversed
+ * (paper on ink), its progress in gold. Planned: a dashed rule and its number in the plan.
+ * Locked: a dotted outline in grey. Pointing at a card only repaints (rings, rules): it
+ * never changes a size.
+ */
+
+/* Branch inks, the chart's (BRAND.md §4.1): brass for the economy, magenta for the bomb. */
+.tech .b-economy,
+.tech .b-industry {
+  --acc: var(--np-warn);
+}
+.tech .b-military {
+  --acc: var(--np-ink);
+}
+.tech .b-naval {
+  --acc: var(--np-sea);
+}
+.tech .b-defense {
+  --acc: var(--np-good);
+}
+.tech .b-nuclear {
+  --acc: var(--np-spot);
+}
+
+.tech .tk {
+  position: relative;
+  appearance: none;
+  min-width: 0;
+  border: 1px solid var(--np-ink-2);
+  border-radius: 2px;
+  background: var(--np-card);
+  color: var(--np-ink);
+  font-family: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    box-shadow 0.12s;
+}
+.tech .tk:hover,
+.tech .tk:focus-visible {
+  background: #fffdf8;
+  border-color: var(--np-ink);
+  outline: none;
+}
+.tech .tk .tk-ico {
+  display: inline-flex;
+  flex: none;
+  color: var(--acc);
+}
+.tech .tk .tk-cost {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--np-warn);
+  white-space: nowrap;
+}
+/* Its number in the plan: a tab over the card's corner (it covers, never pushes). */
+.tech .tk .tk-ord {
+  position: absolute;
+  top: -7px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  font-size: 0.7em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--np-ink);
+  color: var(--np-paper);
+  box-shadow: 0 0 0 2px var(--np-paper);
+  z-index: 1;
+}
+/* A number of the path previewed under the pointer: an outlined figure. */
+.tech .tk .tk-ord.pre {
+  background: var(--np-paper);
+  color: var(--np-ink);
+  box-shadow:
+    inset 0 0 0 1px var(--np-ink),
+    0 0 0 2px var(--np-paper);
+}
+.tech .tk .tk-prog {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: #d6a53f;
+  transition: width 0.3s;
+}
+
+.tech .tk.done {
+  border-color: var(--np-paper-2);
+  background: var(--np-paper-2);
+  color: var(--np-ink-2);
+}
+.tech .tk.done:hover,
+.tech .tk.done:focus-visible {
+  border-color: var(--np-rule-2);
+  background: var(--np-paper-2);
+}
+.tech .tk.done .tk-state {
+  color: var(--np-good);
+}
+.tech .tk.current {
+  border-color: var(--np-ink);
+  background: var(--np-ink);
+  color: var(--np-paper);
+}
+.tech .tk.current:hover,
+.tech .tk.current:focus-visible {
+  background: #24405a;
+}
+.tech .tk.current .tk-ico,
+.tech .tk.current .tk-state {
+  color: inherit;
+}
+.tech .tk.current .tk-cost {
+  color: #e7c77f;
+}
+.tech .tk.current .tk-ord {
+  background: var(--np-paper);
+  color: var(--np-ink);
+  box-shadow: 0 0 0 2px var(--np-ink);
+}
+.tech .tk.queued,
+.tech .tk.need {
+  border-style: dashed;
+  border-color: var(--np-ink);
+}
+.tech .tk.locked {
+  border-style: dotted;
+  border-color: var(--np-rule-2);
+  background: transparent;
+  color: var(--np-ink-3);
+}
+.tech .tk.locked .tk-ico {
+  opacity: 0.75;
+}
+.tech .tk.locked .tk-cost {
+  color: var(--np-ink-3);
+}
+.tech .tk.locked:hover,
+.tech .tk.locked:focus-visible {
+  border-color: var(--np-ink-2);
+  background: var(--np-card);
+}
+/* The technology shown in the box at the foot: an ink ring around the card. */
+.tech .tk.focus {
+  box-shadow:
+    0 0 0 1px var(--np-paper),
+    0 0 0 2.5px var(--np-ink);
+}
+/* What the technology pointed at needs: a fine ring in the branch's ink. */
+.tech .tk.pre {
+  box-shadow:
+    0 0 0 1px var(--np-paper),
+    0 0 0 2px var(--acc);
+}
+
+/* A prerequisite named on a card: the branch's sign and the tier. */
+.tech .tk-req {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px 0 3px;
+  min-height: 15px;
+  border: 1px solid var(--np-rule);
+  border-radius: 2px;
+  font-size: 0.92em;
+  font-weight: 600;
+  font-variant-numeric: lining-nums;
+  color: var(--np-ink-2);
+  white-space: nowrap;
+}
+.tech .tk-req svg {
+  color: var(--acc);
+}
+.tech .tk-req.ok {
+  border-color: color-mix(in srgb, var(--np-good) 40%, transparent);
+  color: var(--np-good);
+}
+.tech .tk-req.ok svg {
+  color: inherit;
+}
+.tech .tk.current .tk-req {
+  border-color: rgba(241, 236, 226, 0.35);
+  color: inherit;
+}
+.tech .tk.current .tk-req svg {
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tech .tk,
+  .tech .tk .tk-prog {
+    transition: none;
+  }
+}

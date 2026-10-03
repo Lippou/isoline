@@ -16,11 +16,14 @@ export interface Rect {
   h: number;
 }
 
-/** Width of each window (CSS pixels; the page zoom scales them) — the journal is a newspaper column, the tree is wide. */
+/**
+ * Width of each window (CSS pixels; the page zoom scales them) — the journal is a newspaper
+ * column; the technology tree a planche across the screen (a narrower window shows it as a ladder).
+ */
 const BASE_W: Record<WinId, number> = {
   diplomacy: 400,
   trade: 400,
-  tech: 640,
+  tech: 1440,
   stats: 400,
   log: 468,
   chat: 400,
@@ -99,15 +102,13 @@ const overlaps = (a: Rect, b: Rect) =>
 /** The default size of a window: its width, and the height above the resources panel. */
 function defaultSize(id: WinId): { w: number; h: number } {
   const w = Math.min(BASE_W[id], vw() - wm.railRight - GAP - MARGIN);
-  // The tech tree needs height more than the resources panel needs to stay visible
-  // while one plans research: it goes down to the build bar's height (its newsprint
-  // masthead and inspector take room, the tree should still show five tiers).
+  // The tech tree is a planche one plans research on: it takes the screen's height
+  // (over the resources panel and the build bar) so that every branch shows at once.
   // (The panels' measured heights, when shown: hudBox.svelte.ts.)
   const resRoom = hudBox.res ? hudBox.res + 12 + GAP : BOTTOM_ROOM;
-  const barRoom = (hudBox.bar || 112) + 12 + 26;
-  const room = Math.max(id === 'tech' ? barRoom : resRoom, wm.bottomReserve);
+  const room = Math.max(id === 'tech' ? MARGIN : resRoom, wm.bottomReserve);
   const h = Math.max(Math.min(320, vh() - HUD_TOP - MARGIN), vh() - HUD_TOP - room);
-  return { w, h: Math.min(h, 820) };
+  return { w, h: Math.min(h, id === 'tech' ? 940 : 820) };
 }
 
 /**
