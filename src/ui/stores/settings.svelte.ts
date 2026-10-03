@@ -174,9 +174,22 @@ export function applyCss(): void {
   root.lang = settings.lang;
 }
 
+/**
+ * What each physical key prints on this keyboard (KeyQ is "a" on AZERTY), from Chromium's
+ * keyboard layout map; empty until it answers, or where the API is missing.
+ */
+const layout = $state<{ map: Map<string, string> }>({ map: new Map() });
+const keyboard = (
+  navigator as Navigator & { keyboard?: { getLayoutMap?: () => Promise<Map<string, string>> } }
+).keyboard;
+keyboard
+  ?.getLayoutMap?.()
+  .then((m) => (layout.map = new Map(m)))
+  .catch(() => {});
+
 export function keyLabel(code: string): string {
   if (!code) return '—';
-  if (code.startsWith('Key')) return code.slice(3);
+  // Digits print as digits (the AZERTY row's "&", "é"… are their shifted twins).
   if (code.startsWith('Digit')) return code.slice(5);
   const fr = i18n.lang === 'fr';
   const map: Record<string, string> = {
@@ -186,5 +199,20 @@ export function keyLabel(code: string): string {
     Enter: fr ? 'Entrée' : 'Enter',
     Escape: fr ? 'Échap' : 'Esc',
   };
-  return map[code] ?? code;
+  if (map[code]) return map[code]!;
+  const printed = layout.map.get(code);
+  if (printed && printed.trim()) return printed.toUpperCase();
+  if (code.startsWith('Key')) return code.slice(3);
+  const fallback: Record<string, string> = {
+    BracketLeft: '[',
+    BracketRight: ']',
+    Semicolon: ';',
+    Quote: "'",
+    Backquote: '`',
+    Backslash: '\\',
+    Comma: ',',
+    Period: '.',
+    Slash: '/',
+  };
+  return fallback[code] ?? code;
 }
