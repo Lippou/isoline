@@ -658,7 +658,14 @@
     "killed": "Enemies killed",
     "troopsLost": "Troops lost",
     "resources": "Deposits held",
-    "timeline": "Timeline"
+    "timeline": "Timeline",
+    "asOf": "As of {clock}",
+    "rank": "Rank {n} of {total}",
+    "group": {
+      "land": "Expansion",
+      "economy": "Economy",
+      "war": "War"
+    }
   },
   "end": {
     "victory": "Victory",
@@ -2085,7 +2092,15 @@
     "liftAll": "Lift all my embargoes",
     "center": "Centre the map on this country",
     "viaSea": "By sea",
-    "viaRail": "By rail"
+    "viaRail": "By rail",
+    "partnersNone": "No partners",
+    "partnersOne": "1 partner",
+    "partnersMany": "{n} partners",
+    "embargoesNone": "No embargoes",
+    "embargoesOne": "1 embargo",
+    "embargoesMany": "{n} embargoes",
+    "noTakings": "No takings in the last 5 minutes",
+    "rules": "Trade rules"
   },
   "threat": {
     "tag": "Threatened border",

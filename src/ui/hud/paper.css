@@ -104,7 +104,7 @@
 }
 
 /*
- * Windows printed on the paper (technologies, diplomacy, messages), the journal's
+ * Windows printed on the paper (technologies, diplomacy, commerce, statistics, messages), the journal's
  * siblings. The ink HUD's tokens are remapped to the newsprint inks, so the shared
  * pieces they still use (the opinion gauge, tooltips' rules) print in the same inks.
  */
@@ -264,4 +264,126 @@
 }
 .newsprint input[type='checkbox'] {
   accent-color: var(--np-ink);
+}
+
+/* A country in a window's list: its map ink, then its name in the title face. */
+.newsprint .np-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--title);
+  font-weight: 600;
+  font-size: 1.06em;
+  line-height: 1.2;
+  color: var(--np-ink);
+}
+.newsprint button.np-name {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.newsprint button.np-name:hover,
+.newsprint button.np-name:focus-visible {
+  text-decoration: underline;
+  text-decoration-color: var(--np-rule-2);
+  text-underline-offset: 3px;
+}
+.newsprint .np-ink {
+  flex: none;
+  width: 3px;
+  height: 13px;
+}
+
+/* Orders printed as words: a rule appears around the one pointed at. */
+.newsprint .np-act {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: none;
+  font-family: var(--text);
+  font-size: 0.8em;
+  font-weight: 500;
+  color: var(--np-ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.newsprint .np-act:hover,
+.newsprint .np-act:focus-visible {
+  color: var(--np-ink);
+  border-color: var(--np-rule);
+  background: var(--np-card);
+}
+.newsprint .np-act.spot {
+  color: var(--np-spot);
+}
+.newsprint .np-act.spot:hover,
+.newsprint .np-act.spot:focus-visible {
+  border-color: color-mix(in srgb, var(--np-spot) 45%, transparent);
+}
+.newsprint .np-act.icon {
+  padding: 1px 3px;
+  color: var(--np-ink-3);
+}
+.newsprint .np-act:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* A section mark that folds its list away: the whole mark is the switch. */
+.newsprint button.np-mark {
+  appearance: none;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.newsprint button.np-mark:hover {
+  color: var(--np-ink);
+}
+
+/* A kicker: the small italic head over a group of figures or controls. */
+.newsprint .np-kicker {
+  margin: 0;
+  font-family: var(--title);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.84em;
+  color: var(--np-ink-2);
+}
+
+/* Nothing to print yet: a line in italics. */
+.newsprint .np-empty {
+  margin: 4px 0 2px;
+  font-family: var(--title);
+  font-style: italic;
+  font-size: 0.9em;
+  line-height: 1.45;
+  color: var(--np-ink-2);
+  text-wrap: pretty;
+}
+
+/* The rules close a window's page, in a box. */
+.newsprint .np-rules {
+  margin-top: 18px;
+}
+.newsprint .np-rules p {
+  margin: 0;
+  font-family: var(--np-serif);
+  font-size: 0.82em;
+  line-height: 1.5;
+  color: var(--np-ink-2);
+  text-wrap: pretty;
 }

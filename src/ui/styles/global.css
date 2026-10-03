@@ -379,6 +379,9 @@ input[type='checkbox'] {
   --np-spot: #b3245f;
   --np-good: #276b48;
   --np-warn: #8f5c0e;
+  /* Rules and curves only (too light for text): the chart's brass and the sea's blue. */
+  --np-gold: #b8862a;
+  --np-sea: #2c6e91;
   --np-serif: 'IBM Plex Serif', Georgia, serif;
   background: var(--np-paper);
   color: var(--np-ink);

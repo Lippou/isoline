@@ -1,12 +1,16 @@
 <script lang="ts">
-  // Commerce: who we trade with (gold over the last minutes, ships and trains running
-  // between us), the embargoes both ways, and the switch to block or lift each one.
+  // Commerce, printed on the journal's paper: the masthead counts partners and embargoes
+  // and gives the takings by sea and by rail; then the gold of the last five minutes as
+  // the lead figure, the partners by what they bring, the embargoes both ways, the
+  // countries we do not trade with, each with its order. The rules close the page.
+  import './paper.css';
   import { hud } from '../stores/game.svelte';
   import { t, i18n, short, clock } from '../i18n/i18n.svelte';
   import { settings } from '../stores/settings.svelte';
   import { inkHex } from '../../render/colors';
   import { flagUrl } from '../../render/flags';
   import Icon from '../icons/Icon.svelte';
+  import PaperMast from './PaperMast.svelte';
   import { audio } from '../../audio/audio';
   import type { GameController } from '../game/controller';
   import type { LocalView, PlayerView } from '../../engine/protocol';
@@ -72,340 +76,376 @@
     }
   }
   const via = (n: number, one: string, many: string) => (n === 1 ? t(one) : t(many, { n }));
+  const count = (n: number, none: string, one: string, many: string) =>
+    n === 0 ? t(none) : n === 1 ? t(one) : t(many, { n });
 </script>
 
-{#if !me}
-  <p class="hint">{t('trade.intro')}</p>
-{:else}
-  <p class="hint intro">{t('trade.intro')}</p>
+{#snippet name(r: Row)}
+  <button class="np-name" onclick={() => center(r.p)} title={t('trade.center')}
+    ><i class="np-ink" style="background:{inkHex(r.p.color, settings.access.vision)}"></i>{nameOf(
+      r.p,
+    )}</button
+  >
+{/snippet}
 
-  {#if sea + rail > 0 || boom}
-    <div class="sum">
-      {#if sea + rail > 0}
-        <b class="total mono">{short(sea + rail)}</b>
-        <span class="what">{t('trade.earned')}</span>
-        <span class="split mono">
-          <span><Icon name="port" size={13} />{t('trade.bySea', { gold: short(sea) })}</span>
-          <span><Icon name="train" size={13} />{t('trade.byRail', { gold: short(rail) })}</span>
-        </span>
-      {/if}
-      {#if boom}<span class="boom"><Icon name="income" size={13} />{t('trade.boom')}</span>{/if}
-    </div>
-  {/if}
+<div class="paper newsprint np-window trade">
+  <PaperMast title={t('panel.trade')} onclose={() => (hud.panels.trade = false)}>
+    {#if me}
+      <p class="np-dateline">
+        <span>{count(partners.length, 'trade.partnersNone', 'trade.partnersOne', 'trade.partnersMany')}</span>
+        {#if sea + rail > 0}
+          <span class="split">
+            <span><Icon name="port" size={12} />{t('trade.bySea', { gold: short(sea) })}</span>
+            <span><Icon name="train" size={12} />{t('trade.byRail', { gold: short(rail) })}</span>
+          </span>
+        {:else}
+          <span>{t('trade.noTakings')}</span>
+        {/if}
+        <b class:spot={embargoed.length > 0}
+          >{count(embargoed.length, 'trade.embargoesNone', 'trade.embargoesOne', 'trade.embargoesMany')}</b
+        >
+      </p>
+      <div class="tools">
+        <button class="np-btn small quiet" onclick={embargoAll}
+          ><Icon name="embargo" size={14} />{t('trade.embargoAll')}</button
+        >
+        <button
+          class="np-btn small quiet"
+          disabled={!embargoed.some((r) => r.embargo?.mine)}
+          onclick={() => order({ t: 'embargoAll', on: false, exceptTeam: false })}
+          >{t('trade.liftAll')}</button
+        >
+      </div>
+    {/if}
+  </PaperMast>
 
-  <h4 class="section-title">
-    <Icon name="trade" size={14} />{t('trade.partners')}<i class="n">{partners.length}</i>
-  </h4>
-  {#if partners.length}
-    <ul class="legend" data-testid="trade-partners">
-      {#each partners as r (r.p.id)}
-        <li>
-          <img src={flagUrl(r.p, 32)} alt="" />
-          <div class="who">
-            <button class="name" onclick={() => center(r.p)} title={t('trade.center')}
-              ><i class="ink" style="background:{inkHex(r.p.color, settings.access.vision)}"></i>{nameOf(
-                r.p,
-              )}</button
-            >
-            <span class="note">
-              {#if r.trade?.ships}
-                <span><Icon name="port" size={12} />{via(r.trade.ships, 'trade.ship1', 'trade.ships')}</span>
-              {:else if r.trade?.sea}
-                <span><Icon name="port" size={12} />{t('trade.viaSea')}</span>
-              {/if}
-              {#if r.trade?.trains}
-                <span
-                  ><Icon name="train" size={12} />{via(r.trade.trains, 'trade.train1', 'trade.trains')}</span
-                >
-              {:else if r.trade?.rail}
-                <span><Icon name="train" size={12} />{t('trade.viaRail')}</span>
-              {/if}
-            </span>
-            <span class="share" aria-hidden="true"><i style="width:{(r.gold / top) * 100}%"></i></span>
-          </div>
-          <span class="gold mono" class:none={r.gold <= 0} data-tip={t('trade.goldTip')}
-            >{r.gold > 0 ? `+${short(r.gold)}` : '—'}</span
-          >
-          <button class="btn small ghost act" onclick={() => setEmbargo(r.p.id, true)}
-            ><Icon name="embargo" size={13} />{t('trade.embargo')}</button
-          >
-        </li>
-      {/each}
-    </ul>
-  {:else}
-    <p class="hint empty">{t('trade.partnersEmpty')}</p>
-  {/if}
-
-  <h4 class="section-title">
-    <Icon name="noTrade" size={14} />{t('trade.embargoes')}<i class="n">{embargoed.length}</i>
-  </h4>
-  {#if embargoed.length}
-    <ul class="legend" data-testid="trade-embargoes">
-      {#each embargoed as r (r.p.id)}
-        {@const e = r.embargo!}
-        <li class="blocked">
-          <img src={flagUrl(r.p, 32)} alt="" />
-          <div class="who">
-            <button class="name" onclick={() => center(r.p)} title={t('trade.center')}
-              ><i class="ink" style="background:{inkHex(r.p.color, settings.access.vision)}"></i>{nameOf(
-                r.p,
-              )}</button
-            >
-            {#if e.mine || e.theirs}
-              <span class="note status" class:bad={e.theirs}
-                >{e.mine && e.theirs ? t('trade.mutual') : e.mine ? t('trade.mine') : t('trade.theirs')}</span
-              >
-            {/if}
-            {#if e.mineFor > 0}
-              <span class="note temp" data-tip={t('trade.tempTip')}
-                ><Icon name="hourglass" size={12} />{t('trade.mineFor', { clock: clock(e.mineFor) })}</span
-              >
-            {/if}
-            {#if e.theirsFor > 0}
-              <span class="note temp bad" data-tip={t('trade.tempTip')}
-                ><Icon name="hourglass" size={12} />{t('trade.theirsFor', {
-                  clock: clock(e.theirsFor),
-                })}</span
-              >
-            {/if}
-          </div>
-          {#if r.gold > 0}<span class="gold mono" class:none={r.gold <= 0} data-tip={t('trade.goldTip')}
-              >{r.gold > 0 ? `+${short(r.gold)}` : '—'}</span
-            >{/if}
-          {#if e.mine}
-            <button class="btn small act" onclick={() => setEmbargo(r.p.id, false)}>{t('trade.lift')}</button>
-          {:else}
-            <button class="btn small ghost act" onclick={() => setEmbargo(r.p.id, true)}
-              ><Icon name="embargo" size={13} />{t('trade.embargo')}</button
+  <div class="np-body scroll">
+    {#if !me}
+      <p class="np-empty">{t('trade.intro')}</p>
+    {:else}
+      <!-- The lead figure: the gold of the last five minutes, sea and rail as one rule. -->
+      {#if sea + rail > 0 || boom}
+        <div class="lead">
+          {#if sea + rail > 0}
+            <p class="sum">
+              <b class="total">+{short(sea + rail)}</b>
+              <span class="what">{t('trade.earned')}</span>
+            </p>
+            <span class="ways" aria-hidden="true"
+              ><i class="sea" style:flex-grow={sea}></i><i class="rail" style:flex-grow={rail}></i></span
             >
           {/if}
-        </li>
-      {/each}
-    </ul>
-  {:else}
-    <p class="hint empty">{t('trade.embargoesEmpty')}</p>
-  {/if}
-  <div class="bulk">
-    <button class="btn small" onclick={embargoAll}
-      ><Icon name="embargo" size={13} />{t('trade.embargoAll')}</button
-    >
-    <button
-      class="btn small ghost"
-      disabled={!embargoed.some((r) => r.embargo?.mine)}
-      onclick={() => order({ t: 'embargoAll', on: false, exceptTeam: false })}>{t('trade.liftAll')}</button
-    >
-  </div>
+          {#if boom}<p class="boom"><Icon name="income" size={13} />{t('trade.boom')}</p>{/if}
+        </div>
+      {/if}
 
-  {#if others.length}
-    <button class="section-title fold" onclick={() => (showOthers = !showOthers)} aria-expanded={showOthers}>
-      <Icon name={showOthers ? 'chevronDown' : 'chevronRight'} size={14} />{t('trade.others')}<i class="n"
-        >{others.length}</i
-      >
-    </button>
-    {#if showOthers}
-      <ul class="legend quiet">
-        {#each others as r (r.p.id)}
-          <li>
-            <img src={flagUrl(r.p, 32)} alt="" />
-            <div class="who">
-              <button class="name" onclick={() => center(r.p)} title={t('trade.center')}
-                ><i class="ink" style="background:{inkHex(r.p.color, settings.access.vision)}"></i>{nameOf(
-                  r.p,
-                )}</button
+      <h3 class="np-mark">
+        <Icon name="trade" size={13} />{t('trade.partners')} <span class="n">{partners.length}</span>
+      </h3>
+      {#if partners.length}
+        <ul class="list" data-testid="trade-partners">
+          {#each partners as r (r.p.id)}
+            <li class="row">
+              <img class="np-flag" src={flagUrl(r.p, 32)} alt="" />
+              <div class="who">
+                {@render name(r)}
+                <span class="note">
+                  {#if r.trade?.ships}
+                    <span
+                      ><Icon name="port" size={12} />{via(r.trade.ships, 'trade.ship1', 'trade.ships')}</span
+                    >
+                  {:else if r.trade?.sea}
+                    <span><Icon name="port" size={12} />{t('trade.viaSea')}</span>
+                  {/if}
+                  {#if r.trade?.trains}
+                    <span
+                      ><Icon name="train" size={12} />{via(
+                        r.trade.trains,
+                        'trade.train1',
+                        'trade.trains',
+                      )}</span
+                    >
+                  {:else if r.trade?.rail}
+                    <span><Icon name="train" size={12} />{t('trade.viaRail')}</span>
+                  {/if}
+                </span>
+                <span class="share" aria-hidden="true"><i style="width:{(r.gold / top) * 100}%"></i></span>
+              </div>
+              <span class="gold" class:none={r.gold <= 0} data-tip={t('trade.goldTip')}
+                >{r.gold > 0 ? `+${short(r.gold)}` : '—'}</span
               >
-              <span class="note">{t('trade.noTrade')}</span>
-            </div>
-            <button class="btn small ghost act" onclick={() => setEmbargo(r.p.id, true)}
-              ><Icon name="embargo" size={13} />{t('trade.embargo')}</button
-            >
-          </li>
-        {/each}
-      </ul>
+              <button class="np-act" onclick={() => setEmbargo(r.p.id, true)}
+                ><Icon name="embargo" size={13} />{t('trade.embargo')}</button
+              >
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="np-empty">{t('trade.partnersEmpty')}</p>
+      {/if}
+
+      <h3 class="np-mark" class:spot={embargoed.length > 0}>
+        <Icon name="noTrade" size={13} />{t('trade.embargoes')} <span class="n">{embargoed.length}</span>
+      </h3>
+      {#if embargoed.length}
+        <ul class="list" data-testid="trade-embargoes">
+          {#each embargoed as r (r.p.id)}
+            {@const e = r.embargo!}
+            <li class="row">
+              <img class="np-flag" src={flagUrl(r.p, 32)} alt="" />
+              <div class="who">
+                {@render name(r)}
+                <span class="note">
+                  {#if e.mine || e.theirs}
+                    <span class="np-tag" class:spot={e.theirs} class:warn={!e.theirs}
+                      >{e.mine && e.theirs
+                        ? t('trade.mutual')
+                        : e.mine
+                          ? t('trade.mine')
+                          : t('trade.theirs')}</span
+                    >
+                  {/if}
+                  {#if e.mineFor > 0}
+                    <span class="temp" data-tip={t('trade.tempTip')}
+                      ><Icon name="hourglass" size={12} />{t('trade.mineFor', {
+                        clock: clock(e.mineFor),
+                      })}</span
+                    >
+                  {/if}
+                  {#if e.theirsFor > 0}
+                    <span class="temp spot" data-tip={t('trade.tempTip')}
+                      ><Icon name="hourglass" size={12} />{t('trade.theirsFor', {
+                        clock: clock(e.theirsFor),
+                      })}</span
+                    >
+                  {/if}
+                </span>
+              </div>
+              {#if r.gold > 0}<span class="gold" data-tip={t('trade.goldTip')}>+{short(r.gold)}</span>{/if}
+              {#if e.mine}
+                <button class="np-act" onclick={() => setEmbargo(r.p.id, false)}>{t('trade.lift')}</button>
+              {:else}
+                <button class="np-act" onclick={() => setEmbargo(r.p.id, true)}
+                  ><Icon name="embargo" size={13} />{t('trade.embargo')}</button
+                >
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="np-empty">{t('trade.embargoesEmpty')}</p>
+      {/if}
+
+      {#if others.length}
+        <button class="np-mark fold" onclick={() => (showOthers = !showOthers)} aria-expanded={showOthers}>
+          <Icon name={showOthers ? 'chevronDown' : 'chevronRight'} size={13} />{t('trade.others')}
+          <span class="n">{others.length}</span>
+        </button>
+        {#if showOthers}
+          <ul class="list quiet">
+            {#each others as r (r.p.id)}
+              <li class="row">
+                <img class="np-flag" src={flagUrl(r.p, 32)} alt="" />
+                <div class="who">
+                  {@render name(r)}
+                  <span class="note">{t('trade.noTrade')}</span>
+                </div>
+                <button class="np-act" onclick={() => setEmbargo(r.p.id, true)}
+                  ><Icon name="embargo" size={13} />{t('trade.embargo')}</button
+                >
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      {/if}
+
+      <aside class="np-box np-rules">
+        <h3>{t('trade.rules')}</h3>
+        <p>{t('trade.intro')}</p>
+      </aside>
     {/if}
-  {/if}
-{/if}
+  </div>
+</div>
 
 <style>
-  .intro {
-    margin: 0 0 12px;
+  .np-dateline .split {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0 10px;
+  }
+  .np-dateline .split span {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .np-dateline .spot {
+    color: var(--np-spot);
+  }
+  .tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 0 7px;
+    border-bottom: 1px solid var(--np-rule);
+  }
+  .tools .np-btn:first-child {
+    margin-left: -8px;
+  }
+
+  /* The lead: the takings as the page's big figure, the share of sea and rail under it. */
+  .lead {
+    display: grid;
+    gap: 6px;
+    padding: 12px 0 4px;
   }
   .sum {
-    display: grid;
-    grid-template-columns: auto 1fr;
+    display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    column-gap: 10px;
-    row-gap: 4px;
-    padding: 0 0 12px;
-    margin-bottom: 12px;
-    border-bottom: 1px solid var(--line);
+    gap: 2px 10px;
+    margin: 0;
   }
   .total {
+    font-family: var(--text);
     font-size: 1.9em;
     font-weight: 600;
     line-height: 1;
-    color: var(--brass);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    color: var(--np-warn);
   }
   .what {
-    color: var(--muted);
-    font-size: 0.92em;
+    font-family: var(--np-serif);
+    font-style: italic;
+    font-size: 0.86em;
+    color: var(--np-ink-2);
   }
-  .split {
-    grid-column: 1 / -1;
+  .ways {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px 16px;
-    color: var(--muted);
-    font-size: 0.9em;
+    gap: 2px;
+    height: 3px;
   }
-  .split span,
+  .ways i {
+    flex: 0 1 0;
+    min-width: 0;
+  }
+  .ways .sea {
+    background: var(--np-sea);
+  }
+  .ways .rail {
+    background: var(--np-gold);
+  }
   .boom {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-  }
-  .boom {
-    grid-column: 1 / -1;
-    color: var(--good-text);
-    font-size: 0.88em;
-  }
-  .section-title {
-    margin: 14px 0 6px;
-  }
-  .section-title:first-of-type {
-    margin-top: 0;
-  }
-  .n {
-    font-style: normal;
+    margin: 0;
+    font-size: 0.82em;
     font-weight: 500;
-    color: var(--faint);
-    font-variant-numeric: tabular-nums;
-  }
-  .fold {
-    appearance: none;
-    width: 100%;
-    border: 0;
-    background: none;
-    padding: 0;
-    cursor: pointer;
-  }
-  .fold:hover {
-    color: var(--parchment);
+    color: var(--np-good);
   }
 
-  /* A map legend: flag, name, what is going on, the figure and the switch. */
-  .legend {
+  .np-mark :global(svg) {
+    flex: none;
+  }
+  .fold {
+    margin-top: 14px;
+  }
+
+  /* A country: its flag in the margin; its name and the gold it brings, then what runs
+     between us and the order; its share of the takings as a rule at the foot. */
+  .list {
     list-style: none;
     margin: 0;
     padding: 0;
   }
-  li {
+  .row {
     display: grid;
-    grid-template-columns: 26px 1fr auto auto;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-areas: 'flag name gold' 'flag note act' 'flag share share';
     align-items: center;
-    gap: 10px;
-    padding: 7px 0;
-    border-top: 1px solid var(--line);
+    gap: 2px 10px;
+    padding: 8px 0;
   }
-  li:first-child {
-    border-top: 0;
+  .row + .row {
+    border-top: 1px solid var(--np-rule);
   }
-  img {
-    width: 26px;
-    height: 18px;
-    object-fit: cover;
-    border: 1px solid #0007;
+  .row > img {
+    grid-area: flag;
     align-self: start;
+    width: 28px;
+    height: 19px;
     margin-top: 2px;
   }
   .who {
-    display: grid;
-    gap: 2px;
-    min-width: 0;
+    display: contents;
   }
-  .name {
-    appearance: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--parchment);
-    font-weight: 600;
-    text-align: left;
-    cursor: pointer;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .name:hover {
-    color: var(--aurora);
-  }
-  .ink {
-    flex: none;
-    width: 4px;
-    height: 13px;
-    border-radius: 1px;
+  .who .np-name {
+    grid-area: name;
+    justify-self: start;
+    max-width: 100%;
   }
   .note {
+    grid-area: note;
+    min-width: 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 3px 10px;
-    font-size: 0.84em;
-    color: var(--muted);
+    font-size: 0.78em;
+    font-variant-numeric: tabular-nums;
+    color: var(--np-ink-2);
   }
   .note span {
     display: inline-flex;
     align-items: center;
     gap: 4px;
   }
-  .note.temp {
-    gap: 5px;
-    width: fit-content;
+  .note .np-tag {
+    font-size: 1em;
   }
-  .note.status {
-    color: var(--warn-text);
+  .temp.spot {
+    color: var(--np-spot);
   }
-  .note.bad {
-    color: var(--bad-text);
-  }
+  /* The partner's share of the takings: a brass rule on a hairline. */
   .share {
+    grid-area: share;
     display: block;
-    height: 3px;
+    height: 2px;
     margin-top: 3px;
-    border-radius: 2px;
-    background: var(--panel-3);
-    overflow: hidden;
+    background: var(--np-paper-2);
   }
   .share i {
     display: block;
     height: 100%;
-    background: var(--brass);
+    background: var(--np-gold);
     transition: width 0.4s ease;
   }
   .gold {
-    color: var(--brass);
+    grid-area: gold;
+    justify-self: end;
+    font-family: var(--text);
+    font-size: 0.9em;
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--np-warn);
   }
   .gold.none {
-    color: var(--faint);
     font-weight: 400;
+    color: var(--np-ink-3);
   }
-  .act {
-    grid-column: 4;
+  .row > .np-act {
+    grid-area: act;
+    justify-self: end;
+    margin-right: -5px;
   }
-  .quiet .who .name {
+  .quiet .np-name {
     font-weight: 500;
   }
-  .empty {
-    margin: 0 0 4px;
-  }
-  .bulk {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin: 10px 0 4px;
+  @media (prefers-reduced-motion: reduce) {
+    .share i {
+      transition: none;
+    }
   }
 </style>

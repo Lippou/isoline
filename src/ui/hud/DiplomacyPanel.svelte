@@ -78,11 +78,13 @@
   <li class="row">
     <img class="np-flag" src={flagUrl(r.p, 32)} alt="" />
     <div class="who">
-      <span class="name"
-        ><i class="ink" style="background:{inkHex(r.p.color, settings.access.vision)}"></i>{nameOf(r)}</span
+      <span class="np-name"
+        ><i class="np-ink" style="background:{inkHex(r.p.color, settings.access.vision)}"></i>{nameOf(
+          r,
+        )}</span
       >
       <button
-        class="act icon"
+        class="np-act icon"
         aria-label={t('hud.centerOn')}
         data-tip={t('hud.centerOn')}
         onclick={() => {
@@ -133,7 +135,7 @@
         >
       {/if}
       <span class="end">
-        <button class="act" onclick={() => order({ t: 'embargo', target: r.p.id, on: !r.embargo })}
+        <button class="np-act" onclick={() => order({ t: 'embargo', target: r.p.id, on: !r.embargo })}
           >{r.embargo ? t('radial.embargoOff') : t('radial.embargoOn')}</button
         >
       </span>
@@ -171,17 +173,17 @@
     {/if}
     <div class="acts">
       {#if r.ally}
-        <button class="act" onclick={() => order({ t: 'allyRequest', target: r.p.id })}
+        <button class="np-act" onclick={() => order({ t: 'allyRequest', target: r.p.id })}
           ><Icon name="renew" size={13} />{t('diplo.renew')}</button
         >
         {#if s.config.allowDonations}<button
-            class="act"
+            class="np-act"
             data-tip={t('diplo.giveTip')}
             onclick={() =>
               order({ t: 'donate', target: r.p.id, gold: (hud.local?.gold ?? 0) * 0.1, troops: 0 })}
             ><Icon name="gift" size={13} />{t('diplo.give')}</button
           >{/if}
-        <button class="act spot" onclick={() => breakAlliance(r.p.id)}
+        <button class="np-act spot" onclick={() => breakAlliance(r.p.id)}
           ><Icon name="betrayal" size={13} />{t('diplo.break')}</button
         >
       {:else}
@@ -281,7 +283,7 @@
       </ul>
     {/if}
 
-    <aside class="np-box rules">
+    <aside class="np-box np-rules">
       <h3>{t('diplo.rules')}</h3>
       <p>{t('diplo.intro')}</p>
     </aside>
@@ -335,25 +337,6 @@
     justify-content: flex-start;
     gap: 2px;
     min-width: 0;
-  }
-  .name {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-family: var(--title);
-    font-weight: 600;
-    font-size: 1.06em;
-    line-height: 1.2;
-    color: var(--np-ink);
-  }
-  .ink {
-    flex: none;
-    width: 3px;
-    height: 13px;
   }
   .meta {
     margin-left: auto;
@@ -467,42 +450,9 @@
     gap: 2px;
     margin-right: -4px;
   }
-  /* The other orders are printed as words: a rule appears around the one pointed at. */
-  .act {
-    appearance: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 5px;
-    border: 1px solid transparent;
-    border-radius: 2px;
-    background: none;
-    font-family: var(--text);
-    font-size: 0.8em;
-    font-weight: 500;
-    color: var(--np-ink-2);
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .acts > .act:first-child {
+  /* The other orders are printed as words (paper.css), the first one aligned on the name. */
+  .acts > .np-act:first-child {
     margin-left: -5px;
-  }
-  .act:hover,
-  .act:focus-visible {
-    color: var(--np-ink);
-    border-color: var(--np-rule);
-    background: var(--np-card);
-  }
-  .act.spot {
-    color: var(--np-spot);
-  }
-  .act.spot:hover,
-  .act.spot:focus-visible {
-    border-color: color-mix(in srgb, var(--np-spot) 45%, transparent);
-  }
-  .act.icon {
-    padding: 1px 3px;
-    color: var(--np-ink-3);
   }
   /* An offer on its way: the button keeps a green dashed rule until it is answered. */
   .np-btn.sent {
@@ -552,17 +502,5 @@
     margin-right: 4px;
     font-weight: 600;
     color: var(--np-spot);
-  }
-
-  .rules {
-    margin-top: 18px;
-  }
-  .rules p {
-    margin: 0;
-    font-family: var(--np-serif);
-    font-size: 0.82em;
-    line-height: 1.5;
-    color: var(--np-ink-2);
-    text-wrap: pretty;
   }
 </style>

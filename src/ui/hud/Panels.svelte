@@ -103,12 +103,10 @@
         <Window id="tech" paper><TechPanel {ctl} /></Window>
       {:else if tb.id === 'chat'}
         <Window id="chat" paper><ChatPanel {ctl} /></Window>
-      {:else}
-        <Window id={tb.id}>
-          {#if tb.id === 'trade'}<TradePanel {ctl} />
-          {:else if tb.id === 'stats'}<StatsPanel {ctl} />
-          {/if}
-        </Window>
+      {:else if tb.id === 'trade'}
+        <Window id="trade" paper><TradePanel {ctl} /></Window>
+      {:else if tb.id === 'stats'}
+        <Window id="stats" paper><StatsPanel {ctl} /></Window>
       {/if}
     {/if}
   {/each}

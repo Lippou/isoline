@@ -68,7 +68,7 @@
   </ol>
 
   <div class="compose">
-    <p class="kicker">{t('chat.quick')}</p>
+    <p class="np-kicker">{t('chat.quick')}</p>
     <div class="quick">
       {#each [0, 1, 2, 3, 4, 5, 6, 7] as q (q)}
         <button
@@ -81,7 +81,7 @@
       {/each}
     </div>
     <div class="to" role="group" aria-label={t('chat.to')}>
-      <span class="kicker">{t('chat.to')}</span>
+      <span class="np-kicker">{t('chat.to')}</span>
       {#each CHANNELS as c (c)}
         <button class:on={channel === c} aria-pressed={channel === c} onclick={() => (channel = c)}
           >{t(`chat.${c}`)}</button
@@ -189,13 +189,6 @@
     gap: 6px;
     padding: 8px 18px 14px;
     border-top: 1px solid var(--np-ink);
-  }
-  .kicker {
-    margin: 0;
-    font-family: var(--title);
-    font-style: italic;
-    font-size: 0.84em;
-    color: var(--np-ink-2);
   }
   .quick {
     display: flex;

@@ -658,7 +658,14 @@
     "killed": "Ennemis tués",
     "troopsLost": "Troupes perdues",
     "resources": "Gisements possédés",
-    "timeline": "Évolution"
+    "timeline": "Évolution",
+    "asOf": "Relevé à {clock}",
+    "rank": "Rang {n} sur {total}",
+    "group": {
+      "land": "Expansion",
+      "economy": "Économie",
+      "war": "Guerre"
+    }
   },
   "end": {
     "victory": "Victoire",
@@ -2085,7 +2092,15 @@
     "liftAll": "Lever tous mes embargos",
     "center": "Centrer la carte sur ce pays",
     "viaSea": "Par la mer",
-    "viaRail": "Par le rail"
+    "viaRail": "Par le rail",
+    "partnersNone": "Aucun partenaire",
+    "partnersOne": "1 partenaire",
+    "partnersMany": "{n} partenaires",
+    "embargoesNone": "Aucun embargo",
+    "embargoesOne": "1 embargo",
+    "embargoesMany": "{n} embargos",
+    "noTakings": "Aucune recette ces 5 minutes",
+    "rules": "Règles du commerce"
   },
   "threat": {
     "tag": "Frontière menacée",
