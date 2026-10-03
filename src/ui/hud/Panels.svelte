@@ -94,15 +94,19 @@
 <div class="wins">
   {#each tabs as tb (tb.id)}
     {#if hud.panels[tb.id] && !tb.hidden}
+      <!-- The journal and its siblings are printed on the paper: they bring their own masthead. -->
       {#if tb.id === 'log'}
         <Window id="log" paper><LogPanel {ctl} /></Window>
+      {:else if tb.id === 'diplomacy'}
+        <Window id="diplomacy" paper><DiplomacyPanel {ctl} /></Window>
+      {:else if tb.id === 'tech'}
+        <Window id="tech" paper><TechPanel {ctl} /></Window>
+      {:else if tb.id === 'chat'}
+        <Window id="chat" paper><ChatPanel {ctl} /></Window>
       {:else}
         <Window id={tb.id}>
-          {#if tb.id === 'diplomacy'}<DiplomacyPanel {ctl} />
-          {:else if tb.id === 'tech'}<TechPanel {ctl} />
-          {:else if tb.id === 'trade'}<TradePanel {ctl} />
+          {#if tb.id === 'trade'}<TradePanel {ctl} />
           {:else if tb.id === 'stats'}<StatsPanel {ctl} />
-          {:else if tb.id === 'chat'}<ChatPanel {ctl} />
           {/if}
         </Window>
       {/if}

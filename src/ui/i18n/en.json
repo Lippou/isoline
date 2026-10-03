@@ -276,7 +276,12 @@
     "placeholder": "Type a message…",
     "mute": "Click to mute this player",
     "muted": "{n} player(s) muted",
-    "send": "Send"
+    "send": "Send",
+    "countOne": "1 message",
+    "count": "{n} messages",
+    "empty": "No messages yet.",
+    "quick": "Quick messages",
+    "to": "Send to"
   },
   "quick": {
     "0": "Hello!",
@@ -363,7 +368,20 @@
     "search": "Search for a country…",
     "showAllN": "Show all {n} countries",
     "showLess": "Show less",
-    "proposed": "Offer sent…"
+    "proposed": "Offer sent…",
+    "alliesNone": "No allies",
+    "alliesOne": "1 ally",
+    "alliesMany": "{n} allies",
+    "atWar": "{n} at war",
+    "atPeace": "At peace",
+    "countriesOne": "1 country",
+    "countries": "{n} countries",
+    "sectionAllies": "Allies",
+    "sectionWar": "At war",
+    "sectionOthers": "Other countries",
+    "sectionAll": "All countries",
+    "noMatch": "No country matches.",
+    "rules": "Alliance rules"
   },
   "council": {
     "title": "World Council",

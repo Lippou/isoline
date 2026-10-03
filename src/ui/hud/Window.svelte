@@ -1,5 +1,5 @@
 <script lang="ts">
-  // A floating HUD window: dragged by its title bar (the journal: by its masthead),
+  // A floating HUD window: dragged by its title bar (the paper ones: by their masthead),
   // resized by its corner, brought to the front on click. Double-clicking the title bar
   // puts it back in its default place. The content is the panel's own.
   import { onDestroy, type Snippet } from 'svelte';
@@ -37,7 +37,7 @@
   let drag: null | { mode: 'move' | 'size'; px: number; py: number; r: Rect; moved: boolean } = null;
   let dragging = $state(false);
 
-  /** The title bar: our header, or the journal's masthead (paper). */
+  /** The title bar: our header, or the masthead of a window printed on the paper. */
   function isHandle(el: HTMLElement): boolean {
     if (el.closest('button, input, select, textarea, a, label, [data-nodrag]')) return false;
     return !!el.closest(paper ? 'header' : '.win-head');
@@ -148,7 +148,7 @@
     user-select: none;
     opacity: 0.94;
   }
-  /* The journal is printed on newsprint: a sheet over the map, square-cut. */
+  /* The journal and its siblings are printed on newsprint: a sheet over the map, square-cut. */
   .win.paper {
     display: block;
     border-radius: 2px;
