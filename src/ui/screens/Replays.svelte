@@ -157,13 +157,12 @@
 </div>
 
 <style>
+  /* The register of games, printed as a newspaper's table: an ink rule over the heads,
+     a fine rule between the rows. */
   .table {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     align-content: start;
-    background: var(--panel-solid);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
     overflow: hidden;
     align-self: start;
     max-height: 100%;
@@ -171,17 +170,19 @@
   .thead,
   li {
     display: grid;
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) 6em 13em auto;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) 6em 13em 11.5em;
     gap: 16px;
     align-items: center;
-    padding: 10px 18px;
+    padding: 8px 6px;
   }
   .thead {
-    font-size: 0.85em;
-    font-weight: 500;
-    color: var(--muted);
-    border-bottom: 1px solid var(--line);
-    background: var(--panel-2);
+    padding-top: 4px;
+    padding-bottom: 5px;
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.9em;
+    color: var(--np-ink-2);
+    border-bottom: 1px solid var(--np-ink);
   }
   .num {
     text-align: right;
@@ -193,6 +194,7 @@
     min-height: 0;
   }
   li {
+    border-bottom: 1px solid var(--np-rule);
     animation: row-in 0.3s calc(var(--k) * 30ms) ease-out both;
     transition: background 0.14s;
   }
@@ -202,22 +204,20 @@
       transform: translateY(4px);
     }
   }
-  li + li {
-    border-top: 1px solid var(--line);
-  }
   li:hover {
-    background: var(--panel-2);
+    background: var(--np-card);
   }
   .muted {
-    color: var(--muted);
+    color: var(--np-ink-2);
+    font-variant-numeric: tabular-nums;
   }
   .name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-family: var(--title);
-    font-weight: 600;
-    font-size: 1.08em;
+    font-weight: 700;
+    font-size: 1.1em;
   }
   .winner {
     display: inline-flex;
@@ -232,7 +232,7 @@
   .stale {
     display: inline-flex;
     margin-left: 0.4em;
-    color: var(--warn);
+    color: var(--np-warn);
     vertical-align: -2px;
   }
   .racts {
@@ -240,19 +240,20 @@
     gap: 2px;
     justify-content: flex-end;
   }
-  .del:hover {
-    color: var(--signal);
+  .del:hover,
+  .del:focus-visible {
+    color: var(--np-spot);
   }
   .wait {
     position: relative;
     height: 220px;
-    color: var(--aurora);
+    color: var(--np-sea);
   }
   .motif {
     position: relative;
     width: 120px;
     height: 120px;
-    color: var(--aurora);
+    color: var(--np-sea);
     margin-bottom: 4px;
   }
 </style>

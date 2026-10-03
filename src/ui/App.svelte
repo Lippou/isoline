@@ -110,7 +110,7 @@
   <!-- Persistent backdrop: screens fade in over paper (menus) or ink (game), never over a flash. -->
   <div class="stage" class:chart={app.screen !== 'game'}></div>
   {#key app.screen}
-    <div class="screen" class:chart={app.screen !== 'game'}>
+    <div class="screen" class:chart={app.screen !== 'game'} class:newsprint={app.screen !== 'game'}>
       {#if app.screen === 'splash'}<Splash />
       {:else if app.screen === 'title' || app.screen === 'play'}<Title />
       {:else if app.screen === 'lobby'}<Lobby />

@@ -98,7 +98,7 @@
     inset: 0;
     opacity: 0;
     transition: opacity 1.6s ease;
-    filter: saturate(0.78) brightness(1.08) contrast(0.92);
+    filter: saturate(0.74) sepia(0.14) brightness(1.06) contrast(0.92);
   }
   .demo.ready {
     opacity: 1;

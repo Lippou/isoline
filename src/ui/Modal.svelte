@@ -1,8 +1,8 @@
 <script lang="ts">
-  // Confirmation dialog. Rendered outside the screens, so it picks its look itself: chart
-  // paper in the menus (theme tokens only), and over the game the Courier's newsprint, as
-  // the windows and the pause menu: a slip under a magenta rule (every confirmation asked
-  // in a game is a grave order: betrayal, a strike on our own land, surrender, leaving).
+  // Confirmation dialog. Rendered outside the screens, so it picks its look itself: always a
+  // slip of the Courier's newsprint, as the windows and the pause menu. Over the game it
+  // sits under a magenta rule (every confirmation asked in a game is a grave order:
+  // betrayal, a strike on our own land, surrender, leaving); in the menus, under an ink one.
   import './hud/paper.css';
   import { app } from './stores/app.svelte';
 
@@ -21,14 +21,7 @@
     aria-modal="true"
     aria-labelledby="modal-title"
   >
-    <div
-      class="box"
-      class:glass={!paper}
-      class:newsprint={paper}
-      class:np-sheet={paper}
-      tabindex="-1"
-      bind:this={box}
-    >
+    <div class="box newsprint np-sheet" class:menus={!paper} tabindex="-1" bind:this={box}>
       <h3 id="modal-title">{app.modal.title}</h3>
       <p>{app.modal.body}</p>
       <div class="actions">
@@ -38,7 +31,13 @@
               >{a.label}</button
             >
           {:else}
-            <button class="btn {a.kind ?? ''}" onclick={a.run}>{a.label}</button>
+            <button
+              class="np-btn {a.kind ?? ''}"
+              class:ink={a.kind === 'primary'}
+              class:spot={a.kind === 'danger'}
+              class:quiet={a.kind === 'ghost'}
+              onclick={a.run}>{a.label}</button
+            >
           {/if}
         {/each}
       </div>
@@ -55,39 +54,18 @@
     place-items: center;
     z-index: 1000;
   }
+  /* In the menus: the paper dimmed by a wash of its own ink. */
   .back.chart {
-    background: color-mix(in srgb, var(--tip-bg) 30%, transparent);
-    color: var(--parchment);
+    background: rgba(23, 42, 60, 0.32);
+    color: var(--np-ink);
   }
   .box {
-    width: min(460px, 90vw);
-    padding: 1.4rem 1.5rem 1.2rem;
     display: grid;
-    gap: 0.6rem;
     outline: none;
-  }
-  .box.glass {
-    animation: modal-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  }
-  h3 {
-    font-size: 1.3em;
-  }
-  p {
-    margin: 0;
-    color: var(--muted);
-    line-height: 1.55;
   }
   .actions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.5rem;
-    margin-top: 0.6rem;
-  }
-  @keyframes modal-in {
-    from {
-      opacity: 0;
-      transform: translateY(8px) scale(0.98);
-    }
   }
 
   /* Over the game: a slip of the Courier's paper. */
@@ -121,5 +99,16 @@
     margin-top: 14px;
     padding-top: 10px;
     border-top: 1px solid var(--np-rule);
+  }
+  /* In the menus: under an ink rule, laid on the paper with a lighter shadow. */
+  .box.menus {
+    border-top-color: var(--np-ink);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.4) inset,
+      0 18px 44px -12px rgba(23, 42, 60, 0.45);
+  }
+  .menus .np-btn {
+    padding: 7px 14px;
+    font-size: 0.9em;
   }
 </style>

@@ -74,43 +74,44 @@
 </div>
 
 <style>
+  /* Two columns of the page, a fine rule between: the colophon, then the credits. */
   .cols {
     display: grid;
     grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.4fr);
-    gap: 18px;
   }
   .brand {
     align-self: start;
     display: grid;
     justify-items: start;
     gap: 14px;
-    padding: 28px 30px;
-    background: var(--panel-solid);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    padding: 10px 30px 10px 0;
   }
   .slogan {
     margin: 0;
     font-family: var(--title);
     font-style: italic;
     font-size: 1.25em;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .text {
     margin: 4px 0 0;
+    font-family: var(--np-serif);
     line-height: 1.6;
+    text-wrap: pretty;
   }
   dl {
     margin: 6px 0 0;
     width: 100%;
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 8px 18px;
-    padding-top: 14px;
-    border-top: 1px solid var(--line);
+    gap: 7px 18px;
+    padding-top: 12px;
+    border-top: 2px solid var(--np-ink);
   }
   dt {
-    color: var(--muted);
+    font-family: var(--title);
+    font-style: italic;
+    color: var(--np-ink-2);
   }
   dd {
     margin: 0;
@@ -118,18 +119,30 @@
   .credits {
     min-height: 0;
     overflow-y: auto;
-    padding: 24px 30px;
-    background: var(--panel-solid);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    padding: 2px 4px 16px 28px;
+    border-left: 1px solid var(--np-rule);
   }
   .credits h2 {
-    font-size: 1.35em;
-    margin-bottom: 6px;
+    font-weight: 700;
+    font-size: 1.5em;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--np-ink);
   }
+  /* Section heads: a title on a rule, as the Courier's. */
   h3 {
-    margin: 18px 0 6px;
-    font-size: 1.05em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 4px;
+    font-size: 1.02em;
+    color: var(--np-ink-2);
+  }
+  h3::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--np-rule);
   }
   ul {
     list-style: none;
@@ -141,19 +154,23 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
     gap: 2px 16px;
-    padding: 7px 0;
-    border-bottom: 1px solid var(--line);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--np-rule);
     font-size: 0.92em;
+  }
+  li:last-child {
+    border-bottom: 0;
   }
   li b {
     font-weight: 600;
   }
   li span {
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   li small {
     grid-column: 2;
-    color: var(--muted);
-    font-size: 0.9em;
+    font-family: var(--np-serif);
+    color: var(--np-ink-2);
+    font-size: 0.88em;
   }
 </style>

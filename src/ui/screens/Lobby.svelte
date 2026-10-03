@@ -18,6 +18,7 @@
   import { nationsOfMap, type MapNation } from '../components/chartRender';
   import { rangeFill } from '../components/rangeFill';
   import FlagPicker from '../components/FlagPicker.svelte';
+  import PageHeader from '../PageHeader.svelte';
   import { myFlag } from '../stores/profile.svelte';
   import { flagUrl } from '../../render/flags';
   import { hashString } from '../../core/rng';
@@ -259,28 +260,27 @@
 {/if}
 
 <div class="lobby page-shell" data-testid="lobby">
-  <header class="top">
-    <button class="btn ghost back" onclick={() => go('title')}
-      ><Icon name="back" size={16} />{t('common.back')}</button
-    >
-    <div class="htitle">
-      <h1>{lan ? t('lobby.titleLan') : t('lobby.titleSolo')}</h1>
-      <p class="sub">{lan ? t('lobby.subtitleLan') : t('lobby.subtitleSolo')}</p>
-    </div>
-    {#if lobby || (client?.host && port)}
-      <div class="invite">
-        {#if lobby}<span class="chip big" data-testid="lobby-code"
-            ><Icon name="key" size={14} />{t('lobby.code')} <b class="mono">{lobby.code}</b></span
-          >{/if}
-        {#if client?.host && port}<span
-            class="chip big mono"
-            data-testid="lobby-address"
-            data-tip={t('lobby.addressTip')}
-            ><Icon name="network" size={14} />{(hostAddresses[0] ?? '127.0.0.1') + ':' + port}</span
-          >{/if}
-      </div>
-    {/if}
-  </header>
+  <PageHeader
+    wide
+    title={lan ? t('lobby.titleLan') : t('lobby.titleSolo')}
+    subtitle={lan ? t('lobby.subtitleLan') : t('lobby.subtitleSolo')}
+  >
+    {#snippet actions()}
+      {#if lobby || (client?.host && port)}
+        <div class="invite">
+          {#if lobby}<span class="chip big" data-testid="lobby-code"
+              ><Icon name="key" size={14} />{t('lobby.code')} <b class="mono">{lobby.code}</b></span
+            >{/if}
+          {#if client?.host && port}<span
+              class="chip big mono"
+              data-testid="lobby-address"
+              data-tip={t('lobby.addressTip')}
+              ><Icon name="network" size={14} />{(hostAddresses[0] ?? '127.0.0.1') + ':' + port}</span
+            >{/if}
+        </div>
+      {/if}
+    {/snippet}
+  </PageHeader>
 
   <div class="steps">
     <!-- 1. Map -->
@@ -904,58 +904,44 @@
 
 <style>
   .lobby {
-    gap: 18px;
-  }
-  .top {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 6px 22px;
-  }
-  .back {
-    margin-top: 6px;
-  }
-  .htitle {
-    display: grid;
-    gap: 4px;
-  }
-  .htitle h1 {
-    font-size: 2.15em;
-    line-height: 1.1;
-  }
-  .sub {
-    margin: 0;
-    color: var(--muted);
+    gap: 14px;
   }
   .invite {
     display: flex;
     gap: 8px;
-    margin-top: 6px;
   }
   .chip.big {
-    font-size: 0.98em;
-    padding: 0.4em 0.75em;
-    color: var(--parchment);
+    font-size: 0.92em;
+    padding: 0.3em 0.65em;
+    color: var(--np-ink);
+    border-color: var(--np-ink-2);
   }
   .chip.big b {
     letter-spacing: 0.06em;
   }
 
-  /* Three steps, side by side: map → settings → launch. */
+  /* Three steps, printed as the columns of a page: map → settings → launch, a fine rule
+     between them. */
   .steps {
     display: grid;
     grid-template-columns: minmax(300px, 1fr) minmax(360px, 1.1fr) minmax(320px, 0.95fr);
-    gap: 18px;
     min-height: 0;
   }
   .step {
     min-height: 0;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    background: var(--panel-solid);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    padding: 0 18px;
     overflow: hidden;
+  }
+  .step:first-child {
+    padding-left: 0;
+  }
+  .step:last-child {
+    padding-right: 0;
+  }
+  .step + .step {
+    border-left: 1px solid var(--np-rule);
   }
   .maps {
     grid-template-rows: auto auto minmax(0, 1fr);
@@ -963,69 +949,72 @@
   .side {
     grid-template-rows: auto minmax(0, 1fr) auto;
   }
+  /* A column's head: its numeral and name over an ink rule, then its line in italics. */
   .sh {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 12px;
-    align-items: center;
-    padding: 16px 18px 14px;
-    border-bottom: 1px solid var(--line);
+    gap: 10px;
+    align-items: baseline;
+    padding: 2px 0 6px;
+    border-bottom: 2px solid var(--np-ink);
   }
   .num {
-    width: 30px;
-    height: 30px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    border: 1.5px solid var(--parchment);
     font-family: var(--title);
-    font-weight: 600;
-    font-size: 1.05em;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.5em;
     line-height: 1;
+    color: var(--np-ink-3);
   }
   .sh h2 {
-    font-size: 1.2em;
+    font-weight: 700;
+    font-size: 1.3em;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
   }
   .sh p {
-    margin: 1px 0 0;
-    color: var(--muted);
-    font-size: 0.88em;
+    margin: 2px 0 0;
+    font-family: var(--np-serif);
+    font-style: italic;
+    color: var(--np-ink-2);
+    font-size: 0.84em;
   }
 
-  /* 1. Maps */
+  /* 1. Maps: sections as the journal's, words over a rule, the chosen one underlined in ink. */
   .tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 2px 4px;
-    padding: 10px 14px 0;
-    border-bottom: 1px solid var(--line);
+    gap: 0 14px;
+    padding: 6px 0 0;
+    border-bottom: 1px solid var(--np-rule);
   }
   .tab {
     position: relative;
     background: none;
     border: 0;
-    color: var(--muted);
-    padding: 7px 8px 9px;
+    color: var(--np-ink-2);
+    padding: 4px 0 6px;
+    font-size: 0.9em;
+    font-weight: 500;
     cursor: var(--cursor-pointer, pointer);
-    border-radius: 4px 4px 0 0;
     transition: color 0.14s;
   }
   .tab::after {
     content: '';
     position: absolute;
-    left: 8px;
-    right: 8px;
+    left: 0;
+    right: 0;
     bottom: -1px;
     height: 2px;
-    background: var(--aurora);
+    background: var(--np-ink);
     transform: scaleX(0);
     transition: transform 0.22s var(--ease-out);
   }
   .tab:hover:not(:disabled) {
-    color: var(--parchment);
+    color: var(--np-ink);
   }
   .tab.on {
-    color: var(--parchment);
+    color: var(--np-ink);
     font-weight: 600;
   }
   .tab.on::after {
@@ -1040,72 +1029,69 @@
     gap: 14px 12px;
     align-content: start;
     min-height: 0;
-    padding: 14px;
+    padding: 14px 2px 14px 0;
   }
   .map {
     display: grid;
-    gap: 2px;
+    gap: 1px;
     padding: 0;
     background: none;
     border: 0;
     cursor: var(--cursor-pointer, pointer);
     text-align: left;
-    color: var(--parchment);
+    color: var(--np-ink);
   }
   .map:disabled {
     cursor: default;
   }
+  /* A plate of the atlas: square-cut, under a fine rule; the chosen one framed in ink. */
   .thumb {
     position: relative;
     display: block;
     aspect-ratio: 16 / 10;
-    margin-bottom: 6px;
-    border-radius: 4px;
+    margin-bottom: 5px;
+    border: 1px solid var(--np-rule-2);
     overflow: hidden;
-    outline: 1px solid var(--line);
-    outline-offset: 0;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
     transition:
-      outline-color 0.16s,
-      transform 0.22s var(--ease-out),
-      box-shadow 0.22s var(--ease-out);
+      border-color 0.16s,
+      outline-color 0.16s;
   }
   .map:hover:not(:disabled) .thumb {
-    outline-color: var(--line-strong);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px -10px rgba(22, 50, 74, 0.45);
+    border-color: var(--np-ink);
   }
   .map.on .thumb {
-    outline: 2px solid var(--aurora);
-    outline-offset: 2px;
+    border-color: var(--np-ink);
+    outline-color: var(--np-ink);
   }
   .map:focus-visible {
     outline: none;
   }
   .map:focus-visible .thumb {
-    outline: 2px dashed var(--parchment);
+    outline: 2px dashed var(--np-ink);
     outline-offset: 3px;
   }
   .tick {
     position: absolute;
-    top: 6px;
-    right: 6px;
+    top: 0;
+    right: 0;
     width: 22px;
     height: 22px;
     display: grid;
     place-items: center;
-    border-radius: 50%;
-    background: var(--aurora);
-    color: #fff;
-    animation: tick-in 0.28s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+    background: var(--np-ink);
+    color: var(--np-paper);
+    animation: tick-in 0.2s ease-out both;
   }
   @keyframes tick-in {
     from {
-      transform: scale(0);
+      opacity: 0;
     }
   }
-  /* The random map's tile: contour lines and a die. */
+  /* The random map's plate: contour lines and a die. */
   .random .thumb {
-    background: #f7fafa;
+    background: var(--np-card);
   }
   .die {
     position: absolute;
@@ -1113,14 +1099,14 @@
     display: grid;
     place-items: center;
     color: var(--contour-ink);
-    opacity: 0.75;
+    opacity: 0.85;
   }
   .die :global(svg) {
     box-sizing: content-box;
     padding: 8px;
     border-radius: 50%;
-    background: #f7fafa;
-    box-shadow: 0 0 0 6px #f7fafa;
+    background: var(--np-card);
+    box-shadow: 0 0 0 6px var(--np-card);
   }
   .map.random:hover:not(:disabled) .die {
     animation: roll 0.5s var(--ease-out);
@@ -1136,21 +1122,25 @@
     padding: 0;
   }
   .mname {
+    font-family: var(--title);
     font-weight: 600;
-    font-size: 0.95em;
+    font-size: 1.02em;
+    line-height: 1.2;
   }
   .map.on .mname {
-    color: var(--aurora);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
   }
   .msize {
-    font-size: 0.82em;
-    color: var(--muted);
+    font-size: 0.8em;
+    color: var(--np-ink-2);
   }
   .loading {
     position: relative;
     grid-column: 1 / -1;
     height: 180px;
-    color: var(--aurora);
+    color: var(--np-sea);
   }
   .empty {
     grid-column: 1 / -1;
@@ -1160,43 +1150,51 @@
   }
   .gen {
     display: grid;
-    gap: 12px;
+    gap: 14px;
     align-content: start;
-    padding: 14px 18px;
+    padding: 14px 2px 14px 0;
     min-height: 0;
+  }
+  .gen > .hint {
+    margin: 0;
+    font-family: var(--np-serif);
+    font-size: 0.88em;
+    line-height: 1.5;
   }
 
   /* 2. Settings */
   .groups {
     min-height: 0;
-    padding: 4px 18px 10px;
+    padding: 0 4px 10px 0;
   }
   .group {
     display: grid;
-    gap: 14px;
-    padding: 16px 0 18px;
-    border-bottom: 1px solid var(--line);
+    gap: 13px;
+    padding: 14px 0 16px;
+    border-bottom: 1px solid var(--np-rule);
   }
   .group:last-child {
     border-bottom: 0;
   }
   .gh h3 {
-    font-size: 1.05em;
+    font-weight: 700;
+    font-size: 1.08em;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
   }
   .gh p {
-    margin: 2px 0 0;
-    color: var(--muted);
-    font-size: 0.88em;
+    margin: 1px 0 0;
+    font-family: var(--np-serif);
+    color: var(--np-ink-2);
+    font-size: 0.84em;
     line-height: 1.45;
   }
   .cnt {
-    color: var(--muted);
+    color: var(--np-ink-2);
     font-family: var(--text);
     font-weight: 500;
-    font-size: 0.82em;
+    font-size: 0.8em;
   }
   .field {
     display: grid;
@@ -1206,17 +1204,19 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    font-weight: 500;
-    font-size: 0.93em;
+    font-weight: 600;
+    font-size: 0.92em;
   }
   .field > span b {
-    color: var(--aurora);
+    color: var(--np-ink);
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
   .field small,
   .gdesc {
-    color: var(--muted);
-    font-size: 0.84em;
+    font-family: var(--np-serif);
+    color: var(--np-ink-2);
+    font-size: 0.82em;
     line-height: 1.4;
   }
   .row {
@@ -1227,55 +1227,57 @@
     flex: 1;
     min-width: 0;
   }
+  /* Difficulty: a row of words in fine boxes, the chosen one printed in solid ink. */
   .seg {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    padding: 3px;
-    gap: 3px;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 6px;
+    border: 1px solid var(--np-ink-2);
+    border-radius: 2px;
   }
   .seg button {
     background: none;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    color: var(--muted);
+    border: 0;
+    border-radius: 0;
+    color: var(--np-ink-2);
     padding: 6px 2px;
     cursor: var(--cursor-pointer, pointer);
-    font-size: 0.9em;
+    font-size: 0.88em;
+    font-weight: 500;
     transition:
       background 0.16s,
-      color 0.16s,
-      border-color 0.16s;
+      color 0.16s;
+  }
+  .seg button + button {
+    border-left: 1px solid var(--np-rule);
   }
   .seg button:hover:not(:disabled) {
-    color: var(--parchment);
+    color: var(--np-ink);
+    background: var(--np-paper-2);
   }
-  .seg button.on {
-    background: var(--panel-solid);
-    border-color: var(--aurora);
-    color: var(--aurora);
+  .seg button.on,
+  .seg button.on:hover:not(:disabled) {
+    background: var(--np-ink);
+    color: var(--np-paper);
     font-weight: 600;
-    box-shadow: 0 1px 2px rgba(22, 50, 74, 0.12);
   }
   .toggles {
     display: grid;
-    gap: 2px;
   }
   .tog {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 12px;
     align-items: start;
-    padding: 8px 8px;
-    margin: 0 -8px;
-    border-radius: 4px;
+    padding: 7px 6px;
+    margin: 0 -6px;
     cursor: var(--cursor-pointer, pointer);
     transition: background 0.14s;
   }
+  .tog + .tog {
+    border-top: 1px solid color-mix(in srgb, var(--np-rule) 60%, transparent);
+  }
   .tog:hover {
-    background: var(--panel-2);
+    background: var(--np-card);
   }
   .tog input {
     margin-top: 1px;
@@ -1286,34 +1288,34 @@
   }
   .tog b {
     font-weight: 500;
-    font-size: 0.94em;
+    font-size: 0.93em;
   }
   .tog small {
-    color: var(--muted);
-    font-size: 0.83em;
+    font-family: var(--np-serif);
+    color: var(--np-ink-2);
+    font-size: 0.8em;
     line-height: 1.4;
   }
 
   /* 3. Launch */
   .sbody {
     min-height: 0;
-    padding: 16px 18px 6px;
+    padding: 14px 2px 6px 0;
     display: grid;
-    gap: 14px;
+    gap: 12px;
     align-content: start;
   }
   .preview {
     margin: 0;
     display: grid;
-    gap: 8px;
+    gap: 6px;
   }
   .pbox {
     position: relative;
     height: clamp(140px, 27vh, 330px);
-    border: 1px solid var(--line);
-    border-radius: 4px;
+    border: 1px solid var(--np-ink);
     overflow: hidden;
-    background: #f7fafa;
+    background: var(--np-card);
   }
   .proc {
     position: absolute;
@@ -1321,49 +1323,52 @@
     display: grid;
     place-items: end start;
     padding: 10px 12px;
-    color: var(--muted);
+    color: var(--np-ink-2);
     font-size: 0.86em;
   }
   .proc span {
     position: relative;
-    background: color-mix(in srgb, var(--panel-solid) 85%, transparent);
+    background: color-mix(in srgb, var(--np-card) 88%, transparent);
     padding: 2px 6px;
-    border-radius: 3px;
   }
+  /* The caption, as under a photograph: the map's name, its size, its line. */
   .cap {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     gap: 10px;
+    padding-top: 2px;
   }
   .mapname {
     font-family: var(--title);
-    font-weight: 600;
-    font-size: 1.45em;
-    line-height: 1.15;
+    font-weight: 700;
+    font-size: 1.5em;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
   }
   .mdesc {
-    margin: -4px 0 0;
+    margin: -3px 0 0;
     font-family: var(--title);
     font-style: italic;
-    color: var(--muted);
-    font-size: 1.02em;
+    color: var(--np-ink-2);
+    font-size: 1em;
     line-height: 1.4;
   }
   .dims {
-    color: var(--muted);
-    font-size: 0.86em;
+    color: var(--np-ink-2);
+    font-size: 0.84em;
     white-space: nowrap;
   }
   .key {
     list-style: none;
-    margin: -2px 0 0;
+    margin: 0;
     padding: 0;
     display: flex;
     flex-wrap: wrap;
     gap: 4px 16px;
-    color: var(--muted);
-    font-size: 0.86em;
+    color: var(--np-ink-2);
+    font-size: 0.84em;
+    font-variant-numeric: tabular-nums;
   }
   .key li {
     display: flex;
@@ -1374,18 +1379,23 @@
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    border: 1.5px solid var(--muted);
+    border: 1.5px solid var(--np-ink-2);
     opacity: 0.7;
   }
   .dot.on {
-    background: var(--parchment);
-    border-color: var(--parchment);
+    background: var(--np-ink);
+    border-color: var(--np-ink);
     opacity: 1;
   }
+  /* The summary reads as the article's lead. */
   .summary {
     margin: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--np-rule);
+    font-family: var(--np-serif);
     line-height: 1.55;
-    font-size: 0.95em;
+    font-size: 0.92em;
+    text-wrap: pretty;
   }
   .who {
     display: grid;
@@ -1410,9 +1420,9 @@
   .flagpick {
     flex: none;
     padding: 3px;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius);
-    background: var(--input-bg);
+    border: 1px solid var(--np-rule-2);
+    border-radius: 2px;
+    background: var(--np-card);
     cursor: var(--cursor-pointer, pointer);
     display: grid;
     place-items: center;
@@ -1420,23 +1430,23 @@
   }
   .flagpick:hover,
   .flagpick:focus-visible {
-    border-color: var(--aurora);
+    border-color: var(--np-ink);
     outline: none;
   }
   .flagpick img {
     height: 26px;
-    border-radius: 2px;
-    box-shadow: 0 0 0 1px rgba(22, 50, 74, 0.22);
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
   }
   .pflag {
     height: 15px;
-    border-radius: 1px;
-    box-shadow: 0 0 0 1px rgba(22, 50, 74, 0.25);
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
   }
   .flagbtn img {
     height: 16px;
-    border-radius: 1px;
-    box-shadow: 0 0 0 1px rgba(22, 50, 74, 0.25);
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
   }
   .flagbtn {
     justify-self: start;
@@ -1445,15 +1455,14 @@
     margin-top: -4px;
   }
   .launch {
-    padding: 14px 18px 16px;
-    border-top: 1px solid var(--line);
-    background: var(--panel-2);
+    padding: 12px 0 0;
+    border-top: 2px solid var(--np-ink);
     display: grid;
-    gap: 8px;
+    gap: 6px;
   }
   .start {
     font-size: 1.15em;
-    padding: 0.8em 1em;
+    padding: 0.75em 1em;
     width: 100%;
   }
   .start:not(:disabled):hover :global(svg) {
@@ -1465,28 +1474,31 @@
   .launch .hint {
     margin: 0;
     text-align: center;
+    font-family: var(--title);
+    font-style: italic;
   }
   .ptitle {
-    font-size: 1.05em;
+    font-weight: 700;
+    font-size: 1.08em;
     display: flex;
     gap: 8px;
     align-items: baseline;
+    padding-top: 10px;
+    border-top: 1px solid var(--np-rule);
   }
   .plist {
     list-style: none;
     padding: 0;
     margin: 0;
     display: grid;
-    gap: 4px;
   }
   .plist li {
     display: flex;
     gap: 6px;
     align-items: center;
     flex-wrap: wrap;
-    padding: 6px 8px;
-    border-radius: 4px;
-    background: var(--panel-2);
+    padding: 6px 2px;
+    border-bottom: 1px solid var(--np-rule);
   }
   .plist li.off {
     opacity: 0.5;
@@ -1496,16 +1508,23 @@
     display: inline-flex;
     gap: 4px;
     align-items: center;
-    font-weight: 500;
+    font-family: var(--title);
+    font-weight: 600;
   }
   .x {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
     background: none;
-    border: 0;
-    color: var(--muted);
+    border: 1px solid transparent;
+    border-radius: 2px;
+    color: var(--np-ink-2);
     cursor: var(--cursor-pointer, pointer);
   }
   .x:hover {
-    color: var(--signal);
+    color: var(--np-spot);
+    border-color: color-mix(in srgb, var(--np-spot) 45%, transparent);
   }
   .chat ul {
     list-style: none;
@@ -1513,6 +1532,9 @@
     margin: 0 0 6px;
     max-height: 140px;
     font-size: 0.88em;
+  }
+  .chat li {
+    padding: 2px 0;
   }
   .chat input {
     width: 100%;

@@ -171,22 +171,33 @@
 <style>
   .editor {
     display: grid;
-    gap: 18px;
+    gap: 16px;
     align-content: start;
   }
   section {
     display: grid;
     gap: 10px;
   }
+  /* Section heads: a title on a rule, its tools at the end. */
   h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
     font-size: 1.02em;
     font-weight: 600;
     margin: 0;
+  }
+  h3::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--np-rule);
   }
   .sh {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
   }
   .acts {
     display: flex;
@@ -200,15 +211,13 @@
   .lay {
     padding: 0;
     aspect-ratio: 3 / 2;
-    border: 1px solid var(--line-strong);
-    border-radius: 3px;
+    border: 1px solid var(--np-rule-2);
+    border-radius: 0;
     overflow: hidden;
     background: none;
     cursor: var(--cursor-pointer, pointer);
     display: block;
-    transition:
-      transform 0.12s var(--ease-out),
-      box-shadow 0.12s;
+    transition: border-color 0.12s;
   }
   .lay :global(svg) {
     display: block;
@@ -216,41 +225,44 @@
     height: 100%;
   }
   .lay:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(22, 50, 74, 0.16);
+    border-color: var(--np-ink);
   }
   .lay.on,
   .emb.on {
-    outline: 2px solid var(--aurora);
+    outline: 2px solid var(--np-ink);
     outline-offset: 2px;
   }
   .slots {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
   }
+  /* The colours to set: square-cut tags with their swatch. */
   .slot {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 5px 12px 5px 6px;
-    border: 1px solid var(--line-strong);
-    border-radius: 20px;
-    background: var(--panel-solid);
-    color: var(--parchment);
-    font-size: 0.9em;
+    padding: 4px 10px 4px 5px;
+    border: 1px solid var(--np-rule-2);
+    border-radius: 2px;
+    background: none;
+    color: var(--np-ink);
+    font-size: 0.88em;
     cursor: var(--cursor-pointer, pointer);
   }
+  .slot:hover {
+    border-color: var(--np-ink);
+  }
   .slot.on {
-    border-color: var(--aurora);
+    border-color: var(--np-ink);
     background: var(--select-bg);
     font-weight: 600;
   }
   .sw {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    box-shadow: inset 0 0 0 1px rgba(22, 50, 74, 0.28);
+    width: 18px;
+    height: 18px;
+    border-radius: 1px;
+    box-shadow: inset 0 0 0 1px rgba(23, 42, 60, 0.3);
   }
   .palette {
     display: flex;
@@ -261,9 +273,9 @@
   .chipc {
     width: 26px;
     height: 26px;
-    border-radius: 4px;
+    border-radius: 2px;
     border: none;
-    box-shadow: inset 0 0 0 1px rgba(22, 50, 74, 0.25);
+    box-shadow: inset 0 0 0 1px rgba(23, 42, 60, 0.28);
     cursor: var(--cursor-pointer, pointer);
     transition: transform 0.1s var(--ease-out);
   }
@@ -271,7 +283,7 @@
     transform: scale(1.1);
   }
   .chipc.on {
-    outline: 2px solid var(--aurora);
+    outline: 2px solid var(--np-ink);
     outline-offset: 2px;
   }
   .custom {
@@ -279,17 +291,19 @@
     align-items: center;
     gap: 6px;
     margin-left: 6px;
-    font-size: 0.86em;
-    color: var(--muted);
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.9em;
+    color: var(--np-ink-2);
     cursor: var(--cursor-pointer, pointer);
   }
   .custom input {
     width: 30px;
     height: 26px;
     padding: 0;
-    border: 1px solid var(--line-strong);
-    border-radius: 4px;
-    background: var(--input-bg);
+    border: 1px solid var(--np-rule-2);
+    border-radius: 2px;
+    background: var(--np-card);
     cursor: var(--cursor-pointer, pointer);
   }
   .emblems {
@@ -301,14 +315,14 @@
     aspect-ratio: 1;
     display: grid;
     place-items: center;
-    border: 1px solid var(--line-strong);
-    border-radius: 4px;
-    background: var(--panel-solid);
-    color: var(--parchment);
+    border: 1px solid var(--np-rule-2);
+    border-radius: 2px;
+    background: var(--np-card);
+    color: var(--np-ink);
     cursor: var(--cursor-pointer, pointer);
   }
   .emb:hover {
-    border-color: var(--aurora);
+    border-color: var(--np-ink);
   }
   .emb.on {
     background: var(--select-bg);
@@ -319,29 +333,37 @@
     gap: 12px;
   }
   .lbl {
-    font-size: 0.9em;
-    color: var(--muted);
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.92em;
+    color: var(--np-ink-2);
   }
+  /* Position: words in fine boxes, the chosen one in solid ink. */
   .seg {
     display: inline-flex;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius);
+    border: 1px solid var(--np-ink-2);
+    border-radius: 2px;
     overflow: hidden;
   }
   .seg button {
     border: none;
-    background: var(--panel-solid);
-    color: var(--parchment);
+    background: none;
+    color: var(--np-ink-2);
     padding: 5px 14px;
-    font-size: 0.9em;
+    font-size: 0.88em;
+    font-weight: 500;
     cursor: var(--cursor-pointer, pointer);
   }
   .seg button + button {
-    border-left: 1px solid var(--line);
+    border-left: 1px solid var(--np-rule);
+  }
+  .seg button:hover {
+    color: var(--np-ink);
+    background: var(--np-paper-2);
   }
   .seg button.on {
-    background: var(--select-bg);
-    color: var(--aurora);
+    background: var(--np-ink);
+    color: var(--np-paper);
     font-weight: 600;
   }
   .warnline {
@@ -350,6 +372,6 @@
     gap: 6px;
     margin: 0;
     font-size: 0.86em;
-    color: var(--warn-text);
+    color: var(--np-warn);
   }
 </style>

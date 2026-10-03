@@ -90,8 +90,8 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: #f7fafa;
-    color: var(--aurora);
+    background: var(--np-card, #f8f4ec);
+    color: var(--np-sea, var(--aurora));
   }
   img,
   svg {
@@ -119,7 +119,7 @@
     opacity: 0.6;
   }
   circle {
-    fill: var(--panel-solid, #fafcfb);
+    fill: var(--panel-solid, #f8f4ec);
     stroke: var(--muted);
     opacity: 0.5;
     transform-box: fill-box;
@@ -132,7 +132,7 @@
   }
   circle.on {
     fill: var(--parchment);
-    stroke: var(--panel-solid, #fafcfb);
+    stroke: var(--panel-solid, #f8f4ec);
     opacity: 1;
   }
   circle.pop {

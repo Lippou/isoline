@@ -1,12 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { go } from '../stores/app.svelte';
   import { t } from '../i18n/i18n.svelte';
   import { MISSIONS } from '../campaign/missions';
   import { profile } from '../stores/profile.svelte';
   import { startMission } from './launch';
   import { mapsBase } from '../bridge';
   import Icon from '../icons/Icon.svelte';
+  import PageHeader from '../PageHeader.svelte';
   import ChartMap from '../components/ChartMap.svelte';
   import { nationsOfMap, type MapNation } from '../components/chartRender';
   import { contourFamily } from '../components/contours';
@@ -97,15 +97,8 @@
 </script>
 
 <div class="camp page-shell" data-testid="campaign">
-  <header class="top">
-    <button class="btn ghost back" onclick={() => go('play')}
-      ><Icon name="back" size={16} />{t('common.back')}</button
-    >
-    <div class="htitle">
-      <h1>{t('campaign.title')}</h1>
-      <p class="sub">{t('campaign.intro')}</p>
-    </div>
-    <div class="acts">
+  <PageHeader wide title={t('campaign.title')} subtitle={t('campaign.intro')} back="play">
+    {#snippet actions()}
       <span
         class="stars-total"
         aria-label={t('campaign.starsTotal', { n: totalStars, total: MISSIONS.length * 3 })}
@@ -113,8 +106,8 @@
           >/ {MISSIONS.length * 3}</span
         ></span
       >
-    </div>
-  </header>
+    {/snippet}
+  </PageHeader>
 
   <div class="body">
     <section class="route" aria-label={t('campaign.routeLabel')} bind:clientWidth={W} bind:clientHeight={H}>
@@ -226,41 +219,13 @@
 </div>
 
 <style>
-  .top {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 6px 22px;
-  }
-  .back {
-    margin-top: 6px;
-  }
-  .htitle {
-    display: grid;
-    gap: 4px;
-  }
-  .htitle h1 {
-    font-size: 2.15em;
-    line-height: 1.1;
-  }
-  .sub {
-    margin: 0;
-    color: var(--muted);
-    max-width: 78ch;
-    line-height: 1.5;
-  }
-  .acts {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-top: 6px;
-  }
   .stars-total {
     display: inline-flex;
     align-items: baseline;
     gap: 6px;
     color: var(--brass-text);
-    font-size: 1.05em;
+    font-size: 1.02em;
+    font-variant-numeric: tabular-nums;
   }
   .stars-total :global(svg) {
     color: var(--brass);
@@ -271,23 +236,23 @@
     font-weight: 600;
   }
   .stars-total span {
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
 
+  /* The route's plate, then the mission's column, a fine rule between. */
   .body {
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) minmax(380px, 1fr);
-    gap: 18px;
     min-height: 0;
   }
 
-  /* The route chart */
+  /* The route chart: a plate of the atlas, square-cut in an ink frame. */
   .route {
     position: relative;
     min-height: 0;
-    background: var(--panel-solid);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    margin-right: 22px;
+    background: var(--np-card);
+    border: 1px solid var(--np-ink);
     overflow: hidden;
   }
   .route svg,
@@ -303,7 +268,7 @@
     padding: 0;
   }
   .grat line {
-    stroke: var(--line);
+    stroke: var(--np-rule);
     stroke-width: 1;
     opacity: 0.55;
   }
@@ -318,14 +283,14 @@
   }
   .track {
     fill: none;
-    stroke: var(--line-strong);
+    stroke: var(--np-rule-2);
     stroke-width: 2.5;
     stroke-dasharray: 0.1 9;
     stroke-linecap: round;
   }
   .progress {
     fill: none;
-    stroke: var(--aurora);
+    stroke: var(--np-ink);
     stroke-width: 3.5;
     stroke-dasharray: 0.1 9;
     stroke-linecap: round;
@@ -358,7 +323,7 @@
     padding: 0;
     background: none;
     border: 0;
-    color: var(--parchment);
+    color: var(--np-ink);
     cursor: var(--cursor-pointer, pointer);
     text-align: center;
   }
@@ -374,23 +339,23 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: var(--panel-solid);
-    border: 2px solid var(--line-strong);
+    background: var(--np-card);
+    border: 2px solid var(--np-rule-2);
     transition:
       transform 0.22s var(--ease-out),
       background 0.16s,
       border-color 0.16s;
   }
   .done .mk::before {
-    background: var(--parchment);
-    border-color: var(--parchment);
+    background: var(--np-ink);
+    border-color: var(--np-ink);
   }
   .next .mk::before {
     width: 15px;
     height: 15px;
     border-radius: 2px;
     background: var(--brass);
-    border: 2px solid var(--panel-solid);
+    border: 2px solid var(--np-card);
     transform: rotate(45deg);
     box-shadow: 0 0 0 1px var(--brass);
   }
@@ -399,7 +364,7 @@
     position: absolute;
     inset: -3px;
     border-radius: 50%;
-    border: 2px solid var(--aurora);
+    border: 2px solid var(--np-ink);
     opacity: 0;
     transform: scale(0.6);
     transition:
@@ -420,32 +385,32 @@
     outline: none;
   }
   .st:focus-visible .lbl {
-    outline: 2px solid var(--aurora);
+    outline: 2px solid var(--np-ink);
     outline-offset: 3px;
-    border-radius: 3px;
   }
+  /* A station's label: a slip of paper, framed in ink when chosen. */
   .lbl {
     display: grid;
     justify-items: center;
     gap: 1px;
     padding: 4px 10px 5px;
-    border-radius: 4px;
+    border-radius: 2px;
     border: 1px solid transparent;
-    background: color-mix(in srgb, var(--panel-solid) 88%, transparent);
+    background: color-mix(in srgb, var(--np-card) 90%, transparent);
     transition:
       border-color 0.16s,
       box-shadow 0.16s;
   }
   .st:hover .lbl {
-    border-color: var(--line-strong);
+    border-color: var(--np-rule-2);
   }
   .st.on .lbl {
-    background: var(--panel-solid);
-    border-color: var(--aurora);
-    box-shadow: 0 6px 16px -10px rgba(22, 50, 74, 0.5);
+    background: var(--np-paper);
+    border-color: var(--np-ink);
+    box-shadow: 3px 3px 0 var(--np-paper-2);
   }
   .lbl small {
-    color: var(--muted);
+    color: var(--np-ink-2);
     font-size: 0.78em;
   }
   .lbl b {
@@ -459,12 +424,12 @@
     font-weight: 600;
   }
   .locked .lbl b {
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .stars {
     display: flex;
     gap: 1px;
-    color: var(--line-strong);
+    color: var(--np-rule-2);
   }
   .got {
     color: var(--brass);
@@ -474,31 +439,30 @@
     align-items: center;
     gap: 4px;
     font-size: 0.78em;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
 
-  /* Mission detail */
+  /* Mission detail: the article — its map as a photograph, then kicker, head, lead. */
   .detail {
     min-height: 0;
     overflow-y: auto;
-    background: var(--panel-solid);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    padding-left: 22px;
+    border-left: 1px solid var(--np-rule);
     display: grid;
     align-content: start;
     scrollbar-width: thin;
   }
   .chartbox {
     position: relative;
-    height: clamp(160px, 30vh, 320px);
-    border-bottom: 1px solid var(--line);
-    background: #f7fafa;
+    height: clamp(150px, 24vh, 290px);
+    border: 1px solid var(--np-ink);
+    background: var(--np-card);
     animation: fade 0.3s ease-out both;
   }
   .dtxt {
     display: grid;
-    gap: 12px;
-    padding: 18px 22px 22px;
+    gap: 9px;
+    padding: 14px 0 16px;
     animation: rise 0.3s ease-out both;
   }
   @keyframes fade {
@@ -513,51 +477,60 @@
     }
   }
   .kicker {
-    color: var(--muted);
-    font-size: 0.88em;
+    font-family: var(--title);
+    font-style: italic;
+    color: var(--np-ink-2);
+    font-size: 0.95em;
   }
   .dtxt h2 {
-    font-size: 1.7em;
+    font-weight: 700;
+    font-size: 1.9em;
+    line-height: 1.05;
+    letter-spacing: -0.012em;
     margin-top: -6px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--np-ink);
   }
   .brief {
     margin: 0;
+    font-family: var(--np-serif);
     line-height: 1.6;
     max-width: 62ch;
+    text-wrap: pretty;
   }
+  /* The orders, as a legend: pictogram, kind, words; a fine rule between. */
   .objs {
     list-style: none;
-    margin: 4px 0 0;
+    margin: 2px 0 0;
     padding: 0;
     display: grid;
-    gap: 10px;
+    border-top: 1px solid var(--np-rule);
   }
   .objs li {
     display: grid;
-    grid-template-columns: 32px 1fr;
+    grid-template-columns: 20px 1fr;
     gap: 12px;
     align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--np-rule);
   }
   .ok {
-    width: 32px;
-    height: 32px;
     display: grid;
     place-items: center;
-    border: 1px solid var(--line-strong);
-    border-radius: 3px;
-    color: var(--parchment);
+    color: var(--np-ink);
   }
   .objs li > span:last-child {
     display: grid;
   }
   .objs b {
-    font-size: 0.82em;
-    font-weight: 500;
-    color: var(--muted);
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.86em;
+    font-weight: 400;
+    color: var(--np-ink-2);
   }
   .bonus .ok {
     color: var(--brass-text);
-    border-color: color-mix(in srgb, var(--brass) 60%, transparent);
   }
   .act {
     margin-top: 4px;
@@ -571,6 +544,13 @@
     display: flex;
     gap: 8px;
     align-items: center;
-    color: var(--muted);
+    font-family: var(--title);
+    font-style: italic;
+    color: var(--np-ink-2);
+  }
+  .dtxt > .hint {
+    margin: 0;
+    font-family: var(--np-serif);
+    font-size: 0.82em;
   }
 </style>
