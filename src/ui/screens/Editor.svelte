@@ -2,7 +2,6 @@
   import Icon from '../icons/Icon.svelte';
   import { rangeFill } from '../components/rangeFill';
   import { onMount, onDestroy } from 'svelte';
-  import { go } from '../stores/app.svelte';
   import { t, i18n } from '../i18n/i18n.svelte';
   import { bridge, mapsBase, readText } from '../bridge';
   import { EditorModel, EDITOR_COLORS, type Brush } from '../editor/editorModel';
@@ -12,9 +11,10 @@
   import { startSolo, playerName } from './launch';
   import { defaultConfig } from '../../core/game/config';
   import Isolines from '../components/Isolines.svelte';
+  import PageHeader from '../PageHeader.svelte';
 
-  // Canvas inks, read from the theme tokens (chart paper in the menus).
-  const ink = { paper: '#e3ecec', text: '#16324a', halo: '#fafcfb', spawn: '#2c6e91', nation: '#b8862a' };
+  // Canvas inks, read from the theme tokens (the Courier's paper in the menus).
+  const ink = { paper: '#e6dfd1', text: '#172a3c', halo: '#f8f4ec', spawn: '#2c6e91', nation: '#b8862a' };
   function readInks(): void {
     if (!wrap) return;
     const cs = getComputedStyle(wrap);
@@ -22,7 +22,7 @@
     ink.paper = v('--slate', ink.paper);
     ink.text = v('--parchment', ink.text);
     ink.halo = v('--panel-solid', ink.halo);
-    ink.spawn = v('--aurora', ink.spawn);
+    ink.spawn = v('--np-sea', ink.spawn);
     ink.nation = v('--brass', ink.nation);
   }
 
@@ -252,31 +252,31 @@
 </script>
 
 <div class="editor" data-testid="editor">
-  <header>
-    <button class="btn ghost back" onclick={() => go('title')}
-      ><Icon name="back" size={16} />{t('common.back')}</button
-    >
-    <h1>{t('title.editor')}</h1>
-    <label class="mapname"
-      ><span class="sr-only">{t('editor.mapName')}</span><Icon name="edit" size={14} /><input
-        type="text"
-        bind:value={name}
-        onchange={sync}
-      /></label
-    >
-    <div class="acts">
-      <button class="btn" onclick={importFile}><Icon name="upload" size={15} />{t('editor.import')}</button>
-      <button class="btn" onclick={exportMap} disabled={!model}
-        ><Icon name="download" size={15} />{t('editor.export')}</button
+  <PageHeader wide title={t('title.editor')}>
+    {#snippet dateline()}
+      <label class="mapname"
+        ><span class="sr-only">{t('editor.mapName')}</span><Icon name="edit" size={14} /><input
+          type="text"
+          bind:value={name}
+          onchange={sync}
+        /></label
       >
-      <button class="btn" onclick={save} disabled={!model} data-testid="editor-save"
-        ><Icon name="save" size={15} />{t('editor.save')}</button
-      >
-      <button class="btn primary" onclick={test} disabled={!model} data-testid="editor-test"
-        ><Icon name="play" size={15} />{t('editor.test')}</button
-      >
-    </div>
-  </header>
+      <div class="acts">
+        <button class="btn small" onclick={importFile}
+          ><Icon name="upload" size={14} />{t('editor.import')}</button
+        >
+        <button class="btn small" onclick={exportMap} disabled={!model}
+          ><Icon name="download" size={14} />{t('editor.export')}</button
+        >
+        <button class="btn small" onclick={save} disabled={!model} data-testid="editor-save"
+          ><Icon name="save" size={14} />{t('editor.save')}</button
+        >
+        <button class="btn small primary" onclick={test} disabled={!model} data-testid="editor-test"
+          ><Icon name="play" size={14} />{t('editor.test')}</button
+        >
+      </div>
+    {/snippet}
+  </PageHeader>
   <div class="main">
     <aside class="tools scroll">
       {#if !model}
@@ -394,19 +394,11 @@
     inset: 0;
     display: grid;
     grid-template-rows: auto 1fr;
-    gap: 18px;
-    padding: 34px var(--page-pad, 32px) 24px;
+    gap: 14px;
+    padding: 22px var(--page-pad, 32px) 22px;
     background: var(--abyss);
   }
-  header {
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  header h1 {
-    font-size: 2em;
-  }
+  /* The dateline carries the map's name and the tools. */
   .mapname {
     flex: 1;
     min-width: 180px;
@@ -414,86 +406,110 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .mapname input {
     flex: 1;
     min-width: 0;
+    padding: 0.25em 0.5em;
     font-family: var(--title);
-    font-size: 1.05em;
+    font-style: italic;
+    font-size: 1.1em;
+    background-color: transparent;
+    border-color: transparent;
+  }
+  .mapname input:hover,
+  .mapname input:focus {
+    background-color: var(--np-card);
   }
   .acts {
     margin-left: auto;
     display: flex;
-    gap: 8px;
+    gap: 6px;
   }
+  /* The tools' column, then the plate, a fine rule between. */
   .main {
     display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 18px;
+    grid-template-columns: 270px 1fr;
     min-height: 0;
   }
   .tools {
-    padding: 18px;
+    padding: 2px 20px 12px 0;
+    margin-right: 20px;
     display: grid;
     gap: 12px;
     align-content: start;
-    background: var(--panel-solid);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    border-right: 1px solid var(--np-rule);
   }
+  /* Section heads: a title on a rule. */
   .tools h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-size: 1.05em;
   }
+  .tools h3::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--np-rule);
+  }
+  /* The sizes, as a legend: the figure, then its word; a fine rule between. */
   .sizes {
     display: grid;
-    gap: 6px;
+    border-top: 1px solid var(--np-ink);
   }
   .size {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    padding: 10px 12px;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    color: var(--parchment);
+    padding: 9px 8px;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--np-rule);
+    color: var(--np-ink);
     cursor: var(--cursor-pointer, pointer);
-    transition:
-      border-color 0.14s,
-      background 0.14s;
+    transition: background 0.14s;
   }
-  .size:hover {
-    border-color: var(--aurora);
-    background: var(--select-bg);
+  .size b {
+    font-weight: 600;
+  }
+  .size:hover,
+  .size:focus-visible {
+    background: var(--np-card);
   }
   .size small {
-    color: var(--muted);
+    font-family: var(--title);
+    font-style: italic;
+    color: var(--np-ink-2);
   }
+  /* Brushes: words in fine boxes, the chosen one in solid ink. */
   .brushes {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
   }
   .brush {
-    padding: 5px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--line);
-    background: var(--panel-2);
-    color: var(--muted);
-    font-size: 0.9em;
+    padding: 4px 9px;
+    border-radius: 2px;
+    border: 1px solid var(--np-rule-2);
+    background: none;
+    color: var(--np-ink-2);
+    font-size: 0.88em;
+    font-weight: 500;
     cursor: var(--cursor-pointer, pointer);
     transition:
       border-color 0.14s,
-      color 0.14s;
+      color 0.14s,
+      background 0.14s;
   }
   .brush:hover {
-    color: var(--parchment);
+    color: var(--np-ink);
+    border-color: var(--np-ink);
   }
   .brush.on {
-    color: var(--aurora);
-    border-color: var(--aurora);
-    background: var(--select-bg);
+    color: var(--np-paper);
+    border-color: var(--np-ink);
+    background: var(--np-ink);
     font-weight: 600;
   }
   .swatches {
@@ -503,9 +519,9 @@
   }
   .sw {
     aspect-ratio: 1;
-    border-radius: 4px;
+    border-radius: 2px;
     border: 2px solid transparent;
-    box-shadow: inset 0 0 0 1px rgba(22, 50, 74, 0.15);
+    box-shadow: inset 0 0 0 1px rgba(23, 42, 60, 0.18);
     cursor: var(--cursor-pointer, pointer);
     transition: transform 0.14s;
   }
@@ -513,7 +529,7 @@
     transform: scale(1.08);
   }
   .sw.on {
-    border-color: var(--parchment);
+    border-color: var(--np-ink);
   }
   .rad {
     display: grid;
@@ -522,10 +538,10 @@
   .rad span {
     display: flex;
     justify-content: space-between;
-    font-weight: 500;
+    font-weight: 600;
   }
   .rad b {
-    color: var(--aurora);
+    color: var(--np-ink);
   }
   .tool-acts {
     display: grid;
@@ -539,24 +555,25 @@
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 4px 12px;
-    padding: 10px 0;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    font-size: 0.92em;
+    padding: 8px 0;
+    border-top: 2px solid var(--np-ink);
+    border-bottom: 1px solid var(--np-rule);
+    font-size: 0.9em;
   }
   .facts dt {
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .facts dd {
     margin: 0;
     text-align: right;
+    font-weight: 500;
   }
+  /* The plate: the map being drawn, in an ink frame. */
   .view {
     position: relative;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    border: 1px solid var(--np-ink);
     overflow: hidden;
-    background: var(--slate);
+    background: var(--np-paper-2);
   }
   canvas {
     display: block;
@@ -571,7 +588,10 @@
     place-content: center;
     justify-items: center;
     gap: 12px;
-    color: var(--muted);
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 1.05em;
+    color: var(--np-ink-2);
     pointer-events: none;
   }
   .empty p {
@@ -581,11 +601,12 @@
     position: relative;
     width: 140px;
     height: 140px;
-    color: var(--aurora);
+    color: var(--np-sea);
   }
   .muted {
-    color: var(--muted);
-    font-size: 0.86em;
+    font-family: var(--np-serif);
+    color: var(--np-ink-2);
+    font-size: 0.84em;
     margin: 0;
     line-height: 1.45;
   }
@@ -593,7 +614,7 @@
     display: flex;
     gap: 6px;
     align-items: baseline;
-    color: var(--bad-text);
+    color: var(--np-spot);
     font-size: 0.88em;
     margin: 0;
   }

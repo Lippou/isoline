@@ -159,42 +159,49 @@
   .body {
     overflow-y: auto;
   }
+  /* Two columns of the page, a fine rule between: host, then join. */
   .cols {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 18px;
     align-items: start;
   }
   .card {
-    padding: 22px 24px;
+    padding: 2px 26px 12px 0;
     display: grid;
     gap: 14px;
     align-content: start;
-    background: var(--panel-solid);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
   }
+  .card + .card {
+    padding: 2px 0 12px 26px;
+    border-left: 1px solid var(--np-rule);
+  }
+  /* A column's head: pictogram and name over an ink rule, then its line in italics. */
   .card header {
     display: grid;
-    grid-template-columns: 38px 1fr;
-    gap: 14px;
-    align-items: start;
+    grid-template-columns: 20px 1fr;
+    gap: 2px 10px;
+    align-items: baseline;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--np-ink);
   }
   .key {
-    width: 38px;
-    height: 38px;
     display: grid;
     place-items: center;
-    border: 1px solid var(--line-strong);
-    border-radius: 3px;
-    color: var(--aurora);
+    color: var(--np-ink);
+    transform: translateY(3px);
   }
   .card h2 {
-    font-size: 1.3em;
+    font-weight: 700;
+    font-size: 1.4em;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
   }
   .card header p {
     margin: 3px 0 0;
-    color: var(--muted);
+    font-family: var(--np-serif);
+    font-style: italic;
+    font-size: 0.9em;
+    color: var(--np-ink-2);
     line-height: 1.5;
   }
   .steps {
@@ -202,26 +209,22 @@
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 10px;
   }
   .steps li {
     display: grid;
-    grid-template-columns: 26px 1fr;
-    gap: 12px;
+    grid-template-columns: 22px 1fr;
+    gap: 10px;
     align-items: baseline;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--np-rule);
     line-height: 1.45;
   }
   .n {
-    width: 24px;
-    height: 24px;
-    display: grid;
-    place-items: center;
-    border: 1.5px solid var(--parchment);
-    border-radius: 50%;
     font-family: var(--title);
-    font-weight: 600;
-    font-size: 0.9em;
-    transform: translateY(-1px);
+    font-style: italic;
+    font-size: 1.25em;
+    line-height: 1;
+    color: var(--np-ink-3);
   }
   .big {
     justify-self: start;
@@ -233,11 +236,15 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px 10px;
-    color: var(--muted);
+    color: var(--np-ink-2);
     font-size: 0.92em;
   }
+  .ips span {
+    font-family: var(--title);
+    font-style: italic;
+  }
   .ips b {
-    color: var(--parchment);
+    color: var(--np-ink);
     font-weight: 600;
   }
   .games {
@@ -245,16 +252,13 @@
     padding: 0;
     margin: 0;
     display: grid;
-    gap: 6px;
   }
   .games li {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 12px;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 4px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--np-rule);
     animation: found 0.3s ease-out both;
   }
   @keyframes found {
@@ -266,31 +270,48 @@
   .games li div {
     display: grid;
   }
-  .games small {
-    color: var(--muted);
+  .games b {
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 1.06em;
   }
+  .games small {
+    color: var(--np-ink-2);
+  }
+  /* Nothing found yet: a line in italics beside a sounding. */
   .scan {
     display: flex;
     gap: 14px;
     align-items: center;
-    padding: 10px 12px;
-    border: 1px dashed var(--line-strong);
-    border-radius: 4px;
-    color: var(--muted);
+    padding: 4px 0 8px;
+    border-bottom: 1px solid var(--np-rule);
+    font-family: var(--title);
+    font-style: italic;
+    color: var(--np-ink-2);
   }
   .sonar {
     position: relative;
     flex: none;
     width: 52px;
     height: 52px;
-    color: var(--aurora);
+    color: var(--np-sea);
   }
+  /* Section heads: a title on a rule. */
   h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
     font-size: 1.05em;
-    margin-top: 8px;
+  }
+  h3::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--np-rule);
   }
   .hint {
     margin: -8px 0 0;
+    font-family: var(--np-serif);
   }
   .manual {
     display: grid;
@@ -303,8 +324,8 @@
     gap: 6px;
   }
   .field span {
-    font-weight: 500;
-    font-size: 0.93em;
+    font-weight: 600;
+    font-size: 0.92em;
   }
   .field input {
     min-width: 0;
@@ -315,17 +336,18 @@
     align-items: center;
     cursor: var(--cursor-pointer, pointer);
   }
+  /* What happens, on a slip of ink. */
   .status {
     position: fixed;
     bottom: 24px;
     left: 50%;
     transform: translateX(-50%);
     margin: 0;
-    padding: 0.6em 1.1em;
-    background: var(--tip-bg);
-    color: #eef3f2;
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
+    padding: 0.55em 1.1em;
+    background: var(--np-ink);
+    color: var(--np-paper);
+    border-radius: 2px;
+    box-shadow: 3px 3px 0 var(--np-paper-2);
     animation: toast 0.25s ease-out both;
   }
   @keyframes toast {

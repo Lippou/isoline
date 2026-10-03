@@ -38,7 +38,7 @@
 
 {#if !done}
   <svg class="sweep" viewBox="0 0 {w} {h}" preserveAspectRatio="xMinYMax slice" aria-hidden="true">
-    <g fill="none" stroke="var(--aurora)" stroke-width="1.5" stroke-linecap="round">
+    <g fill="none" stroke="var(--np-sea, var(--aurora))" stroke-width="1.5" stroke-linecap="round">
       {#each rings as ring, k (k)}
         <path d={ring.d} pathLength="1" style="animation-delay:{k * 22}ms" />
       {/each}

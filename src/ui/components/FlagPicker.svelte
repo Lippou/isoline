@@ -208,68 +208,89 @@
     z-index: 900;
     display: grid;
     place-items: center;
-    background: color-mix(in srgb, var(--tip-bg) 34%, transparent);
+    background: rgba(23, 42, 60, 0.32);
   }
+  /* A sheet of the Courier laid over the page, square-cut, under its masthead. */
   .dlg {
     width: min(1120px, 94vw);
     height: min(760px, 92vh);
     display: grid;
     grid-template-rows: auto auto minmax(0, 1fr) auto;
-    background: var(--panel-solid);
-    border: 1px solid var(--line-strong);
-    border-radius: 10px;
-    box-shadow: 0 24px 60px rgba(22, 50, 74, 0.28);
+    background: var(--np-paper);
+    border: 1px solid #d9d1c1;
+    border-radius: 2px;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.4) inset,
+      0 22px 54px -14px rgba(23, 42, 60, 0.45);
     outline: none;
-    color: var(--parchment);
-    animation: dlg-in 0.22s var(--ease-out) both;
+    color: var(--np-ink);
+    animation: dlg-in 0.24s var(--ease-out) both;
   }
   @keyframes dlg-in {
     from {
       opacity: 0;
-      transform: translateY(10px) scale(0.985);
+      transform: translateY(8px);
     }
   }
+  /* The masthead: the title over a heavy rule, the line under it between fine rules. */
   .top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 20px 24px 10px;
+    position: relative;
+    padding: 14px 24px 0;
   }
   .top h2 {
-    font-family: var(--title);
-    font-size: 1.6em;
-    font-weight: 600;
     margin: 0;
+    padding: 0 40px 8px;
+    border-bottom: 3px solid var(--np-ink);
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 1.6em;
+    line-height: 1;
+    letter-spacing: -0.012em;
+    text-align: center;
   }
   .top p {
-    margin: 4px 0 0;
-    color: var(--muted);
+    margin: 2px 0 0;
+    padding: 5px 0;
+    border-top: 1px solid var(--np-ink);
+    border-bottom: 1px solid var(--np-ink);
+    font-family: var(--np-serif);
+    font-style: italic;
+    font-size: 0.86em;
+    text-align: center;
+    color: var(--np-ink-2);
   }
+  .top > .btn {
+    position: absolute;
+    top: 9px;
+    right: 14px;
+  }
+  /* Sections, as the journal's: words over a rule, the chosen one underlined in ink. */
   .tabs {
     display: flex;
-    gap: 4px;
-    padding: 0 24px;
-    border-bottom: 1px solid var(--line);
+    gap: 0 20px;
+    margin: 0 24px;
+    padding-top: 6px;
+    border-bottom: 1px solid var(--np-rule);
   }
   .tabs button {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 10px 14px 9px;
+    padding: 6px 0 7px;
     border: none;
     border-bottom: 2px solid transparent;
     background: none;
-    color: var(--muted);
+    color: var(--np-ink-2);
     font-weight: 500;
     cursor: var(--cursor-pointer, pointer);
     margin-bottom: -1px;
   }
   .tabs button:hover {
-    color: var(--parchment);
+    color: var(--np-ink);
   }
   .tabs button.on {
-    color: var(--parchment);
-    border-bottom-color: var(--aurora);
+    color: var(--np-ink);
+    border-bottom-color: var(--np-ink);
     font-weight: 600;
   }
   .body {
@@ -281,14 +302,14 @@
     min-height: 0;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    padding: 16px 20px 0 24px;
+    padding: 14px 20px 0 24px;
     gap: 12px;
   }
   .searchrow {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .searchrow input {
     flex: 1;
@@ -301,7 +322,7 @@
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
-    gap: 6px;
+    gap: 4px;
     align-content: start;
     padding: 2px 6px 16px 2px;
   }
@@ -311,32 +332,34 @@
     gap: 6px;
     padding: 9px 6px 7px;
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: 2px;
     background: none;
-    color: var(--parchment);
+    color: var(--np-ink);
     cursor: var(--cursor-pointer, pointer);
     font-size: 0.82em;
     line-height: 1.2;
     text-align: center;
   }
   .cell:hover {
-    background: var(--select-bg);
+    background: var(--np-card);
+    border-color: var(--np-rule);
   }
   .cell.on {
-    border-color: var(--aurora);
-    background: var(--select-bg);
+    border-color: var(--np-ink);
+    background: var(--np-card);
     font-weight: 600;
   }
   .cell img {
     width: 56px;
     height: 42px;
     object-fit: cover;
-    border-radius: 2px;
-    box-shadow: 0 0 0 1px rgba(22, 50, 74, 0.22);
+    border: 1px solid rgba(23, 42, 60, 0.3);
   }
   .none {
     grid-column: 1 / -1;
-    color: var(--muted);
+    font-family: var(--title);
+    font-style: italic;
+    color: var(--np-ink-2);
     padding: 20px 0;
   }
   .edwrap {
@@ -349,34 +372,44 @@
     justify-items: center;
     align-content: center;
     gap: 16px;
-    color: var(--muted);
+    color: var(--np-ink-2);
     text-align: center;
   }
   .auto img {
     width: 240px;
-    border-radius: 3px;
-    box-shadow:
-      0 0 0 1px rgba(22, 50, 74, 0.22),
-      0 8px 22px rgba(22, 50, 74, 0.16);
+    border: 1px solid var(--np-ink);
+    box-shadow: 4px 4px 0 var(--np-paper-2);
   }
   .auto p {
     max-width: 34ch;
     margin: 0;
+    font-family: var(--title);
+    font-style: italic;
+    line-height: 1.5;
   }
+  /* The side column: the proof, then the flag as the game prints it. */
   .side {
-    border-left: 1px solid var(--line);
-    padding: 16px 22px;
+    border-left: 1px solid var(--np-rule);
+    margin: 14px 0 0;
+    padding: 0 22px 16px;
     display: grid;
     align-content: start;
     gap: 10px;
-    background: color-mix(in srgb, var(--slate) 45%, var(--panel-solid));
     overflow-y: auto;
   }
   .side h3 {
-    font-size: 0.82em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
     font-weight: 600;
-    color: var(--muted);
-    margin: 4px 0 0;
+    color: var(--np-ink-2);
+    margin: 2px 0 0;
+  }
+  .side h3::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--np-rule);
   }
   .big {
     margin: 0;
@@ -388,24 +421,23 @@
     width: 100%;
     aspect-ratio: 3 / 2;
     object-fit: fill;
-    border-radius: 3px;
-    box-shadow:
-      0 0 0 1px rgba(22, 50, 74, 0.22),
-      0 8px 22px rgba(22, 50, 74, 0.16);
+    border: 1px solid var(--np-ink);
+    box-shadow: 4px 4px 0 var(--np-paper-2);
   }
   .big.wide img {
     aspect-ratio: 4 / 3;
   }
   figcaption {
     font-family: var(--title);
+    font-style: italic;
     font-size: 1.1em;
     font-weight: 600;
     text-align: center;
   }
-  /* In-game sizes, on the game's ink. */
+  /* In-game sizes: on the map's ink, then a line of the journal on its paper. */
   .ink {
     background: #10212f;
-    border-radius: 8px;
+    border-radius: 2px;
     padding: 14px 14px 10px;
     display: grid;
     gap: 8px;
@@ -446,19 +478,26 @@
     align-items: center;
     font-size: 13px;
     padding: 6px 8px;
-    border-radius: 4px;
+    border-radius: 2px;
     background: rgba(14, 29, 42, 0.96);
     border: 1px solid #253d52;
   }
   .row.sm {
     grid-template-columns: 24px 1fr;
-    color: #9fb3c2;
+    background: var(--np-paper);
+    border-color: #d9d1c1;
+    font-family: var(--np-serif);
+    color: var(--np-ink);
   }
   .row img {
     width: 24px;
     height: 16px;
     object-fit: cover;
-    border-radius: 2px;
+    border-radius: 1px;
+  }
+  .row.sm img {
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
   }
   .rk {
     color: #9fb3c2;
@@ -476,20 +515,23 @@
     justify-content: flex-end;
     align-items: center;
     gap: 10px;
-    padding: 14px 24px;
-    border-top: 1px solid var(--line);
+    margin: 0 24px;
+    padding: 12px 0 14px;
+    border-top: 2px solid var(--np-ink);
   }
   .cur {
     margin-right: auto;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: var(--muted);
-    font-size: 0.9em;
+    font-family: var(--title);
+    font-style: italic;
+    color: var(--np-ink-2);
+    font-size: 0.92em;
   }
   .cur img {
     height: 20px;
-    border-radius: 2px;
-    box-shadow: 0 0 0 1px rgba(22, 50, 74, 0.22);
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
   }
 </style>

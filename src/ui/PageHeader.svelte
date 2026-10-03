@@ -1,7 +1,10 @@
 <script lang="ts">
+  // The masthead of a menu page, as the Courier's: the page's name over a heavy rule, then
+  // the dateline between fine rules (what the page is for, and the day's date). The way
+  // back sits in the left margin, the page's own tools in the right one.
   import type { Snippet } from 'svelte';
   import { go, type Screen } from './stores/app.svelte';
-  import { t } from './i18n/i18n.svelte';
+  import { t, i18n } from './i18n/i18n.svelte';
   import Icon from './icons/Icon.svelte';
 
   let {
@@ -10,52 +13,141 @@
     back = 'title',
     onback,
     actions,
-  }: { title: string; subtitle?: string; back?: Screen; onback?: () => void; actions?: Snippet } = $props();
+    dateline,
+    wide = false,
+  }: {
+    title: string;
+    /** Spans the whole page instead of the centred 1200 px column. */
+    wide?: boolean;
+    subtitle?: string;
+    back?: Screen;
+    onback?: () => void;
+    actions?: Snippet;
+    /** Replaces the dateline's content (the subtitle and the date), e.g. with tools. */
+    dateline?: Snippet;
+  } = $props();
+
+  const today = $derived(
+    new Date().toLocaleDateString(i18n.lang === 'fr' ? 'fr-FR' : 'en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }),
+  );
 </script>
 
-<header class="ph">
-  <button class="btn ghost back" onclick={() => (onback ? onback() : go(back))}
-    ><Icon name="back" size={16} />{t('common.back')}</button
-  >
-  <div class="tt">
+<header class="ph" class:wide>
+  <div class="head">
+    <button class="back" onclick={() => (onback ? onback() : go(back))}
+      ><Icon name="back" size={15} /><span>{t('common.back')}</span></button
+    >
     <h1>{title}</h1>
-    {#if subtitle}<p class="sub">{subtitle}</p>{/if}
+    <div class="acts">
+      {#if actions}{@render actions()}{/if}
+    </div>
   </div>
-  {#if actions}<div class="acts">{@render actions()}</div>{/if}
+  <div class="dateline">
+    {#if dateline}{@render dateline()}{:else}
+      <span class="sub">{subtitle}</span>
+      <span class="day">{today}</span>
+    {/if}
+  </div>
 </header>
 
 <style>
   .ph {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 6px 22px;
     width: min(100%, 1200px);
     justify-self: center;
-  }
-  .back {
-    margin-top: 6px;
-    padding-left: 0.6em;
-  }
-  .tt {
     display: grid;
-    gap: 4px;
+  }
+  .ph.wide {
+    width: 100%;
+  }
+  .head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: end;
+    gap: 16px;
+    padding-bottom: 8px;
+    border-bottom: 3px solid var(--np-ink, var(--parchment));
   }
   h1 {
-    font-size: 2.15em;
-    line-height: 1.1;
-    letter-spacing: -0.005em;
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 2.3em;
+    line-height: 1;
+    letter-spacing: -0.015em;
+    text-align: center;
+    color: var(--np-ink, var(--parchment));
+    text-wrap: balance;
   }
-  .sub {
-    margin: 0;
-    color: var(--muted);
-    max-width: 72ch;
-    line-height: 1.5;
+  .back {
+    justify-self: start;
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 9px 5px 6px;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    background: none;
+    font-family: var(--text);
+    font-size: 0.9em;
+    font-weight: 500;
+    color: var(--np-ink-2, var(--muted));
+    cursor: var(--cursor-pointer, pointer);
+    transition:
+      border-color 0.14s,
+      color 0.14s;
+  }
+  .back:hover,
+  .back:focus-visible {
+    border-color: var(--np-rule, var(--line));
+    color: var(--np-ink, var(--parchment));
   }
   .acts {
+    justify-self: end;
+    align-self: center;
     display: flex;
     gap: 8px;
     align-items: center;
-    margin-top: 6px;
+  }
+  .acts :global(.btn) {
+    padding: 0.35em 0.8em;
+    font-size: 0.9em;
+  }
+  /* The dateline: a fine rule under the heavy one, as a newspaper's. */
+  .dateline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 2px 18px;
+    margin: 2px 0 0;
+    padding: 5px 0 5px;
+    border-top: 1px solid var(--np-ink, var(--parchment));
+    border-bottom: 1px solid var(--np-ink, var(--parchment));
+    font-size: 0.86em;
+    line-height: 1.4;
+    color: var(--np-ink-2, var(--muted));
+  }
+  .sub {
+    font-family: var(--np-serif, var(--text));
+    font-style: italic;
+    min-width: 0;
+    text-wrap: pretty;
+  }
+  .day {
+    display: inline-block;
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .day::first-letter {
+    text-transform: uppercase;
+  }
+  .day:empty {
+    display: none;
   }
 </style>

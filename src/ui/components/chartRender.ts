@@ -1,4 +1,5 @@
-// Map previews drawn as a modern hydrographic chart (BRAND.md §4): white deep water, blue
+// Map previews drawn as a modern hydrographic chart (BRAND.md §4), printed on the menus'
+// newsprint (1.8.0): deep water left the paper's own card, blue
 // shoals along the coasts with a depth line, chamois land with contour lines every few
 // metres (thicker index contours), a soft relief shading and a navy coastline.
 // Rendered once per map and size in the browser, then cached as an object URL.
@@ -11,7 +12,7 @@ type RGB = readonly [number, number, number];
 // Terrain index order: deepOcean, shallow, lake, river, plains, hills, mountain, desert,
 // forest, tundra, impassable.
 const FILL: readonly RGB[] = [
-  [247, 250, 250],
+  [248, 244, 236],
   [214, 232, 239],
   [206, 227, 237],
   [128, 172, 200],
@@ -20,12 +21,12 @@ const FILL: readonly RGB[] = [
   [219, 204, 172],
   [241, 228, 194],
   [222, 225, 196],
-  [244, 244, 238],
+  [244, 241, 232],
   [208, 201, 188],
 ];
 const SHOAL: RGB = [214, 232, 239];
 const DEPTH_LINE: RGB = [176, 208, 222];
-const COAST: RGB = [44, 80, 108];
+const COAST: RGB = [32, 58, 82];
 const CONTOUR: RGB = [168, 146, 106];
 
 const KEY = new Map<number, number>();

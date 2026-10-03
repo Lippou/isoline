@@ -516,67 +516,62 @@
   }
   .layout {
     display: grid;
-    grid-template-columns: 260px minmax(0, 1fr);
+    grid-template-columns: 250px minmax(0, 1fr);
   }
+  /* Sections, as a legend: pictogram, name and a line, a fine rule between; the chosen one
+     marked by an ink bar in the margin. */
   nav {
     display: grid;
     align-content: start;
-    gap: 2px;
-    padding: 14px 10px;
-    border-right: 1px solid var(--line);
-    background: var(--panel-2);
+    padding: 14px 0 14px 16px;
+    border-right: 1px solid var(--np-rule);
   }
   .tab {
     position: relative;
     display: grid;
-    grid-template-columns: 32px 1fr;
-    gap: 12px;
-    align-items: center;
-    padding: 9px 10px;
+    grid-template-columns: 18px 1fr;
+    gap: 11px;
+    align-items: start;
+    padding: 10px 14px 10px 10px;
     background: none;
     border: 0;
-    border-radius: 4px;
-    color: var(--parchment);
+    border-bottom: 1px solid var(--np-rule);
+    border-radius: 0;
+    color: var(--np-ink);
     cursor: var(--cursor-pointer, pointer);
     text-align: left;
     transition: background 0.14s;
+  }
+  .tab:last-child {
+    border-bottom: 0;
   }
   .tab::before {
     content: '';
     position: absolute;
     left: 0;
-    top: 9px;
-    bottom: 9px;
-    width: 2px;
-    border-radius: 1px;
-    background: var(--aurora);
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    background: var(--np-ink);
     transform: scaleY(0);
     transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
   }
   .tab:hover {
-    background: var(--panel-3);
-  }
-  .tab.on {
-    background: var(--select-bg);
+    background: var(--np-card);
   }
   .tab.on::before {
     transform: scaleY(1);
   }
   .key {
-    width: 32px;
-    height: 32px;
     display: grid;
     place-items: center;
-    border: 1px solid var(--line-strong);
-    border-radius: 3px;
-    color: var(--muted);
-    transition:
-      color 0.14s,
-      border-color 0.14s;
+    height: 1.35em;
+    color: var(--np-ink-2);
+    transition: color 0.14s;
   }
-  .tab.on .key {
-    color: var(--aurora);
-    border-color: var(--aurora);
+  .tab.on .key,
+  .tab:hover .key {
+    color: var(--np-ink);
   }
   .tt {
     display: grid;
@@ -584,20 +579,24 @@
     min-width: 0;
   }
   .tt b {
+    font-weight: 500;
+  }
+  .tab.on .tt b {
     font-weight: 600;
   }
   .tt small {
-    color: var(--muted);
+    font-family: var(--np-serif);
+    color: var(--np-ink-2);
     font-size: 0.8em;
-    line-height: 1.3;
+    line-height: 1.35;
   }
   .content {
-    padding: 22px 28px 26px;
+    padding: 20px 28px 26px;
     min-width: 0;
   }
   .pane {
     display: grid;
-    gap: 16px;
+    gap: 6px;
     animation: pane-in 0.24s ease-out both;
   }
   @keyframes pane-in {
@@ -606,12 +605,24 @@
       transform: translateY(4px);
     }
   }
+  /* The section's head: its name over an ink rule, then its line in italics. */
+  .pane header {
+    max-width: 760px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--np-ink);
+  }
   .pane header h2 {
-    font-size: 1.45em;
+    font-weight: 700;
+    font-size: 1.5em;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
   }
   .pane header p {
-    margin: 2px 0 0;
-    color: var(--muted);
+    margin: 3px 0 0;
+    font-family: var(--np-serif);
+    font-style: italic;
+    font-size: 0.92em;
+    color: var(--np-ink-2);
   }
   .rows {
     display: grid;
@@ -623,8 +634,8 @@
     grid-template-columns: minmax(0, 1fr) minmax(200px, 280px);
     gap: 8px 28px;
     align-items: center;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--line);
+    padding: 12px 0;
+    border-bottom: 1px solid var(--np-rule);
   }
   label.srow {
     grid-template-columns: minmax(0, 1fr) auto;
@@ -636,14 +647,15 @@
   }
   .sl label,
   .sl .lb {
-    font-weight: 500;
+    font-weight: 600;
   }
   .sl label {
     cursor: var(--cursor-pointer, pointer);
   }
   .sl small {
-    color: var(--muted);
-    font-size: 0.86em;
+    font-family: var(--np-serif);
+    color: var(--np-ink-2);
+    font-size: 0.84em;
     line-height: 1.4;
   }
   .rng {
@@ -655,7 +667,8 @@
   .rng b {
     text-align: right;
     font-weight: 600;
-    color: var(--aurora);
+    font-variant-numeric: tabular-nums;
+    color: var(--np-ink);
   }
   .rng.ui {
     grid-template-columns: auto 4.2em 1fr;
@@ -669,6 +682,7 @@
   .foot {
     display: flex;
     gap: 8px;
+    margin-top: 12px;
   }
   table {
     border-collapse: collapse;
@@ -676,40 +690,45 @@
     max-width: 760px;
   }
   td {
-    padding: 7px 4px;
-    border-bottom: 1px solid var(--line);
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--np-rule);
   }
   td:last-child {
     text-align: right;
   }
+  /* A key of the keyboard, printed as a figure in a fine box (the windows' np-key). */
   .kbd {
     min-width: 7.5em;
-    font-family: var(--mono);
-    font-size: 0.92em;
-    background: var(--panel-2);
-    border: 1px solid var(--line-strong);
+    font-family: var(--text);
+    font-size: 0.86em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    background: var(--np-card);
+    border: 1px solid var(--np-rule-2);
     border-bottom-width: 2px;
-    border-radius: 4px;
-    padding: 0.25rem 0.7rem;
+    border-radius: 3px;
+    padding: 0.2rem 0.7rem;
     cursor: var(--cursor-pointer, pointer);
-    color: var(--parchment);
+    color: var(--np-ink);
     transition: border-color 0.14s;
   }
   .kbd:hover {
-    border-color: var(--aurora);
+    border-color: var(--np-ink);
   }
   .kbd.listen {
-    border-color: var(--aurora);
-    color: var(--aurora);
+    border-color: var(--np-ink);
+    font-family: var(--title);
+    font-style: italic;
+    font-weight: 400;
     animation: listen 1s ease-in-out infinite alternate;
   }
   @keyframes listen {
     to {
-      background: var(--select-bg);
+      background: var(--np-paper-2);
     }
   }
 
-  /* Narrow (the in-game menu): tabs fold into a row above the content. */
+  /* Narrow (the in-game menu): sections fold into a row of words over a rule. */
   @container (max-width: 820px) {
     .layout {
       grid-template-columns: 1fr;
@@ -718,21 +737,19 @@
       grid-auto-flow: column;
       grid-auto-columns: 1fr;
       border-right: 0;
-      border-bottom: 1px solid var(--line);
-      padding: 6px;
-      background: none;
+      border-bottom: 1px solid var(--np-rule);
+      padding: 6px 6px 0;
     }
     .tab {
       grid-template-columns: 1fr;
       justify-items: center;
       gap: 4px;
-      padding: 6px 4px;
+      padding: 6px 4px 8px;
+      border-bottom: 0;
       text-align: center;
     }
-    .tab .key {
-      border: 0;
-      width: auto;
-      height: auto;
+    .tab:hover {
+      background: none;
     }
     .tt small {
       display: none;
@@ -741,7 +758,7 @@
       left: 10px;
       right: 10px;
       top: auto;
-      bottom: 0;
+      bottom: -1px;
       width: auto;
       height: 2px;
       transform: scaleX(0);
@@ -770,9 +787,9 @@
     width: 220px;
   }
   .ustate {
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .ustate.err {
-    color: var(--danger, #c0392b);
+    color: var(--np-spot);
   }
 </style>

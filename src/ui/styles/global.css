@@ -57,34 +57,38 @@
   color-scheme: dark;
 }
 
-/* Chart paper: menus, lobby, settings, profile… (light, cool, navy ink). */
+/* Chart paper: menus, lobby, settings, profile… Since 1.8.0 every screen outside a game is
+   printed on the Courier's newsprint (the in-game windows' paper and inks, `.newsprint`):
+   warm paper, navy ink, fine rules, square cuts. */
 .chart {
-  --abyss: #eef3f2;
-  --slate: #e3ecec;
-  --panel: rgba(250, 252, 251, 0.97);
-  --panel-2: #e8f0f0;
-  --panel-3: #dce8ea;
-  --aurora: #2c6e91;
+  --abyss: #f1ece2;
+  --slate: #e6dfd1;
+  --panel: rgba(248, 244, 236, 0.97);
+  --panel-2: #e6dfd1;
+  --panel-3: #ddd4c3;
+  /* Selection and focus are printed in ink, as in the windows. */
+  --aurora: #172a3c;
   --brass: #b8862a;
   --brass-hover: #c99636;
   --on-brass: #fffaf0;
   --signal: #b3245f;
-  --verdant: #2f7d55;
-  --warn: #a86a12;
-  --parchment: #16324a;
-  --muted: #4b6478;
-  --faint: #7d93a2;
-  --glass: rgba(250, 252, 251, 0.94);
-  --glass-strong: rgba(255, 255, 255, 0.98);
-  --line: #c9d8dc;
-  --line-strong: #9db4bc;
-  --input-bg: #ffffff;
-  --select-bg: rgba(44, 110, 145, 0.12);
-  --tip-bg: #16324a;
-  --good-text: #2f7d55;
-  --bad-text: #a8204f;
-  --warn-text: #8a560c;
-  --shadow: 0 10px 28px rgba(22, 50, 74, 0.14);
+  --verdant: #276b48;
+  --warn: #8f5c0e;
+  --parchment: #172a3c;
+  --muted: #46535f;
+  --faint: #5c636a;
+  --glass: rgba(248, 244, 236, 0.97);
+  --glass-strong: #f8f4ec;
+  --line: #bdb4a2;
+  --line-strong: #a89e8a;
+  --input-bg: #f8f4ec;
+  --select-bg: rgba(23, 42, 60, 0.08);
+  --tip-bg: #172a3c;
+  --good-text: #276b48;
+  --bad-text: #b3245f;
+  --warn-text: #8f5c0e;
+  --radius: 2px;
+  --shadow: none;
   color-scheme: light;
   background: var(--abyss);
   color: var(--parchment);
@@ -419,62 +423,146 @@ input[type='checkbox'] {
 }
 
 /* ===========================================================================
- * Menu screens on chart paper (BRAND.md §4, « Levé hydrographique »).
- * Additive rules only: scoped to .chart (every screen outside a game) or to
- * opt-in classes, so the in-game "ink" theme is untouched.
+ * Menu screens on the Courier's paper (BRAND.md §4; since 1.8.0 the newsprint of
+ * the in-game windows: warm paper, navy ink, fine rules, square cuts).
+ * Additive rules only: scoped to .chart (every screen outside a game, and the
+ * in-game Settings page) or to opt-in classes, so the in-game "ink" theme is
+ * untouched. The newsprint pieces of hud/paper.css (np-*) also print here: the
+ * menu screens wear `.newsprint` too (App.svelte).
  * ======================================================================== */
 .chart {
+  /* The newsprint inks under their own names (hud/paper.css pieces read them). */
+  --np-paper: #f1ece2;
+  --np-paper-2: #e6dfd1;
+  --np-ink: #172a3c;
+  --np-ink-2: #46535f;
+  --np-ink-3: #5c636a;
+  --np-rule: #bdb4a2;
+  --np-rule-2: #a89e8a;
+  --np-card: #f8f4ec;
+  --np-spot: #b3245f;
+  --np-good: #276b48;
+  --np-warn: #8f5c0e;
+  --np-gold: #b8862a;
+  --np-sea: #2c6e91;
+  --np-serif: 'IBM Plex Serif', Georgia, serif;
   /* Chart inks used by the rendered map previews and the contour motif. */
   --land: #e9e0c6;
   --shoal: #d3e6ee;
   --contour-ink: #a8926a;
-  --panel-solid: #fafcfb;
-  /* Brass for text and for filled buttons that carry text (WCAG AA on paper:
-     raw brass #b8862a is only 2.9:1). */
+  --panel-solid: #f8f4ec;
+  /* Brass for text and for what carries gold (WCAG AA on paper: raw brass is 2.9:1). */
   --brass-text: #80590f;
   --brass-fill: #946919;
   --brass-fill-hover: #855d12;
+  --ink-hover: #24405a;
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
   --ease-draw: cubic-bezier(0.6, 0, 0.2, 1);
   --page-pad: clamp(20px, 2.6vw, 48px);
+  scrollbar-color: var(--np-rule-2) transparent;
 }
-.chart .btn.primary {
-  background: var(--brass-fill);
-  border-color: var(--brass-fill);
-  color: #fffdf6;
+.chart :focus-visible {
+  outline-color: var(--np-ink);
 }
-.chart .btn.primary:hover,
-.chart .btn.primary:focus-visible {
-  background: var(--brass-fill-hover);
-  border-color: var(--brass-fill-hover);
-}
+
+/* Buttons printed on the paper (the windows' np-btn): a fine ink rule, square-cut;
+   the main action in solid ink. */
 .chart .btn {
+  border-color: var(--np-ink-2);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--np-ink);
+  font-weight: 500;
   transition:
     background 0.14s,
     border-color 0.14s,
-    color 0.14s,
-    transform 0.1s;
+    color 0.14s;
+}
+.chart .btn:hover,
+.chart .btn:focus-visible {
+  background: var(--np-paper-2);
+  border-color: var(--np-ink);
 }
 .chart .btn:active:not(:disabled) {
-  transform: translateY(1px) scale(0.985);
+  transform: translateY(1px);
 }
-.chart .chip {
-  background: var(--panel-solid);
-  color: var(--muted);
+.chart .btn.primary {
+  background: var(--np-ink);
+  border-color: var(--np-ink);
+  color: var(--np-paper);
+  font-weight: 600;
 }
-.chart .label,
-.chart .section-title {
-  color: var(--muted);
+.chart .btn.primary:hover,
+.chart .btn.primary:focus-visible {
+  background: var(--ink-hover);
+  border-color: var(--ink-hover);
+}
+.chart .btn.danger {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--np-spot) 55%, transparent);
+  color: var(--np-spot);
+}
+.chart .btn.danger:hover,
+.chart .btn.danger:focus-visible {
+  background: color-mix(in srgb, var(--np-spot) 8%, transparent);
+  border-color: var(--np-spot);
+}
+.chart .btn.ghost {
+  background: none;
+  border-color: transparent;
+  color: var(--np-ink-2);
+}
+.chart .btn.ghost:hover,
+.chart .btn.ghost:focus-visible {
+  background: none;
+  border-color: var(--np-rule);
+  color: var(--np-ink);
+}
+.chart .btn.selected {
+  background: var(--select-bg);
+  border-color: var(--np-ink);
+  color: var(--np-ink);
+  font-weight: 600;
+}
+.chart .btn:disabled {
+  opacity: 0.45;
 }
 
-/* Page shell shared by the menu pages: header, then a centred body. */
+/* Tags (the windows' np-tag). */
+.chart .chip {
+  border-radius: 2px;
+  border-color: var(--np-rule);
+  background: transparent;
+  color: var(--np-ink-2);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.chart .chip.good {
+  color: var(--np-good);
+  border-color: color-mix(in srgb, var(--np-good) 45%, transparent);
+}
+.chart .chip.bad {
+  color: var(--np-spot);
+  border-color: color-mix(in srgb, var(--np-spot) 45%, transparent);
+}
+.chart .chip.warn {
+  color: var(--np-warn);
+  border-color: color-mix(in srgb, var(--np-warn) 45%, transparent);
+}
+.chart .label,
+.chart .section-title,
+.chart .hint {
+  color: var(--np-ink-2);
+}
+
+/* Page shell shared by the menu pages: the masthead, then a centred body. */
 .page-shell {
   position: fixed;
   inset: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 22px;
-  padding: 34px var(--page-pad) 24px;
+  gap: 18px;
+  padding: 22px var(--page-pad) 22px;
   background: var(--abyss);
   overflow: hidden;
 }
@@ -484,41 +572,62 @@ input[type='checkbox'] {
   min-height: 0;
 }
 
-/* Form controls on paper. */
+/* Fields (the windows' np-field): a lighter card with a fine rule, the ink rule when focused. */
+.chart input[type='text'],
+.chart input[type='url'],
+.chart input[type='number'],
+.chart input[type='password'],
+.chart select,
+.chart textarea {
+  background-color: var(--np-card);
+  border: 1px solid var(--np-rule-2);
+  border-radius: 2px;
+  padding: 0.45em 0.65em;
+  color: var(--np-ink);
+  outline: none;
+  transition:
+    border-color 0.14s,
+    box-shadow 0.14s;
+}
 .chart select {
   appearance: none;
-  background-color: var(--input-bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234B6478' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2346535F' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.7em center;
   padding-right: 2.2em;
   cursor: var(--cursor-pointer, pointer);
 }
-.chart input[type='text'],
-.chart input[type='url'],
-.chart input[type='number'],
-.chart select,
-.chart textarea {
-  transition:
-    border-color 0.14s,
-    box-shadow 0.14s;
-}
 .chart input:hover:not(:disabled),
-.chart select:hover:not(:disabled) {
-  border-color: var(--aurora);
+.chart select:hover:not(:disabled),
+.chart textarea:hover:not(:disabled),
+.chart input:focus,
+.chart select:focus,
+.chart textarea:focus {
+  border-color: var(--np-ink);
 }
 .chart input[type='text']:focus,
 .chart input[type='url']:focus,
 .chart input[type='number']:focus,
-.chart select:focus {
-  box-shadow: 0 0 0 3px var(--select-bg);
+.chart input[type='password']:focus,
+.chart select:focus,
+.chart textarea:focus {
+  box-shadow: inset 0 0 0 1px var(--np-ink);
 }
-.chart input::placeholder {
-  color: var(--muted);
-  opacity: 0.85;
+.chart input::placeholder,
+.chart textarea::placeholder {
+  color: var(--np-ink-3);
+  opacity: 1;
+}
+.chart input:disabled,
+.chart select:disabled {
+  opacity: 0.6;
+}
+.chart input[type='checkbox']:not(.switch) {
+  accent-color: var(--np-ink);
 }
 
-/* Range: thin fathom track, filled up to the value (--fill set by use:rangeFill). */
+/* Range: a fine rule inked up to the value (--fill set by use:rangeFill); the thumb is
+   the summit's diamond, printed in ink. */
 .chart input[type='range'] {
   appearance: none;
   height: 22px;
@@ -527,26 +636,29 @@ input[type='checkbox'] {
   margin: 0;
 }
 .chart input[type='range']::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 2px;
+  height: 3px;
+  border-radius: 0;
   background:
-    linear-gradient(var(--aurora), var(--aurora)) 0 / var(--fill, 0%) 100% no-repeat,
-    var(--line);
+    linear-gradient(var(--np-ink), var(--np-ink)) 0 / var(--fill, 0%) 100% no-repeat,
+    var(--np-rule);
 }
 .chart input[type='range']::-webkit-slider-thumb {
   appearance: none;
-  width: 16px;
-  height: 16px;
-  margin-top: -6px;
-  border-radius: 50%;
-  background: var(--panel-solid);
-  border: 2px solid var(--aurora);
-  box-shadow: 0 1px 3px rgba(22, 50, 74, 0.25);
-  transition: transform 0.12s var(--ease-out);
+  width: 12px;
+  height: 12px;
+  margin-top: -4.5px;
+  border-radius: 1px;
+  background: var(--np-card);
+  border: 2px solid var(--np-ink);
+  transform: rotate(45deg);
+  transition:
+    transform 0.12s var(--ease-out),
+    background 0.12s;
 }
 .chart input[type='range']:hover::-webkit-slider-thumb,
 .chart input[type='range']:focus-visible::-webkit-slider-thumb {
-  transform: scale(1.15);
+  transform: rotate(45deg) scale(1.2);
+  background: var(--np-ink);
 }
 .chart input[type='range']:focus-visible {
   outline-offset: 4px;
@@ -556,35 +668,44 @@ input[type='checkbox'] {
   opacity: 0.55;
 }
 
-/* Switch: a checkbox drawn as a toggle (keeps native semantics and bind:checked). */
+/* Switch: a checkbox printed as a square-cut toggle (keeps native semantics and bind:checked). */
 .chart input[type='checkbox'].switch {
   appearance: none;
   flex: none;
   position: relative;
-  width: 34px;
-  height: 20px;
+  width: 32px;
+  height: 18px;
   margin: 0;
-  border-radius: 10px;
-  background: var(--line-strong);
+  border-radius: 2px;
+  background: var(--np-paper-2);
+  box-shadow: inset 0 0 0 1px var(--np-rule-2);
   cursor: var(--cursor-pointer, pointer);
-  transition: background 0.16s var(--ease-out);
+  transition:
+    background 0.16s var(--ease-out),
+    box-shadow 0.16s;
 }
 .chart input[type='checkbox'].switch::after {
   content: '';
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(22, 50, 74, 0.3);
-  transition: transform 0.18s var(--ease-out);
+  width: 12px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--np-ink-3);
+  transition:
+    transform 0.18s var(--ease-out),
+    background 0.16s;
+}
+.chart input[type='checkbox'].switch:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--np-ink);
 }
 .chart input[type='checkbox'].switch:checked {
-  background: var(--aurora);
+  background: var(--np-ink);
+  box-shadow: inset 0 0 0 1px var(--np-ink);
 }
 .chart input[type='checkbox'].switch:checked::after {
+  background: var(--np-paper);
   transform: translateX(14px);
 }
 .chart input[type='checkbox'].switch:disabled {
@@ -592,36 +713,53 @@ input[type='checkbox'] {
   cursor: not-allowed;
 }
 
-/* Empty states: a direction, not a mood. */
+/* Tooltips printed in ink. */
+.chart [data-tip]:hover::after {
+  border-radius: 2px;
+  border-color: var(--np-ink);
+  background: var(--np-ink);
+  color: var(--np-paper);
+}
+
+/* Empty states: a head and a line in italics, then where to go (a direction, not a mood). */
 .empty-state {
   display: grid;
   justify-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 40px 24px;
   text-align: center;
   color: var(--muted);
 }
 .empty-state h3 {
   color: var(--parchment);
-  font-size: 1.25em;
+  font-size: 1.3em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 .empty-state p {
   margin: 0;
   max-width: 46ch;
-  line-height: 1.55;
+  font-family: var(--title);
+  font-style: italic;
+  line-height: 1.5;
+  text-wrap: pretty;
 }
 .empty-state .acts {
   display: flex;
   gap: 8px;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
-/* High contrast on paper: darker filets and secondary text. */
+/* High contrast on paper: darker rules and secondary text. */
 .high-contrast .chart {
-  --line: #7d93a2;
-  --line-strong: #4b6478;
-  --muted: #2a4459;
-  --faint: #4b6478;
+  --line: #8a806c;
+  --line-strong: #5c636a;
+  --np-rule: #8a806c;
+  --np-rule-2: #5c636a;
+  --muted: #2f3a44;
+  --faint: #46535f;
+  --np-ink-2: #2f3a44;
+  --np-ink-3: #46535f;
 }
 
 @media (prefers-reduced-motion: reduce) {

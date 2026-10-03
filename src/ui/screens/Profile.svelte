@@ -151,15 +151,15 @@
 {#if picking}<FlagPicker name={myName} onclose={() => (picking = false)} />{/if}
 
 <style>
+  /* The flag, as a plate with its caption, between two fine rules. */
   .flagrow {
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 14px;
-    padding: 10px 12px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: color-mix(in srgb, var(--slate) 35%, var(--panel-solid));
+    padding: 10px 0;
+    border-top: 1px solid var(--np-rule);
+    border-bottom: 1px solid var(--np-rule);
   }
   .flagbtn {
     padding: 0;
@@ -172,10 +172,8 @@
     width: 66px;
     height: 44px;
     object-fit: cover;
-    border-radius: 2px;
-    box-shadow:
-      0 0 0 1px rgba(22, 50, 74, 0.25),
-      0 3px 8px rgba(22, 50, 74, 0.14);
+    border: 1px solid rgba(23, 42, 60, 0.35);
+    mix-blend-mode: multiply;
     transition: transform 0.12s var(--ease-out);
   }
   .flagbtn:hover img {
@@ -187,33 +185,36 @@
     min-width: 0;
   }
   .flagtxt span {
-    font-size: 0.84em;
-    color: var(--muted);
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.86em;
+    color: var(--np-ink-2);
   }
   .flagtxt b {
     font-family: var(--title);
-    font-size: 1.12em;
-    font-weight: 600;
+    font-size: 1.15em;
+    font-weight: 700;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* Two columns of the page, a fine rule between. */
   .cols {
     display: grid;
     grid-template-columns: minmax(340px, 1fr) minmax(0, 1.45fr);
-    gap: 18px;
   }
   .card {
     min-height: 0;
     overflow-y: auto;
     scrollbar-width: thin;
-    background: var(--panel-solid);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 20px 22px;
+    padding: 2px 24px 16px 0;
     display: grid;
     align-content: start;
-    gap: 14px;
+    gap: 12px;
+  }
+  .card + .card {
+    padding: 2px 0 16px 24px;
+    border-left: 1px solid var(--np-rule);
   }
   .ident {
     display: grid;
@@ -223,8 +224,8 @@
   .field {
     display: grid;
     gap: 6px;
-    font-weight: 500;
-    font-size: 0.93em;
+    font-weight: 600;
+    font-size: 0.92em;
   }
   .field input,
   .field select {
@@ -232,34 +233,46 @@
     font-size: 1.05em;
     min-width: 0;
   }
+  /* Section heads: a title on a rule, as the Courier's. */
   .sec {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    font-weight: 700;
     font-size: 1.15em;
-    margin-top: 8px;
   }
+  .sec::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--np-rule);
+  }
+  /* The record: figures in a ruled table. */
   .stats {
     margin: 0;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    border-top: 1px solid var(--line);
-    border-left: 1px solid var(--line);
+    border-top: 2px solid var(--np-ink);
   }
   .stats div {
-    padding: 12px 14px;
-    border-right: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
+    padding: 9px 12px 10px;
+    border-bottom: 1px solid var(--np-rule);
     display: grid;
-    gap: 2px;
+    gap: 1px;
+  }
+  .stats div:not(:nth-child(3n + 1)) {
+    border-left: 1px solid var(--np-rule);
   }
   .stats dt {
-    color: var(--muted);
-    font-size: 0.84em;
+    color: var(--np-ink-2);
+    font-size: 0.82em;
     display: flex;
     gap: 6px;
     align-items: center;
   }
   .stats dd {
     margin: 0;
-    font-size: 1.55em;
+    font-size: 1.5em;
     font-weight: 600;
     line-height: 1.2;
   }
@@ -274,18 +287,25 @@
     grid-template-columns: 2em 1fr auto auto;
     gap: 10px;
     align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--line);
+    padding: 7px 0;
+    border-bottom: 1px solid var(--np-rule);
   }
   .rank {
-    color: var(--muted);
+    font-family: var(--title);
+    font-style: italic;
+    color: var(--np-ink-3);
   }
   .what {
     display: grid;
   }
+  .what b {
+    font-family: var(--title);
+    font-weight: 600;
+  }
   .what small {
-    color: var(--muted);
-    font-size: 0.84em;
+    font-family: var(--np-serif);
+    color: var(--np-ink-2);
+    font-size: 0.82em;
   }
   .score {
     font-size: 1.1em;
@@ -294,7 +314,7 @@
     color: var(--brass-text);
   }
   .empty-state.small {
-    padding: 14px 0 4px;
+    padding: 4px 0 4px;
     justify-items: start;
     text-align: left;
   }
@@ -302,29 +322,29 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
+    gap: 14px;
   }
   .achh .sec {
+    flex: 1;
     margin: 0;
   }
   .count {
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .count b {
-    color: var(--parchment);
+    color: var(--np-ink);
     font-size: 1.25em;
   }
   .bar {
-    height: 4px;
-    border-radius: 2px;
-    background: var(--line);
+    height: 3px;
+    background: var(--np-rule);
     overflow: hidden;
     margin-top: -4px;
   }
   .bar span {
     display: block;
     height: 100%;
-    background: var(--aurora);
-    border-radius: 2px;
+    background: var(--np-ink);
     transform-origin: left;
     animation: grow 0.8s 0.15s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   }
@@ -333,49 +353,49 @@
       transform: scaleX(0);
     }
   }
+  /* The achievements, as a legend: a pictogram, the name, the line; a rule between. */
   .ach ul {
     list-style: none;
     padding: 0;
     margin: 0;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 4px 18px;
+    gap: 0 22px;
   }
   .ach li {
     display: grid;
-    grid-template-columns: 32px 1fr;
-    gap: 12px;
+    grid-template-columns: 22px 1fr;
+    gap: 10px;
     align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--line);
+    padding: 7px 0;
+    border-bottom: 1px solid var(--np-rule);
   }
   .ach li div {
     display: grid;
   }
   .ach li b {
     font-weight: 600;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .ach li small {
-    color: var(--muted);
-    font-size: 0.84em;
+    font-family: var(--np-serif);
+    color: var(--np-ink-2);
+    font-size: 0.82em;
     line-height: 1.35;
   }
   .ach li.got b {
-    color: var(--parchment);
+    font-family: var(--title);
+    font-weight: 700;
+    color: var(--np-ink);
   }
   .medal {
-    width: 32px;
-    height: 32px;
     display: grid;
     place-items: center;
-    border-radius: 50%;
-    border: 1px dashed var(--line-strong);
-    color: var(--faint);
+    color: var(--np-ink-3);
+    opacity: 0.75;
   }
   .got .medal {
-    border: 1.5px solid var(--brass);
-    background: color-mix(in srgb, var(--brass) 12%, transparent);
     color: var(--brass-text);
+    opacity: 1;
   }
 </style>

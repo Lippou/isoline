@@ -251,7 +251,7 @@
       growth={1.11}
       drift={[0.32, 0.16]}
       seed={11}
-      color="var(--aurora)"
+      color="var(--np-sea)"
       stroke={1.2}
       opacity={0.62}
       settle={0.3}
@@ -270,15 +270,13 @@
   </section>
 
   <nav class="legend" class:first aria-label={t('menu.main')} bind:this={legend}>
-    <header>
+    <header class="mast">
       {#if sub}
         <button class="back" onclick={closePlay} aria-label={t('common.back')}
           ><Icon name="back" size={16} /></button
         >
-        <h2>{t('title.play')}</h2>
-      {:else}
-        <h2>{t('title.mainMenu')}</h2>
       {/if}
+      <h2>{sub ? t('title.play') : t('title.mainMenu')}</h2>
     </header>
     {#key sub}
       <ul in:fly={{ x: sub ? 18 : -18, duration: 220, opacity: 0 }}>
@@ -366,12 +364,12 @@
     top: 46%;
     transform: translateY(-50%);
     padding: 7px;
-    border: 1px solid var(--parchment);
-    background: color-mix(in srgb, var(--panel-solid) 90%, transparent);
-    box-shadow: 0 18px 40px -18px rgba(22, 50, 74, 0.35);
+    border: 1px solid var(--np-ink);
+    background: color-mix(in srgb, var(--np-paper) 92%, transparent);
+    box-shadow: 0 18px 40px -22px rgba(23, 42, 60, 0.4);
   }
   .neat {
-    border: 3px solid var(--parchment);
+    border: 3px solid var(--np-ink);
     padding: clamp(22px, 2.6vw, 34px) clamp(26px, 3vw, 44px) clamp(18px, 2.2vw, 28px);
     display: grid;
     justify-items: start;
@@ -382,7 +380,7 @@
     font-family: var(--title);
     font-style: italic;
     font-size: clamp(1.15em, 1.5vw, 1.45em);
-    color: var(--muted);
+    color: var(--np-ink-2);
     letter-spacing: 0.01em;
   }
   .cartouche.first {
@@ -404,17 +402,20 @@
     }
   }
 
-  /* Legend: actions listed like a chart's key — pictogram, label, one-line explanation. */
+  /* The menu: a sheet of the Courier laid on the chart, its actions printed as a legend —
+     pictogram, name, one line of explanation, a fine rule between. */
   .legend {
     position: absolute;
     right: clamp(28px, 6vw, 120px);
     top: 50%;
     transform: translateY(-50%);
     width: clamp(360px, 25vw, 440px);
-    background: var(--panel-solid);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    box-shadow: 0 22px 50px -20px rgba(22, 50, 74, 0.38);
+    background: var(--np-paper);
+    border: 1px solid #d9d1c1;
+    border-radius: 2px;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.4) inset,
+      0 20px 46px -20px rgba(23, 42, 60, 0.45);
     display: grid;
     overflow: hidden;
   }
@@ -427,36 +428,49 @@
       transform: translate(14px, -50%);
     }
   }
-  .legend header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 18px 22px 12px;
+  /* Its masthead, as the windows': the title over a heavy rule. */
+  .mast {
+    position: relative;
+    padding: 14px 20px 0;
   }
-  .legend h2 {
-    font-size: 1.35em;
+  .mast h2 {
+    margin: 0;
+    padding: 0 30px 8px;
+    border-bottom: 3px solid var(--np-ink);
+    font-weight: 700;
+    font-size: 1.5em;
+    line-height: 1;
+    letter-spacing: -0.012em;
+    text-align: center;
+    color: var(--np-ink);
   }
   .back {
+    position: absolute;
+    left: 14px;
+    top: 10px;
     display: grid;
     place-items: center;
     width: 30px;
     height: 30px;
-    margin-left: -6px;
     background: none;
     border: 1px solid transparent;
-    border-radius: 50%;
-    color: var(--muted);
+    border-radius: 2px;
+    color: var(--np-ink-2);
     cursor: var(--cursor-pointer, pointer);
   }
-  .back:hover {
-    color: var(--parchment);
-    border-color: var(--line-strong);
+  .back:hover,
+  .back:focus-visible {
+    color: var(--np-ink);
+    border-color: var(--np-rule);
   }
   ul {
     list-style: none;
     margin: 0;
-    padding: 0 10px 8px;
+    padding: 4px 20px 6px;
     display: grid;
+  }
+  li + li {
+    border-top: 1px solid var(--np-rule);
   }
   .legend.first li {
     animation: fade-up 0.4s calc(0.75s + var(--k) * 45ms) ease-out both;
@@ -465,33 +479,32 @@
     position: relative;
     width: 100%;
     display: grid;
-    grid-template-columns: 38px 1fr;
+    grid-template-columns: 30px 1fr;
     align-items: center;
-    gap: 14px;
-    padding: 9px 12px;
+    gap: 12px;
+    padding: 9px 8px 9px 6px;
     text-align: left;
     background: none;
     border: 0;
-    border-radius: 4px;
-    color: var(--parchment);
+    border-radius: 0;
+    color: var(--np-ink);
     cursor: var(--cursor-pointer, pointer);
     transition: background 0.16s;
   }
   .entry::before {
     content: '';
     position: absolute;
-    left: 0;
-    top: 10px;
-    bottom: 10px;
-    width: 2px;
-    border-radius: 1px;
-    background: var(--aurora);
+    left: -20px;
+    top: 9px;
+    bottom: 9px;
+    width: 3px;
+    background: var(--np-ink);
     transform: scaleY(0);
     transition: transform 0.2s var(--ease-out);
   }
   .entry:hover,
   .entry:focus-visible {
-    background: var(--select-bg);
+    background: var(--np-card);
   }
   .entry:hover::before,
   .entry:focus-visible::before {
@@ -501,38 +514,29 @@
     outline-offset: -2px;
   }
   .key {
-    width: 38px;
-    height: 38px;
+    width: 30px;
+    height: 30px;
     display: grid;
     place-items: center;
-    border: 1px solid var(--line-strong);
-    border-radius: 3px;
-    background: var(--abyss);
-    color: var(--parchment);
-    transition:
-      border-color 0.16s,
-      color 0.16s,
-      transform 0.2s var(--ease-out);
+    color: var(--np-ink-2);
+    transition: color 0.16s;
   }
   .entry:hover .key,
   .entry:focus-visible .key {
-    border-color: var(--aurora);
-    color: var(--aurora);
+    color: var(--np-ink);
   }
   /* The primary action wears the summit: a brass diamond. */
   .primary .key {
-    border: 0;
-    background: none;
     position: relative;
     color: #fffdf6;
   }
   .primary .key::before {
     content: '';
     position: absolute;
-    inset: 5px;
+    inset: 4px;
     background: var(--brass-fill);
     transform: rotate(45deg);
-    border-radius: 3px;
+    border-radius: 2px;
     transition:
       transform 0.25s var(--ease-out),
       background 0.16s;
@@ -540,6 +544,8 @@
   .primary .key :global(svg) {
     position: relative;
     margin-left: 2px;
+    width: 15px;
+    height: 15px;
   }
   .primary:hover .key,
   .primary:focus-visible .key {
@@ -566,71 +572,89 @@
     align-items: center;
     gap: 8px;
   }
+  .primary .txt b {
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 1.2em;
+    letter-spacing: -0.005em;
+  }
   .txt small {
-    color: var(--muted);
-    font-size: 0.86em;
+    font-family: var(--np-serif);
+    color: var(--np-ink-2);
+    font-size: 0.84em;
     line-height: 1.35;
   }
   .badge {
-    font-size: 0.74em;
+    display: inline-flex;
+    align-items: center;
+    min-height: 18px;
+    padding: 0 6px;
+    border: 1px solid color-mix(in srgb, var(--brass-text) 50%, transparent);
+    border-radius: 2px;
+    font-family: var(--text);
+    font-size: 0.66em;
     font-weight: 600;
+    letter-spacing: 0;
     color: var(--brass-text);
-    background: color-mix(in srgb, var(--brass) 14%, transparent);
-    border-radius: 3px;
-    padding: 1px 6px;
   }
   .quit-row {
-    margin-top: 4px;
-    padding-top: 4px;
-    border-top: 1px solid var(--line);
+    margin-top: 2px;
+  }
+  li.quit-row {
+    border-top: 1px solid var(--np-ink);
+  }
+  .quit {
+    padding-top: 7px;
+    padding-bottom: 7px;
   }
   .quit .key {
-    border-color: transparent;
-    background: none;
-    color: var(--muted);
+    color: var(--np-ink-3);
   }
   .quit b {
     font-weight: 500;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .quit:hover b {
-    color: var(--parchment);
+    color: var(--np-ink);
   }
 
-  /* The note: what lies behind the hovered entry, from your own data. */
+  /* The note: what lies behind the hovered entry, from your own data, as a dateline. */
   .note {
-    border-top: 1px solid var(--line);
-    background: var(--panel-2);
-    min-height: 54px;
-    padding: 12px 22px;
+    margin: 0 20px 14px;
+    min-height: 46px;
+    padding: 7px 0;
+    border-top: 1px solid var(--np-ink);
+    border-bottom: 1px solid var(--np-ink);
     display: grid;
     align-items: center;
   }
   .note p {
     margin: 0;
     display: flex;
-    gap: 10px;
+    gap: 9px;
     align-items: baseline;
-    color: var(--muted);
-    font-size: 0.9em;
-    line-height: 1.45;
+    font-family: var(--title);
+    font-style: italic;
+    color: var(--np-ink-2);
+    font-size: 0.92em;
+    line-height: 1.4;
   }
   .note p :global(svg) {
-    color: var(--aurora);
+    flex: none;
+    color: var(--np-ink);
     transform: translateY(2px);
   }
 
   .update .bar {
     width: 140px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--panel-3);
+    height: 3px;
+    background: var(--np-rule);
     overflow: hidden;
   }
   .update .bar i {
     display: block;
     height: 100%;
-    background: var(--aurora);
+    background: var(--np-ink);
   }
   .update {
     position: fixed;
@@ -642,6 +666,10 @@
     gap: 12px;
     align-items: center;
     z-index: 3;
+    background: var(--np-paper);
+    border: 1px solid var(--np-ink);
+    border-radius: 2px;
+    box-shadow: 3px 3px 0 var(--np-paper-2);
   }
   footer {
     position: absolute;
@@ -652,7 +680,7 @@
     justify-content: space-between;
     align-items: flex-end;
     padding: 0 clamp(20px, 2vw, 32px) 18px;
-    color: var(--muted);
+    color: var(--np-ink-2);
     font-size: 0.88em;
     pointer-events: none;
   }
@@ -661,24 +689,26 @@
     display: grid;
     text-align: left;
     gap: 0;
-    background: color-mix(in srgb, var(--panel-solid) 80%, transparent);
-    border: 1px solid transparent;
-    border-radius: 4px;
-    padding: 6px 10px;
-    color: var(--parchment);
+    background: color-mix(in srgb, var(--np-paper) 88%, transparent);
+    border: 1px solid var(--np-rule);
+    border-radius: 2px;
+    padding: 5px 10px;
+    color: var(--np-ink);
     cursor: var(--cursor-pointer, pointer);
   }
-  .who:hover {
-    border-color: var(--line-strong);
+  .who:hover,
+  .who:focus-visible {
+    border-color: var(--np-ink);
   }
   .who span {
     font-family: var(--title);
     font-style: italic;
-    color: var(--muted);
+    color: var(--np-ink-2);
   }
   .ver {
-    padding: 6px 10px;
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--panel-solid) 80%, transparent);
+    padding: 4px 9px;
+    border: 1px solid var(--np-rule);
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--np-paper) 88%, transparent);
   }
 </style>
