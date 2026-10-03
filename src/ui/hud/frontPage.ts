@@ -411,6 +411,8 @@ export interface Turning {
   flags: number[];
   /** Where to look in the replay. */
   at?: At;
+  /** A world event's press photo (its id: pressPhotos.ts). */
+  photo?: string;
   title: Line;
   deck: Line;
 }
@@ -546,6 +548,7 @@ export function turningPoints(ed: Edition, lead: Lead | null = leadInfo(ed), max
           tick: f.tick,
           weight: 40,
           flags: [],
+          photo: f.id,
           title: line(`worldEvent.${f.id}.title`),
           deck: line(`worldEvent.${f.id}.fx`),
         });

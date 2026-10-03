@@ -1,6 +1,6 @@
 # Crédits et licences
 
-Isoline est un projet original. Le code est sous licence MIT (voir `LICENSE`). Le logo, les cartes, les sprites d'unités et les textures sont créés par le projet. Les icônes, drapeaux, polices, bruitages, musiques et la voix de synthèse proviennent des sources libres listées ci-dessous.
+Isoline est un projet original. Le code est sous licence MIT (voir `LICENSE`). Le logo, les cartes, les sprites d'unités et les textures sont créés par le projet. Les icônes, drapeaux, polices, bruitages, musiques, photos de presse et la voix de synthèse proviennent des sources libres listées ci-dessous.
 
 ## Polices (embarquées)
 
@@ -93,6 +93,18 @@ Enregistrements réels publiés sur Freesound sous **Creative Commons 0** (domai
 
 Les fichiers audio sont générés par `scripts/audio/gen-voice.py` à partir des textes de `src/ui/i18n/`.
 
+## Photographies de presse (événements mondiaux)
+
+Chaque événement mondial est illustré dans les articles du Courrier (Flash info, journal, une de fin de partie) par une vraie photographie de **Wikimedia Commons**, sous licence libre vérifiée dans les métadonnées du fichier (domaine public ou Creative Commons Attribution). `scripts/press/build-photos.ts` télécharge les originaux, contrôle leur licence et leur auteur, puis les **modifie** : recadrage au format 3:2, réduction à 768 × 512 px, impression en bichromie (encre marine `#172A3C` sur papier `#F1ECE2`), rouges de l'original reportés en magenta (crise seulement), léger grain de papier, export WebP (`public/press/`). Les images modifiées restent sous la licence de leur original.
+
+| Photo (titre sur Wikimedia Commons) | Auteur | Licence | Événement | Source | Modifications |
+|---|---|---|---|---|---|
+| « Electronic stock board in Yaesu, Tokyo 2007 » | nappa (Flickr) | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/) | Crise économique mondiale (`crisis`) | https://commons.wikimedia.org/wiki/File:Electronic_stock_board_in_Yaesu,_Tokyo_2007.jpg | recadrage 3:2, réduction, bichromie, chiffres rouges en magenta, grain |
+| « Connecticut National Guard sets up federal medical station equipment at Southern Connecticut State University (8) » | Staff Sgt. Steven Tucker, U.S. Air National Guard | [Domaine public](https://commons.wikimedia.org/wiki/Template:PD-USGov-Military-National_Guard) (œuvre du gouvernement fédéral américain) | Pandémie mondiale (`pandemic`) | https://commons.wikimedia.org/wiki/File:Connecticut_National_Guard_sets_up_federal_medical_station_equipment_at_Southern_Connecticut_State_University_(8).jpg | recadrage 3:2 (sans le drapeau), réduction, bichromie, grain |
+| « Container crane @ Container terminal @ Harbour Tour @ Spido @ Rotterdam » | Guilhem Vellut (Flickr) | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/) | Boom commercial (`boom`) | https://commons.wikimedia.org/wiki/File:Container_crane_@_Container_terminal_@_Harbour_Tour_@_Spido_@_Rotterdam_(30530447836).jpg | réduction, bichromie, grain |
+| « 220305-F-EI268-1046 - Arctic sky illuminates Patriot (Image 1 of 2) » | Senior Airman Joseph Leveille, U.S. Air Force | [Domaine public](https://commons.wikimedia.org/wiki/Template:PD-USGov-Military-Air_Force) (œuvre du gouvernement fédéral américain) | Tempête solaire (`solarStorm`) | https://commons.wikimedia.org/wiki/File:220305-F-EI268-1046_-_Arctic_sky_illuminates_Patriot_(Image_1_of_2).jpg | recadrage 3:2, réduction, bichromie, grain |
+| « United Nations Headquarters - Security Council chamber, angled view (cropped) » | Jdforrester | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Sommet de la paix (`peaceSummit`) | https://commons.wikimedia.org/wiki/File:United_Nations_Headquarters_-_Security_Council_chamber,_angled_view_(cropped).jpg | recadrage 3:2 sur la table du Conseil, réduction, bichromie, grain |
+
 ## Icônes et drapeaux
 
 | Élément | Auteur | Licence | URL |
@@ -102,7 +114,7 @@ Les fichiers audio sont générés par `scripts/audio/gen-voice.py` à partir de
 
 ## Outils de build (non distribués)
 
-electron-builder (MIT), Vite (MIT), esbuild (MIT), TypeScript (Apache-2.0), Vitest (MIT), Playwright (Apache-2.0), ESLint (MIT), Prettier (MIT), lefthook (MIT), opentype.js (MIT), @resvg/resvg-js (MPL-2.0), pngjs (MIT), resedit (MIT), tsx (MIT), gifenc (MIT), ffmpeg-static (binaire FFmpeg, GPL ; utilisé seulement pour assembler la vidéo de présentation, non distribué), svelte-check (MIT), typescript-eslint (MIT), NSIS 3.12 (zlib/libpng, via electron-builder).
+electron-builder (MIT), Vite (MIT), esbuild (MIT), TypeScript (Apache-2.0), Vitest (MIT), Playwright (Apache-2.0), ESLint (MIT), Prettier (MIT), lefthook (MIT), opentype.js (MIT), @resvg/resvg-js (MPL-2.0), pngjs (MIT), resedit (MIT), tsx (MIT), gifenc (MIT), ffmpeg-static (binaire FFmpeg, GPL ; utilisé seulement pour assembler la vidéo de présentation et imprimer les photos de presse, non distribué), svelte-check (MIT), typescript-eslint (MIT), NSIS 3.12 (zlib/libpng, via electron-builder).
 
 ## Inspirations
 

@@ -2,6 +2,8 @@
 // deck, or briefs) and writes the special edition of a fallen country.
 import { t, i18n } from '../i18n/i18n.svelte';
 import type { Fall, LogEntry } from '../stores/game.svelte';
+import type { WorldEventId } from '../../core/rules/features';
+import { hasPressPhoto } from './pressPhotos';
 
 export type Tone = LogEntry['level'];
 
@@ -13,6 +15,8 @@ export interface Story {
   deck: string;
   /** Countries pictured next to the headline (flags). */
   flags: number[];
+  /** A world event's press photo (pressPhotos.ts). */
+  photo?: WorldEventId;
 }
 
 type Name = (id: number) => string;
@@ -156,7 +160,9 @@ export function storyOf(e: LogEntry, name: Name): Story {
   const weight = weightOf(e.key);
   if (weight === 0) return { entry: e, weight, title: e.text, deck: '', flags: [] };
   const [title, deck, flags] = headline(e.key ?? '', e.params ?? {}, name);
-  return { entry: e, weight, title: title || e.text, deck, flags };
+  const event = e.key?.startsWith('worldEvent.') ? e.key.slice('worldEvent.'.length) : '';
+  const photo = hasPressPhoto(event) ? { photo: event } : {};
+  return { entry: e, weight, title: title || e.text, deck, flags, ...photo };
 }
 
 /** Section heading of a minute of play: "13e minute" / "Minute 13". */
