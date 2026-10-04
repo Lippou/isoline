@@ -18,7 +18,7 @@ import {
   RELATION_HOSTILE,
   SCRAMBLE_SIGHT,
 } from '../game/constants';
-import { IS_LAND } from '../map/terrain';
+import { HABITABLE, IS_LAND } from '../map/terrain';
 import { MAX_LEVEL, buildCost, checkPlacement, levelsOwned } from '../buildings/buildings';
 import {
   hostileSams,
@@ -587,7 +587,7 @@ function randomInterior(game: Game, p: Player): number {
   for (let tries = 0; tries < 6; tries++) {
     const b = p.border[game.rng.int(0, p.border.length - 1)]!;
     const tile = innerTile(game, p, b, game.rng.int(6, 30));
-    if (tile >= 0 && IS_LAND[game.map.terrain[tile]!]) return tile;
+    if (tile >= 0 && HABITABLE[game.map.terrain[tile]!]) return tile;
   }
   return -1;
 }
@@ -911,7 +911,8 @@ function tryBoat(game: Game, p: Player, m: Mem, _t: Traits, idle = false): numbe
     const y = fy + game.rng.int(-150, 150);
     if (!game.map.inBounds(x, y)) continue;
     const tile = y * w + x;
-    if (!IS_LAND[game.map.terrain[tile]!] || game.isDead(tile) || outsideNextZone(game, tile)) continue;
+    // Landings aim at habitable shores, not at an ice sheet or a cliff of high peaks.
+    if (!HABITABLE[game.map.terrain[tile]!] || game.isDead(tile) || outsideNextZone(game, tile)) continue;
     const o = game.owner[tile]!;
     if (o === p.id || (o > 0 && (game.friendly(o, p.id) || !game.attackAllowed(p.id, o, true)))) continue;
     if (o > 0 && game.players[o]!.troops > p.troops * 0.7) continue;

@@ -1,7 +1,7 @@
 // Arcade maps (1.5): symmetric, readable boards for competitive games. Each shape is
 // drawn in canonical coordinates, and the finished terrain is copied from the canonical
 // tile (worlds.ts `symmetry`), so every player starts on exactly the same ground.
-import { T, IS_LAND, Resource } from '../../src/core/map/terrain';
+import { T, HABITABLE, Resource } from '../../src/core/map/terrain';
 import type { LocalizedName } from '../../src/core/map/gamemap';
 import {
   SYM,
@@ -115,7 +115,7 @@ function checkerRetouch({ w, h, terrain, elevation, noise }: Retouch): void {
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
-      if (!IS_LAND[terrain[i]!]) continue;
+      if (!HABITABLE[terrain[i]!]) continue;
       const [cx, cy, lx, ly] = cbCell(x, y);
       const inCell = lx < CB.cell && ly < CB.cell;
       const centre = cx === 3 && cy === 2;
@@ -365,7 +365,7 @@ function arenaRetouch({ w, h, terrain, noise }: Retouch): void {
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
       const t = terrain[i]!;
-      if (!IS_LAND[t] || t === T.River || t === T.Mountain) continue;
+      if (!HABITABLE[t] || t === T.River || t === T.Mountain) continue;
       const r = Math.hypot(x - (w - 1) / 2, y - (h - 1) / 2) / h;
       if (r < 0.15) terrain[i] = T.Plains;
       else if (r > 0.2 && r < 0.33 && t !== T.Hills)
@@ -476,7 +476,7 @@ function pixelWorld(c: Ctx): { terrain: Uint8Array; elevation: Uint8Array } {
       const lx = x - bx * PX;
       const ly = y - by * PX;
       // River segments: 4-tile wide strokes from block centre to block centre.
-      if (IS_LAND[t] && t !== T.Mountain) {
+      if (HABITABLE[t] && t !== T.Mountain) {
         for (const j of riverDir[k]!) {
           const dx = (j % bw) - bx;
           const dy = Math.floor(j / bw) - by;
@@ -486,7 +486,7 @@ function pixelWorld(c: Ctx): { terrain: Uint8Array; elevation: Uint8Array } {
         }
       }
       terrain[y * w + x] = t;
-      elevation[y * w + x] = IS_LAND[t] ? Math.max(8, be[k]!) : 0;
+      elevation[y * w + x] = HABITABLE[t] ? Math.max(8, be[k]!) : 0;
     }
   return { terrain, elevation };
 }

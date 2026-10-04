@@ -4,7 +4,7 @@ import type { Game } from './state';
 import type { Player } from './player';
 import { PERSONALITIES } from './player';
 import { SPAWN_IMMUNITY_TICKS, SPAWN_RADIUS, START_GOLD, START_TROOPS } from './constants';
-import { IS_LAND } from '../map/terrain';
+import { HABITABLE, IS_LAND } from '../map/terrain';
 import { inventTribeName } from '../names';
 import { hashString } from '../rng';
 import { GENERALS } from './config';
@@ -41,7 +41,7 @@ export function setupPlayers(game: Game): void {
   let teamRR = 0;
   for (const spec of nationSpecs) {
     const tile = game.map.idx(spec.x, spec.y);
-    if (!IS_LAND[game.map.terrain[tile]!] || game.owner[tile] !== 0) continue;
+    if (!HABITABLE[game.map.terrain[tile]!] || game.owner[tile] !== 0) continue;
     const p = game.addPlayer(spec.name, 'nation');
     p.flagSeed = spec.flagSeed;
     p.iso = spec.iso ?? '';
@@ -66,7 +66,7 @@ export function setupPlayers(game: Game): void {
   for (const [x, y] of points) {
     if (tribes >= cfg.tribes) break;
     const tile = game.map.idx(x, y);
-    if (!IS_LAND[game.map.terrain[tile]!] || game.owner[tile] !== 0) continue;
+    if (!HABITABLE[game.map.terrain[tile]!] || game.owner[tile] !== 0) continue;
     if (nearOwned(game, tile, 14)) continue;
     const p = game.addPlayer(inventTribeName(rng), 'tribe');
     p.color = -1;
@@ -139,7 +139,8 @@ export function releaseSpawn(game: Game, p: Player): void {
 
 export function validSpawnTile(game: Game, tile: number): boolean {
   if (tile < 0 || tile >= game.map.size) return false;
-  if (!IS_LAND[game.map.terrain[tile]!] || game.owner[tile] !== 0 || game.isDead(tile)) return false;
+  // Nobody settles on a glacier or among the high peaks (they are conquered later).
+  if (!HABITABLE[game.map.terrain[tile]!] || game.owner[tile] !== 0 || game.isDead(tile)) return false;
   return (game.map.componentSize[game.map.component[tile]!] ?? 0) >= 30;
 }
 

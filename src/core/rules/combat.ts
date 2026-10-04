@@ -38,7 +38,7 @@ import {
   WILD_LOSS_DIV_TRIBE,
   WILD_REACH,
 } from '../game/constants';
-import { IS_LAND, MAG, SPEED } from '../map/terrain';
+import { HARSH, IS_LAND, MAG, SPEED } from '../map/terrain';
 import { hash2 } from '../rng';
 import { addGold } from '../game/economy';
 import { capitalSpeedMult } from './capital';
@@ -177,7 +177,8 @@ export interface TileOutcome {
  * front this tick. mag and tile cost come from the terrain, ×5 / ×3 near an enemy
  * defence post, ×(5 − 2 × fallout share) on fallout; mag ×0.75 inside the attacker's
  * reconnaissance zone (Isoline's aviation).
- * - Wilderness: loss mag / 5 (tribes mag / 10); fraction clamp(2,000 × cost / troops, 5, 100) / (2 × border).
+ * - Wilderness: loss mag / 5 (tribes mag / 10); fraction clamp(2,000 × cost / troops, 5, 100) / (2 × border),
+ *   the bounds × cost / 16.5 on glaciers and high peaks.
  * - Player: loss mag × clamp(r, 0.6, 2) × (0.463 × bonus(A, 0.7) × bonus(D, 0.3) + 0.0039 × D troops per tile),
  *   ×0.7 against a tribe, ×0.5 against a traitor; the defender loses its troops per tile;
  *   fraction clamp(r, 0.82, 7.5) × clamp(r / 20, 1, 50) / 8.55 × cost × bonus(A, 0.73) × bonus(D, 0.3)
@@ -199,11 +200,19 @@ export function attackLogic(game: Game, a: Attack, tile: number, borderSize: num
   const troops = Math.max(1, a.troops);
   const border = Math.max(1, borderSize) * attackSpeedMult(game, A);
   if (!T) {
+    // OpenFront's floor makes every wild tile cost the same to a large army. Glaciers and
+    // high peaks (Isoline's) keep their slowness at any size: the floor and the ceiling
+    // scale with their cost (×1.9 and ×2.2 the plains), so they stay slow to settle.
+    const harsh = HARSH[t] ? SPEED[t]! / PLAINS_COST : 1;
     return {
       attackerLoss: mag / (A.kind === 'tribe' ? WILD_LOSS_DIV_TRIBE : WILD_LOSS_DIV),
       defenderLoss: 0,
       tickFraction:
-        clamp((TERRA_NULLIUS_COST_SCALE * cost) / troops, TERRA_NULLIUS_MIN_COST, TERRA_NULLIUS_MAX_COST) /
+        clamp(
+          (TERRA_NULLIUS_COST_SCALE * cost) / troops,
+          TERRA_NULLIUS_MIN_COST * harsh,
+          TERRA_NULLIUS_MAX_COST * harsh,
+        ) /
         (TERRA_NULLIUS_BUDGET * border),
     };
   }

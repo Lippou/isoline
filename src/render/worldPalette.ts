@@ -10,7 +10,8 @@ export function worldCode(palette: MapPalette | undefined): number {
 }
 
 type RGB = [number, number, number];
-// Terrain order: deepOcean, shallow, lake, river, plains, hills, mountain, desert, forest, tundra, impassable.
+// Terrain order: deepOcean, shallow, lake, river, plains, hills, mountain, desert, forest, tundra,
+// impassable (walls), glacier, peaks.
 const MINIMAP: Record<MapPalette, RGB[]> = {
   mars: [
     [12, 26, 40],
@@ -23,7 +24,9 @@ const MINIMAP: Record<MapPalette, RGB[]> = {
     [140, 92, 58],
     [90, 52, 34],
     [170, 150, 140],
+    [70, 44, 34],
     [200, 196, 194],
+    [150, 120, 104],
   ],
   moon: [
     [30, 32, 38],
@@ -36,7 +39,9 @@ const MINIMAP: Record<MapPalette, RGB[]> = {
     [126, 125, 120],
     [120, 119, 114],
     [126, 125, 120],
+    [70, 70, 68],
     [150, 150, 148],
+    [140, 139, 135],
   ],
   titan: [
     [14, 12, 12],
@@ -49,7 +54,9 @@ const MINIMAP: Record<MapPalette, RGB[]> = {
     [64, 45, 28],
     [96, 70, 40],
     [100, 84, 62],
+    [60, 50, 40],
     [156, 142, 118],
+    [146, 132, 108],
   ],
   pixel: [
     [26, 62, 170],
@@ -63,6 +70,8 @@ const MINIMAP: Record<MapPalette, RGB[]> = {
     [26, 124, 50],
     [226, 232, 244],
     [80, 76, 84],
+    [214, 236, 252],
+    [180, 178, 186],
   ],
 };
 

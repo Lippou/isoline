@@ -3,7 +3,7 @@
 // into pieces. Ships sail the rivers that reach a sea or a lake (GameMap.navBody), so every
 // river fragment within `maxGap` tiles of the sea — or of a river already reaching it — is
 // joined to it by carving the shortest land route as river.
-import { IS_WATER, T } from './terrain';
+import { HARSH, IS_WATER, T } from './terrain';
 
 /**
  * Navigable river tiles (1): every river tile whose river — 4-connected river tiles —
@@ -138,15 +138,9 @@ export function connectRivers(
           const ny = y + dy;
           if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
           const j = ny * w + nx;
-          if (dist[j] !== -1 || terrain[j] === T.Impassable || isSea(j)) continue;
+          if (dist[j] !== -1 || HARSH[terrain[j]!] || isSea(j)) continue;
           // Diagonal steps need a corner to carve through.
-          if (
-            dx !== 0 &&
-            dy !== 0 &&
-            terrain[y * w + nx] === T.Impassable &&
-            terrain[ny * w + x] === T.Impassable
-          )
-            continue;
+          if (dx !== 0 && dy !== 0 && HARSH[terrain[y * w + nx]!] && HARSH[terrain[ny * w + x]!]) continue;
           dist[j] = d + 1;
           parent[j] = i;
           queue[qt++] = j;
@@ -165,7 +159,7 @@ export function connectRivers(
           const a = ((p - px) / w) * w + ix; // (ix, py)
           const b = ((i - ix) / w) * w + px; // (px, iy)
           const open = (t: number) => terrain[t] === T.River || IS_WATER[terrain[t]!] === 1;
-          if (!open(a) && !open(b)) carved += carve(terrain[a] !== T.Impassable ? a : b);
+          if (!open(a) && !open(b)) carved += carve(!HARSH[terrain[a]!] ? a : b);
         }
       }
     }
@@ -181,7 +175,7 @@ export function connectRivers(
 
   function carve(i: number): number {
     const t = terrain[i]!;
-    if (t === T.River || t === T.Impassable || IS_WATER[t]) return 0;
+    if (t === T.River || HARSH[t] || IS_WATER[t]) return 0;
     terrain[i] = T.River;
     return 1;
   }

@@ -119,14 +119,18 @@ vec3 worldBiome(float t, vec2 p, float elev) {
     } else if (t < 7.5) c = mix(vec3(0.77, 0.51, 0.31), vec3(0.86, 0.61, 0.39), dune * 0.5 + m * 0.5);
     else if (t < 8.5) c = vec3(0.50, 0.29, 0.19);
     else if (t < 9.5) c = mix(vec3(0.78, 0.65, 0.58), vec3(0.93, 0.89, 0.86), smoothstep(0.3, 0.8, m));
-    else c = mix(vec3(0.95, 0.94, 0.93), vec3(0.86, 0.84, 0.84), smoothstep(0.5, 0.9, fine));
+    else if (t < 10.5) c = vec3(0.30, 0.18, 0.14) * (0.9 + 0.15 * fine);
+    else if (t < 11.5) c = mix(vec3(0.95, 0.94, 0.93), vec3(0.86, 0.84, 0.84), smoothstep(0.5, 0.9, fine));
+    else c = mix(vec3(0.50, 0.32, 0.25), vec3(0.80, 0.68, 0.62), smoothstep(0.35, 0.75, m + fine * 0.3));
   } else if (uWorld < 2.5) {   // Moon: regolith greys, bright crater rims and ejecta
     float g;
     if (t < 4.5) g = mix(0.60, 0.68, n);
     else if (t < 5.5) g = mix(0.55, 0.64, n);
     else if (t < 6.5) g = mix(0.66, 0.80, n * 0.6 + fine * 0.4);
     else if (t < 9.5) g = mix(0.70, 0.79, m * 0.6 + n * 0.4);
-    else g = 0.86;
+    else if (t < 10.5) g = 0.40;
+    else if (t < 11.5) g = 0.86;
+    else g = mix(0.72, 0.88, n * 0.5 + fine * 0.5);
     c = vec3(g, g * 0.985, g * 0.95) * (0.95 + 0.07 * fine);
   } else if (uWorld < 3.5) {   // Titan: orange plains, dark dune seas, bright icy highlands
     if (t < 3.5) c = vec3(0.20, 0.15, 0.11);
@@ -136,7 +140,9 @@ vec3 worldBiome(float t, vec2 p, float elev) {
     else if (t < 7.5) c = mix(vec3(0.33, 0.23, 0.14), vec3(0.43, 0.30, 0.18), dune * 0.6 + m * 0.4);
     else if (t < 8.5) c = vec3(0.52, 0.38, 0.22);
     else if (t < 9.5) c = mix(vec3(0.52, 0.43, 0.31), vec3(0.62, 0.52, 0.38), m);
-    else c = vec3(0.86, 0.79, 0.66);
+    else if (t < 10.5) c = vec3(0.30, 0.24, 0.19);
+    else if (t < 11.5) c = vec3(0.86, 0.79, 0.66);
+    else c = mix(vec3(0.72, 0.63, 0.50), vec3(0.90, 0.84, 0.72), n * 0.6 + fine * 0.4);
   } else {                     // 8-bit: flat console colours, a faint one-tile dither
     if (t < 3.5) c = vec3(0.20, 0.45, 0.95);
     else if (t < 4.5) c = vec3(0.38, 0.76, 0.27);
@@ -145,7 +151,9 @@ vec3 worldBiome(float t, vec2 p, float elev) {
     else if (t < 7.5) c = vec3(0.94, 0.83, 0.46);
     else if (t < 8.5) c = vec3(0.10, 0.50, 0.20);
     else if (t < 9.5) c = vec3(0.90, 0.93, 0.98);
-    else c = vec3(0.32, 0.30, 0.34);
+    else if (t < 10.5) c = vec3(0.32, 0.30, 0.34);
+    else if (t < 11.5) c = vec3(0.84, 0.93, 1.00);
+    else c = elev > 0.97 ? vec3(0.95, 0.96, 0.98) : vec3(0.70, 0.68, 0.72);
     c *= 0.97 + 0.03 * mod(floor(p.x) + floor(p.y), 2.0);
   }
   return c;
@@ -196,8 +204,16 @@ vec3 biome(float t, vec2 p, float elev) {
   } else if (t < 9.5) {        // tundra and ice fields
     c = mix(vec3(0.55, 0.56, 0.48), vec3(0.72, 0.73, 0.68), n);
     c = mix(c, vec3(0.90, 0.92, 0.95), smoothstep(0.6, 0.85, m) * 0.6);
-  } else {                     // glaciers and impassable walls
-    c = mix(vec3(0.86, 0.90, 0.95), vec3(0.74, 0.80, 0.88), smoothstep(0.5, 0.9, fine));
+  } else if (t < 10.5) {       // impassable walls (mazes, legends): dark basalt
+    c = mix(vec3(0.22, 0.21, 0.22), vec3(0.31, 0.29, 0.29), n * 0.6 + fine * 0.4);
+  } else if (t < 11.5) {       // glacier: an ice sheet with faint blue crevasses
+    c = mix(vec3(0.89, 0.93, 0.97), vec3(0.78, 0.85, 0.92), smoothstep(0.5, 0.9, fine));
+    float crev = smoothstep(0.93, 0.99, abs(sin(p.x * 0.31 + p.y * 0.17 + n * 9.0)));
+    c = mix(c, vec3(0.62, 0.74, 0.86), crev * 0.3);
+  } else {                     // high peaks: bare rock ridges under lasting snow
+    c = mix(vec3(0.40, 0.38, 0.36), vec3(0.55, 0.52, 0.49), n * 0.6 + fine * 0.4);
+    float snow = smoothstep(0.35, 0.7, m * 0.7 + fine * 0.3);
+    c = mix(c, vec3(0.90, 0.92, 0.95), snow * 0.75);
   }
   return c;
 }
@@ -234,7 +250,9 @@ vec3 heat(float t) {
   if (t < 6.5) return vec3(0.95, 0.35, 0.30);
   if (t < 8.5) return vec3(0.65, 0.80, 0.35);
   if (t < 9.5) return vec3(0.85, 0.60, 0.30);
-  return vec3(0.15, 0.12, 0.15);
+  if (t < 10.5) return vec3(0.15, 0.12, 0.15); // walls: never crossed
+  if (t < 11.5) return vec3(0.84, 0.20, 0.42); // glacier: dearer than mountains
+  return vec3(0.70, 0.10, 0.38);               // high peaks: the dearest land
 }
 
 void main() {
@@ -286,7 +304,8 @@ void main() {
   }
   if (!water && tId > 2.5 && tId < 3.5) ground = mix(ground, vec3(0.22, 0.49, 0.6), 0.75); // rivers
   // Beaches: a thin sand fringe on the land side of the coast.
-  float beach = landA * (1.0 - smoothstep(0.5, 0.75, landMask)) * step(0.5, 1.0 - float(tId > 5.5 && tId < 6.5));
+  // (No sand under mountains, ice, peaks or walls.)
+  float beach = landA * (1.0 - smoothstep(0.5, 0.75, landMask)) * step(0.5, 1.0 - float((tId > 5.5 && tId < 6.5) || tId > 9.5));
   ground = mix(ground, vec3(0.80, 0.74, 0.58), beach * (uWorld > 0.5 ? 0.0 : 0.45));
   col = mix(sea, ground, landA);
   water = landA < 0.5;

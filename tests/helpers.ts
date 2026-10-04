@@ -68,12 +68,14 @@ const CHARS: Record<string, number> = {
   f: T.Forest,
   t: T.Tundra,
   '#': T.Impassable,
+  g: T.Glacier,
+  '^': T.Peaks,
 };
 
 /**
  * Build a map from rows of characters (scaled ×`scale` in both directions):
  * ~ deep, - shallow, o lake, r river, . plains, h hills, M mountain, d desert,
- * f forest, t tundra, # impassable.
+ * f forest, t tundra, # impassable wall, g glacier, ^ high peaks.
  */
 export function asciiMap(rows: string[], scale = 1, id = 'test'): GM {
   const h0 = rows.length;
@@ -87,7 +89,8 @@ export function asciiMap(rows: string[], scale = 1, id = 'test'): GM {
       const ch = rows[Math.floor(y / scale)]![Math.floor(x / scale)]!;
       const t = CHARS[ch] ?? T.Plains;
       terrain[y * w + x] = t;
-      elevation[y * w + x] = t === T.Mountain ? 200 : t === T.Hills ? 140 : t <= 2 ? 0 : 60;
+      elevation[y * w + x] =
+        t === T.Peaks ? 245 : t === T.Mountain ? 200 : t === T.Hills ? 140 : t <= 2 ? 0 : 60;
     }
   }
   return new GM(

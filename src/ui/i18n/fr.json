@@ -1066,7 +1066,9 @@
     "desert": "Désert",
     "forest": "Forêt",
     "tundra": "Toundra / glace",
-    "impassable": "Infranchissable"
+    "impassable": "Infranchissable",
+    "glacier": "Glacier",
+    "peaks": "Hauts sommets"
   },
   "resource": {
     "none": "—",
@@ -1937,7 +1939,8 @@
       "attack": "vos attaques ici : −{pct} % de pertes"
     },
     "alert": "intercepteurs {n}/{m}",
-    "teammate": "Votre coéquipier"
+    "teammate": "Votre coéquipier",
+    "harshTerrain": "Lent à conquérir · on n'y construit rien"
   },
   "weather": {
     "stormNear": "Un orage se forme près de chez vous : navires ralentis de {pct} %.",
