@@ -728,7 +728,10 @@ describe('buildings', () => {
     const post = placeBuilding(g, p2, B.DefensePost, g.map.idx(40, 16), true)!;
     g.setOwner(t, 1);
     expect(city.owner).toBe(1);
-    expect(p1.cityLevels).toBe(2);
+    // Looted on capture (GAME_DESIGN.md §6.4): half its levels, rounded down, are lost.
+    expect(city.level).toBe(1);
+    expect(p1.cityLevels).toBe(1);
+    expect(p2.cityLevels).toBe(0);
     g.setOwner(post.tile, 1);
     expect(g.buildings.has(post.id)).toBe(false);
   });

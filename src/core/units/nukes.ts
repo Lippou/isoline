@@ -29,7 +29,7 @@ import {
 } from '../game/constants';
 import { U, makeUnit, type Unit } from './unit';
 import { addUnit } from './ships';
-import type { Building } from '../buildings/building';
+import { inService, type Building } from '../buildings/building';
 import { removeBuilding } from '../buildings/buildings';
 import { destroyRailsInRadius } from './trains';
 import { IS_LAND } from '../map/terrain';
@@ -53,7 +53,7 @@ export function nukeCost(game: Game, p: Player, kind: N): number {
 function readySilos(game: Game, p: Player): Building[] {
   const out: Building[] = [];
   for (const b of game.buildings.values()) {
-    if (b.owner !== p.id || b.type !== B.Silo || b.buildLeft > 0) continue;
+    if (b.owner !== p.id || b.type !== B.Silo || !inService(b)) continue;
     out.push(b);
   }
   return out;
@@ -324,7 +324,7 @@ function ensureSamSlots(game: Game, sam: Building): number {
 
 /** Index of a loaded SAM missile, or -1. */
 export function samLoaded(game: Game, sam: Building): number {
-  if (sam.buildLeft > 0) return -1;
+  if (!inService(sam)) return -1;
   const slots = ensureSamSlots(game, sam);
   for (let k = 0; k < slots; k++) if (sam.tubes[k] === 0) return k;
   return -1;
@@ -332,7 +332,7 @@ export function samLoaded(game: Game, sam: Building): number {
 
 /** Loaded SAM missiles (a bomber raid's planners count them). */
 export function samMissilesReady(game: Game, sam: Building): number {
-  if (sam.buildLeft > 0) return 0;
+  if (!inService(sam)) return 0;
   const slots = ensureSamSlots(game, sam);
   let n = 0;
   for (let k = 0; k < slots; k++) if (sam.tubes[k] === 0) n++;
@@ -378,7 +378,7 @@ function updateSams(game: Game, missiles: Unit[]): void {
   }
   if (missiles.length === 0) return;
   for (const sam of game.buildings.values()) {
-    if (sam.type !== B.Sam || sam.buildLeft > 0) continue;
+    if (sam.type !== B.Sam || !inService(sam)) continue;
     const owner = game.players[sam.owner]!;
     if (!owner.alive || samLoaded(game, sam) < 0) continue;
     const range = samRangeOf(game, sam);
@@ -421,7 +421,7 @@ function updateSams(game: Game, missiles: Unit[]): void {
 export function hostileSams(game: Game, p: Player): { x: number; y: number; range: number }[] {
   const out: { x: number; y: number; range: number }[] = [];
   for (const b of game.buildings.values())
-    if (b.type === B.Sam && b.buildLeft === 0 && !game.friendly(b.owner, p.id))
+    if (b.type === B.Sam && inService(b) && !game.friendly(b.owner, p.id))
       out.push({ x: b.x + 0.5, y: b.y + 0.5, range: samRangeOf(game, b) });
   return out;
 }

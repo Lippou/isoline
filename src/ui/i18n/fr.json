@@ -1005,8 +1005,8 @@
       "desc": "Pétrole, uranium, terres fertiles et métaux rares."
     },
     "loyalty": {
-      "name": "Loyauté et sécessions",
-      "desc": "Les conquêtes récentes peuvent faire sécession si elles sont mal tenues."
+      "name": "Loyauté et sécessions (optionnel)",
+      "desc": "Désactivé par défaut. Les conquêtes récentes peuvent faire sécession si elles sont mal tenues."
     },
     "events": {
       "name": "Événements mondiaux",
@@ -1044,7 +1044,7 @@
     },
     "propaganda": {
       "name": "Propagande",
-      "desc": "+50 % de loyauté pendant 60 s, aucune sécession possible."
+      "desc": "Vos bâtiments occupés se rallient aussitôt ; avec la loyauté, +50 % de loyauté pendant 60 s et aucune sécession."
     }
   },
   "personality": {
@@ -1080,7 +1080,7 @@
   "building": {
     "city": {
       "name": "Ville",
-      "desc": "+60 000 troupes maximales par niveau une fois achevée. Gare ferroviaire.",
+      "desc": "+60 000 troupes maximales par niveau une fois achevée. Gare ferroviaire. Prise, elle perd la moitié de ses niveaux et reste occupée 60 s.",
       "short": "Ville"
     },
     "port": {
@@ -1120,7 +1120,7 @@
     },
     "lab": {
       "name": "Centre de recherche",
-      "desc": "Produit 1,5 point de recherche par seconde et par niveau une fois achevé ; sans centre, la recherche plafonne à 0,5 point/s. Niveaux illimités. Transféré s'il est capturé.",
+      "desc": "Produit 1,5 point de recherche par seconde et par niveau une fois achevé ; sans centre, la recherche plafonne à 0,5 point/s. Niveaux illimités. Transféré s'il est capturé, pillé et occupé 60 s.",
       "short": "Recherche"
     }
   },
@@ -1315,7 +1315,7 @@
     "researchIdle": "Plus aucune recherche en cours : choisissez la prochaine technologie.",
     "labReady": "Centre de recherche opérationnel : la recherche accélère.",
     "labLost": "{by} s'est emparé d'un de vos centres de recherche.",
-    "labTaken": "Vous prenez un centre de recherche à {player}.",
+    "labTaken": "Vous prenez un centre de recherche à {player} : pillé au niveau {level}, il cherchera pour vous après {s} s d'occupation.",
     "secessionRegion": "Une région fait sécession : {tribe} ({tiles} cases) se soulève dans votre pays.",
     "raidDamaged": "Raid aérien ({by}) — {building} : −{n} niv.",
     "raidDestroyed": "Raid aérien ({by}) — {building} : en ruine.",
@@ -1328,7 +1328,10 @@
       "fighter": "Radar — chasseurs ennemis ({by}) au-dessus de vos terres.",
       "recon": "Radar — avion de reconnaissance ennemi ({by}) au-dessus de vos terres.",
       "transport": "Radar — transport ennemi ({by}) en approche : {troops} troupes."
-    }
+    },
+    "buildingTaken": "Vous prenez à {player} : {building}, sous occupation pendant {s} s.",
+    "buildingLooted": "Vous prenez à {player} : {building}, pillage du niveau {from} au niveau {level}, sous occupation pendant {s} s.",
+    "buildingLost": "{by} s'est emparé d'un de vos bâtiments : {building}."
   },
   "error": {
     "nukeSelfMirv": "Un MIRV ne peut pas viser votre propre pays : ses ogives tomberaient sur tout votre territoire.",
@@ -1940,7 +1943,9 @@
     },
     "alert": "intercepteurs {n}/{m}",
     "teammate": "Votre coéquipier",
-    "harshTerrain": "Lent à conquérir · on n'y construit rien"
+    "harshTerrain": "Lent à conquérir · on n'y construit rien",
+    "occupied": "Sous occupation · {s} s",
+    "occupiedTip": "Pris et pillé : hors service jusque-là (ni troupes, ni commerce, ni recherche)."
   },
   "weather": {
     "stormNear": "Un orage se forme près de chez vous : navires ralentis de {pct} %.",

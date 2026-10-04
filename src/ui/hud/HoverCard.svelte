@@ -305,6 +305,16 @@
             >{t('hover.alert', { n: alert.ready, m: alert.all })}</span
           >{/if}
       </div>
+      {#if (info.h.building.occupied ?? 0) > 0}
+        <!-- Taken by conquest: looted, and out of service a while (GAME_DESIGN.md §6.4). -->
+        <div class="line bad occupied" data-testid="hover-occupied">
+          <Icon name="time" size={13} /><span
+            >{t('hover.occupied', { s: Math.ceil((info.h.building.occupied ?? 0) / 10) })}<small
+              >{t('hover.occupiedTip')}</small
+            ></span
+          >
+        </div>
+      {/if}
     {/if}
     {#if info.h.resource > 0}
       <div class="line res">
@@ -508,6 +518,22 @@
   .up {
     font-weight: 600;
     color: var(--np-warn);
+  }
+  /* A captured building under occupation: out of service for a while. */
+  .line.occupied {
+    align-items: flex-start;
+  }
+  .line.occupied :global(svg) {
+    flex: none;
+    margin-top: 2px;
+  }
+  .line.occupied span {
+    display: grid;
+    font-weight: 600;
+  }
+  .line.occupied small {
+    font-weight: 400;
+    color: var(--np-ink-2);
   }
   .line.threat :global(svg) {
     flex: none;

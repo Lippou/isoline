@@ -1,7 +1,7 @@
 // Railways: factories automatically lay track to stations (cities, ports,
 // factories) within range; trains wander the network and pay at every stop.
 import type { Game } from '../game/state';
-import type { Building } from '../buildings/building';
+import { inService, type Building } from '../buildings/building';
 import {
   B,
   RAIL_CONNECT_RANGE,
@@ -298,7 +298,8 @@ function payTrain(game: Game, p: Player, amount: number, station: Building): voi
  * `train.path`.
  */
 function payStop(game: Game, train: Unit, station: Building): void {
-  if (station.type !== B.City && station.type !== B.Port) return;
+  // An occupied station (a capture, GAME_DESIGN.md §6.4) lets trains through without paying.
+  if ((station.type !== B.City && station.type !== B.Port) || !inService(station)) return;
   if (train.path.includes(station.id)) return;
   train.path.push(station.id);
   const p = game.players[train.owner]!;
@@ -379,7 +380,7 @@ export function updateRails(game: Game): void {
   const w = game.map.width;
   // Spawn trains at factories: one roll per level every tick, TRAIN_SPAWN_COOLDOWN apart.
   for (const f of game.buildings.values()) {
-    if (f.type !== B.Factory || f.buildLeft > 0 || game.tick < f.timer) continue;
+    if (f.type !== B.Factory || !inService(f) || game.tick < f.timer) continue;
     const p = game.players[f.owner]!;
     if (!p.alive) continue;
     const rate = trainSpawnRate(factoryLevels[p.id]!, trains * TRAIN_UNITS);

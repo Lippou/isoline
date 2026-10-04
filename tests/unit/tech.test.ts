@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { asciiMap, testGame, startWith, cmd, makeGame, run } from '../helpers';
-import { A, B, BUILD_TICKS, N } from '../../src/core/game/constants';
+import { A, B, BUILD_TICKS, CAPTURE_OCCUPATION_TICKS, N } from '../../src/core/game/constants';
 import {
   buildCost,
   checkPlacement,
@@ -234,7 +234,7 @@ describe('tech tree: research centres', () => {
     expect(researchRate(p) * 10).toBeCloseTo((RESEARCH_BASE + 3 * RESEARCH_PER_LAB_LEVEL) * 1.35);
   });
 
-  it('journal: a centre ready, then captured (it changes hands with its output)', () => {
+  it('journal: a centre ready, then captured (it changes hands with its output, after the occupation)', () => {
     const g = testGame(asciiMap(FIELD, 6), 2, { victoryThreshold: 101 });
     g.config.features.tech = true;
     startWith(g, [
@@ -258,6 +258,9 @@ describe('tech tree: research centres', () => {
     expect(ev).toEqual(expect.arrayContaining(['notify.labLost', 'notify.labTaken']));
     g.step([]);
     expect(a.labLevels).toBe(0);
+    // Occupied first (GAME_DESIGN.md §6.4): it researches for its new owner once that ends.
+    expect(b.labLevels).toBe(0);
+    for (let k = 0; k < CAPTURE_OCCUPATION_TICKS; k++) g.step([]);
     expect(b.labLevels).toBe(1);
   });
 

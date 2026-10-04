@@ -29,6 +29,21 @@ export interface Building {
    */
   upgradeLeft: number;
   upgradeTotal: number;
+  /**
+   * Occupation after a capture (GAME_DESIGN.md §6.4): ticks left before the building works
+   * for its new owner (0 = none). Meanwhile it is out of service, like one under construction.
+   */
+  occupiedLeft: number;
+  occupiedTotal: number;
+}
+
+/**
+ * Whether a building works: built and not under occupation. Only then do cities raise the
+ * troop ceiling, stations pay trains, ports trade, factories run trains, research centres
+ * research, silos launch, SAMs fire and airfields fly.
+ */
+export function inService(b: Building): boolean {
+  return b.buildLeft === 0 && b.occupiedLeft === 0;
 }
 
 const CELL = 32;

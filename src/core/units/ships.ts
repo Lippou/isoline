@@ -45,7 +45,7 @@ import { U, makeUnit, sailOnPath, type Unit } from './unit';
 import { launchAttack } from '../rules/combat';
 import { navalHostilities, noteTrade, openHostilities } from '../rules/diplomacy';
 import { addGold } from '../game/economy';
-import type { Building } from '../buildings/building';
+import { inService, type Building } from '../buildings/building';
 import { IS_LAND, T } from '../map/terrain';
 import { techNaval } from '../rules/tech';
 import { FOG_SIGHT, inFogBank, sightBetween } from '../rules/weather';
@@ -334,7 +334,7 @@ function portsNear(game: Game, p: Player, tile: number): Building[] {
   const body = game.map.isNavigable(tile) ? game.map.navBody[tile]! : -1;
   const ports: Building[] = [];
   for (const b of game.buildings.values()) {
-    if (b.owner !== p.id || b.type !== B.Port || b.buildLeft > 0) continue;
+    if (b.owner !== p.id || b.type !== B.Port || !inService(b)) continue;
     const wt = game.map.adjacentWater(b.tile);
     if (wt < 0) continue;
     if (body >= 0 && game.map.navBody[wt] !== body) continue;
@@ -556,7 +556,7 @@ function portFull(game: Game, port: Building, except?: Unit): boolean {
 /** The port a retreating or docked warship repairs at, while it is still one of its owner's. */
 function repairPort(game: Game, u: Unit): Building | null {
   const b = game.buildings.get(u.home);
-  return b && b.type === B.Port && b.owner === u.owner && b.buildLeft === 0 ? b : null;
+  return b && b.type === B.Port && b.owner === u.owner && inService(b) ? b : null;
 }
 
 /** OpenFront's healing: 1 hp a tick near one of your ports, plus the docked share of the port's pool. */
@@ -567,12 +567,7 @@ function healWarship(game: Game, u: Unit): void {
   game.grid.query(u.x, u.y, WARSHIP_PASSIVE_HEAL_RANGE, (id) => {
     if (near) return;
     const b = game.buildings.get(id)!;
-    if (
-      b.type === B.Port &&
-      b.owner === u.owner &&
-      b.buildLeft === 0 &&
-      (b.x - u.x) ** 2 + (b.y - u.y) ** 2 <= r2
-    )
+    if (b.type === B.Port && b.owner === u.owner && inService(b) && (b.x - u.x) ** 2 + (b.y - u.y) ** 2 <= r2)
       near = true;
   });
   let heal = near ? WARSHIP_PASSIVE_HEAL : 0;
@@ -763,7 +758,7 @@ function countPortLevels(game: Game): Float64Array {
   if (portLevelsBuf.length < game.players.length) portLevelsBuf = new Float64Array(game.players.length * 2);
   portLevelsBuf.fill(0);
   for (const b of game.buildings.values())
-    if (b.type === B.Port && b.buildLeft === 0) portLevelsBuf[b.owner]! += b.level;
+    if (b.type === B.Port && inService(b)) portLevelsBuf[b.owner]! += b.level;
   return portLevelsBuf;
 }
 
@@ -791,7 +786,7 @@ function pickTradePort(game: Game, port: Building, owner: Player, portLevels: Fl
   const body = game.map.navBody[wt];
   const candidates: { b: Building; d: number }[] = [];
   for (const other of game.buildings.values()) {
-    if (other.type !== B.Port || other.owner === port.owner || other.buildLeft > 0) continue;
+    if (other.type !== B.Port || other.owner === port.owner || !inService(other)) continue;
     const o = game.players[other.owner]!;
     if (!o.alive || o.kind === 'tribe' || owner.hasEmbargoWith(o, game.tick)) continue;
     const ow = game.map.adjacentWater(other.tile);
@@ -814,7 +809,7 @@ function pickTradePort(game: Game, port: Building, owner: Player, portLevels: Fl
 function spawnMerchants(game: Game, merchants: number): void {
   let portLevels: Float64Array | null = null;
   for (const port of game.buildings.values()) {
-    if (port.type !== B.Port || port.buildLeft > 0) continue;
+    if (port.type !== B.Port || !inService(port)) continue;
     if ((game.tick + port.createdTick) % TRADE_ROLL_TICKS !== 0) continue;
     const owner = game.players[port.owner]!;
     if (!owner.alive || owner.kind === 'tribe') continue;
@@ -847,7 +842,7 @@ function spawnMerchants(game: Game, merchants: number): void {
 /** Whether a (not pirated) merchant may still deliver its cargo; otherwise it is scrapped. */
 function voyageValid(game: Game, m: Unit): boolean {
   const dest = game.buildings.get(m.dest);
-  if (!dest || dest.owner === m.owner) return false;
+  if (!dest || dest.owner === m.owner || !inService(dest)) return false;
   const host = game.players[dest.owner]!;
   return host.alive && host.kind !== 'tribe' && !game.players[m.owner]!.hasEmbargoWith(host, game.tick);
 }

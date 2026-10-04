@@ -9,6 +9,7 @@ import { restoreSnapshot, takeSnapshot } from '../core/net/snapshot';
 import { hashGame } from '../core/net/hash';
 import { B, BUILDING_COUNT, HASH_EVERY, N, radarRange } from '../core/game/constants';
 import { buildCost, levelsByType, planBuild } from '../core/buildings/buildings';
+import { inService } from '../core/buildings/building';
 import { warshipCost, planBoat, TRANSPORT_RETREATING } from '../core/units/ships';
 import { maxLaunchable, nukeCost } from '../core/units/nukes';
 import { nextTechCost, researchRate, researchSources, techKey, techSam } from '../core/rules/tech';
@@ -242,7 +243,9 @@ function sendUpdate(
     events.some((e) => e.k === 'gameOver' || e.k === 'worldEvent' || e.k === 'council')
   )
     up.world = worldView(g);
-  const constructing = [...g.buildings.values()].some((b) => b.buildLeft > 0 || b.upgradeLeft > 0);
+  const constructing = [...g.buildings.values()].some(
+    (b) => b.buildLeft > 0 || b.upgradeLeft > 0 || b.occupiedLeft > 0,
+  );
   if (
     full ||
     g.buildingsDirty ||
@@ -676,8 +679,10 @@ function buildingViews(g: Game): BuildingView[] {
       y: b.y,
       level: b.level,
       progress: b.buildTotal > 0 ? 1 - b.buildLeft / b.buildTotal : 1,
-      ready: b.buildLeft === 0,
+      ready: inService(b),
       upgrade: b.upgradeLeft > 0 ? 1 - b.upgradeLeft / b.upgradeTotal : -1,
+      occupied: b.occupiedLeft,
+      occupiedTotal: b.occupiedTotal,
       // Airfields: their alert interceptors (a slot not created yet is loaded, units/air.ts).
       tubesReady:
         b.type === B.Airfield
@@ -811,6 +816,7 @@ function answer(g: Game, q: import('./protocol').Query): unknown {
               level: b.level,
               ready: b.buildLeft === 0,
               upgrading: b.upgradeLeft > 0,
+              occupied: b.occupiedLeft,
             }
           : null,
       };

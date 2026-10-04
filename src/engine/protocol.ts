@@ -273,9 +273,13 @@ export interface BuildingView {
   y: number;
   level: number;
   progress: number; // 0..1 construction
+  /** In service: built and not under occupation (buildings.ts inService). */
   ready: boolean;
   /** Upgrade to level + 1 under way: 0..1 done, −1 when none. */
   upgrade: number;
+  /** Occupied after a capture (GAME_DESIGN.md §6.4): ticks left (0 = none), out of `occupiedTotal`. */
+  occupied: number;
+  occupiedTotal: number;
   tubesReady: number;
   cooldown: number;
 }

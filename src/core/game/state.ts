@@ -8,6 +8,7 @@ import { DIFFICULTY } from './config';
 import {
   B,
   BUILDING_COUNT,
+  BUILDING_KEYS,
   CAPTURE_TRANSFER,
   DEFENSE_POST_MAG,
   DEFENSE_POST_RANGE,
@@ -18,6 +19,7 @@ import {
   LOYALTY_MAX,
   LOYALTY_SETTLED,
   RECON_LOSS_MULT,
+  TICKS_PER_SECOND,
 } from './constants';
 import type { EliminationCause, GameEvent } from './events';
 import { Player, type PlayerKind } from './player';
@@ -29,7 +31,7 @@ import type { StampedCommand } from '../net/commands';
 import { applyCommand } from './commands';
 import { addGold, updateEconomy } from './economy';
 import { setupPlayers, updateSpawnPhase } from './spawn';
-import { updateBuildings, removeBuilding, paidLevels } from '../buildings/buildings';
+import { updateBuildings, removeBuilding, paidLevels, lootBuilding } from '../buildings/buildings';
 import { updateShips } from '../units/ships';
 import { updateRails, cutRailsAt, type Rail } from '../units/trains';
 import { updateNukes } from '../units/nukes';
@@ -260,16 +262,41 @@ export class Game {
       po.buildingCount[b.type]--;
       if (b.type === B.City) po.cityLevels -= paidLevels(b);
     }
+    // Taken by conquest (an attack, a landing, an annexation): looted and occupied a while
+    // (lootBuilding, GAME_DESIGN.md §6.4). A region seceding takes its buildings over as they
+    // stand, and they come home intact when its old country takes it back; friends never
+    // take each other's land.
+    const conquest =
+      !!po &&
+      this.phase === 'playing' &&
+      pn.rebelOf !== prev &&
+      po.rebelOf !== newOwner &&
+      !this.friendly(prev, newOwner);
+    const from = b.level;
+    if (conquest) lootBuilding(this, b);
     pn.buildingCount[b.type]++;
     if (b.type === B.City) pn.cityLevels += paidLevels(b);
     b.owner = newOwner;
     this.buildingsDirty = true;
     this.buildingsVersion++;
     this.emit({ k: 'capture', x: b.x, y: b.y, owner: prev, by: newOwner });
-    // Journal: a research centre changes hands with its research output.
+    // Journal: what changed hands, what was looted and how long it stays occupied.
+    const lost = { by: newOwner, building: BUILDING_KEYS[b.type] };
+    const taken = {
+      player: prev,
+      building: BUILDING_KEYS[b.type],
+      from,
+      level: b.level,
+      s: Math.round(b.occupiedLeft / TICKS_PER_SECOND),
+    };
     if (b.type === B.Lab) {
-      if (po?.kind === 'human') this.notify(prev, 'notify.labLost', 'warn', { by: newOwner }, b.tile);
-      if (pn.kind === 'human') this.notify(newOwner, 'notify.labTaken', 'good', { player: prev }, b.tile);
+      // A research centre changes hands with its research output (once the occupation ends).
+      if (po?.kind === 'human') this.notify(prev, 'notify.labLost', 'warn', lost, b.tile);
+      if (pn.kind === 'human') this.notify(newOwner, 'notify.labTaken', 'good', taken, b.tile);
+    } else if (conquest) {
+      if (po?.kind === 'human') this.notify(prev, 'notify.buildingLost', 'warn', lost, b.tile);
+      const key = from > b.level ? 'notify.buildingLooted' : 'notify.buildingTaken';
+      if (pn.kind === 'human') this.notify(newOwner, key, 'good', taken, b.tile);
     }
   }
 

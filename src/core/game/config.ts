@@ -65,13 +65,18 @@ export interface GameConfig {
   mission?: string;
 }
 
+/**
+ * Features on in a new game. Loyalty and secessions are off (1.12.0, the player's request:
+ * « je veux pouvoir jouer en solo comme je jouerais en multijoueur »); the lobby can still
+ * switch them on. A save or a replay keeps the features of its own game (GameConfig).
+ */
 export function defaultFeatures(): FeatureToggles {
   return {
     weather: true,
     fog: false,
     tech: true,
     resources: true,
-    loyalty: true,
+    loyalty: false,
     events: true,
     generals: true,
     air: true,

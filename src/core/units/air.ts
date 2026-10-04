@@ -37,7 +37,7 @@ import {
 } from '../game/constants';
 import { U, makeUnit, type Unit } from './unit';
 import { addUnit, unitById } from './ships';
-import type { Building } from '../buildings/building';
+import { inService, type Building } from '../buildings/building';
 import { damageBuilding } from '../buildings/buildings';
 import { destroyRailsInRadius } from './trains';
 import { samFire, samLoaded, samRangeOf } from './nukes';
@@ -89,7 +89,7 @@ export function airfieldFor(
   let best: Building | null = null;
   let bestD = Infinity;
   for (const b of game.buildings.values()) {
-    if (b.owner !== p.id || b.type !== B.Airfield || b.buildLeft > 0) continue;
+    if (b.owner !== p.id || b.type !== B.Airfield || !inService(b)) continue;
     const d = Math.hypot(b.x + 0.5 - tx, b.y + 0.5 - ty);
     if (d >= bestD || inFlight(game, b) >= AIRFIELD_CAPACITY * b.level) continue;
     bestD = d;
@@ -319,7 +319,7 @@ function scramble(game: Game, planes: Unit[]): void {
   for (const t of planes) {
     if (!t.alive || (t.type !== U.Bomber && t.type !== U.Recon)) continue;
     if (t.type === U.Bomber && t.kind !== AIR_OUTBOUND) continue; // bombs gone: let it fly home
-    fields ??= [...game.buildings.values()].filter((b) => b.type === B.Airfield && b.buildLeft === 0);
+    fields ??= [...game.buildings.values()].filter((b) => b.type === B.Airfield && inService(b));
     // The nearest loaded airfield of each hostile country in range.
     const best = new Map<number, [Building, number, number]>();
     for (const f of fields) {
@@ -372,7 +372,7 @@ export function updateAir(game: Game): void {
   scramble(game, planes);
   // SAMs shoot down hostile bombers in range (one missile each), research bonuses included.
   for (const sam of game.buildings.values()) {
-    if (sam.type !== B.Sam || sam.buildLeft > 0) continue;
+    if (sam.type !== B.Sam || !inService(sam)) continue;
     let slot = -2;
     const r = samRangeOf(game, sam);
     for (const u of planes) {

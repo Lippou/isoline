@@ -190,7 +190,15 @@ export const hud = $state({
     sx: number;
     sy: number;
     /** `upgrade`: next level under construction, 0..1 (−1: none); `tubes`: loaded tubes / missiles / interceptors. */
-    building: { type: number; level: number; owner: number; upgrade: number; tubes?: number } | null;
+    building: {
+      type: number;
+      level: number;
+      owner: number;
+      upgrade: number;
+      tubes?: number;
+      /** Occupied after a capture: ticks left (0 or absent = none). */
+      occupied?: number;
+    } | null;
     fallout: number;
     resource: number;
     /** Owner of the capital marker under the pointer (0: none). */

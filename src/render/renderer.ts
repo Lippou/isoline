@@ -754,7 +754,18 @@ export class GameRenderer {
         prog.circle(0, 0, 20).stroke({ width: 3, color: 0xffffff, alpha: 0.5 + 0.4 * pulse });
         prog.circle(0, 0, 25).stroke({ width: 2, color: 0xffffff, alpha: 0.25 * pulse });
       }
-      if (!b.ready) {
+      if (b.occupied > 0 && b.progress >= 1) {
+        // Occupied after a capture (GAME_DESIGN.md §6.4): a red ring empties as the
+        // occupation ends; the icon stays greyed until then (out of service).
+        const left = b.occupied / Math.max(1, b.occupiedTotal);
+        prog.circle(0, 0, 17.5).stroke({ width: 5, color: UI.slate, alpha: 0.55 });
+        prog.circle(0, 0, 17.5).stroke({ width: 3, color: UI.signal, alpha: 0.25 });
+        // moveTo: the arc must not start with a stroke from the centre.
+        prog
+          .moveTo(0, -17.5)
+          .arc(0, 0, 17.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * left)
+          .stroke({ width: 3, color: UI.signal });
+      } else if (!b.ready && b.progress < 1) {
         prog
           .arc(0, 0, 17.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * b.progress)
           .stroke({ width: 3, color: 0xf2f0e8 });
@@ -762,6 +773,7 @@ export class GameRenderer {
         // Next level under construction: a brass ring fills while the building keeps working.
         prog.circle(0, 0, 17.5).stroke({ width: 3, color: UI.brass, alpha: 0.25 });
         prog
+          .moveTo(0, -17.5)
           .arc(0, 0, 17.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * b.upgrade)
           .stroke({ width: 3, color: UI.brass });
       }

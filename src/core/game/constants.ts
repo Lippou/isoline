@@ -229,6 +229,15 @@ export const BUILDING_KEYS = [
 export const BUILD_TICKS = [20, 50, 20, 50, 100, 300, 40, 80, 60] as const;
 /** What happens to a building when its tile is captured. */
 export const CAPTURE_TRANSFER = [true, true, true, false, true, true, false, true, true] as const;
+/**
+ * Isoline's capture rule (the player's request: OpenFront hands captured buildings over
+ * intact, and an attack-only game snowballed on the cities it took). A building taken by
+ * conquest is looted — an upgrade under way is lost, then half of its levels, rounded down
+ * (a level-1 or level-2 building keeps one) — and occupied for CAPTURE_OCCUPATION_TICKS:
+ * out of service (no troop ceiling, no trade, no trains, no research, no launches) until
+ * the countdown ends. GAME_DESIGN.md §6.4.
+ */
+export const CAPTURE_OCCUPATION_TICKS = sec(60);
 export const DEMOLISH_REFUND = 0.25;
 export const STATION_TYPES: readonly number[] = [B.City, B.Port, B.Factory];
 export const RADAR_RANGE = 60;

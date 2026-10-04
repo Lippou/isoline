@@ -5,6 +5,7 @@ import {
   AIRFIELD_COST,
   B,
   BUILD_TICKS,
+  CAPTURE_OCCUPATION_TICKS,
   CITY_COST_BASE,
   CITY_COST_CAP,
   DEFENSE_POST_COST_CAP,
@@ -20,7 +21,7 @@ import {
   SILO_RELOAD_TICKS,
   STATION_TYPES,
 } from '../game/constants';
-import type { Building } from './building';
+import { inService, type Building } from './building';
 import { HABITABLE } from '../map/terrain';
 import { onStationBuilt, onStationRemoved } from '../units/trains';
 import { resourceBonus } from '../rules/resources';
@@ -338,6 +339,8 @@ export function placeBuilding(game: Game, p: Player, type: B, tile: number, free
     invested: cost,
     upgradeLeft: 0,
     upgradeTotal: 0,
+    occupiedLeft: 0,
+    occupiedTotal: 0,
   };
   game.buildings.set(b.id, b);
   game.grid.add(b);
@@ -446,6 +449,48 @@ export function damageBuilding(game: Game, b: Building, levels: number): boolean
   return false;
 }
 
+/**
+ * Isoline's capture rule (GAME_DESIGN.md §6.4; OpenFront hands buildings over intact): a
+ * building taken by conquest is looted — an upgrade under way is lost, then half of its
+ * levels, rounded down (levels 1 and 2 keep one, 3 keeps 2, 8 keeps 4) — and occupied for
+ * CAPTURE_OCCUPATION_TICKS, out of service meanwhile (inService). The caller moves the
+ * levels between the two owners' cityLevels around it. Returns the levels lost (the
+ * upgrade under way not counted).
+ */
+export function lootBuilding(game: Game, b: Building): number {
+  if (b.upgradeLeft > 0) {
+    b.upgradeLeft = 0;
+    b.upgradeTotal = 0;
+  }
+  const lost = Math.floor(b.level / 2);
+  if (lost > 0) {
+    b.invested *= (b.level - lost) / b.level;
+    b.level -= lost;
+    // Silo tubes and airfield alert slots go with their levels.
+    if (b.type === B.Silo || b.type === B.Airfield) b.tubes.length = Math.min(b.tubes.length, b.level);
+  }
+  b.occupiedTotal = CAPTURE_OCCUPATION_TICKS;
+  b.occupiedLeft = CAPTURE_OCCUPATION_TICKS;
+  game.buildingsDirty = true;
+  game.buildingsVersion++;
+  return lost;
+}
+
+/** General "Propaganda": p's occupied buildings rally to it at once (rules/features.ts). */
+export function endOccupations(game: Game, owner: number): number {
+  let n = 0;
+  for (const b of game.buildings.values()) {
+    if (b.owner !== owner || b.occupiedLeft === 0) continue;
+    b.occupiedLeft = 0;
+    n++;
+  }
+  if (n > 0) {
+    game.buildingsDirty = true;
+    game.buildingsVersion++;
+  }
+  return n;
+}
+
 export function removeBuilding(game: Game, b: Building, _voluntary: boolean): void {
   if (!b.alive) return;
   b.alive = false;
@@ -464,6 +509,11 @@ export function removeBuilding(game: Game, b: Building, _voluntary: boolean): vo
 
 export function updateBuildings(game: Game): void {
   for (const b of game.buildings.values()) {
+    // Occupation counts down alongside a construction or an upgrade.
+    if (b.occupiedLeft > 0 && --b.occupiedLeft === 0) {
+      game.buildingsDirty = true;
+      game.buildingsVersion++;
+    }
     if (b.buildLeft > 0) {
       b.buildLeft--;
       if (b.buildLeft === 0) completeBuilding(game, b);
@@ -478,10 +528,10 @@ export function updateBuildings(game: Game): void {
   }
 }
 
-/** Ready (constructed) buildings of a type owned by a player, in id order. */
+/** Buildings of a type owned by a player and in service (built, not occupied), in id order. */
 export function ownedBuildings(game: Game, owner: number, type: B): Building[] {
   const out: Building[] = [];
   for (const b of game.buildings.values())
-    if (b.owner === owner && b.type === type && b.buildLeft === 0) out.push(b);
+    if (b.owner === owner && b.type === type && inService(b)) out.push(b);
   return out;
 }

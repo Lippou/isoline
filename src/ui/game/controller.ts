@@ -440,7 +440,8 @@ export class GameController {
         hud.views.resources = !hud.views.resources;
         break;
       case 'loyaltyView':
-        this.toggleLoyaltyView();
+        // Only in a game with loyalty on (an option of the lobby, off by default).
+        if (this.session.config.features.loyalty) this.toggleLoyaltyView();
         break;
       case 'tradeRoutes':
         this.toggleTradeRoutes();

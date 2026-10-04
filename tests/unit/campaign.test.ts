@@ -272,15 +272,15 @@ describe('campaign: objectives', () => {
     expect(mission('m4').bonus.key).toBe('campaign.m4.bonusLevels');
   });
 
-  it('no secessions in the first four missions (the basics, the sea, the economy)', () => {
+  it('no secessions in any mission (loyalty is off by default since 1.12.0)', () => {
     const loyalty = MISSIONS.map((m) => [m.id, m.config(1, 'X').features.loyalty]);
     expect(loyalty).toEqual([
       ['m1', false],
       ['m2', false],
       ['m3', false],
       ['m4', false],
-      ['m5', true],
-      ['m6', true],
+      ['m5', false],
+      ['m6', false],
     ]);
   });
 

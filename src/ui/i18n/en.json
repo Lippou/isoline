@@ -1005,8 +1005,8 @@
       "desc": "Oil, uranium, fertile land and rare metals."
     },
     "loyalty": {
-      "name": "Loyalty & secession",
-      "desc": "Fresh conquests may secede if poorly garrisoned."
+      "name": "Loyalty & secession (optional)",
+      "desc": "Off by default. Fresh conquests may secede if poorly garrisoned."
     },
     "events": {
       "name": "World events",
@@ -1044,7 +1044,7 @@
     },
     "propaganda": {
       "name": "Propaganda",
-      "desc": "+50% loyalty for 60 s, no secession possible."
+      "desc": "Your occupied buildings rally at once; with loyalty on, +50% loyalty for 60 s and no secession."
     }
   },
   "personality": {
@@ -1080,7 +1080,7 @@
   "building": {
     "city": {
       "name": "City",
-      "desc": "+60,000 maximum troops per level once built. Railway station.",
+      "desc": "+60,000 maximum troops per level once built. Railway station. When captured, it loses half its levels and stays occupied for 60 s.",
       "short": "City"
     },
     "port": {
@@ -1120,7 +1120,7 @@
     },
     "lab": {
       "name": "Research centre",
-      "desc": "Produces 1.5 research points per second per level once built; without a centre, research crawls at 0.5 point/s. Unlimited levels. Changes hands when captured.",
+      "desc": "Produces 1.5 research points per second per level once built; without a centre, research crawls at 0.5 point/s. Unlimited levels. Changes hands when captured, looted and occupied for 60 s.",
       "short": "Research"
     }
   },
@@ -1315,7 +1315,7 @@
     "researchIdle": "Nothing is being researched: pick the next technology.",
     "labReady": "Research centre ready: research speeds up.",
     "labLost": "{by} has seized one of your research centres.",
-    "labTaken": "You take a research centre from {player}.",
+    "labTaken": "You take a research centre from {player}: looted to level {level}, it researches for you after {s} s of occupation.",
     "secessionRegion": "A region secedes: {tribe} ({tiles} tiles) rises up in your country.",
     "raidDamaged": "Air raid by {by} — {building}: −{n} lvl.",
     "raidDestroyed": "Air raid by {by} — {building}: in ruins.",
@@ -1328,7 +1328,10 @@
       "fighter": "Radar — fighters from {by} over your land.",
       "recon": "Radar — reconnaissance plane from {by} over your land.",
       "transport": "Radar — transport from {by} inbound: {troops} troops."
-    }
+    },
+    "buildingTaken": "{building} taken from {player}: under occupation for {s} s.",
+    "buildingLooted": "{building} taken from {player}: looted from level {from} to level {level}, under occupation for {s} s.",
+    "buildingLost": "{by} has seized one of your buildings: {building}."
   },
   "error": {
     "nukeSelfMirv": "A MIRV cannot target your own country: its warheads would fall all over your land.",
@@ -1940,7 +1943,9 @@
     },
     "alert": "interceptors {n}/{m}",
     "teammate": "Your teammate",
-    "harshTerrain": "Slow to conquer · nothing can be built here"
+    "harshTerrain": "Slow to conquer · nothing can be built here",
+    "occupied": "Under occupation · {s} s",
+    "occupiedTip": "Captured and looted: out of service until then (no troops, trade or research)."
   },
   "weather": {
     "stormNear": "A storm is forming near you: ships {pct}% slower.",

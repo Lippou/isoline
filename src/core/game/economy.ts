@@ -17,16 +17,17 @@ import {
   TROOP_REGEN_DIV,
   TROOP_REGEN_EXP,
 } from './constants';
+import { inService } from '../buildings/building';
 import { resourceBonus } from '../rules/resources';
 import { techEconomy, techTroopCap } from '../rules/tech';
 import { capitalGoldMult, capitalGrowthMult } from '../rules/capital';
 import { doomIncomeMult } from '../rules/victory';
 
-/** Sum of the levels of p's completed cities (cities under construction add nothing yet). */
+/** Sum of the levels of p's cities in service (under construction or occupation: nothing yet). */
 export function completedCityLevels(game: Game, p: Player): number {
   let n = 0;
   for (const b of game.buildings.values())
-    if (b.owner === p.id && b.type === B.City && b.buildLeft === 0) n += b.level;
+    if (b.owner === p.id && b.type === B.City && inService(b)) n += b.level;
   return n;
 }
 
@@ -71,7 +72,7 @@ export function updateEconomy(game: Game): void {
   const cityLevels = cityLevelsBuf;
   cityLevels.fill(0);
   for (const b of game.buildings.values())
-    if (b.type === B.City && b.buildLeft === 0) cityLevels[b.owner]! += b.level;
+    if (b.type === B.City && inService(b)) cityLevels[b.owner]! += b.level;
 
   for (const p of game.alivePlayers()) {
     // --- troops

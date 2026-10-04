@@ -164,19 +164,11 @@ export function observe(c: MissionCtx): void {
 }
 
 /**
- * Secessions (loyalty) only from mission 5: the first four missions teach the basics, the
- * sea and the economy, and a region of your own rising up as a tribe there only confused
- * (« une tribu qui réapparaît dans mon territoire »).
+ * A mission's game. Loyalty and secessions stay off in every mission, as in any new game
+ * (1.12.0): a region of your own rising up as a tribe only confused (« une tribu qui
+ * réapparaît dans mon territoire »), and the player would rather play solo as in multiplayer.
  */
-const LOYALTY_FROM = 5;
-
-function base(
-  seed: number,
-  name: string,
-  mapId: string,
-  patch: Partial<GameConfig>,
-  mission = LOYALTY_FROM,
-): GameConfig {
+function base(seed: number, name: string, mapId: string, patch: Partial<GameConfig>): GameConfig {
   const cfg = defaultConfig(seed);
   return {
     ...cfg,
@@ -184,7 +176,7 @@ function base(
     players: [{ slot: 0, name, kind: 'human', team: 0, general: 'blitz' }],
     spawnSeconds: 90,
     ...patch,
-    features: { ...cfg.features, loyalty: mission >= LOYALTY_FROM },
+    features: { ...cfg.features, loyalty: false },
     mode: patch.mode ?? 'campaign',
   };
 }
@@ -198,7 +190,7 @@ export const MISSIONS: Mission[] = [
     mapId: 'two-lakes',
     // The first city is paid for: the guide asks for it within the first minutes.
     config: (s, n) =>
-      base(s, n, 'two-lakes', { nations: 3, tribes: 24, difficulty: 'easy', startGold: 125_000 }, 1),
+      base(s, n, 'two-lakes', { nations: 3, tribes: 24, difficulty: 'easy', startGold: 125_000 }),
     objectives: [
       { key: 'campaign.m1.main', check: (c) => share(c) >= 0.15, progress: (c) => pct(c, 0.15) },
       {
@@ -231,7 +223,7 @@ export const MISSIONS: Mission[] = [
     id: 'm2',
     mapId: 'europe',
     config: (s, n) =>
-      base(s, n, 'europe', { nations: 30, tribes: 10, difficulty: 'hard', startGold: 50_000 }, 2),
+      base(s, n, 'europe', { nations: 30, tribes: 10, difficulty: 'hard', startGold: 50_000 }),
     objectives: [
       {
         key: 'campaign.m2.main',
@@ -261,7 +253,7 @@ export const MISSIONS: Mission[] = [
     id: 'm3',
     mapId: 'archipelago',
     config: (s, n) =>
-      base(s, n, 'archipelago', { nations: 12, tribes: 20, difficulty: 'normal', startGold: 125_000 }, 3),
+      base(s, n, 'archipelago', { nations: 12, tribes: 20, difficulty: 'normal', startGold: 125_000 }),
     objectives: [
       {
         key: 'campaign.m3.land',
@@ -305,7 +297,7 @@ export const MISSIONS: Mission[] = [
     id: 'm4',
     mapId: 'pangaea',
     config: (s, n) =>
-      base(s, n, 'pangaea', { nations: 16, tribes: 30, difficulty: 'normal', startGold: 250_000 }, 4),
+      base(s, n, 'pangaea', { nations: 16, tribes: 30, difficulty: 'normal', startGold: 250_000 }),
     objectives: [
       {
         key: 'campaign.m4.main',

@@ -20,6 +20,8 @@ import {
 import { recountResources, type ResourceBonus } from './resources';
 import { NODES, repeatCount, techKey, updateResearch } from './tech';
 import { sabotageNear } from '../units/trains';
+import { inService } from '../buildings/building';
+import { endOccupations } from '../buildings/buildings';
 import { inventTribeName } from '../names';
 import { IS_LAND } from '../map/terrain';
 import { shipSpeedAt, updateWeather, type WeatherCell } from './weather';
@@ -136,7 +138,7 @@ export function updateFeatures(game: Game): void {
 function countLabLevels(game: Game): void {
   for (const p of game.players) if (p) p.labLevels = 0;
   for (const b of game.buildings.values()) {
-    if (b.type !== B.Lab || b.buildLeft > 0) continue;
+    if (b.type !== B.Lab || !inService(b)) continue;
     const p = game.players[b.owner];
     if (p) p.labLevels += b.level;
   }
@@ -232,7 +234,7 @@ function stabilityGrid(game: Game): Map<number, number> {
   const cw = Math.ceil(game.map.width / cell);
   const rc = Math.ceil(LOYALTY_STABILISE_RANGE / cell);
   for (const b of game.buildings.values()) {
-    if ((b.type !== B.City && b.type !== B.DefensePost) || b.buildLeft > 0) continue;
+    if ((b.type !== B.City && b.type !== B.DefensePost) || !inService(b)) continue;
     const cx = (b.x / cell) | 0;
     const cy = (b.y / cell) | 0;
     for (let dy = -rc; dy <= rc; dy++)
@@ -315,6 +317,9 @@ export function useGeneral(game: Game, p: Player, tile: number): boolean {
       if (!sabotageNear(game, p.id, tile)) return false;
       break;
     case 'propaganda':
+      // The occupied buildings rally at once (GAME_DESIGN.md §6.4); with loyalty on, the
+      // land also settles faster and cannot secede for a minute.
+      endOccupations(game, p.id);
       p.propagandaUntil = game.tick + sec(60);
       break;
   }
