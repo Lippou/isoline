@@ -11,7 +11,7 @@
   import BuildBar from '../hud/BuildBar.svelte';
   import Minimap from '../hud/Minimap.svelte';
   import Leaderboard from '../hud/Leaderboard.svelte';
-  import Toasts from '../hud/Toasts.svelte';
+  import CursorNote from '../hud/CursorNote.svelte';
   import RadialMenu from '../hud/RadialMenu.svelte';
   import HoverCard from '../hud/HoverCard.svelte';
   import NukeAlerts from '../hud/NukeAlerts.svelte';
@@ -150,10 +150,10 @@
       </div>
       <PactBanner {ctl} />
       <!-- The right column, between the leaderboard and the minimap: the launch panel while
-           aiming, then the dispatches and, nearest the minimap, the alliance offers. -->
+           aiming and, nearest the minimap, the alliance offers. (The notifications go to the
+           journal from 1.10.0: its dock button counts the unread.) -->
       <div class="tr">
         {#if live}<NukePanel {ctl} />{/if}
-        <Toasts {ctl} />
         {#if live}<AllyRequests {ctl} />{/if}
       </div>
     {/if}
@@ -173,6 +173,7 @@
     {#if hud.fallen && !hud.end}<FallNotice {ctl} />{/if}
     {#if hud.showPerf}<Perf {ctl} />{/if}
     {#if hud.photo}<PhotoBar {ctl} />{/if}
+    {#if !hud.photo}<CursorNote />{/if}
   {/if}
 </div>
 
@@ -215,7 +216,7 @@
   .tr {
     position: absolute;
     left: var(--zone-right-x, auto);
-    width: var(--right-w, 310px);
+    width: var(--zone-right-w, var(--right-w, 310px));
     top: calc(12px + var(--hud-lb-h, 240px) + 10px);
     bottom: calc(var(--hud-mini-h, 200px) + 22px);
     display: flex;
@@ -226,7 +227,7 @@
     z-index: 29;
     pointer-events: none;
   }
-  .tr > :global(:is(.launch, .dispatches, .offers, [data-zone-chip])) {
+  .tr > :global(:is(.launch, .offers, [data-zone-chip])) {
     flex: none;
     pointer-events: auto;
   }
@@ -236,11 +237,6 @@
   /* The launch panel at the head of the column, the rest at its foot. */
   .tr > :global(.launch) {
     margin-bottom: auto;
-  }
-  /* The dispatches give way first: the oldest slips leave the clip. */
-  .tr > :global(.dispatches) {
-    flex: 0 1 auto;
-    min-height: 0;
   }
   /* Reading mode: the pieces of the normal layout step aside (and keep their state). */
   .normal {

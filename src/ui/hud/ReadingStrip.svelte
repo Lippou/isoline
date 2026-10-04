@@ -5,7 +5,7 @@
   // clock), then what cannot wait as chips — an invasion, the missiles coming (who fired,
   // when they land), the alliance offers (Accept / Refuse; K and L answer the oldest), the
   // pact just signed, the words just spoken — then what can (the council's vote, the lost
-  // capital, a special edition, the dispatches). A chip that needs the map, and the button
+  // capital, a special edition, the journal's unread news). A chip that needs the map, and the button
   // at the end, bring the columns back (the windows stand in the stage again).
   import { hud, openPanel } from '../stores/game.svelte';
   import { t, short, clock } from '../i18n/i18n.svelte';
@@ -18,6 +18,7 @@
   import PactBanner from './PactBanner.svelte';
   import type { GameController } from '../game/controller';
   import type { PieceId } from '../stores/zones';
+  import { unreadOf } from './news';
 
   let { ctl }: { ctl: GameController } = $props();
   const L = $derived(hud.local);
@@ -41,8 +42,10 @@
   /** Back to the map, the piece asked for unfolded in its column. */
   function back(piece?: PieceId): void {
     restoreColumns();
-    if (piece) layout.pin(piece, true, piece === 'dispatches' ? 15000 : 0);
+    if (piece) layout.pin(piece);
   }
+  /** The journal's unread news (when it is not the window being read). */
+  const unread = $derived(hud.panels.log ? null : unreadOf(hud.log, hud.journalSeen));
 </script>
 
 <header
@@ -102,17 +105,14 @@
         data-testid="reading-breaking"><Icon name="news" size={13} /><b>{t('news.breaking')}</b></button
       >
     {/if}
-    {#if hud.toasts.length}
+    {#if unread && unread.n}
       <button
         class="zchip"
-        onclick={() => back('dispatches')}
-        title={hud.toasts.at(-1)?.text}
-        data-testid="reading-dispatches"
-        ><Icon name="news" size={13} /><b
-          >{hud.toasts.length === 1
-            ? t('zone.dispatchesOne')
-            : t('zone.dispatches', { n: hud.toasts.length })}</b
-        ></button
+        class:spot={unread.danger}
+        onclick={() => openPanel('log')}
+        title={t(unread.danger ? 'inbox.tipDanger' : 'inbox.tip', { n: unread.n })}
+        data-testid="reading-journal"
+        ><Icon name="log" size={13} /><b>{t('panel.log')}</b><span class="mono">{unread.n}</span></button
       >
     {/if}
   </div>

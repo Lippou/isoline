@@ -3,8 +3,10 @@
   // orders as a map's legend (the grave ones in magenta under a rule); its save register
   // and its reference of the controls. Its settings are the main menu's very page.
   import './paper.css';
-  import { hud, toast } from '../stores/game.svelte';
+  import { hud } from '../stores/game.svelte';
+  import { note } from '../stores/note.svelte';
   import { resetWindows } from '../stores/windows.svelte';
+  import { allFolded, toggleAllFolds } from '../stores/folds.svelte';
   import { t, date, i18n, clock } from '../i18n/i18n.svelte';
   import { go, confirmModal } from '../stores/app.svelte';
   import { settings, keyLabel } from '../stores/settings.svelte';
@@ -49,7 +51,7 @@
   }
   async function save(slot: number): Promise<void> {
     const ok = await ctl.saveGame(slot);
-    toast(ok ? t('menu.saved', { slot }) : t('menu.saveFailed'), ok ? 'good' : 'warn');
+    note(ok ? t('menu.saved', { slot }) : t('menu.saveFailed'), ok ? 'good' : 'warn');
     saves = await listSaves();
   }
   function quit(): void {
@@ -81,11 +83,13 @@
     ['nukes', ['nukeA', 'nukeH', 'nukeMirv', 'flipArc']],
     ['command', ['selectWarships', 'general', 'home']],
     ['diplomacy', ['allyAccept', 'allyRefuse', 'chat']],
-    ['views', ['terrainView', 'fogView', 'resourcesView', 'loyaltyView']],
+    ['views', ['terrainView', 'fogView', 'resourcesView', 'loyaltyView', 'hudFold']],
     ['time', ['speedDown', 'speedUp', 'pause']],
     ['capture', ['screenshot', 'photoMode', 'fps']],
   ];
   const MOUSE = ['click', 'radial', 'drag', 'wheel'];
+  /** Every panel folded (the minimal interface): the entry unfolds them all. */
+  const minimal = $derived(allFolded());
 </script>
 
 {#if view === 'settings'}
@@ -159,11 +163,26 @@
               <button
                 onclick={() => {
                   resetWindows();
-                  toast(t('menu.windowsReset'), 'info');
+                  note(t('menu.windowsReset'), 'info');
                 }}
                 data-testid="menu-reset-windows"
                 ><Icon name="refresh" size={16} /><span class="lb">{t('menu.resetWindows')}</span><small
                   >{t('menu.d.resetWindows')}</small
+                ></button
+              >
+            </li>
+            <li>
+              <button
+                onclick={() => {
+                  toggleAllFolds();
+                  resume();
+                }}
+                aria-pressed={minimal}
+                data-testid="menu-fold-hud"
+                ><Icon name={minimal ? 'expand' : 'collapse'} size={16} /><span class="lb"
+                  >{minimal ? t('menu.unfoldHud') : t('menu.foldHud')}</span
+                ><small>{minimal ? t('menu.d.unfoldHud') : t('menu.d.foldHud')}</small><kbd class="np-key"
+                  >{keyLabel(settings.keys.hudFold ?? '')}</kbd
                 ></button
               >
             </li>

@@ -11,6 +11,12 @@ import {
   overlaps,
   PIECES,
   MARGIN,
+  FOLD_IDS,
+  FOLD_OF,
+  FOLD_TAB_W,
+  noFolds,
+  parseFolds,
+  toggleAll,
   type Box,
   type PieceId,
   type PieceState,
@@ -199,19 +205,139 @@ describe('a column short of room', () => {
   });
 
   it('gives room back to the most important folded piece when another folds further', () => {
-    const right: PieceId[] = ['offers', 'leaderboard', 'minimap', 'dispatches'];
+    const right: PieceId[] = ['offers', 'launch', 'leaderboard', 'minimap'];
     const ps = pieces(right, {
       offers: { full: 330 },
-      leaderboard: { full: 300, compact: 190, chip: 36 },
-      minimap: { full: 230, chip: 30 },
-      dispatches: { full: 220, compact: 120 },
+      launch: { full: 220 },
+      leaderboard: { full: 300, compact: 190, chip: 64 },
+      minimap: { full: 230, chip: 64 },
     });
-    const lv = allocate(ps, 760);
+    const lv = allocate(ps, 900);
     expect(lv.offers).toBe('full');
-    expect(columnHeight(ps, lv)).toBeLessThanOrEqual(760);
-    // The leaderboard folded to its title: the dispatches come back on one line.
+    expect(lv.launch).toBe('full');
+    expect(columnHeight(ps, lv)).toBeLessThanOrEqual(900);
+    // The leaderboard folded to its tab: the minimap stays whole.
     expect(lv.leaderboard).toBe('chip');
-    expect(lv.dispatches).toBe('compact');
+    expect(lv.minimap).toBe('full');
+  });
+});
+
+describe("the player's folds", () => {
+  const left: PieceId[] = ['nukeAlerts', 'council', 'flash', 'alliances'];
+  const H = {
+    nukeAlerts: { full: 110 },
+    council: { full: 300, compact: 130 },
+    flash: { full: 330, compact: 40 },
+    alliances: { full: 150, compact: 36 },
+  };
+
+  it('prints a folded piece at its fold level at most, however much room there is', () => {
+    const ps = pieces(left, H);
+    ps.find((p) => p.id === 'flash')!.folded = true;
+    ps.find((p) => p.id === 'alliances')!.folded = true;
+    const lv = allocate(ps, 5000);
+    expect(lv.flash).toBe('compact');
+    expect(lv.alliances).toBe('compact');
+    expect(lv.council).toBe('full');
+    // Short of room, a folded piece still gives way further (to a chip).
+    const tight = allocate(ps, 200);
+    expect(tight.nukeAlerts).toBe('full');
+    expect(tight.alliances).toBe('chip');
+    expect(columnHeight(ps, tight)).toBeLessThanOrEqual(200);
+  });
+
+  it('gives the room of a folded piece to the others', () => {
+    const right: PieceId[] = ['offers', 'leaderboard', 'minimap'];
+    const H2 = {
+      offers: { full: 330 },
+      leaderboard: { full: 300, compact: 190, chip: 64 },
+      minimap: { full: 230, chip: 64 },
+    };
+    const open = allocate(pieces(right, H2), 760);
+    expect(open.leaderboard).not.toBe('full');
+    const ps = pieces(right, H2);
+    ps.find((p) => p.id === 'minimap')!.folded = true;
+    const lv = allocate(ps, 760);
+    expect(lv.minimap).toBe('chip');
+    expect(lv.leaderboard).toBe('full');
+  });
+
+  it('never folds an urgent piece', () => {
+    const ps = pieces(['offers', 'minimap'], { offers: { full: 300 }, minimap: { full: 230, chip: 64 } });
+    for (const p of ps) p.folded = true;
+    const lv = allocate(ps, 2000);
+    expect(lv.offers).toBe('full');
+    expect(lv.minimap).toBe('chip');
+  });
+
+  it('folds the right column to a strip of tabs: the stage and the bar take its width', () => {
+    for (const [sw, sh, dpr] of SCREENS) {
+      const { w, h } = css(sw, sh, dpr);
+      const z = computeZones(input(w, h));
+      const slim = computeZones(input(w, h, { rightSlim: FOLD_TAB_W }));
+      expect(slim.right.w).toBe(FOLD_TAB_W);
+      expect(slim.right.x + slim.right.w).toBe(w - MARGIN);
+      expect(slim.stage.w - z.stage.w).toBe(z.right.w - FOLD_TAB_W);
+      expect(slim.bar.w).toBeGreaterThan(z.bar.w);
+      expect(overlaps(slim.stage, slim.right)).toBe(false);
+      expect(overlaps(slim.top, slim.right)).toBe(false);
+      expect(slim.stage.x + slim.stage.w).toBeLessThanOrEqual(slim.right.x - 10);
+    }
+  });
+
+  it.each(SCREENS)(
+    '%i × %i (dpr %i): a folded resources panel lengthens the news column, never into the bar',
+    (sw, sh, dpr) => {
+      const { w, h } = css(sw, sh, dpr);
+      for (const barH of [88, 150, 35]) {
+        const z = computeZones(input(w, h, { resH: 37, barH }));
+        const bar = { x: z.bar.x, y: h - MARGIN - barH, w: z.bar.w, h: barH };
+        const res = { x: MARGIN, y: h - MARGIN - 37, w: z.sizes.res, h: 37 };
+        expect(overlaps(z.left, bar), 'left × bar').toBe(false);
+        expect(overlaps(z.left, res), 'left × res').toBe(false);
+        expect(overlaps(z.rail, res), 'rail × res').toBe(false);
+        expect(z.left.h).toBeGreaterThanOrEqual(computeZones(input(w, h, { barH })).left.h);
+      }
+    },
+  );
+
+  it('gives the stage the height of a folded build bar', () => {
+    const z = computeZones(input(1600, 900));
+    const folded = computeZones(input(1600, 900, { barH: 35 }));
+    expect(folded.stage.h - z.stage.h).toBe(88 - 35);
+    // A folded resources panel lengthens the news column (down to the bar it reaches over).
+    const res = computeZones(input(1600, 900, { resH: 37 }));
+    expect(res.left.h).toBeGreaterThan(z.left.h);
+    expect(res.rail.h - z.rail.h).toBe(262 - 37);
+  });
+
+  it('remembers only what it knows, everything unfolded by default', () => {
+    expect(Object.values(noFolds()).every((v) => v === false)).toBe(true);
+    expect(parseFolds(null)).toEqual(noFolds());
+    expect(parseFolds('nonsense')).toEqual(noFolds());
+    const f = parseFolds({ minimap: true, bar: 'yes', dispatches: true, res: true });
+    expect(f.minimap).toBe(true);
+    expect(f.res).toBe(true);
+    expect(f.bar).toBe(false);
+    expect(Object.keys(f).sort()).toEqual([...FOLD_IDS].sort());
+  });
+
+  it('toggles the minimal interface: everything folds, then everything unfolds', () => {
+    const some = { ...noFolds(), minimap: true };
+    const all = toggleAll(some);
+    expect(FOLD_IDS.every((id) => all[id])).toBe(true);
+    const none = toggleAll(all);
+    expect(FOLD_IDS.every((id) => !none[id])).toBe(true);
+  });
+
+  it('ties every foldable piece of the columns to a fold', () => {
+    for (const [id, def] of Object.entries(PIECES) as [PieceId, (typeof PIECES)[PieceId]][]) {
+      const fold = (def as { fold?: string }).fold;
+      if (fold) {
+        expect(FOLD_OF[id], id).toBeDefined();
+        expect(def.levels as readonly string[]).toContain(fold);
+      }
+    }
   });
 });
 

@@ -6,10 +6,13 @@ import { untrack } from 'svelte';
 import { innerWidth, innerHeight } from 'svelte/reactivity/window';
 import { hudBox } from './hudBox.svelte';
 import { wm, isReading } from './windows.svelte';
+import { folds } from './folds.svelte';
 import {
   computeZones,
   allocate,
   PIECES,
+  FOLD_OF,
+  FOLD_TAB_W,
   type Level,
   type PieceId,
   type PieceState,
@@ -46,6 +49,18 @@ class Layout {
   /** Room kept over the bar for the research reminder (0: none: no research, spectating). */
   nudge = $state(0);
 
+  /**
+   * The right column folded to its tabs: the leaderboard and the minimap both folded by the
+   * player, and nothing else in it (an alliance offer or the launch panel widens it again).
+   */
+  rightSlim = $derived(
+    folds.minimap &&
+      folds.leaderboard &&
+      !(Object.keys(this.pieces) as PieceId[]).some(
+        (id) => PIECES[id].zone === 'right' && id !== 'minimap' && id !== 'leaderboard',
+      ),
+  );
+
   /** What the zones are computed from. */
   input = $derived.by((): Omit<ZoneInput, 'reading'> => ({
     w: innerWidth.current ?? 1600,
@@ -57,6 +72,7 @@ class Layout {
     nudgeH: hudBox.bar ? this.nudge : 0,
     bottomReserve: wm.bottomReserve,
     stripH: hudBox.strip || 44,
+    rightSlim: this.rightSlim ? FOLD_TAB_W : 0,
   }));
   /** The zones of the normal layout (windows that are not maximised stand in its stage). */
   normal = $derived(computeZones({ ...this.input, reading: false }));
@@ -81,7 +97,8 @@ class Layout {
         const heights: Partial<Record<Level, number>> = {};
         for (const [lv, v] of Object.entries(m) as [Level, Measure][])
           heights[lv] = v.n === p.n || v.n <= 0 ? v.h : Math.round((v.h * p.n) / v.n);
-        list.push({ id, def, heights, pinned: p.pinned });
+        const fold = FOLD_OF[id];
+        list.push({ id, def, heights, pinned: p.pinned, folded: !!fold && folds[fold] });
       }
       const room = zone === 'left' ? z.left.h : z.right.h;
       const perRow = cls === 'compact' ? 2 : 3;
@@ -99,6 +116,7 @@ class Layout {
     const v: Record<string, string> = {
       '--card-w': px(z.sizes.card),
       '--right-w': px(z.sizes.right),
+      '--zone-right-w': px(z.right.w),
       '--res-w': px(z.sizes.res),
       '--mini-w': px(z.sizes.right - 10),
       '--zone-left-x': px(z.left.x),

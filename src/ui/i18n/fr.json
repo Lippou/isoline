@@ -162,7 +162,9 @@
       "help": "Les gestes et toutes les touches",
       "photo": "La carte sans l'interface, pour une image",
       "resetWindows": "Les fenêtres reprennent leur place d'origine",
-      "quit": "Retour au menu principal"
+      "quit": "Retour au menu principal",
+      "foldHud": "La carte en grand : chaque panneau se replie en onglet",
+      "unfoldHud": "Chaque panneau se déplie à nouveau"
     },
     "used": "{n} sur {of} utilisés",
     "autoEvery": "Sauvegarde automatique toutes les deux minutes",
@@ -171,7 +173,9 @@
     "colSaved": "Enregistrée le",
     "colAction": "Action",
     "saveHere": "Sauvegarder ici",
-    "overwrite": "Remplacer"
+    "overwrite": "Remplacer",
+    "foldHud": "Replier l'interface",
+    "unfoldHud": "Tout déplier"
   },
   "help": {
     "intro": "Isoline se joue sur un atlas vivant : étendez votre encre, bâtissez une économie, nouez des alliances et tenez le monde.",
@@ -1328,7 +1332,8 @@
     "speedDown": "Ralentir le temps (solo)",
     "speedUp": "Accélérer le temps (solo)",
     "buildLab": "Centre de recherche",
-    "photoMode": "Mode photo"
+    "photoMode": "Mode photo",
+    "hudFold": "Replier / déplier l'interface"
   },
   "settings": {
     "tab": {
@@ -2343,5 +2348,28 @@
     "dispatches": "{n} dépêches",
     "dispatchesOne": "1 dépêche",
     "dispatchesShow": "Déplier les dépêches ({n})"
+  },
+  "fold": {
+    "fold": "Replier {name}",
+    "unfold": "Déplier {name}",
+    "allKey": "{key} : replier ou déplier toute l'interface",
+    "bar": "la barre de construction",
+    "res": "l'armée et le trésor",
+    "news": "les nouvelles",
+    "alliances": "les alliances en cours",
+    "minimap": "la minicarte",
+    "leaderboard": "le classement",
+    "barTab": "Construire",
+    "keys": "touches {keys}",
+    "map": "Carte",
+    "rank": "Rang",
+    "missiles": "{n} missile(s) en vol",
+    "incoming": "{n} attaque(s) contre vous",
+    "allOn": "Interface repliée — {key} pour tout déplier",
+    "allOff": "Interface dépliée"
+  },
+  "inbox": {
+    "tip": "Journal : {n} nouvelle(s) non lue(s)",
+    "tipDanger": "Journal : {n} nouvelle(s) non lue(s), dont des alertes"
   }
 }

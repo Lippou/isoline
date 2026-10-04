@@ -1,7 +1,8 @@
 <script lang="ts">
   import { hudSize } from '../stores/hudBox.svelte';
   import Icon from '../icons/Icon.svelte';
-  import { hud, openPaper, toast } from '../stores/game.svelte';
+  import { hud, openPaper } from '../stores/game.svelte';
+  import { note } from '../stores/note.svelte';
   import { t, clock, i18n, short } from '../i18n/i18n.svelte';
   import type { GameController } from '../game/controller';
   import { flagUrl } from '../../render/flags';
@@ -36,7 +37,7 @@
     starting = true;
     const ok = await ctl.takeOver(pick);
     starting = false;
-    if (!ok) toast(t('takeover.failed'), 'warn');
+    if (!ok) note(t('takeover.failed'), 'warn');
   }
 
   async function seek(target: number): Promise<void> {

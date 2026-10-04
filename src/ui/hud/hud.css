@@ -259,3 +259,85 @@
 .np-hud .zchip.spot > svg {
   color: var(--np-spot);
 }
+
+/*
+ * The player's folds (1.10.0, folds.svelte.ts): a panel folded to a slim tab of paper
+ * under an ink rule, its mark, its name and the figure that matters (a rank, the missiles
+ * in flight). A click unfolds it. Nothing moves on hover: only the paper darkens.
+ */
+.np-hud .ftab {
+  width: 64px;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 3px;
+  padding: 5px 3px 7px;
+  border: 1px solid var(--np-edge);
+  border-top: 3px solid var(--np-ink);
+  border-radius: 1px;
+  background: var(--np-paper);
+  box-shadow: var(--np-lift);
+  color: var(--np-ink);
+  font-family: var(--text);
+  font-size: 0.74em;
+  line-height: 1.15;
+  text-align: center;
+  cursor: var(--cursor-pointer, pointer);
+  transition: background 0.12s;
+}
+.np-hud .ftab:hover,
+.np-hud .ftab:focus-visible {
+  background: var(--np-card);
+}
+.np-hud .ftab .fold {
+  width: 20px;
+  height: 18px;
+  border-color: transparent;
+  background: transparent;
+}
+.np-hud .ftab:hover .fold,
+.np-hud .ftab:focus-visible .fold {
+  color: var(--np-ink);
+}
+.np-hud .ftab .lbl {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--title);
+  font-style: italic;
+  color: var(--np-ink-2);
+}
+.np-hud .ftab .fig {
+  font-family: var(--title);
+  font-weight: 700;
+  font-size: 1.45em;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.np-hud .ftab .alarm {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  border-radius: 1px;
+  background: var(--np-spot);
+  color: #fff7f9;
+  font-weight: 700;
+}
+/* A panel folding or unfolding: its new form comes up quickly, in place (nothing slides). */
+.np-hud .fold-in {
+  animation: np-fold-in 0.14s ease-out both;
+}
+@keyframes np-fold-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-hud .fold-in {
+    animation: none;
+  }
+}
+.reduced-motion .np-hud .fold-in {
+  animation: none;
+}

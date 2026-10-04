@@ -3,7 +3,8 @@
   // government it asks the player to choose one — on the map (a tool: click one of
   // your tiles) or at once on the safest spot (largest inland city, or the heart of the
   // country). The minute of disorganisation drains away on a printed bar.
-  import { hud, toast } from '../stores/game.svelte';
+  import { hud } from '../stores/game.svelte';
+  import { note } from '../stores/note.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
   import Icon from '../icons/Icon.svelte';
   import type { GameController } from '../game/controller';
@@ -34,7 +35,7 @@
     }
     hud.tool = { k: 'capital' };
     audio.ui('open');
-    toast(t('capital.toolHint'), 'info');
+    note(t('capital.toolHint'), 'info');
   }
 
   function safest(): void {

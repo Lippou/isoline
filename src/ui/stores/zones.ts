@@ -7,9 +7,9 @@
 //   │      │ (council,  ├───────────────────────────────────┤ right column │
 //   │      │ nuclear    │                                   │ (launch      │
 //   │      │ alerts,    │            the stage              │ panel,       │
-//   │      │ capital,   │   (the map; windows open here)    │ dispatches,  │
-//   │      │ flash,     │                                   │ alliance     │
-//   │      │ alliances) ├───────────────────────────────────┤ offers)      │
+//   │      │ capital,   │   (the map; windows open here)    │ alliance     │
+//   │      │ flash,     │                                   │ offers)      │
+//   │      │ alliances) ├───────────────────────────────────┤              │
 //   ├──────┴──────┬─────┘ bottom strip: research reminder,  │              │
 //   │ resources   │       mission dock, build / replay bar  │   minimap    │
 //   └─────────────┴───────────────────────────────────────────┴──────────────┘
@@ -20,6 +20,12 @@
 // Reading mode (a big window: the technology planche, the journal, any window the player
 // maximises): the window takes the screen, the columns fold into a slim strip at the top
 // (gold, troops, time, urgent chips) and the dock rail stays at the left edge.
+// The player's folds (1.10.0): every panel over the map can be folded by hand, and stays
+// so from one game to the next (folds.svelte.ts). A folded piece of a column is printed at
+// its fold level at most (the room it leaves goes to the others); the right column, its
+// leaderboard and minimap both folded and nothing else in it, shrinks to a slim strip of
+// tabs and the stage takes the width it leaves; the build bar and the resources panel fold
+// to a strip, and the zones read their new heights.
 
 export interface Rect {
   x: number;
@@ -81,6 +87,8 @@ export interface ZoneInput {
   bottomReserve: number;
   /** Reading mode: a big window is open. */
   reading: boolean;
+  /** The right column folded to a strip of tabs this wide (0 or absent: at its full width). */
+  rightSlim?: number;
   /** Height of the reading strip (reading mode). */
   stripH: number;
 }
@@ -143,12 +151,18 @@ export function computeZones(i: ZoneInput): Zones {
   // The columns: the rail and the news column above the resources panel, the right one
   // from top to bottom.
   const leftFoot = i.resH > 0 ? i.h - MARGIN - i.resH - GAP : i.h - MARGIN;
+  const leftX = railRight + GAP;
+  // The build bar may stretch under the news column (from the resources panel's edge): with
+  // the panel folded to its strip, the column stops above the bar.
+  const barUnder = i.resH > 0 && i.barH > 0 && MARGIN + sizes.res + GAP < leftX + sizes.card;
+  const cardFoot = barUnder ? Math.min(leftFoot, i.h - MARGIN - i.barH - GAP) : leftFoot;
   const rail = { x: MARGIN, y: MARGIN, w: nonNeg(i.railW), h: nonNeg(leftFoot - MARGIN) };
-  const left = { x: railRight + GAP, y: MARGIN, w: sizes.card, h: nonNeg(leftFoot - MARGIN) };
+  const left = { x: leftX, y: MARGIN, w: sizes.card, h: nonNeg(cardFoot - MARGIN) };
+  const rightW = i.rightSlim && i.rightSlim > 0 ? Math.min(i.rightSlim, sizes.right) : sizes.right;
   const right = {
-    x: nonNeg(i.w - MARGIN - sizes.right),
+    x: nonNeg(i.w - MARGIN - rightW),
     y: MARGIN,
-    w: sizes.right,
+    w: rightW,
     h: nonNeg(i.h - 2 * MARGIN),
   };
   const bandX = left.x + left.w + GAP;
@@ -198,6 +212,8 @@ export interface PieceDef {
   guess: Partial<Record<Level, number>>;
   /** Room kept around it in the column beyond the gap between pieces (leaderboard, minimap). */
   extra?: number;
+  /** The level the player's fold prints it at (at most); absent: the player cannot fold it. */
+  fold?: Level;
 }
 
 /**
@@ -207,7 +223,8 @@ export interface PieceDef {
  * asks for a decision) › council ballot 80 › special edition 60 › news flash 40 ›
  * alliances in progress 30.
  * Right column: alliance offers 100 (urgent) › nuclear launch panel 95 (urgent, while
- * aiming) › minimap 70 › leaderboard 50 › dispatches 20.
+ * aiming) › minimap 70 › leaderboard 50. (The dispatches tray is gone from 1.10.0: the
+ * notifications go to the journal, whose dock button counts the unread ones.)
  *
  * Short of height, a column first prints its least important pieces on one line, from
  * the bottom of the ranking up, then turns them into chips the same way.
@@ -228,6 +245,7 @@ export const PIECES = {
     levels: ['full', 'compact', 'chip'],
     rowChip: true,
     guess: { full: 170, compact: 40 },
+    fold: 'compact',
   },
   flash: {
     zone: 'left',
@@ -235,6 +253,7 @@ export const PIECES = {
     levels: ['full', 'compact', 'chip'],
     rowChip: true,
     guess: { full: 320, compact: 40 },
+    fold: 'compact',
   },
   alliances: {
     zone: 'left',
@@ -242,6 +261,7 @@ export const PIECES = {
     levels: ['full', 'compact', 'chip'],
     rowChip: true,
     guess: { full: 150, compact: 36 },
+    fold: 'compact',
   },
   offers: { zone: 'right', priority: 100, urgent: true, levels: ['full'], guess: { full: 124 } },
   launch: { zone: 'right', priority: 95, urgent: true, levels: ['full'], guess: { full: 220 } },
@@ -249,25 +269,62 @@ export const PIECES = {
     zone: 'right',
     priority: 70,
     levels: ['full', 'chip'],
-    guess: { full: 200, chip: 30 },
+    guess: { full: 200, chip: 64 },
     extra: GAP - ITEM_GAP,
+    fold: 'chip',
   },
   leaderboard: {
     zone: 'right',
     priority: 50,
     levels: ['full', 'compact', 'chip'],
-    guess: { full: 300, compact: 190, chip: 36 },
+    guess: { full: 300, compact: 190, chip: 64 },
     extra: GAP - ITEM_GAP,
-  },
-  dispatches: {
-    zone: 'right',
-    priority: 20,
-    levels: ['full', 'compact', 'chip'],
-    rowChip: true,
-    guess: { full: 220, compact: 110 },
+    fold: 'chip',
   },
 } satisfies Record<string, PieceDef>;
 export type PieceId = keyof typeof PIECES;
+
+// ------------------------------------------------------------------ the player's folds
+
+/**
+ * The panels the player can fold (persisted, folds.svelte.ts): the minimap, the leaderboard,
+ * the build bar, the resources panel, the news cards of the left column (news flash, special
+ * edition) and the alliances in progress.
+ */
+export const FOLD_IDS = ['minimap', 'leaderboard', 'bar', 'res', 'news', 'alliances'] as const;
+export type FoldId = (typeof FOLD_IDS)[number];
+export type Folds = Record<FoldId, boolean>;
+
+/** Which fold each piece of the columns obeys. */
+export const FOLD_OF: Partial<Record<PieceId, FoldId>> = {
+  minimap: 'minimap',
+  leaderboard: 'leaderboard',
+  flash: 'news',
+  breaking: 'news',
+  alliances: 'alliances',
+};
+
+/** Width of the right column folded to its tabs (the minimap's and the leaderboard's). */
+export const FOLD_TAB_W = 64;
+
+/** Everything unfolded (the default). */
+export function noFolds(): Folds {
+  return Object.fromEntries(FOLD_IDS.map((id) => [id, false])) as Folds;
+}
+
+/** Folds read back from storage: unknown or malformed entries are unfolded. */
+export function parseFolds(raw: unknown): Folds {
+  const out = noFolds();
+  if (raw && typeof raw === 'object')
+    for (const id of FOLD_IDS) if ((raw as Record<string, unknown>)[id] === true) out[id] = true;
+  return out;
+}
+
+/** The minimal interface (everything folded) toggled: all unfold if all were folded, else all fold. */
+export function toggleAll(f: Folds): Folds {
+  const all = FOLD_IDS.every((id) => f[id]);
+  return Object.fromEntries(FOLD_IDS.map((id) => [id, !all])) as Folds;
+}
 
 export interface PieceState {
   id: string;
@@ -276,6 +333,8 @@ export interface PieceState {
   heights: Partial<Record<Level, number>>;
   /** The player asked for it whole (clicked its chip): it ranks first. */
   pinned?: boolean;
+  /** The player folded it: printed at its fold level at most (PieceDef.fold). */
+  folded?: boolean;
 }
 
 function heightAt(p: PieceState, level: Level): number {
@@ -318,22 +377,31 @@ export function allocate(
   chipsPerRow = 3,
 ): Record<string, Level> {
   const levels: Record<string, Level> = {};
-  for (const p of pieces) levels[p.id] = 'full';
+  /** The most whole a piece may be printed: its fold level when the player folded it. */
+  const top = (p: PieceState) =>
+    p.folded && p.def.fold && !p.def.urgent ? Math.max(0, p.def.levels.indexOf(p.def.fold)) : 0;
+  for (const p of pieces) levels[p.id] = p.def.levels[top(p)] ?? 'full';
   const fits = () => columnHeight(pieces, levels, chipsPerRow) <= room;
+  /** Prints a piece at `lv`, only ever less whole than it is. */
+  const lower = (p: PieceState, lv: Level) => {
+    const k = p.def.levels.indexOf(lv);
+    if (k > p.def.levels.indexOf(levels[p.id]!)) levels[p.id] = lv;
+  };
   const order = [...pieces].filter((p) => !p.def.urgent).sort((a, b) => a.def.priority - b.def.priority);
   // The pieces the player asked for give way only once every other one is a chip.
   demote: for (const group of [order.filter((p) => !p.pinned), order.filter((p) => p.pinned)])
     for (const step of ['compact', 'chip'] as const)
       for (const p of group) {
         if (fits()) break demote;
-        if (p.def.levels.includes(step)) levels[p.id] = step;
-        else if (step === 'chip' && p.def.levels.includes('compact')) levels[p.id] = 'compact';
+        if (p.def.levels.includes(step)) lower(p, step);
+        else if (step === 'chip' && p.def.levels.includes('compact')) lower(p, 'compact');
       }
   // Room left over: the most important folded pieces unfold again, a step at a time
-  // (the dispatches back on one line once the leaderboard has folded, say).
+  // (the leaderboard back on its top 5 once the minimap has folded, say) — never past the
+  // player's own fold.
   for (const p of [...order].reverse()) {
     const lv = p.def.levels;
-    for (let k = lv.indexOf(levels[p.id]!) - 1; k >= 0; k--) {
+    for (let k = lv.indexOf(levels[p.id]!) - 1; k >= top(p); k--) {
       const was = levels[p.id]!;
       levels[p.id] = lv[k]!;
       if (!fits()) {

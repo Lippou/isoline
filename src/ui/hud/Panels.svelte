@@ -12,7 +12,7 @@
   import ChatPanel from './ChatPanel.svelte';
   import TradePanel from './TradePanel.svelte';
   import Window from './Window.svelte';
-  import { inPaper, weightOf } from './news';
+  import { unreadOf } from './news';
   import { researchIdle } from './research';
   import { audio } from '../../audio/audio';
   import Icon from '../icons/Icon.svelte';
@@ -37,18 +37,13 @@
     hud.panels[id] = !hud.panels[id];
     audio.ui('open');
   }
-  /** Unread news: 'head' when a headline is among it (the mark turns magenta). */
-  const unread = $derived.by(() => {
-    let level: '' | 'brief' | 'head' = '';
-    for (let k = hud.log.length - 1; k >= 0; k--) {
-      const e = hud.log[k]!;
-      if (e.tick <= hud.journalSeen) break;
-      if (!inPaper(e)) continue;
-      if (weightOf(e.key) > 0) return 'head';
-      level = 'brief';
-    }
-    return level;
-  });
+  /**
+   * Unread news (1.10.0: every notification goes to the journal): their count on the
+   * Journal's button, magenta when an alert is among them.
+   */
+  const unread = $derived(
+    hud.panels.log ? { n: 0, danger: false, head: false } : unreadOf(hud.log, hud.journalSeen),
+  );
 
   /** Research has stopped while it could go on: the Technologies button pulses. */
   const techIdle = $derived(
@@ -84,7 +79,13 @@
         >
           <Icon name={tb.icon} size={18} />
           <span class="lbl">{t(`panel.${tb.id}`)}</span>
-          {#if tb.id === 'log' && unread}<i class="dot" class:head={unread === 'head'}></i>{/if}
+          {#if tb.id === 'log' && unread.n}<i
+              class="count mono"
+              class:danger={unread.danger}
+              data-testid="journal-unread"
+              title={t(unread.danger ? 'inbox.tipDanger' : 'inbox.tip', { n: unread.n })}
+              >{unread.n > 99 ? '99+' : unread.n}</i
+            >{/if}
           {#if tb.id === 'tech' && techIdle}<i class="dot research" data-testid="tech-idle-dot"></i>{/if}
         </button>
       {/each}
@@ -201,8 +202,32 @@
     background: var(--np-gold);
     box-shadow: 0 0 0 1.5px var(--np-paper);
   }
-  .dot.head {
+  /* Unread news: their count in a tab of ink at the button's corner, magenta with an alert. */
+  .count {
+    position: absolute;
+    top: 3px;
+    right: 6px;
+    min-width: 17px;
+    height: 15px;
+    padding: 0 4px;
+    display: grid;
+    place-items: center;
+    border-radius: 1px;
+    background: var(--np-ink);
+    box-shadow: 0 0 0 1.5px var(--np-paper);
+    color: var(--np-paper);
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+  .count.danger {
     background: var(--np-spot);
+  }
+  .rail button.front .count {
+    box-shadow: 0 0 0 1.5px var(--np-ink);
   }
   /* Research stopped: a slow pulse in the sea's blue. */
   .dot.research {
@@ -230,6 +255,9 @@
     .dot {
       right: 6px;
     }
+    .count {
+      right: 2px;
+    }
   }
   :global(.game[data-layout='compact']) .lbl {
     display: none;
@@ -240,6 +268,9 @@
   }
   :global(.game[data-layout='compact']) .dot {
     right: 6px;
+  }
+  :global(.game[data-layout='compact']) .count {
+    right: 2px;
   }
   .wins {
     position: absolute;

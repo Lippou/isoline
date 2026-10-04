@@ -118,7 +118,7 @@ export const hud = $state({
     victim: number;
     teammate: boolean;
   },
-  toasts: [] as Toast[],
+  /** The journal's record: every notification (the paper prints what is newsworthy). */
   log: [] as LogEntry[],
   nukeAlerts: [] as NukeAlert[],
   /**
@@ -222,27 +222,16 @@ export function openPaper(page?: PaperPage): void {
 }
 
 let toastId = 1;
-/** The pointer is on the dispatches: they stay until it leaves (Toasts.svelte). */
-let toastsHeld = false;
-export function holdToasts(on: boolean): void {
-  toastsHeld = on;
-}
-/** A dispatch leaves after its time, or a moment after the pointer has left the tray. */
-function expire(id: number, ms: number): void {
-  setTimeout(() => {
-    if (toastsHeld && hud.toasts.some((x) => x.id === id)) expire(id, 1500);
-    else hud.toasts = hud.toasts.filter((x) => x.id !== id);
-  }, ms);
-}
-/** Puts a dispatch away at once (clicked). */
-export function dropToast(id: number): void {
-  hud.toasts = hud.toasts.filter((x) => x.id !== id);
-}
+/**
+ * A notification (1.10.0: no tray over the map any more — it hid the alliance offers): it
+ * goes to the journal, whose dock button counts what is unread (magenta when an alert is
+ * among it); a tile makes it a link that centres the map there. An answer to the player's
+ * own order is a cursor note instead (stores/note.svelte.ts).
+ */
 export function toast(text: string, level: Toast['level'] = 'info', tile?: number): void {
-  const t: Toast = { id: toastId++, text, level, t: performance.now(), tick: hud.tick };
-  if (tile !== undefined) t.tile = tile;
-  hud.toasts = [...hud.toasts.slice(-4), t];
-  expire(t.id, level === 'danger' ? 9000 : 6000);
+  const e: LogEntry = { tick: hud.tick, text, level };
+  if (tile !== undefined) e.tile = tile;
+  hud.log = [...hud.log.slice(-199), e];
 }
 
 export function subtitle(text: string): void {
@@ -267,7 +256,6 @@ export function resetHud(): void {
   hud.pact = null;
   pactQueue.length = 0;
   hud.launch = null;
-  hud.toasts = [];
   hud.log = [];
   hud.breaking = null;
   hud.journalSeen = 0;
