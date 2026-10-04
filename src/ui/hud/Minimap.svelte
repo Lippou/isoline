@@ -9,6 +9,7 @@
   import { t } from '../i18n/i18n.svelte';
   import { minimapPalette } from '../../render/worldPalette';
   import { hudSize } from '../stores/hudBox.svelte';
+  import { layout, zonePiece } from '../stores/layout.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   let canvas: HTMLCanvasElement;
@@ -19,7 +20,18 @@
   const H = Math.max(80, Math.round((st.height / st.width) * W));
   let base: ImageData | null = null;
   let img: ImageData | null = null;
-  let collapsed = $state(false);
+  // The foot of the right column (zones.ts): folded when the column is short of room
+  // (the button unfolds it, the other pieces giving way), or when the player folds it.
+  let folded = $state(false);
+  const level = $derived(layout.levelOf('minimap'));
+  const collapsed = $derived(folded || level === 'chip');
+  function toggle(): void {
+    if (!folded && level === 'chip') layout.pin('minimap');
+    else {
+      folded = !folded;
+      if (folded) layout.pin('minimap', false);
+    }
+  }
 
   const EARTH_COLORS: [number, number, number][] = [
     [10, 20, 36],
@@ -171,8 +183,14 @@
   });
 </script>
 
-<aside class="mini panel" class:collapsed data-testid="minimap" use:hudSize={'mini'}>
-  <button class="toggle" onclick={() => (collapsed = !collapsed)} title={t('hud.minimap')}
+<aside
+  class="mini panel"
+  class:collapsed
+  data-testid="minimap"
+  use:hudSize={'mini'}
+  use:zonePiece={{ id: 'minimap', level }}
+>
+  <button class="toggle" onclick={toggle} title={t('hud.minimap')}
     ><Icon name={collapsed ? 'expand' : 'collapse'} size={13} /></button
   >
   <canvas

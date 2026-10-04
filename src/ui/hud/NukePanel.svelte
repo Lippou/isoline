@@ -8,6 +8,7 @@
   import { N } from '../../core/game/constants';
   import type { GameController } from '../game/controller';
   import { lockFor, nukeUnlock, techKey } from '../../core/rules/tech';
+  import { zonePiece } from '../stores/layout.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   const NAMES = ['nukeA', 'nukeH', 'nukeMirv'];
@@ -40,6 +41,7 @@
     class:banned
     data-testid="launch-panel"
     aria-label={t('launch.title')}
+    use:zonePiece={{ id: 'launch' }}
   >
     {#if banned}
       <p class="ban" data-testid="launch-ban" data-tip={t('ban.tip', { clock: clock(banLeft) })}>
@@ -155,7 +157,7 @@
 <style>
   /* Top of the right column (GameScreen.svelte), under the leaderboard: never over the target. */
   .launch {
-    width: min(400px, calc(100vw - 32px));
+    width: 100%;
     padding: 8px 12px 9px;
     display: grid;
     gap: 7px;

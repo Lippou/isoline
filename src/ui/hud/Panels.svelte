@@ -1,6 +1,8 @@
 <script lang="ts">
   import { hud } from '../stores/game.svelte';
-  import { wm, focusWindow, clampAll, type WinId } from '../stores/windows.svelte';
+  import { wm, focusWindow, relayout, type WinId } from '../stores/windows.svelte';
+  import { layout } from '../stores/layout.svelte';
+  import { hudSize } from '../stores/hudBox.svelte';
   import { t } from '../i18n/i18n.svelte';
   import type { GameController } from '../game/controller';
   import DiplomacyPanel from './DiplomacyPanel.svelte';
@@ -54,19 +56,23 @@
   );
 
   const showRail = $derived(!hud.spectating || !!hud.replay);
-  let railW = $state(0);
-  // Windows and the column of cards open beside the rail (at the edge without it).
+  // The stage moved or changed size (the screen, the interface scale, a piece of the HUD):
+  // the open windows stay in it (zones.ts).
+  const stageKey = $derived.by(() => {
+    const s = layout.normal.stage;
+    return `${s.x},${s.y},${s.w},${s.h}`;
+  });
   $effect(() => {
-    wm.railRight = showRail && railW ? 12 + railW : 2;
+    void stageKey;
+    relayout();
   });
 </script>
 
-<svelte:window onresize={clampAll} />
-
 {#if showRail}
-  <!-- The dock: a rail along the left edge, centred in the room above the resources panel. -->
-  <div class="strip">
-    <nav class="rail glass" aria-label={t('hud.panels')} bind:clientWidth={railW}>
+  <!-- The dock: a rail along the left edge, centred in its zone (above the resources panel;
+       in reading mode, under the reading strip). -->
+  <div class="strip" class:reading={layout.reading}>
+    <nav class="rail glass" aria-label={t('hud.panels')} use:hudSize={'rail'}>
       {#each tabs.filter((tb) => !tb.hidden) as tb (tb.id)}
         <button
           class:active={hud.panels[tb.id]}
@@ -116,8 +122,8 @@
   .strip {
     position: absolute;
     left: 12px;
-    top: 12px;
-    bottom: calc(var(--hud-res-h, 268px) + 24px);
+    top: var(--zone-rail-y, 12px);
+    height: var(--zone-rail-h, 50vh);
     display: flex;
     align-items: center;
     pointer-events: none;
@@ -208,7 +214,11 @@
       opacity: 0.35;
     }
   }
-  /* Short windows: icons only (the name is in the tooltip), so the rail fits beside the panels. */
+  .strip.reading {
+    top: var(--zone-read-rail-y, 66px);
+    height: var(--zone-read-rail-h, 80vh);
+  }
+  /* Short windows and the compact layout: icons only (the name is in the tooltip). */
   @media (max-height: 760px) {
     .lbl {
       display: none;
@@ -220,6 +230,16 @@
     .dot {
       right: 6px;
     }
+  }
+  :global(.game[data-layout='compact']) .lbl {
+    display: none;
+  }
+  :global(.game[data-layout='compact']) .rail button {
+    width: 44px;
+    padding: 8px 2px;
+  }
+  :global(.game[data-layout='compact']) .dot {
+    right: 6px;
   }
   .wins {
     position: absolute;

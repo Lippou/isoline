@@ -2324,5 +2324,24 @@
       "solarStorm": "Aurore boréale au-dessus d'un lanceur de missiles antiaériens dans la neige",
       "peaceSummit": "Salle vide du Conseil de sécurité des Nations unies et sa table en fer à cheval"
     }
+  },
+  "window": {
+    "maximize": "Agrandir (mode lecture)",
+    "restore": "Remettre à sa place",
+    "maximizeTip": "Mode lecture : la fenêtre prend l’écran, les colonnes se replient en un bandeau",
+    "restoreTip": "La fenêtre reprend sa place à côté de la carte, les colonnes reviennent"
+  },
+  "reading": {
+    "title": "Bandeau de lecture",
+    "back": "Retour à la carte",
+    "backTip": "Les fenêtres reprennent leur place, les colonnes reviennent",
+    "invasion": "Invasion !"
+  },
+  "zone": {
+    "unfold": "déplier",
+    "council": "Conseil",
+    "dispatches": "{n} dépêches",
+    "dispatchesOne": "1 dépêche",
+    "dispatchesShow": "Déplier les dépêches ({n})"
   }
 }

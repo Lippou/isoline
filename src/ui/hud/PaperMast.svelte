@@ -1,16 +1,21 @@
 <script lang="ts">
   // The masthead of a window printed on the paper, as the journal's: the title over a
   // heavy rule, then what the window adds under it (its dateline, sections, tools).
-  // It is the window's title bar: the window is dragged by it (Window.svelte).
-  import type { Snippet } from 'svelte';
+  // It is the window's title bar: the window is dragged by it (Window.svelte). In a HUD
+  // window it also carries the maximise button: reading mode, the window over the whole
+  // room and the columns folded into the reading strip (zones.ts).
+  import { getContext, type Snippet } from 'svelte';
   import { t } from '../i18n/i18n.svelte';
   import Icon from '../icons/Icon.svelte';
+  import WindowMax from './WindowMax.svelte';
 
   let { title, onclose, children }: { title: string; onclose: () => void; children?: Snippet } = $props();
+  const win = !!getContext('iso-window');
 </script>
 
-<header class="mast">
+<header class="mast" class:win>
   <button class="x" onclick={onclose} aria-label={t('common.close')}><Icon name="close" size={16} /></button>
+  <WindowMax />
   <h2>{title}</h2>
   {@render children?.()}
 </header>
@@ -49,6 +54,10 @@
     padding: 0 26px 7px;
     border-bottom: 3px solid var(--np-ink);
     color: var(--np-ink);
+  }
+  /* Room for the two buttons, the title still centred. */
+  .mast.win h2 {
+    padding-inline: 60px;
   }
   /* The dateline: figures between two fine rules, under the heavy one. */
   .mast :global(.np-dateline) {

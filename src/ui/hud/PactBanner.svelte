@@ -1,8 +1,15 @@
+<script module lang="ts">
+  /** The last pact heard (the banner moves between the stage and the reading strip). */
+  let sounded = -1;
+</script>
+
 <script lang="ts">
   // Alliance signed (or renewed): a notice printed on the Courier's paper, both flags
   // sealed by a handshake, a signature drawn in ink, then it fades out by itself. An offer turned down
   // gets a « Refusé » stamp slammed across it; a pact betrayed is torn in two (flags
   // drawn apart, red tear instead of a signature).
+  // It stands at the foot of the map's stage (zones.ts). In reading mode it is a line of
+  // the reading strip instead (`slim`), with the same sound and the same few seconds.
   import { hud, nextPact } from '../stores/game.svelte';
   import { audio } from '../../audio/audio';
   import { t, i18n } from '../i18n/i18n.svelte';
@@ -10,7 +17,7 @@
   import Icon from '../icons/Icon.svelte';
   import type { GameController } from '../game/controller';
 
-  let { ctl }: { ctl: GameController } = $props();
+  let { ctl, slim = false }: { ctl: GameController; slim?: boolean } = $props();
   const SHOW_MS = 4600;
 
   const pact = $derived(hud.pact);
@@ -20,13 +27,17 @@
   $effect(() => {
     const id = pact?.id;
     if (id === undefined) return;
-    // Its sound plays as it appears: pen on parchment, a stamp and a sour note, or paper torn.
+    // Its sound plays as it appears: pen on parchment, a stamp and a sour note, or paper torn
+    // (once, though it moves between the stage and the reading strip).
     const p = hud.pact;
-    if (p?.betrayed) audio.sfx('torn', 0.85);
-    else if (p?.refused) {
-      audio.sfx('stamp', 0.85);
-      audio.sfx('rejected', 0.5);
-    } else audio.sfx('alliance', 0.8);
+    if (id !== sounded) {
+      sounded = id;
+      if (p?.betrayed) audio.sfx('torn', 0.85);
+      else if (p?.refused) {
+        audio.sfx('stamp', 0.85);
+        audio.sfx('rejected', 0.5);
+      } else audio.sfx('alliance', 0.8);
+    }
     const timer = setTimeout(() => {
       if (hud.pact?.id === id) nextPact();
     }, SHOW_MS);
@@ -34,7 +45,26 @@
   });
 </script>
 
-{#if pact && them}
+{#if pact && them && slim}
+  {#key pact.id}
+    {@const name = ctl.session.state.name(them.id, i18n.lang)}
+    <span
+      class="slim newsprint"
+      class:refused={pact.refused}
+      class:betrayed={pact.betrayed}
+      role="status"
+      data-testid="pact-banner"
+    >
+      <Icon name="alliance" size={14} /><img src={flagUrl(them, 24)} alt="" /><b
+        >{pact.refused
+          ? t(pact.silent ? 'pact.lapsed' : 'pact.refused')
+          : pact.betrayed
+            ? t('pact.betrayed')
+            : t(pact.renewed ? 'pact.renewed' : 'pact.signed')}</b
+      ><span>{name}</span>
+    </span>
+  {/key}
+{:else if pact && them}
   {#key pact.id}
     {@const name = ctl.session.state.name(them.id, i18n.lang)}
     <div
@@ -75,11 +105,55 @@
 {/if}
 
 <style>
-  /* Lower centre, above the build bar and the campaign guide: clear of the dispatches and the launch panel. */
+  /* Reading mode: a line of the reading strip. */
+  .slim {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 10px 0 8px;
+    border: 1px solid var(--np-edge);
+    border-left: 3px solid var(--np-good);
+    border-radius: 1px;
+    font-size: 0.84em;
+    color: var(--np-good);
+    white-space: nowrap;
+    animation: life 4.6s ease both;
+  }
+  @keyframes life {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    8%,
+    85% {
+      opacity: 1;
+    }
+  }
+  .slim img {
+    width: 22px;
+    height: 15px;
+    object-fit: cover;
+    box-shadow: 0 0 0 1px var(--np-rule);
+  }
+  .slim b {
+    font-family: var(--title);
+    font-weight: 600;
+    color: var(--np-ink);
+  }
+  .slim span {
+    color: var(--np-ink-2);
+  }
+  .slim.refused,
+  .slim.betrayed {
+    border-left-color: var(--np-spot);
+    color: var(--np-spot);
+  }
+  /* At the foot of the map's stage (zones.ts), centred: clear of the columns and the bars. */
   .pact {
     position: absolute;
-    left: 50%;
-    bottom: calc(var(--hud-bar-h, 112px) + 138px);
+    left: var(--zone-band-c, 50%);
+    bottom: calc(var(--zone-stage-b, 250px) + 12px);
     transform: translateX(-50%);
     z-index: 29;
     display: grid;

@@ -2,8 +2,9 @@
   // A wave of troops is sent at us: the screen's edges flash in the chart's magenta (the
   // danger colour) three times, then fade (about 1.8 s; once per wave, not for the whole
   // attack). The glow is brightest on the edge facing the attack. Reduced motion: one slow
-  // pulse, no blinking.
+  // pulse, no blinking. In reading mode (a big window open) it flashes over the window.
   import { hud } from '../stores/game.svelte';
+  import { layout } from '../stores/layout.svelte';
   import { settings } from '../stores/settings.svelte';
 
   const still = $derived(
@@ -15,6 +16,7 @@
   {#if hud.invasion}
     <div
       class="flash"
+      class:over={layout.reading}
       class:still
       style:--ex="{hud.invasion.ex * 100}%"
       style:--ey="{hud.invasion.ey * 100}%"
@@ -42,6 +44,9 @@
       transparent 42%
     );
     animation: blink 1.8s ease-out forwards;
+  }
+  .flash.over {
+    z-index: 31;
   }
   .flash.still {
     animation: pulse 1.6s ease-in-out forwards;

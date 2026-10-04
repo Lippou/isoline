@@ -59,12 +59,13 @@
 </div>
 
 <style>
+  /* At the head of the map's stage (zones.ts). */
   .dispatch {
     position: absolute;
-    top: 72px;
-    left: 50%;
+    top: var(--zone-stage-y, 72px);
+    left: var(--zone-band-c, 50%);
     z-index: 40;
-    width: min(440px, calc(100vw - 32px));
+    width: min(440px, var(--zone-band-w, calc(100vw - 32px)));
     transform: translateX(-50%);
     padding: 12px 18px 14px;
     border-top: 4px solid var(--np-spot);

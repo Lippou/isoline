@@ -9,6 +9,7 @@
   import type { GameController } from '../game/controller';
   import { CAPITAL_DISORG_TICKS } from '../../core/game/constants';
   import { audio } from '../../audio/audio';
+  import { layout, zonePiece } from '../stores/layout.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
 
@@ -23,6 +24,8 @@
   );
   const lost = $derived(!!L && L.capital < 0);
   const picking = $derived(hud.tool.k === 'capital');
+  /** Short of room (zones.ts): the kicker and the actions only. */
+  const compact = $derived(layout.levelOf('capital') !== 'full');
 
   function pick(): void {
     if (picking) {
@@ -49,7 +52,13 @@
 </script>
 
 {#if show && L}
-  <section class="dispatch newsprint rise-in" data-testid="capital-card" aria-live="polite">
+  <section
+    class="dispatch newsprint rise-in"
+    class:compact
+    data-testid="capital-card"
+    aria-live="polite"
+    use:zonePiece={{ id: 'capital', level: compact ? 'compact' : 'full' }}
+  >
     <header class="kicker" class:calm={!lost}>
       <span
         ><Icon name="capital" size={13} stroke={2.4} />{lost
@@ -58,23 +67,25 @@
       >
       {#if L.disorgFor > 0}<time data-tip={t('capital.leftTip')}>{clock(L.disorgFor)}</time>{/if}
     </header>
-    <h3>{lost ? t('capital.titleLost') : t('capital.titleMoved')}</h3>
-    {#if lost && (L.capitalLostBy > 0 || L.disorgFor > 0)}
+    {#if !compact}<h3>{lost ? t('capital.titleLost') : t('capital.titleMoved')}</h3>{/if}
+    {#if !compact && lost && (L.capitalLostBy > 0 || L.disorgFor > 0)}
       <p class="by">
         {L.capitalLostBy > 0
           ? t('capital.takenBy', { by: ctl.session.state.name(L.capitalLostBy, i18n.lang) })
           : t('capital.razed')}
       </p>
     {/if}
-    {#if L.disorgFor > 0}
+    {#if L.disorgFor > 0 && !compact}
       <p class="fx"><Icon name="crisis" size={14} />{t('capital.disorg')}</p>
       <span class="bar" aria-hidden="true"
         ><i style="width:{(L.disorgFor / CAPITAL_DISORG_TICKS) * 100}%"></i></span
       >
     {/if}
     {#if lost}
-      <p class="fx dim"><Icon name="gold" size={14} />{t('capital.none')}</p>
-      <p class="how">{t('capital.how')}</p>
+      {#if !compact}
+        <p class="fx dim"><Icon name="gold" size={14} />{t('capital.none')}</p>
+        <p class="how">{t('capital.how')}</p>
+      {/if}
       <div class="acts">
         <button class="act ink" class:on={picking} onclick={pick} data-testid="capital-pick"
           ><Icon name={picking ? 'close' : 'target'} size={14} />{picking
@@ -95,7 +106,7 @@
 
 <style>
   .dispatch {
-    width: 300px;
+    width: 100%;
     padding: 0 14px 11px;
     border-radius: 1px;
     font-family: var(--np-serif);

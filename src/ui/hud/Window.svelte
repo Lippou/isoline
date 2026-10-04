@@ -1,8 +1,10 @@
 <script lang="ts">
   // A floating HUD window: dragged by its title bar (the paper ones: by their masthead),
-  // resized by its corner, brought to the front on click. Double-clicking the title bar
-  // puts it back in its default place. The content is the panel's own.
-  import { onDestroy, type Snippet } from 'svelte';
+  // resized by its corner, brought to the front on click, always within the map's stage.
+  // Double-clicking the title bar puts it back in its default place. Maximised (the
+  // masthead's button, PaperMast.svelte), it takes the reading room and stays put. The
+  // content is the panel's own.
+  import { onDestroy, setContext, type Snippet } from 'svelte';
   import { hud } from '../stores/game.svelte';
   import { t } from '../i18n/i18n.svelte';
   import {
@@ -12,6 +14,8 @@
     focusWindow,
     setRect,
     resetWindows,
+    windowRect,
+    isMax,
     MIN_W,
     MIN_H,
     type WinId,
@@ -29,8 +33,12 @@
   // svelte-ignore state_referenced_locally
   mountWindow(id);
   onDestroy(() => unmountWindow(id));
+  // The masthead (PaperMast.svelte) finds its window: its maximise button.
+  // svelte-ignore state_referenced_locally
+  setContext('iso-window', id);
 
-  const rect = $derived(wm.rects[id]);
+  const max = $derived(isMax(id));
+  const rect = $derived(windowRect(id));
   const z = $derived(wm.order.indexOf(id) + 1);
   const front = $derived(wm.order.at(-1) === id);
 
@@ -44,7 +52,7 @@
   }
 
   function begin(e: PointerEvent, mode: 'move' | 'size', host: HTMLElement): void {
-    if (e.button !== 0 || !rect) return;
+    if (e.button !== 0 || !rect || max) return;
     drag = { mode, px: e.clientX, py: e.clientY, r: { ...rect }, moved: false };
     host.setPointerCapture(e.pointerId);
     e.preventDefault();
@@ -69,12 +77,12 @@
       });
   }
   function end(): void {
-    if (drag?.moved && rect) setRect(id, rect, true);
+    if (drag?.moved && rect && !max) setRect(id, rect, true);
     drag = null;
     dragging = false;
   }
   function dblclick(e: MouseEvent): void {
-    if (isHandle(e.target as HTMLElement)) resetWindows(id);
+    if (isHandle(e.target as HTMLElement) && !max) resetWindows(id);
   }
 </script>
 
@@ -85,6 +93,7 @@
     class:paper
     class:front
     class:dragging
+    class:max
     style:left="{rect.x}px"
     style:top="{rect.y}px"
     style:width="{rect.w}px"
@@ -94,6 +103,7 @@
     aria-label={title || t(`panel.${id}`)}
     data-testid="panel-open"
     data-window={id}
+    data-max={max || undefined}
     onpointerdowncapture={() => focusWindow(id)}
     onfocusin={() => focusWindow(id)}
     onpointerdown={down}
@@ -114,14 +124,14 @@
       <div class="body scroll">{@render children()}</div>
     {/if}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="grip"
-      title={t('hud.windowResize')}
-      onpointerdown={(e) => {
-        e.stopPropagation();
-        begin(e, 'size', e.currentTarget.parentElement as HTMLElement);
-      }}
-    ></div>
+    {#if !max}<div
+        class="grip"
+        title={t('hud.windowResize')}
+        onpointerdown={(e) => {
+          e.stopPropagation();
+          begin(e, 'size', e.currentTarget.parentElement as HTMLElement);
+        }}
+      ></div>{/if}
   </div>
 {/if}
 
@@ -159,6 +169,10 @@
   }
   .win.paper :global(header) {
     cursor: grab;
+  }
+  /* Maximised: it stays put (the masthead's button restores it). */
+  .win.paper.max :global(header) {
+    cursor: default;
   }
   .win.dragging,
   .win.dragging :global(header) {

@@ -314,13 +314,14 @@
 
 <style>
   /*
-   * Centred in the room between the resources panel and the minimap; when that room is
-   * too narrow for one row, the groups go on two (the panels around read its height).
+   * The bottom strip (zones.ts): centred in the room between the resources panel and the
+   * right column; when that room is too narrow for one row, the groups go on two (the
+   * zones read its height).
    */
   .bar {
     position: absolute;
-    left: calc(12px + var(--res-w, 290px) + 10px);
-    right: calc(12px + var(--hud-mini-w, 278px) + 10px);
+    left: var(--zone-bar-l, calc(12px + var(--res-w, 290px) + 10px));
+    right: var(--zone-bar-r, calc(12px + var(--hud-mini-w, 278px) + 10px));
     bottom: 12px;
     width: fit-content;
     margin-inline: auto;

@@ -2324,5 +2324,24 @@
       "solarStorm": "Northern lights over an air-defence missile launcher in the snow",
       "peaceSummit": "The empty United Nations Security Council chamber and its horseshoe table"
     }
+  },
+  "window": {
+    "maximize": "Maximise (reading mode)",
+    "restore": "Put it back in its place",
+    "maximizeTip": "Reading mode: the window takes the screen, the columns fold into a strip",
+    "restoreTip": "The window goes back beside the map, the columns come back"
+  },
+  "reading": {
+    "title": "Reading strip",
+    "back": "Back to the map",
+    "backTip": "The windows go back to their places, the columns come back",
+    "invasion": "Invasion!"
+  },
+  "zone": {
+    "unfold": "unfold",
+    "council": "Council",
+    "dispatches": "{n} dispatches",
+    "dispatchesOne": "1 dispatch",
+    "dispatchesShow": "Unfold the dispatches ({n})"
   }
 }

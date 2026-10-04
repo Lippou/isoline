@@ -6,12 +6,13 @@
   import { hud } from '../stores/game.svelte';
   import { t, i18n } from '../i18n/i18n.svelte';
   import type { GameController } from '../game/controller';
+  import { zonePiece } from '../stores/layout.svelte';
   let { ctl }: { ctl: GameController } = $props();
   const names = ['nukeA', 'nukeH', 'nukeMirv', 'nukeMirv'];
 </script>
 
 {#if hud.nukeAlerts.length}
-  <div class="alerts" role="alert">
+  <div class="alerts" role="alert" use:zonePiece={{ id: 'nukeAlerts' }}>
     {#each hud.nukeAlerts as a (a.id)}
       <button
         class="alert newsprint"
@@ -37,7 +38,7 @@
   }
   .alert {
     appearance: none;
-    width: 300px;
+    width: 100%;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;

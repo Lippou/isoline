@@ -7,6 +7,7 @@
   import Icon from '../icons/Icon.svelte';
   import { keyLabel } from '../stores/settings.svelte';
   import type { GameController } from '../game/controller';
+  import { hudSize } from '../stores/hudBox.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   const solo = ctl.session.kind === 'solo';
@@ -44,7 +45,9 @@
   const banLeft = $derived(Math.max(0, (hud.world?.nukeBanUntil ?? 0) - hud.tick));
 </script>
 
-<header class="top">
+<!-- The top strip (zones.ts): centred over the band between the columns; its status line
+     keeps its height when empty, so that the stage under it never jumps. -->
+<header class="top" use:hudSize={'top'}>
   {#if hud.phase === 'spawn'}
     <div class="spawn panel" data-testid="spawn-countdown">
       <span class="pin"><Icon name="pin" size={18} /></span>
@@ -147,29 +150,28 @@
         >{/if}
       {#if hud.paused}<span class="chip warn"><Icon name="pause" size={13} />{t('hud.paused')}</span>{/if}
       {#if hud.desync}<span class="chip bad"><Icon name="refresh" size={13} />{t('hud.resyncing')}</span>{/if}
+      <!-- The words just spoken (sirens, a pact, an explosion…), as a caption. -->
+      {#each hud.subtitles.slice(-1) as s (s.id)}
+        <span class="caption fade-in" aria-hidden="true" data-testid="subtitle">{s.text}</span>
+      {/each}
     </div>
   {/if}
 </header>
 
 <style>
-  /* Centred, clear of the leaderboard (top right, 310 px; 270 px below 1400 px). */
+  /* Centred over the band between the columns (the top strip, zones.ts). */
   .top {
     position: absolute;
     top: 10px;
-    left: 50%;
+    left: var(--zone-band-c, 50%);
     transform: translateX(-50%);
-    width: min(760px, calc(100vw - 680px));
+    width: min(760px, var(--zone-band-w, calc(100vw - 680px)));
     display: grid;
     justify-items: center;
     gap: 5px;
     pointer-events: none;
     z-index: 5;
     container-type: inline-size;
-  }
-  @media (max-width: 1400px) {
-    .top {
-      width: min(760px, calc(100vw - 600px));
-    }
   }
   /* Before the start: a notice under the ink rule, the seconds left in the margin. */
   .spawn {
@@ -316,7 +318,29 @@
     flex-wrap: wrap;
     gap: 5px;
     justify-content: center;
+    min-height: 24px;
+    max-width: 100%;
+    pointer-events: none;
+  }
+  .status > * {
     pointer-events: auto;
+  }
+  /* A caption: one line in italics, cut short rather than spilling over the map. */
+  .caption {
+    max-width: 100%;
+    padding: 2px 10px;
+    border: 1px solid var(--np-edge);
+    border-radius: 1px;
+    background: var(--np-paper);
+    box-shadow: 0 1px 3px rgba(3, 10, 16, 0.22);
+    font-family: var(--title);
+    font-style: italic;
+    font-size: 0.86em;
+    line-height: 1.35;
+    color: var(--np-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .status .chip {
     background: var(--np-paper);

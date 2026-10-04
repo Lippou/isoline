@@ -12,6 +12,7 @@
   import { audio } from '../../audio/audio';
   import { reserveBottom } from '../stores/windows.svelte';
   import { hudBox } from '../stores/hudBox.svelte';
+  import { layout } from '../stores/layout.svelte';
   import { settings } from '../stores/settings.svelte';
   import { researchIdle } from './research';
   import Masthead from './Masthead.svelte';
@@ -46,7 +47,8 @@
       !settings.game.autoResearch &&
       researchIdle(hud.local, ctl.session.config.features.tech),
   );
-  const bottom = $derived((hudBox.bar || 112) + (nudge ? 48 : 16));
+  // (The bottom strip, zones.ts: the reminder's room is kept whenever research exists.)
+  const bottom = $derived(12 + (hudBox.bar || 100) + (layout.nudge || (nudge ? 44 : 4)));
   let dockH = $state(0);
   $effect(() => {
     reserveBottom(dockH > 0 ? bottom + Math.ceil(dockH) + 8 : 0);
@@ -222,16 +224,16 @@
 
 <style>
   /*
-   * Bottom centre, above the build bar: between the resources panel (left, 300 px) and
-   * the alliance offers (right, 300 px), under the windows' reserved bottom band.
+   * The bottom strip (zones.ts), over the band between the columns, above the build bar:
+   * the windows' stage ends above it.
    */
   .dock {
     position: absolute;
-    left: 50%;
+    left: var(--zone-band-c, 50%);
     transform: translateX(-50%);
     transition: bottom 0.2s ease-out;
-    width: min(680px, calc(100vw - 640px));
-    min-width: 420px;
+    width: min(680px, var(--zone-band-w, calc(100vw - 640px)));
+    min-width: min(420px, var(--zone-band-w, 420px));
     display: grid;
     gap: 6px;
     z-index: 29;

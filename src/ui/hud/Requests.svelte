@@ -2,6 +2,8 @@
   // The World Council's vote, as a ballot printed on the Courier's paper (the news flash's
   // sibling): the time left and the votes cast as its dateline, the motions as printed
   // buttons, ours inked. Alliance offers have their own card: AllyRequests.svelte.
+  // Short of room in the news column (zones.ts): compact, the motions' names on one row
+  // (their descriptions in the tooltips); then a chip with the time left (a click unfolds it).
   import './paper.css';
   import { hud } from '../stores/game.svelte';
   import { t } from '../i18n/i18n.svelte';
@@ -9,58 +11,70 @@
   import { COUNCIL_OPTIONS } from '../../core/rules/features';
   import { COUNCIL_VOTE_TICKS } from '../../core/game/constants';
   import Icon from '../icons/Icon.svelte';
+  import { layout, zonePiece } from '../stores/layout.svelte';
   let { ctl }: { ctl: GameController } = $props();
   const s = ctl.session;
 
   const council = $derived(hud.world?.council && hud.local?.alive ? hud.world.council : null);
   const left = $derived(council ? Math.max(0, council.closes - hud.tick) : 0);
   const mine = $derived(council && council.myVote >= 0 ? COUNCIL_OPTIONS[council.myVote] : undefined);
+  const level = $derived(layout.levelOf('council'));
 </script>
 
-<div class="requests">
-  {#if council}
-    <section class="ballot newsprint rise-in" data-testid="council" aria-labelledby="council-title">
-      <p class="kicker"><Icon name="council" size={13} />{t('council.kicker')}</p>
-      <h3 id="council-title">{t('council.title')}</h3>
-      <p class="dateline">
-        <b>{Math.ceil(left / 10)} s</b>
-        <span>{council.votes} {t('council.votes')}</span>
-        <span class="cast" class:none={!mine}
-          >{mine ? t('council.cast', { motion: t(`council.${mine}.name`) }) : t('council.notCast')}</span
+{#if council && level === 'chip'}
+  <button
+    class="zchip newsprint"
+    data-zone-chip
+    data-testid="council"
+    onclick={() => layout.pin('council')}
+    aria-label="{t('council.title')} — {t('zone.unfold')}"
+    use:zonePiece={{ id: 'council', level }}
+    ><Icon name="council" size={13} /><b>{t('zone.council')}</b><span class="mono"
+      >{Math.ceil(left / 10)} s</span
+    ></button
+  >
+{:else if council}
+  <section
+    class="ballot newsprint rise-in"
+    class:compact={level === 'compact'}
+    data-testid="council"
+    aria-labelledby="council-title"
+    use:zonePiece={{ id: 'council', level }}
+  >
+    <p class="kicker"><Icon name="council" size={13} />{t('council.kicker')}</p>
+    <h3 id="council-title">{t('council.title')}</h3>
+    <p class="dateline">
+      <b>{Math.ceil(left / 10)} s</b>
+      <span>{council.votes} {t('council.votes')}</span>
+      <span class="cast" class:none={!mine}
+        >{mine ? t('council.cast', { motion: t(`council.${mine}.name`) }) : t('council.notCast')}</span
+      >
+    </p>
+    <span class="bar" aria-hidden="true"><i style="width:{(left / COUNCIL_VOTE_TICKS) * 100}%"></i></span>
+    <div class="motions" role="group" aria-label={t('council.motions')}>
+      {#each COUNCIL_OPTIONS as o, k (o)}
+        {@const on = council.myVote === k}
+        <button
+          class="np-btn motion"
+          class:ink={on}
+          aria-pressed={on}
+          onclick={() => s.cmd({ t: 'vote', option: k })}
+          title={t(`council.${o}.desc`)}
+          ><span class="box" aria-hidden="true"
+            >{#if on}<Icon name="check" size={12} stroke={3} />{/if}</span
+          ><span class="txt"
+            ><b>{t(`council.${o}.name`)}</b>{#if level === 'full'}<small>{t(`council.${o}.desc`)}</small
+              >{/if}</span
+          ></button
         >
-      </p>
-      <span class="bar" aria-hidden="true"><i style="width:{(left / COUNCIL_VOTE_TICKS) * 100}%"></i></span>
-      <div class="motions" role="group" aria-label={t('council.motions')}>
-        {#each COUNCIL_OPTIONS as o, k (o)}
-          {@const on = council.myVote === k}
-          <button
-            class="np-btn motion"
-            class:ink={on}
-            aria-pressed={on}
-            onclick={() => s.cmd({ t: 'vote', option: k })}
-            title={t(`council.${o}.desc`)}
-            ><span class="box" aria-hidden="true"
-              >{#if on}<Icon name="check" size={12} stroke={3} />{/if}</span
-            ><span class="txt"><b>{t(`council.${o}.name`)}</b><small>{t(`council.${o}.desc`)}</small></span
-            ></button
-          >
-        {/each}
-      </div>
-    </section>
-  {/if}
-</div>
+      {/each}
+    </div>
+  </section>
+{/if}
 
 <style>
-  .requests {
-    display: grid;
-    gap: 8px;
-    max-width: 420px;
-  }
-  .requests:empty {
-    display: none;
-  }
   .ballot {
-    width: 300px;
+    width: 100%;
     padding: 8px 14px 12px;
     border-radius: 1px;
     border-top: 3px solid var(--np-ink);
@@ -173,6 +187,25 @@
   }
   .motion.ink small {
     color: color-mix(in srgb, var(--np-paper) 82%, transparent);
+  }
+  /* Short of room: the motions' names two by two, their descriptions in the tooltips. */
+  .ballot.compact {
+    padding: 6px 12px 9px;
+  }
+  .ballot.compact h3 {
+    display: none;
+  }
+  .ballot.compact .motions {
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .ballot.compact .motion {
+    padding: 4px 7px;
+    gap: 6px;
+  }
+  .ballot.compact .txt b {
+    font-size: 0.92em;
   }
   @media (prefers-reduced-motion: reduce) {
     .bar i {

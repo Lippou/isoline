@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { app, go } from '../stores/app.svelte';
   import { hud, openPaper } from '../stores/game.svelte';
-  import { columnPlace } from '../stores/windows.svelte';
+  import { layout, NUDGE_ROOM } from '../stores/layout.svelte';
   import { t, i18n } from '../i18n/i18n.svelte';
   import { settings } from '../stores/settings.svelte';
   import { GameController } from '../game/controller';
@@ -34,15 +34,22 @@
   import PhotoBar from '../hud/PhotoBar.svelte';
   import InvasionFlash from '../hud/InvasionFlash.svelte';
   import NukeSender from '../hud/NukeSender.svelte';
+  import ReadingStrip from '../hud/ReadingStrip.svelte';
   import Icon from '../icons/Icon.svelte';
   import '../hud/paper.css';
   import '../hud/hud.css';
 
   let host: HTMLDivElement;
   let ctl: GameController | null = $state(null);
-  // The left column moves beside the windows standing at the left edge (Panels.svelte),
-  // so nuclear alerts, the council vote and the news stay readable instead of hiding under them.
-  const col = $derived(columnPlace());
+  // The zones (stores/zones.ts): the columns, the strips and the stage stand where the
+  // layout says, through the CSS variables set on the screen's root.
+  const reading = $derived(layout.reading);
+  const live = $derived(!hud.spectating && hud.replay === null);
+  // Room kept over the build bar for the "research stopped" reminder, all the time research
+  // exists, so that the stage (and the windows in it) never jump when it shows.
+  $effect(() => {
+    layout.nudge = ctl && hud.ready && live && ctl.session.config.features.tech ? NUDGE_ROOM : 0;
+  });
 
   // Settings changed during the game reach the map at once (they were only read when it
   // started): country names in the new language, colour vision, contrast, motion, frame cap.
@@ -95,7 +102,14 @@
 <svelte:window onresize={syncResolution} />
 
 <!-- The whole HUD is printed on the Courier's paper (hud/hud.css). -->
-<div class="game np-hud" class:photo={hud.photo} data-testid="game-screen">
+<div
+  class="game np-hud"
+  class:photo={hud.photo}
+  class:reading
+  data-layout={layout.normal.cls}
+  style={layout.vars}
+  data-testid="game-screen"
+>
   <div class="canvas-host" bind:this={host}></div>
   {#if hud.loading}
     <div class="loading fade-in">
@@ -108,36 +122,45 @@
   {#if ctl && hud.ready}
     <!-- Under the panels' cards and windows, over the map and the HUD's edges. -->
     {#if !hud.photo}<InvasionFlash /><NukeSender {ctl} />{/if}
-    <TopBar {ctl} />
-    {#if !hud.spectating && hud.replay === null}
-      <ResourcePanel {ctl} />
-      <BuildBar {ctl} />
-    {/if}
-    <Minimap {ctl} />
-    <Leaderboard {ctl} />
+    <!-- Reading mode folds these away (they keep their state): the reading strip shows
+         what matters of them. -->
+    <div class="normal">
+      <TopBar {ctl} />
+      {#if live}
+        <ResourcePanel {ctl} />
+        <BuildBar {ctl} />
+      {/if}
+      <Minimap {ctl} />
+      <Leaderboard {ctl} />
+    </div>
     <HoverCard />
-    <!-- Left column, beside the dock: council vote, nuclear alerts, the lost-capital dispatch, the news (special edition, flash) and alliances. -->
-    <div class="tl" style:left="{col.left}px" style:max-width="{col.maxW}px">
-      <Requests {ctl} />
-      <NukeAlerts {ctl} />
-      <CapitalCard {ctl} />
-      <BreakingNews {ctl} />
-      <EventCard {ctl} />
-      {#if !hud.spectating && !col.covered}<Alliances {ctl} />{/if}
-    </div>
-    <PactBanner {ctl} />
-    <!-- Right column, between the leaderboard and the minimap: the launch panel while
-         aiming, then the dispatches (notifications) and, nearest the minimap, the
-         alliance offers. The dispatches give way first when the room runs short. -->
-    <div class="tr">
-      {#if !hud.spectating && hud.replay === null}<NukePanel {ctl} />{/if}
-      <Toasts {ctl} />
-      {#if !hud.spectating && hud.replay === null}<AllyRequests {ctl} />{/if}
-    </div>
+    {#if reading}
+      <ReadingStrip {ctl} />
+    {:else}
+      <!-- The news column, beside the dock: nuclear alerts, the council vote, the lost-capital
+           dispatch, the news (special edition, flash) and alliances. Short of height, the
+           least important go on one line, then become chips (zones.ts). -->
+      <div class="tl">
+        <Requests {ctl} />
+        <NukeAlerts {ctl} />
+        <CapitalCard {ctl} />
+        <BreakingNews {ctl} />
+        <EventCard {ctl} />
+        {#if !hud.spectating}<Alliances {ctl} />{/if}
+      </div>
+      <PactBanner {ctl} />
+      <!-- The right column, between the leaderboard and the minimap: the launch panel while
+           aiming, then the dispatches and, nearest the minimap, the alliance offers. -->
+      <div class="tr">
+        {#if live}<NukePanel {ctl} />{/if}
+        <Toasts {ctl} />
+        {#if live}<AllyRequests {ctl} />{/if}
+      </div>
+    {/if}
     <Panels {ctl} />
     <RadialMenu {ctl} />
     <Dialogue {ctl} />
-    {#if hud.replay}<ReplayBar {ctl} />{/if}
+    {#if hud.replay && !reading}<ReplayBar {ctl} />{/if}
     {#if hud.panels.menu}<GameMenu {ctl} />{/if}
     <!-- The end of the game: the final edition of the Courier (front page or mission
          communiqué, then the results); folded, a button opens it again. -->
@@ -154,50 +177,57 @@
 </div>
 
 <style>
-  /* Never taller than the room above the resources panel: it scrolls instead. */
+  /* The news column: its zone (zones.ts), its pieces whole or on one line, chips at its foot.
+     Scrolling is a last resort (urgent pieces alone taller than the room). */
   .tl {
     position: absolute;
-    left: 84px;
-    top: 64px;
-    max-height: calc(100vh - 64px - var(--hud-res-h, 270px) - 24px);
+    left: var(--zone-left-x, 94px);
+    top: var(--zone-left-y, 12px);
+    width: var(--card-w, 300px);
+    max-height: var(--zone-left-h, 60vh);
     overflow-y: auto;
     /* An explanation (tooltip) wider than the column never adds a scrollbar under the pointer. */
     overflow-x: hidden;
-    scrollbar-width: none;
-    display: grid;
-    align-content: start;
+    scrollbar-width: thin;
+    scrollbar-color: var(--np-rule-2) transparent;
+    display: flex;
+    flex-flow: row wrap;
+    align-content: flex-start;
     gap: 8px;
-    justify-items: start;
     z-index: 27;
     pointer-events: none;
   }
   .tl > :global(*) {
     pointer-events: auto;
+    flex: 0 0 100%;
+    min-width: 0;
   }
-  /* Short windows: the column scrolls more often, so its scrollbar shows. */
-  @media (max-height: 900px) {
-    .tl {
-      scrollbar-width: thin;
-      scrollbar-color: var(--np-rule-2) transparent;
-    }
+  /* Folded pieces: chips side by side at the column's foot. */
+  .tl > :global([data-zone-chip]) {
+    flex: none;
+    order: 1;
   }
-  /* Right column: under the leaderboard, down to the minimap; its pieces sit at the foot. */
+  /* The right column: under the leaderboard, down to the minimap; its pieces sit at the foot. */
   .tr {
     position: absolute;
-    right: 12px;
-    top: calc(12px + var(--hud-lb-h, 240px) + 12px);
-    bottom: calc(var(--hud-mini-h, 200px) + 24px);
+    left: var(--zone-right-x, auto);
+    width: var(--right-w, 310px);
+    top: calc(12px + var(--hud-lb-h, 240px) + 10px);
+    bottom: calc(var(--hud-mini-h, 200px) + 22px);
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: stretch;
     justify-content: flex-end;
     gap: 8px;
     z-index: 29;
     pointer-events: none;
   }
-  .tr > :global(:is(.launch, .dispatches, .offers)) {
+  .tr > :global(:is(.launch, .dispatches, .offers, [data-zone-chip])) {
     flex: none;
     pointer-events: auto;
+  }
+  .tr > :global([data-zone-chip]) {
+    align-self: flex-end;
   }
   /* The launch panel at the head of the column, the rest at its foot. */
   .tr > :global(.launch) {
@@ -207,6 +237,13 @@
   .tr > :global(.dispatches) {
     flex: 0 1 auto;
     min-height: 0;
+  }
+  /* Reading mode: the pieces of the normal layout step aside (and keep their state). */
+  .normal {
+    display: contents;
+  }
+  .game.reading .normal {
+    display: none;
   }
   /* The folded paper: a newsprint tab above the build bar, clear of the toasts. */
   .reopen {
@@ -233,29 +270,16 @@
     background: var(--np-paper-2);
   }
   /*
-   * The HUD's layout tokens: the widths of the resources panel (bottom left) and of the
-   * minimap (bottom right), which the build bar is centred between. The interface scale
-   * (page zoom) has already fitted the window to about 1600 × 900; what is still narrow
-   * gets the compact sizes (see also the media queries of each panel).
+   * The HUD's layout tokens (--res-w, --mini-w, --card-w, --right-w, the zones' --zone-*)
+   * come from the layout (stores/layout.svelte.ts), set on this root: the interface scale
+   * (page zoom) has already fitted the window, the layout class (wide, standard, compact)
+   * chooses the columns' widths.
    */
   .game {
     position: fixed;
     inset: 0;
     overflow: hidden;
     background: var(--abyss);
-    --res-w: 290px;
-    --mini-w: 270px;
-  }
-  @media (max-width: 1600px) {
-    .game {
-      --res-w: 262px;
-      --mini-w: 236px;
-    }
-  }
-  @media (max-width: 1360px), (max-height: 760px) {
-    .game {
-      --mini-w: 200px;
-    }
   }
   .canvas-host {
     position: absolute;

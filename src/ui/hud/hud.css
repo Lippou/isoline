@@ -212,3 +212,50 @@
     transition: none;
   }
 }
+
+/*
+ * A folded piece of a column (zones.ts): a chip of paper with the piece's mark, its name
+ * and a figure (time left, a count). A click unfolds the piece, the others giving way.
+ */
+.np-hud .zchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--np-edge);
+  border-left: 3px solid var(--np-ink);
+  border-radius: 1px;
+  background: var(--np-paper);
+  box-shadow: 0 1px 3px rgba(3, 10, 16, 0.25);
+  font-family: var(--text);
+  font-size: 0.8em;
+  color: var(--np-ink);
+  white-space: nowrap;
+  cursor: var(--cursor-pointer, pointer);
+}
+.np-hud .zchip b {
+  font-family: var(--title);
+  font-weight: 600;
+  font-size: 1.05em;
+}
+.np-hud .zchip .mono {
+  font-weight: 600;
+  color: var(--np-ink-2);
+}
+.np-hud .zchip:hover,
+.np-hud .zchip:focus-visible {
+  background: var(--np-card);
+}
+.np-hud .zchip.good {
+  border-left-color: var(--np-good);
+}
+.np-hud .zchip.good > svg {
+  color: var(--np-good);
+}
+.np-hud .zchip.spot {
+  border-left-color: var(--np-spot);
+}
+.np-hud .zchip.spot > svg {
+  color: var(--np-spot);
+}

@@ -7,12 +7,24 @@
   import type { GameController } from '../game/controller';
   import Icon from '../icons/Icon.svelte';
   import { hudSize } from '../stores/hudBox.svelte';
+  import { layout, zonePiece } from '../stores/layout.svelte';
 
+  // The head of the right column (zones.ts). Short of room in it, the table shows the top 5
+  // (and us; a button unfolds the top 10), then folds to its title (a click unfolds it).
   let { ctl }: { ctl: GameController } = $props();
   let open = $state(true);
   let all = $state(false);
-  /** Short windows show the top 5 (and us): this unfolds the top 10. */
-  let more = $state(false);
+  const level = $derived(layout.levelOf('leaderboard'));
+  /** The player's choice, as far as the column's room allows (or asked for: pinned). */
+  const shown = $derived(open && level !== 'chip');
+  const more = $derived(level === 'full');
+  function toggleOpen(): void {
+    if (open && level === 'chip') layout.pin('leaderboard');
+    else {
+      open = !open;
+      if (!open) layout.pin('leaderboard', false);
+    }
+  }
   const rows = $derived.by(() => {
     const list = hud.players
       .filter((p) => p.alive && p.tiles > 0 && (all || p.kind !== 'tribe'))
@@ -26,17 +38,24 @@
   });
 </script>
 
-<aside class="lb panel" class:closed={!open} class:more data-testid="leaderboard" use:hudSize={'lb'}>
+<aside
+  class="lb panel"
+  class:closed={!shown}
+  class:more
+  data-testid="leaderboard"
+  use:hudSize={'lb'}
+  use:zonePiece={{ id: 'leaderboard', level }}
+>
   <header>
-    <button class="title" onclick={() => (open = !open)}
-      ><Icon name={open ? 'chevronDown' : 'chevronRight'} size={15} />{t('hud.leaderboard')}</button
+    <button class="title" onclick={toggleOpen} aria-expanded={shown}
+      ><Icon name={shown ? 'chevronDown' : 'chevronRight'} size={15} />{t('hud.leaderboard')}</button
     >
-    {#if open}
+    {#if shown}
       <span class="tools">
-        {#if rows.length > 5}<button
+        {#if rows.length > 5 && (level === 'compact' || layout.pieces.leaderboard?.pinned)}<button
             class="more-btn"
             aria-pressed={more}
-            onclick={() => (more = !more)}
+            onclick={() => layout.pin('leaderboard', !more)}
             data-testid="leaderboard-more"
             ><Icon name={more ? 'chevronDown' : 'chevronRight'} size={12} />{t('hud.lbTop', {
               n: more ? 5 : 10,
@@ -46,7 +65,7 @@
       </span>
     {/if}
   </header>
-  {#if open}
+  {#if shown}
     <div class="cols">
       <span>#</span><span>{t('hud.colCountry')}</span><span class="r">{t('hud.colLand')}</span><span class="r"
         >{t('hud.colTroops')}</span
@@ -83,24 +102,19 @@
     position: absolute;
     right: 12px;
     top: 12px;
-    width: 310px;
+    width: var(--right-w, 310px);
     padding: 0;
     z-index: 6;
     font-size: 0.86em;
-  }
-  @media (max-width: 1400px) {
-    .lb {
-      width: 270px;
-    }
   }
   .tools {
     display: flex;
     align-items: center;
     gap: 10px;
   }
-  /* Short windows: the top 5 (and our row), the top 10 on demand. */
+  /* Short of room: the top 5 (and our row), the top 10 on demand. */
   .more-btn {
-    display: none;
+    display: inline-flex;
     align-items: center;
     gap: 3px;
     padding: 1px 6px;
@@ -115,13 +129,8 @@
     color: var(--np-ink);
     border-color: var(--np-ink);
   }
-  @media (max-height: 940px) {
-    .more-btn {
-      display: inline-flex;
-    }
-    .lb:not(.more) li.extra:not(.me) {
-      display: none;
-    }
+  .lb:not(.more) li.extra:not(.me) {
+    display: none;
   }
   .lb.closed {
     width: auto;

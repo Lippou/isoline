@@ -1,6 +1,7 @@
 <script lang="ts">
   // Current alliances, always in view: who, how long is left (a draining bar), and
-  // the renewal button once the last 30 seconds have started.
+  // the renewal button once the last 30 seconds have started. Short of room in the news
+  // column (zones.ts) the list folds to its header, then to a chip (a click unfolds it).
   import { hud } from '../stores/game.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
   import { flagUrl } from '../../render/flags';
@@ -8,6 +9,7 @@
   import Icon from '../icons/Icon.svelte';
   import { audio } from '../../audio/audio';
   import type { GameController } from '../game/controller';
+  import { layout, zonePiece } from '../stores/layout.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   const s = ctl.session;
@@ -19,17 +21,44 @@
       .filter((r) => r.p && r.p.alive)
       .sort((a, b) => a.expiresIn - b.expiresIn),
   );
+  const level = $derived(layout.levelOf('alliances'));
+  /** Unfolded by the player, the list asks the column for its room. */
+  function toggle(): void {
+    if (level !== 'full') {
+      open = true;
+      layout.pin('alliances');
+    } else {
+      open = !open;
+      layout.pin('alliances', false);
+    }
+  }
 </script>
 
-{#if rows.length}
-  <section class="allies newsprint" data-testid="alliances" aria-label={t('alliances.title')}>
-    <button class="head" onclick={() => (open = !open)} aria-expanded={open}>
+{#if rows.length && level === 'chip'}
+  <button
+    class="zchip newsprint good"
+    data-zone-chip
+    data-testid="alliances"
+    onclick={toggle}
+    aria-label="{t('alliances.title')} — {t('zone.unfold')}"
+    use:zonePiece={{ id: 'alliances', level }}
+    ><Icon name="alliance" size={13} /><b>{t('alliances.title')}</b><span class="mono">{rows.length}</span
+    ></button
+  >
+{:else if rows.length}
+  <section
+    class="allies newsprint"
+    data-testid="alliances"
+    aria-label={t('alliances.title')}
+    use:zonePiece={{ id: 'alliances', level }}
+  >
+    <button class="head" onclick={toggle} aria-expanded={open && level === 'full'}>
       <Icon name="alliance" size={15} />
       <b>{t('alliances.title')}</b>
       <span class="n mono">{rows.length}</span>
-      <Icon name={open ? 'chevronDown' : 'chevronRight'} size={14} />
+      <Icon name={open && level === 'full' ? 'chevronDown' : 'chevronRight'} size={14} />
     </button>
-    {#if open}
+    {#if open && level === 'full'}
       <ul>
         {#each rows as r (r.id)}
           {@const renew = r.expiresIn <= ALLIANCE_RENEW_WINDOW}
@@ -66,7 +95,7 @@
 <style>
   /* A card of the column: the alliance's green rule over it, each pact with its time draining. */
   .allies {
-    width: 268px;
+    width: 100%;
     padding: 2px 0 8px;
     border: 1px solid var(--np-edge);
     border-top: 3px solid var(--np-good);

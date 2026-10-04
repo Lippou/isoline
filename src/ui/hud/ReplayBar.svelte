@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { hudSize } from '../stores/hudBox.svelte';
   import Icon from '../icons/Icon.svelte';
   import { hud, openPaper, toast } from '../stores/game.svelte';
   import { t, clock, i18n, short } from '../i18n/i18n.svelte';
@@ -58,7 +59,7 @@
   }
 </script>
 
-<div class="rb glass" data-testid="replay-bar">
+<div class="rb glass" data-testid="replay-bar" use:hudSize={'replay'}>
   <button
     class="btn"
     onclick={() => {
@@ -162,13 +163,13 @@
 </div>
 
 <style>
-  /* The replay's bar: a strip of paper at the foot of the map. */
+  /* The replay's bar: a strip of paper at the foot of the map (the bottom strip, zones.ts). */
   .rb {
     position: absolute;
-    left: 50%;
+    left: var(--zone-band-c, 50%);
     bottom: 14px;
     transform: translateX(-50%);
-    width: min(860px, 80vw);
+    width: min(860px, var(--zone-band-w, 80vw));
     display: flex;
     align-items: center;
     gap: 0.6rem;

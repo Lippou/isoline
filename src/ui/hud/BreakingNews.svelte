@@ -2,9 +2,11 @@
   // Special edition: a country has fallen. A newspaper clipping unfolds under the
   // dock for a few seconds, then folds back into the journal it comes from. One at
   // a time: countries falling meanwhile join it as a stop-press line. Never modal.
+  // Short of room in the news column (zones.ts): the kicker and the headline only, then a
+  // chip (a click opens the journal, as the clipping does). In reading mode it waits.
   import { cubicIn, cubicOut } from 'svelte/easing';
   import { hud, openPanel } from '../stores/game.svelte';
-  import { columnPlace } from '../stores/windows.svelte';
+  import { layout, zonePiece } from '../stores/layout.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
   import { settings } from '../stores/settings.svelte';
   import { flagUrl } from '../../render/flags';
@@ -20,8 +22,9 @@
 
   const name = (id: number) => ctl.session.state.name(id, i18n.lang);
   const b = $derived(hud.breaking);
-  /** Under a window: the clipping waits (its timer stops) until it can be read. */
-  const covered = $derived(columnPlace().covered);
+  /** Reading mode: the column is folded, the clipping waits (its timer stops) until it can be read. */
+  const covered = $derived(layout.reading);
+  const level = $derived(layout.levelOf('breaking'));
   let hovered = $state(false);
 
   // Display time: paused under the pointer or under a drawer, longer with stop-press lines.
@@ -119,43 +122,75 @@
 
 <p class="sr-only" aria-live="polite">{said}</p>
 {#if b && head && !covered}
-  <div class="room" in:room={{ duration: 560 }} out:roomOut>
-    <button
-      class="clip newsprint"
-      data-testid="breaking-news"
-      in:unfold
-      out:foldAway
-      onclick={() => openPanel('log')}
-      onmouseenter={() => (hovered = true)}
-      onmouseleave={() => (hovered = false)}
-      onfocus={() => (hovered = true)}
-      onblur={() => (hovered = false)}
-    >
-      <span class="kicker"><span>{t('news.breaking')}</span><time>{clock(b.fall.at)}</time></span>
-      <span class="row">
-        {#if fallen}<img src={flagUrl(fallen, 96)} alt="" />{/if}
-        <span class="head">
-          <strong>{head.title}</strong>
-          <em>{head.deck}</em>
+  <div
+    class="room"
+    class:chip={level === 'chip'}
+    data-zone-chip={level === 'chip' || undefined}
+    in:room={{ duration: 560 }}
+    out:roomOut
+  >
+    {#if level === 'chip'}
+      <button
+        class="zchip spot newsprint"
+        data-testid="breaking-news"
+        onclick={() => openPanel('log')}
+        title={head.title}
+        use:zonePiece={{ id: 'breaking', level }}
+        ><b>{t('news.breaking')}</b><span class="mono">{clock(b.fall.at)}</span></button
+      >
+    {:else}
+      <button
+        class="clip newsprint"
+        class:compact={level === 'compact'}
+        use:zonePiece={{ id: 'breaking', level }}
+        data-testid="breaking-news"
+        in:unfold
+        out:foldAway
+        onclick={() => openPanel('log')}
+        onmouseenter={() => (hovered = true)}
+        onmouseleave={() => (hovered = false)}
+        onfocus={() => (hovered = true)}
+        onblur={() => (hovered = false)}
+      >
+        <span class="kicker"><span>{t('news.breaking')}</span><time>{clock(b.fall.at)}</time></span>
+        <span class="row">
+          {#if fallen}<img src={flagUrl(fallen, 96)} alt="" />{/if}
+          <span class="head">
+            <strong>{head.title}</strong>
+            <em>{head.deck}</em>
+          </span>
         </span>
-      </span>
-      <span class="body">{fallBody(b.fall)}</span>
-      {#if stop}<span class="stop">{stop}</span>{/if}
-      <span class="more">{t('news.readMore')}</span>
-    </button>
+        {#if level === 'full'}
+          <span class="body">{fallBody(b.fall)}</span>
+          {#if stop}<span class="stop">{stop}</span>{/if}
+          <span class="more">{t('news.readMore')}</span>
+        {/if}
+      </button>
+    {/if}
   </div>
 {/if}
 
 <style>
   .room {
-    width: 300px;
+    width: 100%;
+  }
+  .room.chip {
+    width: auto;
+  }
+  /* Short of room: the kicker and the headline. */
+  .clip.compact {
+    gap: 5px;
+    padding-bottom: 8px;
+  }
+  .clip.compact em {
+    display: none;
   }
   /* A clipping cut from the paper: square edges, a crease line, lifted off the map. */
   .clip {
     appearance: none;
     display: grid;
     gap: 8px;
-    width: 300px;
+    width: 100%;
     padding: 0 14px 11px;
     border: 0;
     border-radius: 1px;

@@ -1,8 +1,10 @@
 <script lang="ts">
   // News flash: the world event under way, in plain words with its figures, the time
   // left (a draining bar) and when it began; then the World Council's decisions in force.
+  // Short of room in the news column (zones.ts): folded to its one-line strip, then a chip
+  // (a click unfolds it, the other pieces giving way). In reading mode it waits.
   import { hud, openPanel } from '../stores/game.svelte';
-  import { columnPlace } from '../stores/windows.svelte';
+  import { layout, zonePiece } from '../stores/layout.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
   import { flagUrl } from '../../render/flags';
   import Icon from '../icons/Icon.svelte';
@@ -68,9 +70,10 @@
   /** The vote itself is in the requests (with its buttons); spectators read it here. */
   const voting = $derived(w?.council && !hud.local?.alive ? w.council : null);
   const next = $derived(w && w.councilNext > now ? w.councilNext - now : -1);
-  /** A window covers the column (and would let the paper show through): stay out of its way. */
-  const covered = $derived(columnPlace().covered);
+  /** Reading mode: the column is folded. */
+  const covered = $derived(layout.reading);
   const visible = $derived(!covered && (!!ev || council.length > 0 || !!voting));
+  const level = $derived(layout.levelOf('flash'));
 
   // A new story is printed in full for half a minute, then folds to a one-line strip
   // (it also folds while a special edition is on screen), unless the player chose.
@@ -87,15 +90,40 @@
     const timer = setTimeout(() => (fresh = false), FRESH_MS);
     return () => clearTimeout(timer);
   });
-  const open = $derived(manual ?? (fresh && !hud.breaking));
+  const open = $derived(level === 'full' && (manual ?? (fresh && !hud.breaking)));
+  /** The player unfolds it: the column makes room (the others give way). */
+  function toggle(): void {
+    if (open) {
+      manual = false;
+      layout.pin('flash', false);
+    } else {
+      manual = true;
+      if (level !== 'full') layout.pin('flash');
+    }
+  }
   const flagOf = (id: number) => hud.players.find((p) => p.id === id);
 </script>
 
-{#if visible}
-  <section class="flash newsprint rise-in" data-testid="news-flash" aria-label={t('news.flash.title')}>
+{#if visible && level === 'chip'}
+  <button
+    class="zchip spot newsprint"
+    data-zone-chip
+    data-testid="news-flash"
+    onclick={toggle}
+    aria-label="{t('news.flash.title')} — {t('zone.unfold')}"
+    use:zonePiece={{ id: 'flash', level }}
+    ><b>{t('news.flash.title')}</b>{#if ev}<span class="mono">{clock(ev.left)}</span>{/if}</button
+  >
+{:else if visible}
+  <section
+    class="flash newsprint rise-in"
+    data-testid="news-flash"
+    aria-label={t('news.flash.title')}
+    use:zonePiece={{ id: 'flash', level }}
+  >
     <button
       class="top"
-      onclick={() => (manual = !open)}
+      onclick={toggle}
       aria-expanded={open}
       aria-label={open ? t('news.flash.collapse') : t('news.flash.expand')}
     >
@@ -162,7 +190,7 @@
 
 <style>
   .flash {
-    width: 300px;
+    width: 100%;
     padding: 0 14px 10px;
     border-radius: 1px;
     font-family: var(--np-serif);

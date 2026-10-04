@@ -5,11 +5,14 @@
   // rule says what it is (ink: news, green: good, brass: a warning, magenta: danger).
   // A slip that points at a place centres the map on it; one that does not is put away
   // by a click. They stay while the pointer is on them, then leave after a few seconds.
+  // They are the column's least important piece (zones.ts): short of room they go on one
+  // line each, then fold into a chip (the count; a click unfolds them).
   import { flip } from 'svelte/animate';
   import { fly, fade } from 'svelte/transition';
   import { hud, holdToasts, dropToast, type Toast } from '../stores/game.svelte';
   import { t, clock } from '../i18n/i18n.svelte';
   import { settings } from '../stores/settings.svelte';
+  import { layout, zonePiece } from '../stores/layout.svelte';
   import Icon from '../icons/Icon.svelte';
   import type { GameController } from '../game/controller';
   let { ctl }: { ctl: GameController } = $props();
@@ -39,6 +42,16 @@
   }
   $effect(() => () => holdToasts(false));
 
+  const level = $derived(layout.levelOf('dispatches'));
+  /** The chip's colour: the gravest of the folded slips. */
+  const gravest = $derived(
+    hud.toasts.some((d) => d.level === 'danger')
+      ? 'danger'
+      : hud.toasts.some((d) => d.level === 'warn')
+        ? 'warn'
+        : 'info',
+  );
+
   // Short of room, the oldest slips leave the clip at the top: they fade out there.
   let tray: HTMLDivElement | undefined = $state();
   let clipped = $state(false);
@@ -63,6 +76,9 @@
 <div
   class="dispatches"
   class:clipped
+  class:compact={level === 'compact'}
+  data-zone-chip={level === 'chip' || undefined}
+  use:zonePiece={{ id: 'dispatches', on: hud.toasts.length > 0, level }}
   bind:this={tray}
   aria-live="polite"
   aria-label={t('dispatch.title')}
@@ -71,13 +87,26 @@
   onpointerenter={() => holdToasts(true)}
   onpointerleave={() => holdToasts(false)}
 >
-  {#each hud.toasts as d (d.id)}
+  {#if level === 'chip' && hud.toasts.length}
+    <button
+      class="chip-n {gravest}"
+      onclick={() => layout.pin('dispatches')}
+      title={hud.toasts.at(-1)?.text}
+      aria-label={t('zone.dispatchesShow', { n: hud.toasts.length })}
+      data-testid="dispatch-chip"
+      ><Icon name="news" size={13} />{hud.toasts.length === 1
+        ? t('zone.dispatchesOne')
+        : t('zone.dispatches', { n: hud.toasts.length })}</button
+    >
+  {/if}
+  {#each level === 'chip' ? [] : hud.toasts as d (d.id)}
     {@const at = stamp(d)}
     <button
       class="slip {d.level}"
       class:link={d.tile !== undefined}
       onclick={() => open(d)}
-      title={d.tile !== undefined ? t('dispatch.show') : t('dispatch.dismiss')}
+      title={(level === 'compact' ? `${d.text} — ` : '') +
+        (d.tile !== undefined ? t('dispatch.show') : t('dispatch.dismiss'))}
       data-testid="dispatch"
       animate:flip={{ duration: still() ? 0 : 200 }}
       in:enter
@@ -91,19 +120,10 @@
   {/each}
 </div>
 
-<!-- The advisor's words while she speaks (campaign): a caption under the top bar. -->
-{#if hud.subtitles.length}
-  <div class="subtitles" aria-hidden="true">
-    {#each hud.subtitles as s (s.id)}
-      <p class="subtitle fade-in">{s.text}</p>
-    {/each}
-  </div>
-{/if}
-
 <style>
   /* In the right column: the slips sit at its foot; when room runs short the oldest go first. */
   .dispatches {
-    width: 300px;
+    width: 100%;
     min-height: 0;
     display: flex;
     flex-direction: column;
@@ -178,33 +198,49 @@
     display: inline-flex;
     color: var(--np-ink-3);
   }
+  /* Short of room: one line each (the whole text in the tooltip). */
+  .compact .slip {
+    padding: 4px 9px 4px 8px;
+  }
+  .compact .txt {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Folded: the count of dispatches, the gravest one's rule. */
+  .dispatches[data-zone-chip] {
+    width: auto;
+    overflow: visible;
+  }
+  .chip-n {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 4px 8px;
+    border: 1px solid var(--np-edge);
+    border-left: 3px solid var(--np-ink);
+    border-radius: 1px;
+    background: var(--np-paper);
+    box-shadow: 0 1px 3px rgba(3, 10, 16, 0.25);
+    font-family: var(--text);
+    font-size: 0.8em;
+    font-weight: 600;
+    color: var(--np-ink);
+    cursor: var(--cursor-pointer, pointer);
+  }
+  .chip-n:hover,
+  .chip-n:focus-visible {
+    background: var(--np-card);
+  }
+  .chip-n.warn {
+    border-left-color: var(--np-gold);
+  }
+  .chip-n.danger {
+    border-left-color: var(--np-spot);
+    color: var(--np-spot);
+  }
   .slip.link:hover .go,
   .slip.link:focus-visible .go {
     color: var(--np-ink);
-  }
-  .subtitles {
-    position: fixed;
-    top: 86px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 30;
-    display: grid;
-    justify-items: center;
-    gap: 4px;
-    width: min(560px, 60vw);
-    pointer-events: none;
-  }
-  .subtitle {
-    margin: 0;
-    padding: 3px 10px;
-    border: 1px solid var(--np-edge);
-    border-radius: 1px;
-    background: var(--np-paper);
-    box-shadow: 0 2px 8px rgba(3, 10, 16, 0.25);
-    font-family: var(--title);
-    font-style: italic;
-    font-size: 0.9em;
-    color: var(--np-ink);
-    text-align: center;
   }
 </style>

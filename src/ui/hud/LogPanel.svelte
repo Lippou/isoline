@@ -6,6 +6,7 @@
   import { flagUrl } from '../../render/flags';
   import Icon from '../icons/Icon.svelte';
   import PressPhoto from './PressPhoto.svelte';
+  import WindowMax from './WindowMax.svelte';
   import type { GameController } from '../game/controller';
   import { inPaper, minuteLabel, storyOf, type Story } from './news';
 
@@ -69,6 +70,7 @@
     <button class="x" onclick={() => (hud.panels.log = false)} aria-label={t('common.close')}
       ><Icon name="close" size={16} /></button
     >
+    <WindowMax />
     <h2>{t('news.masthead')}</h2>
     <p class="dateline">
       <span>{mapName}</span>
@@ -179,7 +181,7 @@
     line-height: 1;
     letter-spacing: -0.012em;
     text-align: center;
-    padding-bottom: 7px;
+    padding: 0 60px 7px;
     border-bottom: 3px solid var(--np-ink);
   }
   .dateline {
