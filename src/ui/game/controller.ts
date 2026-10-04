@@ -2,7 +2,16 @@
 import { Session, loadMapSource } from '../../engine/session';
 import { GameRenderer } from '../../render/renderer';
 import { InputController, BUILD_KEYS, NUKE_KEYS, guardBetrayal } from './input';
-import { hud, resetHud, toast, subtitle, reportFall, showPact, openPanel } from '../stores/game.svelte';
+import {
+  hud,
+  resetHud,
+  toast,
+  subtitle,
+  reportFall,
+  showPact,
+  openPanel,
+  holdToasts,
+} from '../stores/game.svelte';
 import { closeTopWindow } from '../stores/windows.svelte';
 import { settings, saveSettings } from '../stores/settings.svelte';
 import { WeatherNews } from './weatherNews';
@@ -33,6 +42,8 @@ import { IS_LAND } from '../../core/map/terrain';
 import { UI } from '../../render/colors';
 import type { MissionResult } from './missionResult';
 import { WORLD_EVENT_TICKS, type WorldEventId } from '../../core/rules/features';
+import { emulateScreen } from '../stores/viewport.svelte';
+import type { WinId } from '../stores/windows.svelte';
 
 const PLAYER_PARAMS = new Set(['player', 'by', 'from', 'with', 'traitor', 'victim', 'target']);
 
@@ -228,6 +239,8 @@ export class GameController {
             { id: -hud.nukeAlerts.length - 1, by, kind, impact: hud.tick + secs * 10, tx, ty, sx, sy },
           ];
         },
+        /** QA: the nuclear alerts forgotten (the missiles stay where they are). */
+        clearNukeAlerts: () => (hud.nukeAlerts = []),
         /** QA: print a world event (the Flash info card, the journal's article) right away. */
         worldEvent: (id: string) => {
           this.qaEvent = { id, until: hud.tick + (WORLD_EVENT_TICKS[id as WorldEventId] ?? 1200) };
@@ -276,6 +289,12 @@ export class GameController {
         weather: () => this.session.state.world?.weather ?? [],
         routes: () => this.session.state.routes,
         /** QA: back to the menus with a confirmation open (the dialog in the menus' theme). */
+        /** QA: lay the interface out as on a screen of w × h pixels (0: the real window). */
+        screen: (w = 0, h = 0, dpr = 1) => emulateScreen(w, h, dpr),
+        /** QA: opens or closes a window of the dock (diplomacy, trade, tech, stats, log, chat). */
+        window: (id: WinId, on = true) => (hud.panels[id] = on),
+        /** QA: the dispatches stay while true (as under the pointer). */
+        holdToasts: (on = true) => holdToasts(on),
         /** QA: a notification (the dispatches tray). */
         toast: (text: string, level: 'info' | 'good' | 'warn' | 'danger' = 'info', tile?: number) =>
           toast(text, level, tile),

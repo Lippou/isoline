@@ -24,6 +24,17 @@ let baseDpr = 1;
 
 const currentZoom = () => bridge.zoom?.get() ?? 1;
 
+/**
+ * QA (?automation): the interface laid out as on a screen of `w` × `h` pixels at device
+ * pixel ratio `dpr`, shown scaled down in the real window (whose proportions the script
+ * matches). Lets a 1920 × 1080 desk check a 4K or ultrawide layout. Null: the real window.
+ */
+let emulated: { w: number; h: number; dpr: number } | null = null;
+export function emulateScreen(w = 0, h = 0, dpr = 1): void {
+  emulated = w > 0 && h > 0 ? { w, h, dpr: dpr > 0 ? dpr : 1 } : null;
+  applyUiScale();
+}
+
 /** Reads the window's size at zoom 1 (a pixel or two of rounding is ignored). */
 function measure(): void {
   const z = currentZoom();
@@ -39,9 +50,13 @@ function measure(): void {
 /** Computes the scale and zooms the page to it (after a resize, a setting, a screen change). */
 export function applyUiScale(): void {
   measure();
-  view.auto = autoUiScale(view.w, view.h, baseDpr);
-  view.scale = effectiveUiScale(settings.graphics.uiScale, view.w, view.h, baseDpr);
-  const zoom = zoomFor(view.scale, inGame);
+  const w = emulated?.w ?? view.w;
+  const h = emulated?.h ?? view.h;
+  const dpr = emulated?.dpr ?? baseDpr;
+  view.auto = autoUiScale(w, h, dpr);
+  view.scale = effectiveUiScale(settings.graphics.uiScale, w, h, dpr);
+  // (An emulated screen is shown in the window as it is: scaled by the window's share of it.)
+  const zoom = zoomFor(view.scale, inGame) * (emulated && view.w > 0 ? view.w / emulated.w : 1);
   view.zoom = zoom;
   if (bridge.zoom && Math.abs(currentZoom() - zoom) > 0.001) bridge.zoom.set(zoom);
 }
