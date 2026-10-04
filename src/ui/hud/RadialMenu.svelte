@@ -14,6 +14,7 @@
   import { flagUrl } from '../../render/flags';
   import { formatShort } from '../../render/renderer';
   import { clientSpotError } from '../game/capitalWatch';
+  import { isTeammate } from '../game/team';
 
   let { ctl }: { ctl: GameController } = $props();
   type Item = {
@@ -87,11 +88,80 @@
     });
   }
 
+  /** Gifts of gold and troops (allies and teammates; the sim checks the rest). */
+  function donateItems(target: number): Item[] {
+    const L = hud.local;
+    if (!L || !cfg.allowDonations) return [];
+    return [
+      {
+        id: 'donate',
+        group: 'diplo',
+        label: t('radial.donate'),
+        icon: 'gift',
+        sub: [
+          {
+            id: 'g10',
+            label: t('radial.giveGold', { pct: 10 }),
+            hint: gold(L.gold * 0.1),
+            run: act(() => s.cmd({ t: 'donate', target, gold: L.gold * 0.1, troops: 0 })),
+          },
+          {
+            id: 'g25',
+            label: t('radial.giveGold', { pct: 25 }),
+            hint: gold(L.gold * 0.25),
+            run: act(() => s.cmd({ t: 'donate', target, gold: L.gold * 0.25, troops: 0 })),
+          },
+          {
+            id: 't10',
+            label: t('radial.giveTroops', { pct: 10 }),
+            hint: gold(L.troops * 0.1),
+            run: act(() => s.cmd({ t: 'donate', target, gold: 0, troops: L.troops * 0.1 })),
+          },
+          {
+            id: 't25',
+            label: t('radial.giveTroops', { pct: 25 }),
+            hint: gold(L.troops * 0.25),
+            run: act(() => s.cmd({ t: 'donate', target, gold: 0, troops: L.troops * 0.25 })),
+          },
+        ],
+      },
+    ];
+  }
+
+  /**
+   * A teammate (team games): allies for good. No pact to sign, renew or break, no embargo:
+   * gifts of gold and troops, and the quick messages.
+   */
+  function teamItems(target: number): Item[] {
+    const gifts = donateItems(target).map((it) => ({
+      ...it,
+      group: 'featured',
+      featured: true,
+      desc: t('radial.teamGiftDesc'),
+    }));
+    return [...gifts, quickItem(target)];
+  }
+
+  function quickItem(target: number): Item {
+    return {
+      id: 'quick',
+      group: 'diplo',
+      label: t('radial.quick'),
+      icon: 'chat',
+      sub: [0, 1, 2, 3, 4, 5, 6, 7].map((m) => ({
+        id: `q${m}`,
+        label: t(`quick.${m}`),
+        run: act(() => s.cmd({ t: 'quick', target, msg: m })),
+      })),
+    };
+  }
+
   function diplomacyItems(target: number): Item[] {
     const L = hud.local;
     if (!L || target <= 0 || target === s.viewer) return [];
     const p = s.state.players.get(target);
     if (!p || p.kind === 'tribe') return [];
+    if (isTeammate(s.state.players, s.viewer, target)) return teamItems(target);
     const allied = L.allies.some((a) => a.id === target);
     const embargo = L.embargo.includes(target);
     const items: Item[] = [];
@@ -139,40 +209,7 @@
         danger: true,
         run: attackGuard(target, () => s.cmd({ t: 'allyBreak', target })),
       });
-      if (cfg.allowDonations) {
-        items.push({
-          id: 'donate',
-          group: 'diplo',
-          label: t('radial.donate'),
-          icon: 'gift',
-          sub: [
-            {
-              id: 'g10',
-              label: t('radial.giveGold', { pct: 10 }),
-              hint: gold(L.gold * 0.1),
-              run: act(() => s.cmd({ t: 'donate', target, gold: L.gold * 0.1, troops: 0 })),
-            },
-            {
-              id: 'g25',
-              label: t('radial.giveGold', { pct: 25 }),
-              hint: gold(L.gold * 0.25),
-              run: act(() => s.cmd({ t: 'donate', target, gold: L.gold * 0.25, troops: 0 })),
-            },
-            {
-              id: 't10',
-              label: t('radial.giveTroops', { pct: 10 }),
-              hint: gold(L.troops * 0.1),
-              run: act(() => s.cmd({ t: 'donate', target, gold: 0, troops: L.troops * 0.1 })),
-            },
-            {
-              id: 't25',
-              label: t('radial.giveTroops', { pct: 25 }),
-              hint: gold(L.troops * 0.25),
-              run: act(() => s.cmd({ t: 'donate', target, gold: 0, troops: L.troops * 0.25 })),
-            },
-          ],
-        });
-      }
+      items.push(...donateItems(target));
     }
     items.push({
       id: 'emb',
@@ -182,17 +219,7 @@
       desc: t('radial.embargoDesc'),
       run: act(() => s.cmd({ t: 'embargo', target, on: !embargo })),
     });
-    items.push({
-      id: 'quick',
-      group: 'diplo',
-      label: t('radial.quick'),
-      icon: 'chat',
-      sub: [0, 1, 2, 3, 4, 5, 6, 7].map((m) => ({
-        id: `q${m}`,
-        label: t(`quick.${m}`),
-        run: act(() => s.cmd({ t: 'quick', target, msg: m })),
-      })),
-    });
+    items.push(quickItem(target));
     return items;
   }
 
@@ -265,6 +292,8 @@
   const tile = $derived(hud.radial ? (hud.radial.tile < -1 ? -hud.radial.tile - 2 : hud.radial.tile) : 0);
   const owner = $derived(s.state.owner[tile] ?? 0);
   const ownerView = $derived(owner > 0 ? s.state.players.get(owner) : undefined);
+  /** A teammate's land: never attacked, landed on nor bombed (team games). */
+  const mate = $derived(isTeammate(s.state.players, s.viewer, owner));
   const terrainKey = $derived(TERRAIN[s.state.terrain[tile] ?? 0]?.key ?? 'plains');
 
   const items = $derived.by((): Item[] => {
@@ -291,7 +320,7 @@
       });
       return out;
     }
-    if (land && owner !== s.viewer) {
+    if (land && owner !== s.viewer && !mate) {
       out.push({
         id: 'attack',
         group: 'main',
@@ -411,17 +440,19 @@
           { id: 'f', label: t('unit.fighter.name'), k: 0 },
           { id: 'bo', label: t('unit.bomber.name'), k: 1 },
           { id: 'r', label: t('unit.recon.name'), k: 2 },
-        ].map((x) => ({
-          id: x.id,
-          label: x.label,
-          icon: (['airfield', 'bomb', 'eye'] as IconName[])[x.k]!,
-          desc: t(`unit.${['fighter', 'bomber', 'recon'][x.k]}.desc`),
-          run: act(() => s.cmd({ t: 'air', kind: x.k, tile })),
-        })),
+        ]
+          .filter((x) => !(mate && x.k === 1))
+          .map((x) => ({
+            id: x.id,
+            label: x.label,
+            icon: (['airfield', 'bomb', 'eye'] as IconName[])[x.k]!,
+            desc: t(`unit.${['fighter', 'bomber', 'recon'][x.k]}.desc`),
+            run: act(() => s.cmd({ t: 'air', kind: x.k, tile })),
+          })),
       });
     }
     const nukes = nukeItems(tile, owner === s.viewer);
-    if (nukes.length && land)
+    if (nukes.length && land && !mate)
       out.push({
         id: 'nukes',
         group: 'military',
@@ -494,7 +525,13 @@
           <img class="flag" src={flagUrl(ownerView, 24)} alt="" />
           <div class="who">
             <b>{ownerView.name[i18n.lang] || ownerView.name.en}</b>
-            <small>{t(`terrain.${terrainKey}`)}{owner === s.viewer ? ` · ${t('radial.yours')}` : ''}</small>
+            <small
+              >{t(`terrain.${terrainKey}`)}{owner === s.viewer
+                ? ` · ${t('radial.yours')}`
+                : mate
+                  ? ` · ${t('radial.teammate')}`
+                  : ''}</small
+            >
           </div>
         {:else}
           <Icon name="terrain" size={16} />

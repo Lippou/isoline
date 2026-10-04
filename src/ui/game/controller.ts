@@ -4,6 +4,7 @@ import { GameRenderer } from '../../render/renderer';
 import { InputController, BUILD_KEYS, NUKE_KEYS, guardBetrayal } from './input';
 import { hud, resetHud, toast, subtitle, reportFall, showPact, openPanel } from '../stores/game.svelte';
 import { note } from '../stores/note.svelte';
+import { isTeammate } from './team';
 import { toggleAllFolds, setFold, FOLD_IDS, type FoldId } from '../stores/folds.svelte';
 import { closeTopWindow } from '../stores/windows.svelte';
 import { settings, saveSettings, keyLabel } from '../stores/settings.svelte';
@@ -195,6 +196,9 @@ export class GameController {
               tiles: p.tiles,
               label: p.label,
               kind: p.kind,
+              team: p.team,
+              gold: p.gold,
+              troops: p.troops,
               capital: p.capital,
             })),
           };
@@ -398,13 +402,17 @@ export class GameController {
         this.flipArc();
         break;
       case 'attackHover':
-        if (hover >= 0)
-          guardBetrayal(s, hover, () => s.cmd({ t: 'attack', tile: hover, ratio: hud.attackRatio }));
+      case 'boatHover': {
+        if (hover < 0) break;
+        // A teammate's land: no attack, no landing (allies for good).
+        if (isTeammate(s.state.players, s.viewer, s.state.owner[hover] ?? 0)) {
+          note(t('hud.teammateClick'), 'info');
+          break;
+        }
+        const c = action === 'attackHover' ? ('attack' as const) : ('boat' as const);
+        guardBetrayal(s, hover, () => s.cmd({ t: c, tile: hover, ratio: hud.attackRatio }));
         break;
-      case 'boatHover':
-        if (hover >= 0)
-          guardBetrayal(s, hover, () => s.cmd({ t: 'boat', tile: hover, ratio: hud.attackRatio }));
-        break;
+      }
       case 'warship':
         hud.tool = { k: 'warship' };
         break;

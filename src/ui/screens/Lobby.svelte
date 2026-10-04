@@ -483,6 +483,7 @@
               modes={MODES}
               value={cfg.mode}
               disabled={!isHost}
+              solo={!lan}
               onpick={(m) => {
                 cfg.mode = m;
                 push();
@@ -747,7 +748,11 @@
               ? 'lobby.summaryRoyale'
               : cfg.mode === 'doomsday'
                 ? 'lobby.summaryDoomsday'
-                : 'lobby.summaryLong',
+                : cfg.mode === 'humansVsNations'
+                  ? lan
+                    ? 'lobby.summaryHvn'
+                    : 'lobby.summaryHvnSolo'
+                  : 'lobby.summaryLong',
             {
               mode: t(`mode.${cfg.mode}`),
               diff: t(`difficulty.${cfg.difficulty}`),

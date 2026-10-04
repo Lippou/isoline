@@ -324,7 +324,11 @@
     },
     "goalRoyale": "Survivre à la zone",
     "goalRoyaleShort": "Zone",
-    "goalRoyaleTip": "Battle Royale : pas de victoire au territoire. Le dernier pays debout gagne ; sinon, le plus grand dans la dernière zone."
+    "goalRoyaleTip": "Battle Royale : pas de victoire au territoire. Le dernier pays debout gagne ; sinon, le plus grand dans la dernière zone.",
+    "teammateClick": "Votre coéquipier : clic droit pour lui donner de l'or ou des troupes",
+    "modeHvnSolo": "Seul contre les nations",
+    "modeHvnSoloTip": "Vous seul contre une coalition de toutes les nations (elles ne s'attaquent pas entre elles).",
+    "modeHvnTip": "Tous les humains ensemble contre la coalition des nations (elles ne s'attaquent pas entre elles)."
   },
   "panel": {
     "diplomacy": "Diplomatie",
@@ -403,7 +407,9 @@
     "capitalDesc": "Siège du gouvernement : le perdre désorganise le pays pendant une minute. Un transfert toutes les 5 minutes au plus.",
     "capitalNeeded": "Votre pays n'a plus de capitale",
     "capitalFront": "trop près du front",
-    "capitalFallout": "irradié"
+    "capitalFallout": "irradié",
+    "teammate": "coéquipier",
+    "teamGiftDesc": "Or ou troupes, reçus aussitôt"
   },
   "confirm": {
     "betrayTitle": "Trahir votre allié ?",
@@ -447,7 +453,13 @@
     "sectionOthers": "Autres pays",
     "sectionAll": "Tous les pays",
     "noMatch": "Aucun pays ne correspond.",
-    "rules": "Règles des alliances"
+    "rules": "Règles des alliances",
+    "teammate": "Coéquipier",
+    "teammateTip": "Allié pour toute la partie : pas d'attaque possible, ni minuterie ni rupture ; dons d'or et de troupes, vision partagée.",
+    "giveTroops": "Donner 10 % de troupes",
+    "giveTroopsTip": "Envoie 10 % de vos troupes à ce pays.",
+    "teamCount": "Équipe de {n}",
+    "sectionTeam": "Votre équipe"
   },
   "council": {
     "title": "Conseil mondial",
@@ -962,7 +974,9 @@
     "noCustom": "Dessinez votre propre monde dans l'éditeur de cartes : il apparaîtra ici dès qu'il sera enregistré.",
     "modeHow": "Comment on joue :",
     "summaryRoyale": "{mode}, difficulté {diff}. Vous affronterez {nations} nations et {tribes} tribus. La zone se referme : le dernier debout l'emporte, sinon le plus grand dans la dernière zone.",
-    "summaryDoomsday": "{mode}, difficulté {diff}. Vous affronterez {nations} nations et {tribes} tribus. À minuit, le plus grand pays l'emporte (ou le premier à {pct} % des terres)."
+    "summaryDoomsday": "{mode}, difficulté {diff}. Vous affronterez {nations} nations et {tribes} tribus. À minuit, le plus grand pays l'emporte (ou le premier à {pct} % des terres).",
+    "summaryHvn": "{mode}, difficulté {diff}. Tous les humains ensemble contre une coalition de {nations} nations (elles ne s'attaquent pas entre elles) ; {tribes} tribus occupent aussi la carte. Le premier camp à contrôler {pct} % des terres l'emporte.",
+    "summaryHvnSolo": "{mode}, difficulté {diff}. Vous seul contre une coalition de {nations} nations (elles ne s'attaquent pas entre elles) ; {tribes} tribus occupent aussi la carte. Le premier camp à contrôler {pct} % des terres l'emporte."
   },
   "rule": {
     "allowPorts": "Ports et marine",
@@ -1139,7 +1153,11 @@
     "renew": "Renouveler",
     "renewTip": "Proposer de prolonger l'alliance de 5 minutes (les deux pays doivent accepter).",
     "acceptRenew": "Accepter le renouvellement",
-    "acceptRenewTip": "Votre allié propose de prolonger l'alliance de 5 minutes."
+    "acceptRenewTip": "Votre allié propose de prolonger l'alliance de 5 minutes.",
+    "team": "Équipe",
+    "pacts": "Pactes",
+    "giveGold": "Donner 10 % de votre or ({n})",
+    "giveTroops": "Donner 10 % de vos troupes ({n})"
   },
   "pact": {
     "signed": "Pacte d'alliance signé",
@@ -1918,7 +1936,8 @@
       "alert": "intercepteurs {n}/{m}",
       "attack": "vos attaques ici : −{pct} % de pertes"
     },
-    "alert": "intercepteurs {n}/{m}"
+    "alert": "intercepteurs {n}/{m}",
+    "teammate": "Votre coéquipier"
   },
   "weather": {
     "stormNear": "Un orage se forme près de chez vous : navires ralentis de {pct} %.",
@@ -1927,10 +1946,11 @@
   "modeDesc": {
     "ffa": "Chacun pour soi : le premier à atteindre le seuil de terres gagne.",
     "teams": "Les joueurs et nations sont répartis en équipes ; les terres de l'équipe s'additionnent.",
-    "humansVsNations": "Tous les joueurs humains font équipe contre toutes les nations.",
+    "humansVsNations": "Tous les humains ensemble, en une seule équipe, contre la coalition des nations (elles ne s'attaquent pas entre elles). Entre coéquipiers, aucune attaque n'est possible : dons d'or et de troupes, vision partagée. Le premier camp qui atteint le seuil de victoire l'emporte.",
     "tribes": "Aucune nation : seulement des tribus. Idéal pour s'entraîner.",
     "doomsday": "Après 10 minutes, un pourcentage minimal de terres est exigé, et il augmente sans cesse.",
-    "battleRoyale": "Toutes les 3 minutes, une zone se resserre ; les terres hors zone deviennent inhabitables."
+    "battleRoyale": "Toutes les 3 minutes, une zone se resserre ; les terres hors zone deviennent inhabitables.",
+    "humansVsNationsSolo": "Vous seul contre une coalition de toutes les nations : elles ne s'attaquent pas entre elles et peuvent s'envoyer des renforts. Les tribus n'appartiennent à aucun camp. Le premier camp qui atteint le seuil de victoire l'emporte ; si vous êtes éliminé, la coalition gagne."
   },
   "difficultyDesc": {
     "easy": "Petites armées ; nations lentes et prudentes, peu de trahisons.",
@@ -2516,10 +2536,11 @@
   "modeLine": {
     "ffa": "Le premier au seuil de terres gagne",
     "teams": "Des camps qui additionnent leurs terres",
-    "humansVsNations": "Tous les humains contre les nations",
+    "humansVsNations": "Tous les humains ensemble contre la coalition des nations",
     "tribes": "Seul face aux tribus, pour s'entraîner",
     "doomsday": "À minuit, le plus grand l'emporte",
-    "battleRoyale": "Une zone qui se referme au hasard"
+    "battleRoyale": "Une zone qui se referme au hasard",
+    "humansVsNationsSolo": "Vous seul contre la coalition des nations"
   },
   "fold": {
     "fold": "Replier {name}",

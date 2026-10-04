@@ -1,6 +1,7 @@
 <script lang="ts">
   // Current alliances, always in view: who, how long is left (a draining bar), and
-  // the renewal button once the last 30 seconds have started. Short of room in the news
+  // the renewal button once the last 30 seconds have started. Team games (1.11.0): the
+  // teammates come first, under « Équipe » — allies for good, no timer, a gift at hand. Short of room in the news
   // column (zones.ts) the list folds to its header, then to a chip (a click unfolds it).
   import { hud } from '../stores/game.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
@@ -12,6 +13,8 @@
   import { layout, zonePiece } from '../stores/layout.svelte';
   import { setFold } from '../stores/folds.svelte';
   import FoldButton from './FoldButton.svelte';
+  import { teammatesOf } from '../game/team';
+  import { formatShort } from '../../render/renderer';
 
   let { ctl }: { ctl: GameController } = $props();
   const s = ctl.session;
@@ -22,6 +25,21 @@
       .filter((r) => r.p && r.p.alive)
       .sort((a, b) => a.expiresIn - b.expiresIn),
   );
+  const mates = $derived(teammatesOf(hud.players, hud.viewer));
+  /** Everyone listed (teammates and allies): the card shows while there is anyone. */
+  const count = $derived(mates.length + rows.length);
+  const gifts = $derived(s.config.allowDonations && !!hud.local?.alive);
+  function give(id: number, what: 'gold' | 'troops'): void {
+    const L = hud.local;
+    if (!L) return;
+    audio.ui('confirm');
+    s.cmd({
+      t: 'donate',
+      target: id,
+      gold: what === 'gold' ? L.gold * 0.1 : 0,
+      troops: what === 'troops' ? L.troops * 0.1 : 0,
+    });
+  }
   const level = $derived(layout.levelOf('alliances'));
   /** The list printed (folded by the player, remembered, or short of room: its header only). */
   const open = $derived(level === 'full');
@@ -37,29 +55,28 @@
   }
 </script>
 
-{#if rows.length && level === 'chip'}
+{#if count && level === 'chip'}
   <button
     class="zchip newsprint good"
     data-zone-chip
     data-testid="alliances"
     onclick={toggle}
     aria-label="{t('alliances.title')} — {t('zone.unfold')}"
-    use:zonePiece={{ id: 'alliances', level, n: rows.length }}
-    ><Icon name="alliance" size={13} /><b>{t('alliances.title')}</b><span class="mono">{rows.length}</span
-    ></button
+    use:zonePiece={{ id: 'alliances', level, n: count }}
+    ><Icon name="alliance" size={13} /><b>{t('alliances.title')}</b><span class="mono">{count}</span></button
   >
-{:else if rows.length}
+{:else if count}
   <section
     class="allies newsprint"
     data-testid="alliances"
     aria-label={t('alliances.title')}
-    use:zonePiece={{ id: 'alliances', level, n: rows.length }}
+    use:zonePiece={{ id: 'alliances', level, n: count + (mates.length && rows.length ? 1 : 0) }}
   >
     <div class="headline">
       <button class="head" onclick={toggle} tabindex="-1" aria-expanded={open}>
         <Icon name="alliance" size={15} />
         <b>{t('alliances.title')}</b>
-        <span class="n mono">{rows.length}</span>
+        <span class="n mono">{count}</span>
       </button>
       <FoldButton
         folded={!open}
@@ -70,7 +87,44 @@
         testid="fold-alliances"
       />
     </div>
-    {#if open}
+    {#if open && mates.length}
+      <h4 class="sub" data-testid="alliances-team">
+        <Icon name="users" size={12} />{t('alliances.team')}<span class="mono">{mates.length}</span>
+      </h4>
+      <ul class="team">
+        {#each mates as p (p.id)}
+          <li class="mate">
+            <img src={flagUrl(p, 24)} alt="" />
+            <button class="name" onclick={() => ctl.focusPlayer(p.id)}>{s.state.name(p.id, i18n.lang)}</button
+            >
+            {#if gifts}
+              <span class="gifts">
+                <button
+                  class="gift"
+                  data-testid="team-gift-gold"
+                  data-tip={t('alliances.giveGold', { n: formatShort((hud.local?.gold ?? 0) * 0.1) })}
+                  aria-label={t('alliances.giveGold', { n: formatShort((hud.local?.gold ?? 0) * 0.1) })}
+                  onclick={() => give(p.id, 'gold')}><Icon name="gold" size={13} /></button
+                >
+                <button
+                  class="gift"
+                  data-testid="team-gift-troops"
+                  data-tip={t('alliances.giveTroops', { n: formatShort((hud.local?.troops ?? 0) * 0.1) })}
+                  aria-label={t('alliances.giveTroops', { n: formatShort((hud.local?.troops ?? 0) * 0.1) })}
+                  onclick={() => give(p.id, 'troops')}><Icon name="troops" size={13} /></button
+                >
+              </span>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+    {/if}
+    {#if open && rows.length}
+      {#if mates.length}
+        <h4 class="sub">
+          <Icon name="alliance" size={12} />{t('alliances.pacts')}<span class="mono">{rows.length}</span>
+        </h4>
+      {/if}
       <ul>
         {#each rows as r (r.id)}
           {@const renew = r.expiresIn <= ALLIANCE_RENEW_WINDOW}
@@ -248,6 +302,55 @@
   .renewbtn.asked:hover,
   .renewbtn.asked:focus-visible {
     background: #1f5a3c;
+  }
+  /* Team games: the teammates' sub-head, then one line each (no timer: allies for good). */
+  .sub {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 2px 10px 0;
+    padding: 3px 0 2px;
+    border-top: 1px solid var(--np-ink);
+    font-family: var(--text);
+    font-size: 0.78em;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--np-good);
+  }
+  .sub .mono {
+    margin-left: auto;
+    color: var(--np-ink-3);
+    letter-spacing: 0;
+  }
+  li.mate {
+    grid-template-columns: 22px 1fr auto;
+    grid-template-areas: 'flag name act';
+    padding: 4px 0;
+  }
+  .gifts {
+    grid-area: act;
+    display: inline-flex;
+    gap: 3px;
+  }
+  .gift {
+    appearance: none;
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid var(--np-rule-2);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--np-ink-2);
+    cursor: var(--cursor-pointer, pointer);
+  }
+  .gift:hover,
+  .gift:focus-visible {
+    border-color: var(--np-good);
+    color: var(--np-good);
+    background: color-mix(in srgb, var(--np-good) 9%, transparent);
   }
   /* Short windows: a long list of allies scrolls instead of pushing the column down. */
   @media (max-height: 900px) {

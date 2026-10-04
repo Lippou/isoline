@@ -10,6 +10,8 @@ import { U } from '../../core/units/unit';
 import { IS_LAND, T } from '../../core/map/terrain';
 import { UNIT_STRIDE } from '../../engine/protocol';
 import { capitalPx } from '../../render/badgeSize';
+import { isTeammate } from './team';
+import { note } from '../stores/note.svelte';
 
 export interface InputHooks {
   onAction: (tile: number, ev: PointerEvent) => void;
@@ -306,7 +308,9 @@ export class InputController {
         session.cmd({ t: 'warship', tile });
         return;
       case 'air':
-        // A bomber over an ally betrays it; fighters and reconnaissance do not.
+        // A bomber over an ally betrays it; fighters and reconnaissance do not. A teammate's
+        // land is never bombed (the aircraft panel already says so).
+        if (tool.kind === 1 && hud.airAim?.problem === 'teammate') return;
         if (tool.kind === 1) guardBetrayal(session, tile, () => session.cmd({ t: 'air', kind: 1, tile }));
         else session.cmd({ t: 'air', kind: tool.kind, tile });
         return;
@@ -330,6 +334,11 @@ export class InputController {
     if (!IS_LAND[s.terrain[tile]!]) return;
     const owner = s.owner[tile]!;
     if (owner === session.viewer) return;
+    // A teammate is an ally for good: a click on its land never attacks it.
+    if (isTeammate(s.players, session.viewer, owner)) {
+      note(t('hud.teammateClick'), 'info');
+      return;
+    }
     guardBetrayal(session, tile, () => session.cmd({ t: 'attack', tile, ratio }));
   }
 }

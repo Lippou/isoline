@@ -2,6 +2,7 @@
 // every decision uses game.rng and a deterministic work budget (no wall clock),
 // so all lockstep peers compute identical AI behaviour.
 import type { Game } from '../game/state';
+import type { Difficulty } from '../game/config';
 import type { Player, Personality } from '../game/player';
 import { applyCommand } from '../game/commands';
 import {
@@ -403,8 +404,12 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
         applyCommand(game, p.id, { t: 'attack', tile: target.tile, ratio: offensiveRatio(p, q, t) });
         m.lastAttack = game.tick;
         if (q.kind !== 'tribe') m.lastWar = game.tick;
-      } else if (idle || nb.size === 0 || (nb.size === 1 && nb.has(0) === false && game.rng.chance(0.3))) {
-        cost += tryBoat(game, p, m, t, idle);
+      } else {
+        // Nothing to attack: a landing overseas, else (team games) troops for a teammate at war.
+        const sail = idle || nb.size === 0 || (nb.size === 1 && nb.has(0) === false && game.rng.chance(0.3));
+        const sailed = sail ? tryBoat(game, p, m, t, idle) : 0;
+        cost += sailed;
+        if (sailed < 400 && donateTroops(game, p, cap)) m.lastAttack = game.tick;
       }
     }
   } else if (nb.size === 0 && p.troops > cap * 0.5) {
@@ -938,6 +943,47 @@ function tryBoat(game: Game, p: Player, m: Mem, _t: Traits, idle = false): numbe
   return 60;
 }
 
+/** Odds that a nation with nothing to attack sends its spare troops to a teammate (OpenFront). */
+const AI_DONATE_ODDS: Record<Difficulty, number> = { easy: 0, normal: 0.25, hard: 0.5, impossible: 1 };
+/** Share of its troop ceiling a nation keeps when it gives troops (OpenFront's reserve: 30–40 %). */
+const AI_DONATE_RESERVE = 0.35;
+
+/**
+ * Team games (OpenFront's AiAttackBehavior.donateTroops, its last strategy): the teammate at
+ * war (attacking or attacked) with the lowest share of its troop ceiling gets every troop
+ * above p's reserve. Never on easy; 25 % of the time on normal, 50 % on hard, always on
+ * impossible. Teammates are allies for good: they help each other like allies would.
+ */
+function donateTroops(game: Game, p: Player, cap: number): boolean {
+  if (p.team <= 0 || !game.config.allowDonations) return false;
+  const odds = AI_DONATE_ODDS[game.config.difficulty];
+  if (odds <= 0 || (odds < 1 && !game.rng.chance(odds))) return false;
+  const spare = p.troops - cap * AI_DONATE_RESERVE;
+  if (spare < 1) return false;
+  let best: Player | null = null;
+  let bestShare = Infinity;
+  for (const id of teammatesOf(game, p)) {
+    const q = game.players[id]!;
+    if (!game.attacks.some((a) => !a.done && (a.target === id || a.attacker === id))) continue;
+    const share = q.troops / Math.max(1, troopCap(game, q));
+    if (share < bestShare) {
+      bestShare = share;
+      best = q;
+    }
+  }
+  if (!best) return false;
+  applyCommand(game, p.id, { t: 'donate', target: best.id, gold: 0, troops: spare });
+  return true;
+}
+
+/** p's living teammates (team games), by id. */
+function teammatesOf(game: Game, p: Player): number[] {
+  const out: number[] = [];
+  if (p.team <= 0) return out;
+  for (const q of game.alivePlayers()) if (q.id !== p.id && q.team === p.team) out.push(q.id);
+  return out;
+}
+
 /** The weakest allied land neighbour when every neighbouring country is an ally (-1 otherwise). */
 function lapsingAlly(game: Game, p: Player, nb: Map<number, Neighbor>): number {
   let weakest = -1;
@@ -969,7 +1015,13 @@ function diplomacy(
   for (const n of nb.values()) {
     if (n.id === 0 || prey >= 0) continue;
     const q = game.players[n.id]!;
-    if (q.kind === 'tribe' || p.allies.has(q.id) || (m.grudge.get(q.id) ?? 0) > 5 || q.isTraitor(game.tick))
+    // Teammates are allies for good (no pact to sign): an offer would be wasted.
+    if (
+      q.kind === 'tribe' ||
+      game.friendly(p.id, q.id) ||
+      (m.grudge.get(q.id) ?? 0) > 5 ||
+      q.isTraitor(game.tick)
+    )
       continue;
     if (p.relation(q.id) < 0) continue;
     const exp = p.allies.get(q.id);
@@ -985,11 +1037,11 @@ function diplomacy(
     if (ally !== prey && exp - game.tick < 280 && game.rng.chance(0.6 * t.diplomacy))
       applyCommand(game, p.id, { t: 'allyRequest', target: ally });
   }
-  // Help allies under attack.
+  // Help allies and teammates under attack (teammates first: they are allies for good).
   if (game.config.allowDonations && p.gold > 3_000_000 && game.rng.chance(0.1 * t.diplomacy)) {
-    for (const ally of p.allies.keys()) {
-      if (game.attacks.some((a) => !a.done && a.target === ally)) {
-        applyCommand(game, p.id, { t: 'donate', target: ally, gold: p.gold * 0.1, troops: 0 });
+    for (const friend of [...teammatesOf(game, p), ...p.allies.keys()]) {
+      if (game.attacks.some((a) => !a.done && a.target === friend)) {
+        applyCommand(game, p.id, { t: 'donate', target: friend, gold: p.gold * 0.1, troops: 0 });
         break;
       }
     }

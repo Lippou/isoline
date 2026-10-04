@@ -14,6 +14,7 @@
   import { FOG_SIGHT, STORM_AIR_SPEED, STORM_SHIP_SPEED } from '../../core/rules/weather';
   import OpinionMeter from './OpinionMeter.svelte';
   import { pct } from './opinion';
+  import { isTeammate } from '../game/team';
 
   /** Weather over the hovered tile (storms first) and what it does there. */
   const sky = $derived.by(() => {
@@ -42,14 +43,17 @@
     // Fog of war: other players' details only where the viewer can see.
     let visible = true;
     const me = s.players.get(s.viewer);
-    if (s.fog && s.viewer > 0 && h.owner > 0 && h.owner !== s.viewer && !me?.allies.includes(h.owner)) {
+    const friend = !!me?.allies.includes(h.owner) || isTeammate(s.players, s.viewer, h.owner);
+    if (s.fog && s.viewer > 0 && h.owner > 0 && h.owner !== s.viewer && !friend) {
       const w = s.width;
       const fx = Math.min(s.fog.w - 1, Math.floor((h.tile % w) / 4));
       const fy = Math.min(s.fog.h - 1, Math.floor(Math.floor(h.tile / w) / 4));
       visible = s.fog.data[fy * s.fog.w + fx] === 255;
     }
     const p = h.owner > 0 && visible ? s.players.get(h.owner) : undefined;
-    const allied = !!p && p.allies.includes(hud.viewer);
+    // A teammate reads like an ally (allies for good), with its own word.
+    const mate = !!p && isTeammate(s.players, s.viewer, p.id);
+    const allied = !!p && (mate || p.allies.includes(hud.viewer));
     const war = !!p && !!hud.local?.wars.includes(p.id);
     const noTrade = !!p && !!hud.local?.noTrade.includes(p.id);
     // A neighbour massing an army on our border (view-only intelligence from the worker).
@@ -67,6 +71,7 @@
       p,
       visible,
       allied,
+      mate,
       war,
       noTrade,
       threat,
@@ -145,6 +150,7 @@
     const i = info;
     if (!i?.p) return '';
     if (i.p.id === hud.viewer) return t('hover.you');
+    if (i.mate) return t('hover.teammate');
     if (i.allied) return t('hover.ally');
     if (i.war) return t('hover.war');
     if (i.p.kind === 'tribe') return t('hover.tribe');
@@ -170,7 +176,7 @@
               >{Math.ceil(info.p.traitorFor / 10)} s</small
             ></span
           >{/if}
-        {#if info.allied}<span class="tag ally" title={t('hover.ally')}
+        {#if info.allied}<span class="tag ally" title={t(info.mate ? 'hover.teammate' : 'hover.ally')}
             ><Icon name="alliance" size={14} /></span
           >{/if}
         {#if info.war}<span class="tag war" title={t('hover.war')}><Icon name="sword" size={14} /></span>{/if}

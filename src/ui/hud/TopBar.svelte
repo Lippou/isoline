@@ -24,7 +24,12 @@
         key,
         share: 0,
         color: inkHex(p.color, settings.access.vision),
-        name: p.team > 0 ? `${t('lobby.team')} ${p.team}` : p.name[i18n.lang] || p.name.en,
+        name:
+          p.team > 0
+            ? mode === 'humansVsNations'
+              ? t(`front.team.${p.team === 1 ? 'humans' : 'nations'}`)
+              : `${t('lobby.team')} ${p.team}`
+            : p.name[i18n.lang] || p.name.en,
         me: false,
       };
       e.share += p.usefulTiles / total;
@@ -40,6 +45,14 @@
   const elapsed = $derived(hud.world ? Math.max(0, hud.tick - hud.world.startTick) : 0);
   const spawnLeft = $derived(hud.world ? Math.max(0, hud.world.spawnEndTick - hud.tick) : 0);
   const mode = $derived(currentSession()?.config.mode ?? 'ffa');
+  /** Humans vs nations with a single human: the player alone against the nations' coalition. */
+  const hvnSolo = $derived(
+    mode === 'humansVsNations' && hud.players.filter((p) => p.kind === 'human').length <= 1,
+  );
+  const modeName = $derived(hvnSolo ? t('hud.modeHvnSolo') : t(`mode.${mode}`));
+  const modeTip = $derived(
+    mode === 'humansVsNations' ? t(hvnSolo ? 'hud.modeHvnSoloTip' : 'hud.modeHvnTip') : '',
+  );
   const threshold = $derived(hud.world?.threshold ?? 80);
   const secs = (ticks: number) => Math.ceil(ticks / 10);
   /** The World Council's nuclear ban: time left (0: none). */
@@ -90,7 +103,7 @@
           {/each}
         </span>
       {/if}
-      <span class="item mode">{t(`mode.${mode}`)}</span>
+      <span class="item mode" data-tip={modeTip || null} data-testid="topbar-mode">{modeName}</span>
       <span
         class="item goal-txt"
         data-tip={mode === 'battleRoyale'
@@ -378,9 +391,13 @@
   .top:has(.status [data-tip]:hover) {
     z-index: 31;
   }
-  .status .chip[data-tip]:hover::after {
+  .status .chip[data-tip]:hover::after,
+  .strip .item[data-tip]:hover::after {
     top: calc(100% + 6px);
     bottom: auto;
+  }
+  .top:has(.strip .item[data-tip]:hover) {
+    z-index: 31;
   }
   .short {
     display: none;

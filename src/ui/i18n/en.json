@@ -324,7 +324,11 @@
     },
     "goalRoyale": "Survive the zone",
     "goalRoyaleShort": "Zone",
-    "goalRoyaleTip": "Battle Royale: no territorial victory. The last country standing wins; otherwise, the largest in the last zone."
+    "goalRoyaleTip": "Battle Royale: no territorial victory. The last country standing wins; otherwise, the largest in the last zone.",
+    "teammateClick": "Your teammate: right-click to give it gold or troops",
+    "modeHvnSolo": "Alone vs the nations",
+    "modeHvnSoloTip": "You alone against a coalition of every nation (they don't attack each other).",
+    "modeHvnTip": "All humans together against the nations' coalition (they don't attack each other)."
   },
   "panel": {
     "diplomacy": "Diplomacy",
@@ -403,7 +407,9 @@
     "capitalDesc": "Seat of government: losing it disorganises the country for a minute. At most one move every 5 minutes.",
     "capitalNeeded": "Your country has no capital",
     "capitalFront": "too close to a border",
-    "capitalFallout": "irradiated"
+    "capitalFallout": "irradiated",
+    "teammate": "teammate",
+    "teamGiftDesc": "Gold or troops, received at once"
   },
   "confirm": {
     "betrayTitle": "Betray your ally?",
@@ -447,7 +453,13 @@
     "sectionOthers": "Other countries",
     "sectionAll": "All countries",
     "noMatch": "No country matches.",
-    "rules": "Alliance rules"
+    "rules": "Alliance rules",
+    "teammate": "Teammate",
+    "teammateTip": "An ally for the whole game: no attack possible, no timer, no breaking; gifts of gold and troops, shared sight.",
+    "giveTroops": "Give 10% troops",
+    "giveTroopsTip": "Sends 10% of your troops to this country.",
+    "teamCount": "Team of {n}",
+    "sectionTeam": "Your team"
   },
   "council": {
     "title": "World Council",
@@ -962,7 +974,9 @@
     "noCustom": "Draw your own world in the map editor: it will appear here as soon as it is saved.",
     "modeHow": "How it plays:",
     "summaryRoyale": "{mode}, {diff} difficulty. You will face {nations} nations and {tribes} tribes. The zone closes in: the last one standing wins, otherwise the largest in the last zone.",
-    "summaryDoomsday": "{mode}, {diff} difficulty. You will face {nations} nations and {tribes} tribes. At midnight the largest country wins (or the first to hold {pct}% of the land)."
+    "summaryDoomsday": "{mode}, {diff} difficulty. You will face {nations} nations and {tribes} tribes. At midnight the largest country wins (or the first to hold {pct}% of the land).",
+    "summaryHvn": "{mode}, {diff} difficulty. All humans together against a coalition of {nations} nations (they don't attack each other); {tribes} tribes also hold land. The first side to control {pct}% of the land wins.",
+    "summaryHvnSolo": "{mode}, {diff} difficulty. You alone against a coalition of {nations} nations (they don't attack each other); {tribes} tribes also hold land. The first side to control {pct}% of the land wins."
   },
   "rule": {
     "allowPorts": "Ports and navy",
@@ -1139,7 +1153,11 @@
     "renew": "Renew",
     "renewTip": "Offer to extend the alliance by 5 minutes (both countries must agree).",
     "acceptRenew": "Accept renewal",
-    "acceptRenewTip": "Your ally offers to extend the alliance by 5 minutes."
+    "acceptRenewTip": "Your ally offers to extend the alliance by 5 minutes.",
+    "team": "Team",
+    "pacts": "Pacts",
+    "giveGold": "Give 10% of your gold ({n})",
+    "giveTroops": "Give 10% of your troops ({n})"
   },
   "pact": {
     "signed": "Alliance pact signed",
@@ -1918,7 +1936,8 @@
       "alert": "interceptors {n}/{m}",
       "attack": "your attacks here: −{pct}% losses"
     },
-    "alert": "interceptors {n}/{m}"
+    "alert": "interceptors {n}/{m}",
+    "teammate": "Your teammate"
   },
   "weather": {
     "stormNear": "A storm is forming near you: ships {pct}% slower.",
@@ -1927,10 +1946,11 @@
   "modeDesc": {
     "ffa": "Free for all: the first to reach the land threshold wins.",
     "teams": "Players and nations are split into teams; a team's land adds up.",
-    "humansVsNations": "All human players team up against all nations.",
+    "humansVsNations": "All humans together, as one team, against the nations' coalition (they don't attack each other). Teammates can't attack each other: gifts of gold and troops, shared sight. The first side to reach the victory threshold wins.",
     "tribes": "No nations, only tribes. Ideal for practice.",
     "doomsday": "After 10 minutes a minimum share of land is required, and it keeps rising.",
-    "battleRoyale": "Every 3 minutes a zone shrinks; land outside it becomes uninhabitable."
+    "battleRoyale": "Every 3 minutes a zone shrinks; land outside it becomes uninhabitable.",
+    "humansVsNationsSolo": "You alone against a coalition of every nation: they never attack each other and may send each other reinforcements. Tribes belong to no side. The first side to reach the victory threshold wins; if you are eliminated, the coalition wins."
   },
   "difficultyDesc": {
     "easy": "Small armies; slow, cautious nations; few betrayals.",
@@ -2516,10 +2536,11 @@
   "modeLine": {
     "ffa": "First to the land threshold wins",
     "teams": "Camps whose lands add up",
-    "humansVsNations": "All humans against the nations",
+    "humansVsNations": "All humans together against the nations' coalition",
     "tribes": "Alone against tribes, for practice",
     "doomsday": "At midnight, the largest wins",
-    "battleRoyale": "A zone closing on random points"
+    "battleRoyale": "A zone closing on random points",
+    "humansVsNationsSolo": "You alone against the nations' coalition"
   },
   "fold": {
     "fold": "Fold {name}",

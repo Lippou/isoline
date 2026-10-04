@@ -200,15 +200,19 @@ const TROOPS_STYLE = new TextStyle({
 
 const FRONT_BADGE_SLACK = 28;
 
-/** Smallest on-screen length (px) of each aircraft when zoomed out; real size when zoomed in (ships: ships.ts). */
-const UNIT_MIN_PX: Partial<Record<U, number>> = {
-  [U.Fighter]: 26,
-  [U.Bomber]: 30,
-  [U.Recon]: 24,
+/**
+ * Length of each aircraft: [map tiles, least on-screen px]. 1.11.0: like the ships
+ * (ships.ts), planes keep their size on the map when zooming out (they used to keep 24–30 px
+ * on screen and grew against the land); the small minimum keeps a far plane visible.
+ */
+const PLANE_SIZE: Partial<Record<U, readonly [number, number]>> = {
+  [U.Fighter]: [3.2, 9],
+  [U.Bomber]: [4.2, 11],
+  [U.Recon]: [2.8, 8],
 };
 /** Train: wagons behind the locomotive, and the smallest on-screen wagon length (px). */
 const TRAIN_WAGONS = 3;
-const TRAIN_CAR_MIN_PX = 8;
+const TRAIN_CAR_MIN_PX = 5;
 
 export class GameRenderer {
   readonly app = new Application();
@@ -860,9 +864,10 @@ export class GameRenderer {
       // Aircraft (ships: ShipLayer).
       sp.visible = inView && z >= 0.4 && this.revealed(owner, x, y);
       if (!sp.visible) continue;
-      // Real size in tiles when zoomed in; a readable minimum on screen when zoomed out.
+      // Its size on the map whatever the zoom, never under a few pixels.
       const lenTiles = this.unitArt(type).length;
-      sp.scale.set(Math.max(1, (UNIT_MIN_PX[type] ?? 28) / (lenTiles * z)));
+      const [tiles, least] = PLANE_SIZE[type] ?? [lenTiles, 9];
+      sp.scale.set(Math.max(tiles, least / z) / lenTiles);
       (sp.children[1] as Sprite).tint = this.inkOf(owner);
       // Contrails behind planes.
       us.wakeT += dt;
@@ -924,7 +929,7 @@ export class GameRenderer {
     const sp = us.s;
     sp.visible = inView && z >= 2.2 && this.revealed(owner, x, y);
     if (!sp.visible) return;
-    // Real size when zoomed in, a small readable minimum when zoomed out.
+    // Its size on the map (like the ships), never under a few pixels a wagon.
     const scale = Math.max(1, TRAIN_CAR_MIN_PX / (this.icons.trainCar.length * z));
     const pieces: [Sprite[], number][] = [
       [[sp.children[0] as Sprite, sp.children[1] as Sprite], this.icons.train.length],
@@ -973,8 +978,8 @@ export class GameRenderer {
     const s = this.state;
     const me = s.viewer;
     if (me <= 0 || owner === me) return false;
-    const mine = s.players.get(me);
-    if (mine && mine.allies.includes(owner)) return false;
+    // Allies and teammates keep no secrets from us (relation 'friend').
+    if (this.relation(owner) === 'friend') return false;
     for (const c of s.world?.weather ?? []) {
       if (c.kind === 1 && (c.x - x) ** 2 + (c.y - y) ** 2 < c.r * c.r) return true;
     }

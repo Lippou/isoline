@@ -1,7 +1,8 @@
 <script lang="ts">
   // Diplomacy, printed on the journal's paper: the masthead counts allies and wars, then
-  // every country by standing (allies, at war, the others by size) with what it thinks of
-  // you and what can be done with it. The rules close the page.
+  // every country by standing (teammates, allies, at war, the others by size) with what it
+  // thinks of you and what can be done with it. The rules close the page. Teammates (team
+  // games) are allies for good: no timer, no pact to renew or break, no embargo — gifts.
   import './paper.css';
   import { hud } from '../stores/game.svelte';
   import { t, i18n, short, clock } from '../i18n/i18n.svelte';
@@ -16,6 +17,7 @@
   import OpinionMeter from './OpinionMeter.svelte';
   import PaperMast from './PaperMast.svelte';
   import { pct, oddsLine } from './opinion';
+  import { isTeammate } from '../game/team';
 
   let { ctl }: { ctl: GameController } = $props();
   const s = ctl.session;
@@ -54,10 +56,12 @@
       .sort((a, b) => b.tiles - a.tiles)
       .map((p) => {
         const ally = hud.local?.allies.find((a) => a.id === p.id);
+        const mate = isTeammate(s.state.players, hud.viewer, p.id);
         const attacking = hud.local?.wars.includes(p.id) ?? false;
         return {
           p,
           ally,
+          mate,
           attacking,
           embargo: hud.local?.embargo.includes(p.id) ?? false,
           noTrade: hud.local?.noTrade.includes(p.id) ?? false,
@@ -66,11 +70,20 @@
       }),
   );
   type Row = (typeof rows)[number];
-  const allies = $derived(rows.filter((r) => r.ally));
-  const wars = $derived(rows.filter((r) => !r.ally && r.attacking));
-  const others = $derived(rows.filter((r) => !r.ally && !r.attacking));
-  /** Allies and enemies are always listed; the others fill the page up to 25 rows. */
-  const cap = $derived(Math.max(10, 25 - allies.length - wars.length));
+  const team = $derived(rows.filter((r) => r.mate));
+  const allies = $derived(rows.filter((r) => r.ally && !r.mate));
+  const wars = $derived(rows.filter((r) => !r.ally && !r.mate && r.attacking));
+  const others = $derived(rows.filter((r) => !r.ally && !r.mate && !r.attacking));
+  /** Teammates, allies and enemies are always listed; the others fill the page up to 25 rows. */
+  const cap = $derived(Math.max(10, 25 - team.length - allies.length - wars.length));
+  /** A gift of 10 % of our gold or troops (allies and teammates). */
+  const give = (id: number, what: 'gold' | 'troops') =>
+    order({
+      t: 'donate',
+      target: id,
+      gold: what === 'gold' ? (hud.local?.gold ?? 0) * 0.1 : 0,
+      troops: what === 'troops' ? (hud.local?.troops ?? 0) * 0.1 : 0,
+    });
   const nameOf = (r: Row) => r.p.name[i18n.lang] || r.p.name.en;
 </script>
 
@@ -100,7 +113,11 @@
       </span>
     </div>
     <div class="rel">
-      {#if r.ally}
+      {#if r.mate}
+        <span class="np-tag good" data-tip={t('diplo.teammateTip')}
+          ><Icon name="users" size={12} />{t('diplo.teammate')}</span
+        >
+      {:else if r.ally}
         <span
           class="np-tag good ally"
           class:renew={r.ally.expiresIn <= ALLIANCE_RENEW_WINDOW}
@@ -134,11 +151,13 @@
           /></button
         >
       {/if}
-      <span class="end">
-        <button class="np-act" onclick={() => order({ t: 'embargo', target: r.p.id, on: !r.embargo })}
-          >{r.embargo ? t('radial.embargoOff') : t('radial.embargoOn')}</button
-        >
-      </span>
+      {#if !r.mate}
+        <span class="end">
+          <button class="np-act" onclick={() => order({ t: 'embargo', target: r.p.id, on: !r.embargo })}
+            >{r.embargo ? t('radial.embargoOff') : t('radial.embargoOn')}</button
+          >
+        </span>
+      {/if}
     </div>
     {#if r.op && why[r.p.id]}
       <div class="why" data-testid="diplo-why">
@@ -172,7 +191,23 @@
       </div>
     {/if}
     <div class="acts">
-      {#if r.ally}
+      {#if r.mate}
+        {#if s.config.allowDonations}
+          <button
+            class="np-act"
+            data-tip={t('diplo.giveTip')}
+            data-testid="diplo-give-gold"
+            onclick={() => give(r.p.id, 'gold')}><Icon name="gold" size={13} />{t('diplo.give')}</button
+          >
+          <button
+            class="np-act"
+            data-tip={t('diplo.giveTroopsTip')}
+            data-testid="diplo-give-troops"
+            onclick={() => give(r.p.id, 'troops')}
+            ><Icon name="troops" size={13} />{t('diplo.giveTroops')}</button
+          >
+        {/if}
+      {:else if r.ally}
         <button class="np-act" onclick={() => order({ t: 'allyRequest', target: r.p.id })}
           ><Icon name="renew" size={13} />{t('diplo.renew')}</button
         >
@@ -212,7 +247,7 @@
   <PaperMast title={t('panel.diplomacy')} onclose={() => (hud.panels.diplomacy = false)}>
     <p class="np-dateline">
       <span
-        >{allies.length === 0
+        >{team.length ? `${t('diplo.teamCount', { n: team.length })} · ` : ''}{allies.length === 0
           ? t('diplo.alliesNone')
           : allies.length === 1
             ? t('diplo.alliesOne')
@@ -238,6 +273,14 @@
   </PaperMast>
 
   <div class="np-body scroll">
+    {#if team.length}
+      <h3 class="np-mark good" data-testid="diplo-team">
+        {t('diplo.sectionTeam')} <span class="n">{team.length}</span>
+      </h3>
+      <ul class="list">
+        {#each team as r (r.p.id)}{@render row(r)}{/each}
+      </ul>
+    {/if}
     {#if allies.length}
       <h3 class="np-mark good">{t('diplo.sectionAllies')} <span class="n">{allies.length}</span></h3>
       <ul class="list">
@@ -252,7 +295,7 @@
     {/if}
     {#if others.length}
       <h3 class="np-mark">
-        {allies.length || wars.length ? t('diplo.sectionOthers') : t('diplo.sectionAll')}
+        {team.length || allies.length || wars.length ? t('diplo.sectionOthers') : t('diplo.sectionAll')}
         <span class="n">{others.length}</span>
       </h3>
       <ul class="list">

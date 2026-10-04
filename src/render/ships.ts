@@ -8,22 +8,21 @@ import type { ParticleSystem } from './particles';
 import { U } from '../core/units/unit';
 import { SHIP_H, SHIP_RASTER, SHIP_W, TURRET_PIVOT_X, WAKE_H, WAKE_W } from './shipArt';
 
-/** On-screen hull length (px) of each ship type: [zoomed out, zoomed in]. */
-const SHIP_PX: Record<number, readonly [number, number]> = {
-  [U.Transport]: [20, 28],
-  [U.Warship]: [24, 34],
-  [U.Merchant]: [16, 24],
+/**
+ * Hull length of each ship type: [map tiles, least on-screen px]. 1.11.0: ships keep their
+ * size on the map, like the territory (they used to keep 20–34 px on screen, so they grew
+ * against the coasts when zooming out); the small minimum keeps a far ship a visible dot.
+ */
+const SHIP_SIZE: Record<number, readonly [number, number]> = {
+  [U.Transport]: [4.5, 8],
+  [U.Warship]: [5.5, 9],
+  [U.Merchant]: [3.5, 6],
 };
 
-/**
- * Hull length (px) of a ship at zoom `z`: the smallest size up to z 1.33, growing with the
- * zoom like the building badges (24 → 36 px) and capped at z 9.33, so ships stay a size
- * below the badges and never pass for a building.
- */
+/** Hull length (px) of a ship at zoom `z`: its length on the map, never under a few pixels. */
 export function shipPx(type: number, z: number, ui = 1): number {
-  const [a, b] = SHIP_PX[type] ?? SHIP_PX[U.Transport]!;
-  const f = Math.max(0, Math.min(1, (z - 4 / 3) / 8));
-  return (a + (b - a) * f) * ui;
+  const [tiles, least] = SHIP_SIZE[type] ?? SHIP_SIZE[U.Transport]!;
+  return Math.max(least * ui, tiles * z);
 }
 
 /** Warship `kind` values (the sim's WS enum, mirrored for the view). */

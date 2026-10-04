@@ -10,8 +10,18 @@
     modes,
     value,
     disabled = false,
+    solo = false,
     onpick,
-  }: { modes: GameMode[]; value: GameMode; disabled?: boolean; onpick: (m: GameMode) => void } = $props();
+  }: {
+    modes: GameMode[];
+    value: GameMode;
+    disabled?: boolean;
+    /** A solo game: humans vs nations is the player alone against the nations' coalition. */
+    solo?: boolean;
+    onpick: (m: GameMode) => void;
+  } = $props();
+  /** The texts of a mode that read differently alone (humans vs nations, 1.11.0). */
+  const key = (m: GameMode) => (solo && m === 'humansVsNations' ? `${m}Solo` : m);
 
   /** How each mode plays (the timed modes, 1.10.0, have their own text: GAME_DESIGN.md §14.1, §14.2). */
   const HOW: Partial<Record<GameMode, string>> = {
@@ -26,7 +36,7 @@
     if (focus) cards[modes.indexOf(m)]?.focus();
   }
 
-  function key(e: KeyboardEvent, k: number): void {
+  function arrow(e: KeyboardEvent, k: number): void {
     const n = modes.length;
     const to =
       e.key === 'ArrowRight' || e.key === 'ArrowDown'
@@ -66,7 +76,7 @@
         data-mode={m}
         data-testid="mode-{m}"
         onclick={() => pick(m)}
-        onkeydown={(e) => key(e, k)}
+        onkeydown={(e) => arrow(e, k)}
       >
         <svg class="pict" viewBox="0 0 48 36" aria-hidden="true">
           {#if m === 'ffa'}
@@ -111,13 +121,13 @@
           {/if}
         </svg>
         <span class="name">{t(`mode.${m}`)}</span>
-        <span class="rule">{t(`modeLine.${m}`)}</span>
+        <span class="rule">{t(`modeLine.${key(m)}`)}</span>
       </button>
     {/each}
   </div>
   <p class="how" id="mode-how" aria-live="polite">
     <b>{t('lobby.modeHow')}</b>
-    {t(HOW[value] ?? `modeDesc.${value}`)}
+    {t(HOW[value] ?? `modeDesc.${key(value)}`)}
   </p>
 </div>
 
