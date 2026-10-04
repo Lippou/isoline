@@ -1569,8 +1569,8 @@
       "main": "Reach 40% of the territory",
       "bonus": "Do it in under 45 minutes",
       "outro": "You stopped the clock. The atlas now bears your name.",
-      "brief": "The whole world, and a ticking clock. After ten minutes, any nation that holds too little land collapses, and the threshold keeps rising. Reach forty percent of the world before the clock catches up with you.",
-      "tip1": "Watch the threshold at the top of the screen: below it, your troops melt away.",
+      "brief": "The whole world, and the doomsday clock ticking: every bomb, every fallen country, every betrayal brings it closer to midnight. Four milestones change the rules on the way, and at midnight everything stops. Reach forty percent of the world before then.",
+      "tip1": "The dial under the top bar shows the time, the next milestone and its effect. From \"Survival of the strongest\", below the land threshold your troops melt away.",
       "tip2": "Tribes and unclaimed land are your first targets; keep the big wars for later."
     },
     "step": "Step {n} of {total}",
@@ -1879,7 +1879,7 @@
       "expand": "Expand as fast as you can.",
       "economy": "Build three cities to sustain the war effort.",
       "weather": "Watch the sky: storms slow ships and aircraft down, and fog banks halve the range of radars.",
-      "clock": "The doomsday clock starts at ten minutes. Get ready to exceed the required share.",
+      "clock": "The clock is ticking: the dial at the top announces the next milestone. A peace summit or a Council vote turns it back; bombs hasten it.",
       "push": "Push towards forty percent. A vulnerable nation is marked on the map."
     },
     "hint": {

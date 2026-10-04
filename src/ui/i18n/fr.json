@@ -1569,8 +1569,8 @@
       "main": "Atteindre 40 % du territoire",
       "bonus": "Y parvenir en moins de 45 minutes",
       "outro": "Vous avez arrêté l'horloge. L'atlas porte désormais votre nom.",
-      "brief": "Le monde entier, et une horloge qui tourne. Passé dix minutes, toute nation qui ne tient pas assez de terres s'effondre, et le seuil monte sans cesse. Atteignez quarante pour cent du monde avant que l'horloge ne vous rattrape.",
-      "tip1": "Surveillez le seuil affiché en haut de l'écran : sous ce seuil, vos troupes fondent.",
+      "brief": "Le monde entier, et l'horloge de l'apocalypse qui tourne : chaque bombe, chaque pays qui tombe, chaque trahison la rapproche de minuit. Quatre paliers changent les règles en chemin, et à minuit tout s'arrête. Atteignez quarante pour cent du monde avant.",
+      "tip1": "Le cadran sous la barre du haut donne l'heure, le prochain palier et son effet. À la « Loi du plus fort », sous le seuil de terres, vos troupes fondent.",
       "tip2": "Les tribus et les terres libres sont vos premières cibles ; gardez les grandes guerres pour plus tard."
     },
     "step": "Étape {n} sur {total}",
@@ -1879,7 +1879,7 @@
       "expand": "Étendez-vous aussi vite que possible.",
       "economy": "Construisez trois villes pour soutenir l'effort de guerre.",
       "weather": "Surveillez le ciel : les orages ralentissent navires et avions, et les bancs de brouillard réduisent de moitié la portée des radars.",
-      "clock": "L'horloge de l'apocalypse démarre à dix minutes. Préparez-vous à dépasser le seuil requis.",
+      "clock": "L'horloge avance : le cadran en haut annonce le prochain palier. Une paix, un vote du Conseil la font reculer ; les bombes la précipitent.",
       "push": "Poussez vers quarante pour cent. Une nation vulnérable est signalée sur la carte."
     },
     "hint": {
