@@ -2,6 +2,21 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.11.0] — Retours de test (12ᵉ lot) : économie, terrain, équipes, navires
+### Modifié
+- **L'or ne s'emballe plus en fin de partie** (« je gagne 300 000 or par seconde, l'économie est complètement cassée ») : 75 à 90 % de ces revenus venaient des navires marchands. Le commerce mondial est plafonné, mais chaque port en prenait une part proportionnelle à ses niveaux : celui qui empilait les ports raflait une part croissante à mesure que les nations tombaient. Désormais, la capacité commerciale suit des rendements décroissants (écart voulu avec OpenFront) : 3 niveaux de port commercent comme 2, 10 comme 3, jamais plus de 4. Une gare ne paie plus qu'une fois un même train (comme OpenFront : un train faisait payer jusqu'à 8 fois la même ville). Résultat sur 18 parties IA : meneur après 25 min 33k/s en médiane (81k avant), 61k au 9ᵉ décile (233k avant) ; un joueur qui construit partout plafonne à environ 80k/s et a deux fois moins de villes (plafond de troupes à 30 min : 3,4 M au lieu de 5,8 M). Un boom commercial double toujours ces gains pendant 2 minutes. Deux fois moins de tirs nucléaires.
+- **Rayon des usines divisé par deux** : 110 → 55 tuiles (rail le plus long : 78).
+- **Glaciers et hauts sommets conquérables** (« tout le Groenland est impossible à conquérir ») : la calotte du Groenland (et des pôles de Mars, de Niflheim, du nord de l'Amérique) et les hauts sommets des grandes chaînes étaient infranchissables. Ce sont maintenant des terrains durs : pertes ×1,9 (glacier) et ×2,1 (hauts sommets) contre ×1,5 en montagne, avance environ deux fois plus lente même pour une grosse armée ; on n'y construit rien et on n'y apparaît pas. Les murs voulus (labyrinthe, trône d'Olympe, feu de Surtr) restent infranchissables, en basalte sombre.
+- **Battle Royale** : la zone suit les terres que les pays vivants peuvent atteindre à pied ; elle ne dérive plus vers une île vide et ne piège plus un pays retranché en altitude.
+- **Coéquipiers traités en alliés** (« je ne peux pas envoyer de dons ») : en équipes et en humains contre nations, le clic droit sur un coéquipier propose un don (10 ou 25 % de votre or ou de vos troupes) ; section « Équipe » dans les alliances et la diplomatie, sans minuterie. Les nations d'une même équipe s'envoient des renforts comme dans OpenFront (de jamais en Facile à toujours en Impossible).
+- **Navires à taille constante sur la carte** (« quand on dézoome, les bateaux grossissent ») : ils rapetissent avec la carte au lieu de garder la même taille à l'écran, avec un minimum pour rester visibles ; avions et trains aussi.
+- **Humains contre nations, en solo** : « Vous seul contre la coalition des nations (elles ne s'attaquent pas entre elles) » ; la barre de territoire nomme « Les humains » et « Les nations ».
+### Corrigé
+- **Plus d'option d'attaque sur un coéquipier** : le menu contextuel proposait Attaquer, Débarquer, bombes et embargo (que la simulation refusait ensuite) ; un clic gauche sur sa terre rappelle qu'il faut le clic droit pour lui donner de l'or ou des troupes.
+- Les infobulles de la barre du haut s'ouvrent dessous (elles sortaient de l'écran).
+### Vérifié
+- Parties IA (Mer Noire, Europe, Monde, graines 1234 et 42) : chacun pour soi 33 à 53 min, horloge de l'apocalypse 34 à 47 min, Battle Royale 21 à 43 min ; meneur 30 à 48k d'or/s de 20 à 50 min. 363 tests.
+
 ## [1.10.0] — Retours de test (11ᵉ lot) : modes de jeu, aviation, navires, panneaux repliables, campagne
 ### Modifié
 - **Battle Royale** (« la zone se resserre au centre de la carte ? il faudrait des points au hasard ») : chaque nouvelle zone est tirée au hasard dans la précédente (jamais au-dessus de l'océan), annoncée 3 minutes à l'avance par un cercle en tirets sur la carte et la minimap, les terres qui vont être perdues hachurées ; elle se referme en 45 s, 10 à 12 fois. Le dernier pays debout gagne, sinon le plus grand dans la dernière zone. Un bandeau « Zone 3/11 » donne le compte à rebours et la part de vos terres hors de la prochaine zone. Les nations n'investissent plus hors de la prochaine zone.
