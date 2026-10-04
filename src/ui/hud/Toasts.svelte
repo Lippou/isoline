@@ -43,6 +43,8 @@
   $effect(() => () => holdToasts(false));
 
   const level = $derived(layout.levelOf('dispatches'));
+  /** The chip clicked: the slips unfold for a while (they come and go; the column settles back). */
+  const unfold = () => layout.pin('dispatches', true, 15000);
   /** The chip's colour: the gravest of the folded slips. */
   const gravest = $derived(
     hud.toasts.some((d) => d.level === 'danger')
@@ -78,7 +80,7 @@
   class:clipped
   class:compact={level === 'compact'}
   data-zone-chip={level === 'chip' || undefined}
-  use:zonePiece={{ id: 'dispatches', on: hud.toasts.length > 0, level }}
+  use:zonePiece={{ id: 'dispatches', on: hud.toasts.length > 0, level, n: hud.toasts.length }}
   bind:this={tray}
   aria-live="polite"
   aria-label={t('dispatch.title')}
@@ -90,7 +92,7 @@
   {#if level === 'chip' && hud.toasts.length}
     <button
       class="chip-n {gravest}"
-      onclick={() => layout.pin('dispatches')}
+      onclick={unfold}
       title={hud.toasts.at(-1)?.text}
       aria-label={t('zone.dispatchesShow', { n: hud.toasts.length })}
       data-testid="dispatch-chip"

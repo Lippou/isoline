@@ -10,7 +10,6 @@ import {
   computeZones,
   allocate,
   PIECES,
-  MARGIN,
   type Level,
   type PieceId,
   type PieceState,
@@ -23,16 +22,27 @@ export const NUDGE_ROOM = 44;
 
 interface Piece {
   pinned: boolean;
+  /** How much it holds (slips, rows, alerts): heights measured with another count are scaled. */
+  n: number;
+}
+/** A height measured at a level, with the count the piece held then. */
+interface Measure {
+  h: number;
+  n: number;
 }
 
 /** How many elements show each piece now (see Layout.show). */
 const shown = new Map<PieceId, number>();
+/** Pieces asked for while not shown (from the reading strip): pinned when they show. */
+const pending = new Set<PieceId>();
+/** Pins that lapse by themselves (see Layout.pin). */
+const unpinTimers = new Map<PieceId, ReturnType<typeof setTimeout>>();
 
 class Layout {
   /** The pieces of the columns shown now. */
   pieces = $state<Partial<Record<PieceId, Piece>>>({});
-  /** Their measured heights, per layout class and level ("council:standard" → {full: 280}). */
-  heights = $state<Record<string, Partial<Record<Level, number>>>>({});
+  /** Their measured heights, per layout class and level ("council:standard" → {full: {h: 280, n: 1}}). */
+  heights = $state<Record<string, Partial<Record<Level, Measure>>>>({});
   /** Room kept over the bar for the research reminder (0: none: no research, spectating). */
   nudge = $state(0);
 
@@ -66,7 +76,12 @@ class Layout {
       for (const [id, p] of Object.entries(this.pieces) as [PieceId, Piece][]) {
         const def = PIECES[id];
         if (def.zone !== zone) continue;
-        list.push({ id, def, heights: this.heights[`${id}:${cls}`] ?? {}, pinned: p.pinned });
+        // A list measured with 5 slips and holding 2 now: its height scaled to 2.
+        const m = this.heights[`${id}:${cls}`] ?? {};
+        const heights: Partial<Record<Level, number>> = {};
+        for (const [lv, v] of Object.entries(m) as [Level, Measure][])
+          heights[lv] = v.n === p.n || v.n <= 0 ? v.h : Math.round((v.h * p.n) / v.n);
+        list.push({ id, def, heights, pinned: p.pinned });
       }
       const room = zone === 'left' ? z.left.h : z.right.h;
       const perRow = cls === 'compact' ? 2 : 3;
@@ -105,7 +120,6 @@ class Layout {
       '--zone-stage-b': px(h - z.stage.y - z.stage.h),
       '--zone-read-rail-y': px(R.rail.y),
       '--zone-read-rail-h': px(R.rail.h),
-      '--zone-dock-b': px(MARGIN + (hudBox.bar || 100) + (this.nudge || 4)),
     };
     return Object.entries(v)
       .map(([k, val]) => `${k}: ${val}`)
@@ -117,68 +131,102 @@ class Layout {
     return this.levels[id] ?? 'full';
   }
 
-  /** The player asked for a folded piece whole (clicked its chip): the others give way. */
-  pin(id: PieceId, on = true): void {
+  /**
+   * The player asked for a folded piece whole (clicked its chip): the others give way. Asked
+   * from the reading strip, the piece is not in its column yet: it will be, pinned, when the
+   * columns come back.
+   */
+  pin(id: PieceId, on = true, ms = 0): void {
+    clearTimeout(unpinTimers.get(id));
     const p = this.pieces[id];
     if (p && p.pinned !== on) p.pinned = on;
+    if (on && !p) pending.add(id);
+    else pending.delete(id);
+    // For a while only (the dispatches come and go: the column settles back after).
+    if (on && ms > 0)
+      unpinTimers.set(
+        id,
+        setTimeout(() => this.pin(id, false), ms),
+      );
   }
 
   /**
    * A piece shows (`on`) or goes. Counted: a piece printed anew at another level (its chip
    * replacing its card) stays laid out, pinned or not; it goes once nothing shows it.
    */
-  show(id: PieceId, on: boolean): void {
+  show(id: PieceId, on: boolean, count = 1): void {
     const n = (shown.get(id) ?? 0) + (on ? 1 : -1);
     shown.set(id, Math.max(0, n));
-    if (on && !this.pieces[id]) this.pieces[id] = { pinned: false };
+    if (on && !this.pieces[id]) {
+      this.pieces[id] = { pinned: pending.has(id), n: count };
+      pending.delete(id);
+    }
     if (!on && n <= 0)
       queueMicrotask(() => {
         if ((shown.get(id) ?? 0) <= 0 && this.pieces[id]) delete this.pieces[id];
       });
   }
 
-  /** A piece's height as printed at `level` (what its component rendered). */
-  report(id: PieceId, level: Level, h: number): void {
+  /** How much a piece holds now (see Piece.n). */
+  count(id: PieceId, n: number): void {
+    const p = this.pieces[id];
+    if (p && p.n !== n) p.n = n;
+  }
+
+  /** A piece's height as printed at `level` holding `n` (what its component rendered). */
+  report(id: PieceId, level: Level, h: number, n = 1): void {
     if (!this.pieces[id]) return;
     const key = `${id}:${this.normal.cls}`;
     const cur = this.heights[key];
-    if (cur && Math.abs((cur[level] ?? -99) - h) <= 1) return;
-    this.heights[key] = { ...cur, [level]: h };
+    const was = cur?.[level];
+    if (was && was.n === n && Math.abs(was.h - h) <= 1) return;
+    this.heights[key] = { ...cur, [level]: { h, n } };
   }
 }
 
 export const layout = new Layout();
+
+/** What a piece of a column tells the layout: which, shown or not, at what level, holding how much. */
+export interface PieceArg {
+  id: PieceId;
+  on?: boolean;
+  level?: Level;
+  n?: number;
+}
 
 /**
  * Svelte action: `use:zonePiece={{ id: 'council', on: !!council, level }}` lays a piece out
  * in its column while `on`; its height is measured at the level it is printed at (once the
  * page has laid it out: never inside the update that changed it).
  */
-export function zonePiece(node: HTMLElement, arg: { id: PieceId; on?: boolean; level?: Level }) {
-  let { id, on = true, level = 'full' } = arg;
+export function zonePiece(node: HTMLElement, arg: PieceArg) {
+  let { id, on = true, level = 'full', n = 1 } = arg;
   let raf = 0;
   const measure = () => {
     raf = 0;
     if (!on || (!node.offsetParent && node.offsetHeight === 0)) return;
-    layout.report(id, level, Math.round(node.offsetHeight));
+    layout.report(id, level, Math.round(node.offsetHeight), n);
   };
   const later = () => {
     if (!raf) raf = requestAnimationFrame(measure);
   };
   const ro = new ResizeObserver(later);
   ro.observe(node);
-  if (on) untrack(() => layout.show(id, true));
+  if (on) untrack(() => layout.show(id, true, n));
   later();
   return {
-    update(next: { id: PieceId; on?: boolean; level?: Level }) {
+    update(next: PieceArg) {
       const nextOn = next.on ?? true;
+      const nextN = next.n ?? 1;
       untrack(() => {
         if (on && (next.id !== id || !nextOn)) layout.show(id, false);
-        if (nextOn && (next.id !== id || !on)) layout.show(next.id, true);
+        if (nextOn && (next.id !== id || !on)) layout.show(next.id, true, nextN);
+        if (nextOn) layout.count(next.id, nextN);
       });
       id = next.id;
       on = nextOn;
       level = next.level ?? 'full';
+      n = nextN;
       later();
     },
     destroy() {

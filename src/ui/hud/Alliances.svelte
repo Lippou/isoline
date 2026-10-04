@@ -41,7 +41,7 @@
     data-testid="alliances"
     onclick={toggle}
     aria-label="{t('alliances.title')} — {t('zone.unfold')}"
-    use:zonePiece={{ id: 'alliances', level }}
+    use:zonePiece={{ id: 'alliances', level, n: rows.length }}
     ><Icon name="alliance" size={13} /><b>{t('alliances.title')}</b><span class="mono">{rows.length}</span
     ></button
   >
@@ -50,7 +50,7 @@
     class="allies newsprint"
     data-testid="alliances"
     aria-label={t('alliances.title')}
-    use:zonePiece={{ id: 'alliances', level }}
+    use:zonePiece={{ id: 'alliances', level, n: rows.length }}
   >
     <button class="head" onclick={toggle} aria-expanded={open && level === 'full'}>
       <Icon name="alliance" size={15} />

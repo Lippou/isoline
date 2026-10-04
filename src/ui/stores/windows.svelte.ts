@@ -193,9 +193,16 @@ export function setRect(id: WinId, r: Rect, remember = false): void {
   }
 }
 
-/** Forgets where the player put a window (or all of them) and puts it back in its place. */
+/**
+ * Forgets where the player put a window (or all of them) and puts it back in its place;
+ * all of them: whether they open maximised too.
+ */
 export function resetWindows(id?: WinId): void {
   for (const k of id ? [id] : WIN_IDS) delete wm.saved[k];
+  if (!id) {
+    wm.maxPref = {};
+    for (const k of wm.order) wm.maxed[k] = MAX_BY_DEFAULT.has(k);
+  }
   persist();
   if (id) {
     if (wm.rects[id]) wm.rects[id] = placeWindow(id, false);

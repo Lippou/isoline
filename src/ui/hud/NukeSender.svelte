@@ -36,14 +36,16 @@
     );
   /**
    * The nearest place to (x, y) inside [x0, x1] × [y0, y1] where the medallion covers no
-   * window and no other medallion: beside, above or under what it would cover.
+   * window and no other medallion: beside, above or under what it would cover. Null when
+   * the windows fill the stage: the medallion waits (the news column's alert says it all,
+   * the glow on the edge still points at the silo).
    */
   function stepAside(
     x: number,
     y: number,
     lim: { x0: number; x1: number; y0: number; y1: number },
     boxes: readonly Rect[],
-  ): [number, number] {
+  ): [number, number] | null {
     if (!hits(x, y, boxes)) return [x, y];
     const clampX = (v: number) => Math.min(lim.x1, Math.max(lim.x0, v));
     const clampY = (v: number) => Math.min(lim.y1, Math.max(lim.y0, v));
@@ -66,7 +68,7 @@
         }
       }
     }
-    return best ?? [x, y];
+    return best;
   }
 
   const still = $derived(
@@ -96,7 +98,16 @@
   let spots = $state<
     Record<
       number,
-      { x: number; y: number; ax: number; ay: number; angle: number; glow: [number, number] | null }
+      {
+        x: number;
+        y: number;
+        ax: number;
+        ay: number;
+        angle: number;
+        glow: [number, number] | null;
+        /** No room for the medallion in the stage: only the glow. */
+        hidden?: boolean;
+      }
     >
   >({});
   onMount(() => {
@@ -141,7 +152,12 @@
           x = Math.min(x1, Math.max(x0, glow[0]));
           y = Math.min(y1, Math.max(y0, glow[1]));
         }
-        [x, y] = stepAside(x, y, lim, boxes);
+        const spot = stepAside(x, y, lim, boxes);
+        if (!spot) {
+          if (glow) next[s.by] = { x, y, ax: x, ay: y, angle: 0, glow, hidden: true };
+          continue;
+        }
+        [x, y] = spot;
         // The next medallion keeps clear of this one too.
         boxes.push({ x: x - HALF.w, y: y - HALF.h, w: 2 * HALF.w, h: 2 * HALF.h });
         const angle = Math.atan2(py - y, px - x);
@@ -199,7 +215,7 @@
           style:top="{at.glow[1]}px"
           aria-hidden="true"
         ></div>{/if}
-      {#if !layout.reading}
+      {#if !layout.reading && !at.hidden}
         <span
           class="arrow"
           style:left="{at.ax}px"

@@ -202,6 +202,10 @@
     flex: 0 0 100%;
     min-width: 0;
   }
+  /* (What is read out to screen readers takes no room.) */
+  .tl > :global(.sr-only) {
+    margin: 0;
+  }
   /* Folded pieces: chips side by side at the column's foot. */
   .tl > :global([data-zone-chip]) {
     flex: none;

@@ -41,7 +41,7 @@
   /** Back to the map, the piece asked for unfolded in its column. */
   function back(piece?: PieceId): void {
     restoreColumns();
-    if (piece) layout.pin(piece);
+    if (piece) layout.pin(piece, true, piece === 'dispatches' ? 15000 : 0);
   }
 </script>
 
@@ -93,8 +93,13 @@
       >
     {/if}
     {#if hud.breaking && !hud.panels.log}
-      <button class="zchip spot" onclick={() => openPanel('log')} data-testid="reading-breaking"
-        ><Icon name="news" size={13} /><b>{t('news.breaking')}</b></button
+      <button
+        class="zchip spot"
+        onclick={() => {
+          openPanel('log');
+          hud.breaking = null;
+        }}
+        data-testid="reading-breaking"><Icon name="news" size={13} /><b>{t('news.breaking')}</b></button
       >
     {/if}
     {#if hud.toasts.length}

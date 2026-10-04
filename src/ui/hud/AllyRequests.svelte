@@ -125,7 +125,7 @@
     class="offers"
     aria-live="polite"
     data-testid="ally-offers"
-    use:zonePiece={{ id: 'offers', on: offers.length > 0 }}
+    use:zonePiece={{ id: 'offers', on: offers.length > 0, n: Math.min(offers.length, SHOWN) }}
   >
     {#if offers.length > SHOWN}
       <p class="more" transition:fade={{ duration: 120 }}>

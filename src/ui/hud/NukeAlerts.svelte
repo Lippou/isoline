@@ -12,7 +12,7 @@
 </script>
 
 {#if hud.nukeAlerts.length}
-  <div class="alerts" role="alert" use:zonePiece={{ id: 'nukeAlerts' }}>
+  <div class="alerts" role="alert" use:zonePiece={{ id: 'nukeAlerts', n: hud.nukeAlerts.length }}>
     {#each hud.nukeAlerts as a (a.id)}
       <button
         class="alert newsprint"
