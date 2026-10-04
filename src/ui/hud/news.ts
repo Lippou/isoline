@@ -67,6 +67,7 @@ const WEIGHT: Record<string, number> = {
   'notify.capitalRazed': 85,
   'notify.capitalTaken': 75,
   'notify.secession': 70,
+  'notify.secessionRegion': 70,
   'event.capitalFell': 65,
   'event.capitalRazed': 65,
   'council.sanctions': 55,
@@ -106,6 +107,12 @@ function headline(key: string, p: Record<string, string | number>, name: Name): 
     }
     case 'notify.secession':
       return [t('news.head.secession', { tiles: num(p.tiles) }), t('news.deck.secession'), []];
+    case 'notify.secessionRegion':
+      return [
+        t('news.head.secessionRegion', { tribe: name(num(p.tribe)) }),
+        t('news.deck.secessionRegion', { tiles: num(p.tiles) }),
+        [], // tribes fly no flag
+      ];
     // Capitals (rules/capital.ts): ours lost or razed, one we took, one falling elsewhere.
     case 'notify.capitalLost':
       return [

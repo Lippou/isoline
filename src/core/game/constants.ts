@@ -419,6 +419,8 @@ export const AIRFIELD_CAPACITY = 4;
 /** Below the secession threshold (60): a fresh conquest stays at risk ~24 s (one sweep near a city). */
 export const LOYALTY_CONQUERED = 45;
 export const LOYALTY_MAX = 255;
+/** Loyalty of land settled during play (wilderness), or taken back from rebels who seceded from us. */
+export const LOYALTY_SETTLED = 200;
 export const LOYALTY_GAIN_PERIOD = 6; // full map sweep chunks
 export const LOYALTY_SECESSION_THRESHOLD = 60;
 export const LOYALTY_CHECK_TICKS = sec(15);

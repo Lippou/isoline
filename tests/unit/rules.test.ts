@@ -14,6 +14,7 @@ import {
   GENERAL_COOLDOWN,
   COUNCIL_PERIOD,
   COUNCIL_VOTE_TICKS,
+  LOYALTY_SECESSION_THRESHOLD,
 } from '../../src/core/game/constants';
 import { currentThreshold } from '../../src/core/rules/victory';
 import { placeBuilding, buildCost } from '../../src/core/buildings/buildings';
@@ -135,6 +136,33 @@ describe('diplomacy', () => {
     // A second wave joins the attack under way: announced again.
     g.step([cmd(1, { t: 'attack', tile: g.map.idx(45, 20), ratio: 0.2 })]);
     expect(waves()).toHaveLength(1);
+  });
+
+  it('a wave answering our attack under way is a riposte; one we did not provoke is an invasion', () => {
+    const g = testGame(asciiMap(FIELD, 6), 2);
+    startWith(g, [
+      [25, 20],
+      [45, 20],
+    ]);
+    for (let y = 6; y < 36; y++) for (let x = 6; x < 80; x++) g.setOwner(g.map.idx(x, y), x < 41 ? 1 : 2);
+    g.players[1]!.troops = 200_000;
+    g.players[2]!.troops = 200_000;
+    const wave = () => g.events.find((e) => e.k === 'attackWave') as { riposte: boolean; attacker: number };
+    // 1 attacks 2: an invasion of 2.
+    g.step([cmd(1, { t: 'attack', tile: g.map.idx(45, 20), ratio: 0.1 })]);
+    expect(wave()).toMatchObject({ attacker: 1, riposte: false });
+    // 2 strikes back while 1's attack is under way: a riposte (1's screen shows no red edges)…
+    g.step([cmd(2, { t: 'attack', tile: g.map.idx(35, 20), ratio: 0.3 })]);
+    expect(wave()).toMatchObject({ attacker: 2, riposte: true });
+    // …even when the clash ended 1's attack in the process (it was read first).
+    expect(g.attacks.some((a) => !a.done && a.attacker === 1 && a.target === 2)).toBe(false);
+    // 2 reinforces its push into 1's land, with no attack of 1's left to answer: an invasion.
+    for (let k = 0; k < 5; k++) g.step([]);
+    g.step([cmd(2, { t: 'attack', tile: g.map.idx(35, 20), ratio: 0.1 })]);
+    expect(wave()).toMatchObject({ attacker: 2, riposte: false });
+    // 1 strikes back at that attack (begun first): a riposte for 2.
+    g.step([cmd(1, { t: 'attack', tile: g.map.idx(45, 20), ratio: 0.6 })]);
+    expect(wave()).toMatchObject({ attacker: 1, riposte: true });
   });
 
   it('validates command shapes', () => {
@@ -452,6 +480,50 @@ describe('original features', () => {
     }
     expect(seceded).toBe(true);
     expect(g.players.length).toBeGreaterThan(2);
+    expect(invariants(g)).toEqual([]);
+  });
+
+  it('rebels are no gold farm: no treasury, no loot, and land taken back from them stays loyal', () => {
+    const g = testGame(asciiMap(FIELD, 8), 1, {
+      victoryThreshold: 101,
+      features: { loyalty: true } as never,
+    });
+    startWith(g, [[30, 28]]);
+    const p = g.players[1]!;
+    for (let i = 0; i < g.map.size; i++) if (g.map.isLand(i) && g.owner[i] === 0) g.setOwner(i, 1);
+    g.loyalty.fill(10);
+    p.troops = 100;
+    let secession: Extract<(typeof g.events)[number], { k: 'secession' }> | undefined;
+    let notice: (typeof g.events)[number] | undefined;
+    for (let k = 0; k < 400 && !secession; k++) {
+      g.step([]);
+      secession = g.events.find((e) => e.k === 'secession') as typeof secession;
+      notice = g.events.find((e) => e.k === 'notify' && e.key === 'notify.secessionRegion');
+    }
+    expect(secession).toBeDefined();
+    const rebel = g.players[secession!.tribe]!;
+    expect(rebel.kind).toBe('tribe');
+    expect(rebel.rebelOf).toBe(1);
+    // The player is told where, and by whom: a dispatch on the seed tile naming the rebels.
+    expect(notice).toMatchObject({ to: 1, level: 'danger', tile: secession!.tile });
+    expect((notice as { params: Record<string, number> }).params).toMatchObject({ tribe: rebel.id });
+    const region: number[] = [];
+    for (let i = 0; i < g.map.size; i++) if (g.owner[i] === rebel.id) region.push(i);
+    // A rebel hoards nothing (a tribe banks TRIBE_INCOME a second).
+    for (let k = 0; k < 300; k++) g.step([]);
+    expect(rebel.gold).toBe(0);
+    // Crushing the rebellion pays no loot, and the land comes home loyal.
+    p.troops = 500_000;
+    let loot = 0;
+    for (let k = 0; k < 900 && rebel.alive; k++) {
+      g.step(k % 20 === 0 ? [cmd(1, { t: 'attack', tile: region[0]!, ratio: 0.5 })] : []);
+      for (const e of g.events) if (e.k === 'loot' && e.owner === 1) loot += e.amount;
+    }
+    expect(rebel.alive).toBe(false);
+    expect(loot).toBe(0);
+    const back = region.filter((t) => g.owner[t] === 1);
+    expect(back.length).toBeGreaterThan(0);
+    for (const t of back) expect(g.loyalty[t]!).toBeGreaterThanOrEqual(LOYALTY_SECESSION_THRESHOLD);
     expect(invariants(g)).toEqual([]);
   });
 

@@ -49,6 +49,17 @@ export function levelsOwned(game: Game, p: Player, type: B): number {
 }
 
 /**
+ * Levels of p's buildings per type, counted like levelsOwned (one under construction is 1,
+ * an upgrade under way counts as done): a city stacked to level 2 is two cities' worth.
+ */
+export function levelsByType(game: Game, p: Player): number[] {
+  const out = new Array<number>(p.buildingCount.length).fill(0);
+  for (const b of game.buildings.values())
+    if (b.owner === p.id) out[b.type]! += b.buildLeft > 0 ? 1 : paidLevels(b);
+  return out;
+}
+
+/**
  * OpenFront's price index for `type`: n = Σ min(levels owned, levels ever built)
  * over its price group. Upgrades and buildings under construction raise it,
  * captured buildings never raise it beyond what p built, lost ones lower it.
@@ -222,6 +233,56 @@ export function buildingToUpgrade(game: Game, p: Player, type: B, tile: number):
     }
   });
   return best;
+}
+
+/** Why a build order would fail: a placement error, or an upgrade already under way / a building still going up. */
+export type BuildError = PlaceError | 'upgrading' | 'constructing';
+
+/**
+ * What a build order of `type` on `tile` would do — the 'build' command acts on exactly
+ * this, and the cursor shows it before the click. On (or next to) one of p's buildings of
+ * that type below its top level: upgrade it (`building`). Otherwise a new building on
+ * `tile`, the click snapped to the nearest free spot (ports first to the nearest owned
+ * coast); `tile` is -1 when no spot is found nearby. `error` is 'ok' when the order
+ * goes through, `cost` what it would cost, `lock` the technology missing ('locked').
+ */
+export interface BuildPlan {
+  building: Building | null;
+  tile: number;
+  error: BuildError;
+  cost: number;
+  lock: number;
+}
+
+export function planBuild(game: Game, p: Player, type: B, tile: number): BuildPlan {
+  const lock = buildingLock(game, p, type);
+  const existing = buildingToUpgrade(game, p, type, tile);
+  if (existing && existing.level < MAX_LEVEL[type]) {
+    const cost = upgradeCost(game, p, existing);
+    const error: BuildError =
+      existing.upgradeLeft > 0
+        ? 'upgrading'
+        : existing.buildLeft > 0
+          ? 'constructing'
+          : lock >= 0
+            ? 'locked'
+            : p.gold < cost
+              ? 'gold'
+              : 'ok';
+    return { building: existing, tile: existing.tile, error, cost, lock };
+  }
+  const cost = buildCost(game, p, type);
+  let at = tile;
+  if (type === B.Port && !game.map.isCoastalLand(at)) at = snapPortTile(game, p, at);
+  if (at < 0) {
+    // No owned coast within reach of the click (the order is dropped).
+    const error = game.phase !== 'playing' ? 'phase' : game.owner[tile] !== p.id ? 'notOwned' : 'notCoastal';
+    return { building: null, tile: -1, error, cost, lock };
+  }
+  // Structures stand MIN_BUILDING_SPACING apart: the click snaps to the nearest free spot.
+  const spot = snapBuildTile(game, p, type, at);
+  const error = checkPlacement(game, p, type, spot >= 0 ? spot : at);
+  return { building: null, tile: spot, error, cost, lock };
 }
 
 /** For ports: snap a clicked tile to the nearest owned coastal tile within a small radius. */

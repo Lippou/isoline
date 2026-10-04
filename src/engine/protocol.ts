@@ -50,10 +50,26 @@ export type ToWorker =
 
 export type Query =
   | { q: 'tile'; tile: number }
+  /** What a build order there would do (answers a PlacementView). */
   | { q: 'placement'; kind: number; tile: number }
   | { q: 'boat'; tile: number }
   | { q: 'hash' }
   | { q: 'stats' };
+
+/**
+ * The cursor's preview of a build order (core/buildings planBuild): a new building on
+ * `at` (the click snapped to the nearest free spot; -1: none nearby), or an upgrade of
+ * the building standing on `at` to `level`. `error`: 'ok' or why the order would fail;
+ * `tech`: the missing technology's i18n key ('locked').
+ */
+export interface PlacementView {
+  upgrade: boolean;
+  at: number;
+  level: number;
+  error: string;
+  cost: number;
+  tech: string;
+}
 
 export interface PlayerView {
   id: number;
@@ -165,6 +181,11 @@ export interface LocalView {
   maxLaunch: number[];
   resources: [number, number, number, number];
   buildingCount: number[];
+  /**
+   * Levels of my buildings per type (one under construction counts 1, an upgrade under way
+   * as done): building on one of your own buildings stacks it, so a level-2 city is two cities.
+   */
+  buildingLevels: number[];
   stats: PlayerStats;
   blitzFor: number;
   rampartFor: number;

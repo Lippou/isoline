@@ -281,6 +281,8 @@ function secede(game: Game, p: Player, seed: number): void {
   }
   if (region.length < 30) return;
   const rebel = game.addPlayer(inventTribeName(game.rng), 'tribe');
+  // No treasury and no income (economy.ts): putting a rebellion down pays nothing.
+  rebel.rebelOf = p.id;
   rebel.color = -1;
   rebel.flagSeed = game.rng.nextU32();
   rebel.spawned = true;
@@ -294,7 +296,8 @@ function secede(game: Game, p: Player, seed: number): void {
     game.loyalty[t] = 180;
   }
   game.emit({ k: 'secession', from: p.id, tribe: rebel.id, tile: seed });
-  game.notify(p.id, 'notify.secession', 'danger', { tiles: region.length }, seed);
+  // The dispatch and the journal say where (the seed tile) and who the rebels are.
+  game.notify(p.id, 'notify.secessionRegion', 'danger', { tribe: rebel.id, tiles: region.length }, seed);
 }
 
 // --------------------------------------------------------------- generals

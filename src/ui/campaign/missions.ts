@@ -80,7 +80,12 @@ export const share = (c: MissionCtx): number => {
 };
 const alive = (c: MissionCtx) => c.local?.alive ?? true;
 const placed = (c: MissionCtx) => (meView(c)?.tiles ?? 0) > 0;
-const built = (c: MissionCtx, type: number) => c.local?.buildingCount[type] ?? 0;
+/**
+ * How many buildings of a type I own, counted in levels: building on one of your own
+ * buildings stacks it (an upgrade), so a city stacked to level 2 counts as two cities.
+ */
+const built = (c: MissionCtx, type: number) =>
+  c.local?.buildingLevels?.[type] ?? c.local?.buildingCount[type] ?? 0;
 const buildCost = (type: number) => (c: MissionCtx) => c.local?.buildCosts[type] ?? 0;
 const mem = (c: MissionCtx, k: string) => c.memory[k] ?? 0;
 /** Ticks the current guide step has been on screen. */
@@ -158,7 +163,20 @@ export function observe(c: MissionCtx): void {
   }
 }
 
-function base(seed: number, name: string, mapId: string, patch: Partial<GameConfig>): GameConfig {
+/**
+ * Secessions (loyalty) only from mission 5: the first four missions teach the basics, the
+ * sea and the economy, and a region of your own rising up as a tribe there only confused
+ * (« une tribu qui réapparaît dans mon territoire »).
+ */
+const LOYALTY_FROM = 5;
+
+function base(
+  seed: number,
+  name: string,
+  mapId: string,
+  patch: Partial<GameConfig>,
+  mission = LOYALTY_FROM,
+): GameConfig {
   const cfg = defaultConfig(seed);
   return {
     ...cfg,
@@ -166,6 +184,7 @@ function base(seed: number, name: string, mapId: string, patch: Partial<GameConf
     players: [{ slot: 0, name, kind: 'human', team: 0, general: 'blitz' }],
     spawnSeconds: 90,
     ...patch,
+    features: { ...cfg.features, loyalty: mission >= LOYALTY_FROM },
     mode: patch.mode ?? 'campaign',
   };
 }
@@ -179,7 +198,7 @@ export const MISSIONS: Mission[] = [
     mapId: 'two-lakes',
     // The first city is paid for: the guide asks for it within the first minutes.
     config: (s, n) =>
-      base(s, n, 'two-lakes', { nations: 3, tribes: 24, difficulty: 'easy', startGold: 125_000 }),
+      base(s, n, 'two-lakes', { nations: 3, tribes: 24, difficulty: 'easy', startGold: 125_000 }, 1),
     objectives: [
       { key: 'campaign.m1.main', check: (c) => share(c) >= 0.15, progress: (c) => pct(c, 0.15) },
       {
@@ -189,7 +208,7 @@ export const MISSIONS: Mission[] = [
       },
     ],
     bonus: {
-      key: 'campaign.m1.bonus',
+      key: 'campaign.m1.bonusLevels',
       check: (c) => built(c, B.City) >= 2,
       progress: (c) => count(built(c, B.City), 2),
     },
@@ -212,7 +231,7 @@ export const MISSIONS: Mission[] = [
     id: 'm2',
     mapId: 'europe',
     config: (s, n) =>
-      base(s, n, 'europe', { nations: 30, tribes: 10, difficulty: 'hard', startGold: 50_000 }),
+      base(s, n, 'europe', { nations: 30, tribes: 10, difficulty: 'hard', startGold: 50_000 }, 2),
     objectives: [
       {
         key: 'campaign.m2.main',
@@ -242,7 +261,7 @@ export const MISSIONS: Mission[] = [
     id: 'm3',
     mapId: 'archipelago',
     config: (s, n) =>
-      base(s, n, 'archipelago', { nations: 12, tribes: 20, difficulty: 'normal', startGold: 125_000 }),
+      base(s, n, 'archipelago', { nations: 12, tribes: 20, difficulty: 'normal', startGold: 125_000 }, 3),
     objectives: [
       {
         key: 'campaign.m3.land',
@@ -286,7 +305,7 @@ export const MISSIONS: Mission[] = [
     id: 'm4',
     mapId: 'pangaea',
     config: (s, n) =>
-      base(s, n, 'pangaea', { nations: 16, tribes: 30, difficulty: 'normal', startGold: 250_000 }),
+      base(s, n, 'pangaea', { nations: 16, tribes: 30, difficulty: 'normal', startGold: 250_000 }, 4),
     objectives: [
       {
         key: 'campaign.m4.main',
@@ -300,7 +319,7 @@ export const MISSIONS: Mission[] = [
       },
     ],
     bonus: {
-      key: 'campaign.m4.bonus',
+      key: 'campaign.m4.bonusLevels',
       check: (c) => built(c, B.Factory) >= 3,
       progress: (c) => count(built(c, B.Factory), 3),
     },

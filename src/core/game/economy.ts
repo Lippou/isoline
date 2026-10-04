@@ -82,8 +82,9 @@ export function updateEconomy(game: Game): void {
 
     // --- gold
     if (p.kind === 'tribe') {
-      // Tribes trade and hoard: their treasury is the prize for conquering them.
-      p.income = Math.floor(GOLD_PER_TICK.tribe * game.config.goldMultiplier);
+      // Tribes trade and hoard: their treasury is the prize for conquering them. Rebels
+      // (a seceded region) hoard nothing: crushing a rebellion is no gold mine.
+      p.income = p.rebelOf > 0 ? 0 : Math.floor(GOLD_PER_TICK.tribe * game.config.goldMultiplier);
       p.gold = Math.min(MAX_GOLD, p.gold + p.income);
       continue;
     }

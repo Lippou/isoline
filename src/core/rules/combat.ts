@@ -402,6 +402,20 @@ export function launchAttack(
     a = new Attack(game.nextId(), attackerId, targetId, 0, game.tick);
     a.boat = boat;
   }
+  // A riposte: the target was already attacking us when this attack began (the clash below
+  // may end its attack, so this is read first). The wave is the target's defence answered,
+  // not an invasion: the target's screen shows it apart (no red edges).
+  let riposte = false;
+  if (targetId > 0) {
+    for (const opp of game.attacks)
+      if (
+        !opp.done &&
+        opp.attacker === targetId &&
+        opp.target === attackerId &&
+        opp.createdTick <= a.createdTick
+      )
+        riposte = true;
+  }
   // Opposing attacks clash: the bigger stack goes on, minus the smaller one.
   if (targetId > 0) {
     for (const opp of game.attacks) {
@@ -456,6 +470,7 @@ export function launchAttack(
       target: targetId,
       troops: Math.round(troops),
       tile: landing ?? a.heapTiles[0] ?? -1,
+      riposte,
     });
   return a;
 }

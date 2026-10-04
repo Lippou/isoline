@@ -8,10 +8,10 @@ import { generateMapData } from '../core/map/generator';
 import { restoreSnapshot, takeSnapshot } from '../core/net/snapshot';
 import { hashGame } from '../core/net/hash';
 import { B, BUILDING_COUNT, HASH_EVERY, N, RADAR_RANGE } from '../core/game/constants';
-import { buildCost, checkPlacement } from '../core/buildings/buildings';
+import { buildCost, levelsByType, planBuild } from '../core/buildings/buildings';
 import { warshipCost, planBoat, TRANSPORT_RETREATING } from '../core/units/ships';
 import { maxLaunchable, nukeCost } from '../core/units/nukes';
-import { nextTechCost, researchRate, researchSources, techSam } from '../core/rules/tech';
+import { nextTechCost, researchRate, researchSources, techKey, techSam } from '../core/rules/tech';
 import { resourceBonus } from '../core/rules/resources';
 import { isNight } from '../core/rules/features';
 import { sightAt } from '../core/rules/weather';
@@ -24,6 +24,7 @@ import type {
   FromWorker,
   LocalView,
   MapSource,
+  PlacementView,
   PlayerView,
   RailView,
   TickUpdate,
@@ -562,6 +563,7 @@ function localView(g: Game): LocalView | undefined {
     maxLaunch: [maxLaunchable(g, p, N.Atom), maxLaunchable(g, p, N.Hydrogen), maxLaunchable(g, p, N.Mirv)],
     resources: [res[0], res[1], res[2], res[3]],
     buildingCount: [...p.buildingCount],
+    buildingLevels: levelsByType(g, p),
     stats: { ...p.stats },
     blitzFor: Math.max(0, p.blitzUntil - t),
     rampartFor: Math.max(0, p.rampartUntil - t),
@@ -767,8 +769,24 @@ function answer(g: Game, q: import('./protocol').Query): unknown {
     }
     case 'placement': {
       const p = g.player(viewer);
-      if (!p) return { error: 'notOwned', cost: 0 };
-      return { error: checkPlacement(g, p, q.kind as B, q.tile), cost: buildCost(g, p, q.kind as B) };
+      if (!p || q.kind < 0 || q.kind >= BUILDING_COUNT || q.tile < 0 || q.tile >= g.map.size)
+        return {
+          upgrade: false,
+          at: -1,
+          level: 1,
+          error: 'notOwned',
+          cost: 0,
+          tech: '',
+        } satisfies PlacementView;
+      const plan = planBuild(g, p, q.kind as B, q.tile);
+      return {
+        upgrade: !!plan.building,
+        at: plan.tile,
+        level: plan.building ? plan.building.level + 1 : 1,
+        error: plan.error,
+        cost: plan.cost,
+        tech: plan.lock >= 0 ? techKey(plan.lock) : '',
+      } satisfies PlacementView;
     }
     case 'boat': {
       const p = g.player(viewer);

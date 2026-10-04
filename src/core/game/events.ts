@@ -35,9 +35,10 @@ export type GameEvent =
   | { k: 'intercept'; x: number; y: number; owner: number }
   /**
    * A wave of troops sent at `target`: a new land attack, troops added to one already under
-   * way, or a landing. `tile`: a tile of its front (or the beach), −1 if none.
+   * way, or a landing. `tile`: a tile of its front (or the beach), −1 if none. `riposte`:
+   * `target` was already attacking `attacker` when this attack began — the wave answers it.
    */
-  | { k: 'attackWave'; attacker: number; target: number; troops: number; tile: number }
+  | { k: 'attackWave'; attacker: number; target: number; troops: number; tile: number; riposte: boolean }
   | { k: 'shipSunk'; x: number; y: number; owner: number; by: number }
   | { k: 'capture'; x: number; y: number; owner: number; by: number }
   | { k: 'emoji'; from: number; to: number; tile: number; emoji: number }

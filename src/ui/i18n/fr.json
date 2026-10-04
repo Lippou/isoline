@@ -1214,7 +1214,8 @@
   "alert": {
     "nuke": "Missile nucléaire lancé par {by} — impact dans {eta} s !",
     "mirv": "MIRV lancé par {by} — impact dans {eta} s !",
-    "doomsday": "Votre territoire est sous le seuil de {share} % : vos troupes vont fondre !"
+    "doomsday": "Votre territoire est sous le seuil de {share} % : vos troupes vont fondre !",
+    "riposte": "{player} riposte à votre attaque"
   },
   "notify": {
     "allianceRequest": "{from} propose une alliance.",
@@ -1248,7 +1249,8 @@
     "researchIdle": "Plus aucune recherche en cours : choisissez la prochaine technologie.",
     "labReady": "Centre de recherche opérationnel : la recherche accélère.",
     "labLost": "{by} s'est emparé d'un de vos centres de recherche.",
-    "labTaken": "Vous prenez un centre de recherche à {player}."
+    "labTaken": "Vous prenez un centre de recherche à {player}.",
+    "secessionRegion": "Une région fait sécession : {tribe} ({tiles} cases) se soulève dans votre pays."
   },
   "error": {
     "nukeSelfMirv": "Un MIRV ne peut pas viser votre propre pays : ses ogives tomberaient sur tout votre territoire.",
@@ -1460,7 +1462,8 @@
       "outro": "Belles premières lignes. Les nations ont remarqué votre encre.",
       "brief": "Deux grands lacs partagent cette région. Trois petites nations s'y installent, entourées de tribus qui gardent leur or. Vous partez d'une capitale et de quelques milliers d'hommes. Je vous guiderai pas à pas : étendez-vous, bâtissez une ville, soumettez les tribus, et imposez-vous en contrôlant quinze pour cent des terres.",
       "tip1": "Un clic sur une terre libre y envoie une part de vos troupes, fixée par le ratio d'attaque en bas à gauche. Plusieurs petits clics valent mieux qu'un seul gros.",
-      "tip2": "Les villes relèvent votre plafond de troupes. Votre trésor de départ paie la première ; chaque nouvelle ville coûte deux fois plus cher que la précédente."
+      "tip2": "Les villes relèvent votre plafond de troupes. Votre trésor de départ paie la première ; chaque nouvelle ville coûte deux fois plus cher que la précédente.",
+      "bonusLevels": "Posséder 2 villes (une ville de niveau 2 compte pour deux)"
     },
     "m2": {
       "title": "Tenir la ligne",
@@ -1489,7 +1492,8 @@
       "brief": "La Pangée réunit toutes les terres en un seul continent : les routes commerciales y sont longues et lucratives. Votre objectif n'est pas la conquête mais la fortune : gagnez un million et demi d'or grâce au commerce maritime et aux trains, et recherchez les chemins de fer dans votre premier centre de recherche.",
       "tip1": "Une usine relie automatiquement par rail vos villes, ports et usines voisins. Chaque arrêt de train rapporte de l'or.",
       "tip2": "Les ports envoient des navires marchands vers les ports étrangers ; un embargo coupe ces échanges. La touche C affiche les routes commerciales.",
-      "tech": "Rechercher les Chemins de fer"
+      "tech": "Rechercher les Chemins de fer",
+      "bonusLevels": "Posséder 3 usines (chaque niveau compte)"
     },
     "m5": {
       "title": "Le soleil artificiel",
@@ -2076,7 +2080,8 @@
       "capitalRazed": "Votre capitale est rasée",
       "capitalTaken": "Vous prenez la capitale de {player}",
       "capitalFell": "La capitale de {player} tombe aux mains de {by}",
-      "capitalRazedOther": "La capitale de {player} est rasée"
+      "capitalRazedOther": "La capitale de {player} est rasée",
+      "secessionRegion": "{tribe} fait sécession"
     },
     "deck": {
       "betrayal": "L'alliance vole en éclats : {traitor} porte la marque du traître, et {victim} rompt tout commerce avec {traitor} pendant 5 minutes.",
@@ -2090,7 +2095,8 @@
       "capitalLost": "{gold} or du trésor saisis et une minute de désorganisation : choisissez un nouveau siège du gouvernement.",
       "capitalRazed": "Le trésor qui s'y trouvait part en fumée ; choisissez un nouveau siège du gouvernement.",
       "capitalTaken": "{gold} or saisis dans son trésor ; le pays est désorganisé pendant une minute.",
-      "capitalFell": "Le pays est désorganisé pendant une minute et doit choisir un nouveau siège."
+      "capitalFell": "Le pays est désorganisé pendant une minute et doit choisir un nouveau siège.",
+      "secessionRegion": "{tiles} cases mal tenues proclament leur indépendance. Villes et postes de défense calment les conquêtes récentes."
     },
     "flash": {
       "title": "Flash info",
@@ -2343,5 +2349,21 @@
     "dispatches": "{n} dépêches",
     "dispatchesOne": "1 dépêche",
     "dispatchesShow": "Déplier les dépêches ({n})"
+  },
+  "place": {
+    "build": "Construire ici · {cost}",
+    "snapped": "Trop près d'un bâtiment : placé à côté · {cost}",
+    "upgrade": "Améliorer au niveau {level} · {cost}",
+    "notOwned": "Hors de votre territoire",
+    "notLand": "Terrain inconstructible",
+    "occupied": "Emplacement pris : aucune place libre autour",
+    "tooClose": "Bâtiments trop serrés : aucune place libre autour",
+    "notCoastal": "Aucune côte navigable à portée",
+    "gold": "Il manque {gold} d'or",
+    "locked": "À rechercher d'abord : {tech}",
+    "disabled": "Désactivé dans cette partie",
+    "phase": "Pas avant le début de la partie",
+    "upgrading": "Amélioration déjà en cours",
+    "constructing": "Encore en construction"
   }
 }

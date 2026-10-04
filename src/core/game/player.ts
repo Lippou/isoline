@@ -64,6 +64,8 @@ export class Player {
   eliminatedTick = -1;
   inactive = false;
   surrendered = false;
+  /** A rebel tribe: the country whose region seceded to form it (0: none, rules/features.ts). */
+  rebelOf = 0;
 
   troops = 0;
   /** Always 0: troops are the whole population (field kept for older code paths and saves). */

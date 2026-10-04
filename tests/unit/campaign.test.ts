@@ -63,6 +63,7 @@ function local(over: Partial<LocalView> = {}): LocalView {
     popCap: 100_000,
     income: 100,
     buildingCount: new Array<number>(BUILDING_COUNT).fill(0),
+    buildingLevels: new Array<number>(BUILDING_COUNT).fill(0),
     buildCosts: [125_000, 125_000, 125_000, 50_000, 1_000_000, 1_500_000, 300_000, 800_000, 250_000],
     warshipCost: 250_000,
     nukeCosts: [750_000, 5_000_000, 25_000_000],
@@ -226,12 +227,61 @@ describe('campaign: objectives', () => {
     const m = mission('m1');
     const counts = new Array<number>(BUILDING_COUNT).fill(0);
     counts[B.City] = 1;
-    expect(evaluate(m, withShare(ctx({}, { buildingCount: counts }), 0.149), fresh(m))).toBe('playing');
+    const one = { buildingCount: counts, buildingLevels: counts };
+    expect(evaluate(m, withShare(ctx({}, one), 0.149), fresh(m))).toBe('playing');
     expect(evaluate(m, withShare(ctx(), 0.15), fresh(m))).toBe('playing');
-    expect(evaluate(m, withShare(ctx({}, { buildingCount: counts }), 0.15), fresh(m))).toBe('won');
-    expect(m.bonus.check(ctx({}, { buildingCount: counts }))).toBe(false);
-    counts[B.City] = 2;
-    expect(m.bonus.check(ctx({}, { buildingCount: counts }))).toBe(true);
+    expect(evaluate(m, withShare(ctx({}, one), 0.15), fresh(m))).toBe('won');
+    expect(m.bonus.check(ctx({}, one))).toBe(false);
+    const two = [...counts];
+    two[B.City] = 2;
+    expect(m.bonus.check(ctx({}, { buildingCount: two, buildingLevels: two }))).toBe(true);
+  });
+
+  it('cities stacked on one another count by level (a level-2 city is two cities)', () => {
+    const one = new Array<number>(BUILDING_COUNT).fill(0);
+    one[B.City] = 1;
+    one[B.Factory] = 1;
+    const stacked = [...one];
+    stacked[B.City] = 2;
+    stacked[B.Factory] = 3;
+    // One city building at level 2, one factory at level 3.
+    const c = ctx({}, { buildingCount: one, buildingLevels: stacked });
+    expect(mission('m1').bonus.check(c)).toBe(true);
+    expect(mission('m1').bonus.progress!(c)).toEqual({ value: 2, max: 2, format: 'count' });
+    expect(mission('m4').bonus.check(c)).toBe(true);
+    // The guides' « build two / three cities » steps count levels as well.
+    for (const [id, key] of [
+      ['m4', 'guide.m4.cities'],
+      ['m5', 'guide.m5.city'],
+    ] as const)
+      expect(
+        mission(id)
+          .guide.find((s) => s.key === key)!
+          .done(c),
+        key,
+      ).toBe(true);
+    const three = [...stacked];
+    three[B.City] = 3;
+    expect(
+      mission('m6')
+        .guide.find((s) => s.key === 'guide.m6.economy')!
+        .done(ctx({}, { buildingCount: one, buildingLevels: three })),
+    ).toBe(true);
+    // The texts say so.
+    expect(mission('m1').bonus.key).toBe('campaign.m1.bonusLevels');
+    expect(mission('m4').bonus.key).toBe('campaign.m4.bonusLevels');
+  });
+
+  it('no secessions in the first four missions (the basics, the sea, the economy)', () => {
+    const loyalty = MISSIONS.map((m) => [m.id, m.config(1, 'X').features.loyalty]);
+    expect(loyalty).toEqual([
+      ['m1', false],
+      ['m2', false],
+      ['m3', false],
+      ['m4', false],
+      ['m5', true],
+      ['m6', true],
+    ]);
   });
 
   it('m2: hold 20 minutes', () => {

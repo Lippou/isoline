@@ -7,16 +7,7 @@ import { handleSpawnCommand } from './spawn';
 import { attackSlotFree, cancelAttack, hasFrontier, launchAttack } from '../rules/combat';
 import { IS_LAND } from '../map/terrain';
 import { B, BUILDING_COUNT, N } from './constants';
-import {
-  MAX_LEVEL,
-  buildingToUpgrade,
-  checkPlacement,
-  demolishBuilding,
-  placeBuilding,
-  snapBuildTile,
-  snapPortTile,
-  upgradeBuilding,
-} from '../buildings/buildings';
+import { demolishBuilding, placeBuilding, planBuild, upgradeBuilding } from '../buildings/buildings';
 import { buildWarship, launchBoat, orderShips, retreatTransport } from '../units/ships';
 import { launchNukes } from '../units/nukes';
 import { launchAircraft } from '../units/air';
@@ -31,7 +22,7 @@ import {
 } from '../rules/diplomacy';
 import { castVote, useGeneral } from '../rules/features';
 import { continueAfterVictory } from '../rules/victory';
-import { buildingLock, setResearch, techKey } from '../rules/tech';
+import { setResearch, techKey } from '../rules/tech';
 import { capitalCooldown, moveCapital } from '../rules/capital';
 import type { A } from './constants';
 
@@ -101,26 +92,22 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
     case 'build': {
       if (!inMap(c.tile) || c.kind < 0 || c.kind >= BUILDING_COUNT) return;
       const kind = c.kind as B;
-      // Building on (or next to) one of your own buildings of that type upgrades it.
-      const existing = buildingToUpgrade(game, p, kind, c.tile);
-      if (existing && existing.level < MAX_LEVEL[kind]) {
+      // What the cursor showed (buildings.ts planBuild): building on (or next to) one of your
+      // own buildings of that type upgrades it; otherwise the click snaps to the nearest free spot.
+      const plan = planBuild(game, p, kind, c.tile);
+      const existing = plan.building;
+      if (existing) {
         if (existing.upgradeLeft > 0) game.notify(p.id, 'error.build.upgrading', 'warn');
         else if (existing.buildLeft === 0 && !upgradeBuilding(game, p, existing))
           game.notify(p.id, 'error.build.gold', 'warn');
         return;
       }
-      let tile = c.tile;
-      if (kind === B.Port && !game.map.isCoastalLand(tile)) tile = snapPortTile(game, p, tile);
-      if (tile < 0) return;
-      // Structures stand MIN_BUILDING_SPACING apart: snap the click to the nearest free spot.
-      const spot = snapBuildTile(game, p, kind, tile);
-      const err = checkPlacement(game, p, kind, spot >= 0 ? spot : tile);
-      if (err !== 'ok') {
-        const lock = err === 'locked' ? { tech: techKey(buildingLock(game, p, kind)) } : undefined;
-        game.notify(p.id, `error.build.${err}`, 'warn', lock);
+      if (plan.error !== 'ok') {
+        const lock = plan.error === 'locked' ? { tech: techKey(plan.lock) } : undefined;
+        game.notify(p.id, `error.build.${plan.error}`, 'warn', lock);
         return;
       }
-      placeBuilding(game, p, kind, spot);
+      placeBuilding(game, p, kind, plan.tile);
       return;
     }
 

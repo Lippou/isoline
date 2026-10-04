@@ -1214,7 +1214,8 @@
   "alert": {
     "nuke": "Nuclear missile launched by {by} — impact in {eta}s!",
     "mirv": "MIRV launched by {by} — impact in {eta}s!",
-    "doomsday": "Your territory is below the {share}% threshold: your troops will melt away!"
+    "doomsday": "Your territory is below the {share}% threshold: your troops will melt away!",
+    "riposte": "{player} strikes back at your attack"
   },
   "notify": {
     "allianceRequest": "{from} proposes an alliance.",
@@ -1248,7 +1249,8 @@
     "researchIdle": "Nothing is being researched: pick the next technology.",
     "labReady": "Research centre ready: research speeds up.",
     "labLost": "{by} has seized one of your research centres.",
-    "labTaken": "You take a research centre from {player}."
+    "labTaken": "You take a research centre from {player}.",
+    "secessionRegion": "A region secedes: {tribe} ({tiles} tiles) rises up in your country."
   },
   "error": {
     "nukeSelfMirv": "A MIRV cannot target your own country: its warheads would fall all over your land.",
@@ -1460,7 +1462,8 @@
       "outro": "Fine first lines. The nations have noticed your ink.",
       "brief": "Two great lakes divide this region. Three small nations are settling here, surrounded by tribes that guard their gold. You start with a capital and a few thousand men. I will guide you step by step: expand, build a city, subdue the tribes, and become a regional power by controlling fifteen percent of the land.",
       "tip1": "A click on unclaimed land sends part of your troops there, as set by the attack ratio at the bottom left. Several small clicks beat a single large one.",
-      "tip2": "Cities raise your troop ceiling. Your starting treasury pays for the first one; each new city costs twice as much as the previous one."
+      "tip2": "Cities raise your troop ceiling. Your starting treasury pays for the first one; each new city costs twice as much as the previous one.",
+      "bonusLevels": "Own 2 cities (a level-2 city counts as two)"
     },
     "m2": {
       "title": "Hold the Line",
@@ -1489,7 +1492,8 @@
       "brief": "Pangaea joins all land into a single continent: trade routes here are long and lucrative. Your goal is not conquest but fortune: earn one and a half million gold through sea trade and trains, and research railways in your first research centre.",
       "tip1": "A factory automatically links your nearby cities, ports and factories by rail. Every train stop pays gold.",
       "tip2": "Ports send merchant ships to foreign ports; an embargo cuts that trade. Press C to show the trade routes.",
-      "tech": "Research Railways"
+      "tech": "Research Railways",
+      "bonusLevels": "Own 3 factories (each level counts)"
     },
     "m5": {
       "title": "Artificial Sun",
@@ -2076,7 +2080,8 @@
       "capitalRazed": "Your capital is razed",
       "capitalTaken": "You take {player}'s capital",
       "capitalFell": "{player}'s capital falls to {by}",
-      "capitalRazedOther": "{player}'s capital is razed"
+      "capitalRazedOther": "{player}'s capital is razed",
+      "secessionRegion": "{tribe} secedes"
     },
     "deck": {
       "betrayal": "The alliance is shattered: {traitor} bears the traitor's mark, and {victim} cuts all trade with {traitor} for 5 minutes.",
@@ -2090,7 +2095,8 @@
       "capitalLost": "{gold} gold of the treasury seized and a minute of disorganisation: choose a new seat of government.",
       "capitalRazed": "The treasury kept there goes up in smoke; choose a new seat of government.",
       "capitalTaken": "{gold} gold seized from its treasury; the country is disorganised for a minute.",
-      "capitalFell": "The country is disorganised for a minute and must choose a new seat."
+      "capitalFell": "The country is disorganised for a minute and must choose a new seat.",
+      "secessionRegion": "{tiles} poorly held tiles declare independence. Cities and defence posts settle recent conquests."
     },
     "flash": {
       "title": "News flash",
@@ -2343,5 +2349,21 @@
     "dispatches": "{n} dispatches",
     "dispatchesOne": "1 dispatch",
     "dispatchesShow": "Unfold the dispatches ({n})"
+  },
+  "place": {
+    "build": "Build here · {cost}",
+    "snapped": "Too close to a building: placed alongside · {cost}",
+    "upgrade": "Upgrade to level {level} · {cost}",
+    "notOwned": "Outside your territory",
+    "notLand": "Cannot build on this terrain",
+    "occupied": "Spot taken: no free spot around",
+    "tooClose": "Buildings too close together: no free spot around",
+    "notCoastal": "No navigable coast within reach",
+    "gold": "{gold} gold short",
+    "locked": "Research first: {tech}",
+    "disabled": "Disabled in this game",
+    "phase": "Not before the game starts",
+    "upgrading": "Upgrade already under way",
+    "constructing": "Still under construction"
   }
 }

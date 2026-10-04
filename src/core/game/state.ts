@@ -16,6 +16,7 @@ import {
   LARGE_DEFENDER_DEPTH,
   LOYALTY_CONQUERED,
   LOYALTY_MAX,
+  LOYALTY_SETTLED,
 } from './constants';
 import type { EliminationCause, GameEvent } from './events';
 import { Player, type PlayerKind } from './player';
@@ -218,7 +219,11 @@ export class Game {
       p.sumY += y;
       p.stats.tilesConquered++;
       if (p.tiles > p.stats.maxTiles) p.stats.maxTiles = p.tiles;
-      if (old > 0 || this.phase === 'playing') this.loyalty[tile] = old > 0 ? LOYALTY_CONQUERED : 200;
+      // A conquest is restless; land taken back from rebels who seceded from us comes home
+      // calm (it would otherwise secede again at once: the rebellion would never end).
+      if (old > 0 || this.phase === 'playing')
+        this.loyalty[tile] =
+          old > 0 && this.players[old]!.rebelOf !== newOwner ? LOYALTY_CONQUERED : LOYALTY_SETTLED;
     } else {
       this.loyalty[tile] = LOYALTY_MAX;
     }
