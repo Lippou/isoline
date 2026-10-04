@@ -32,13 +32,25 @@ import { alertReady, airfieldFor, radarSees, spotted } from '../units/air';
 import { airLock } from '../rules/tech';
 import { ARC_DOWN, ARC_UP, Trajectory, predictInterception } from '../units/trajectory';
 import { U } from '../units/unit';
-import { planBoat, warshipCost } from '../units/ships';
+import { planBoat } from '../units/ships';
 import { pathLength } from '../map/nav';
 import { castVote } from '../rules/features';
-import { NATION_RESEARCH, lockFor, planGoal } from '../rules/tech';
+import { NATION_RESEARCH, isResearched, lockFor, planGoal, techId } from '../rules/tech';
 import { maxTroops } from '../game/economy';
 import type { Building } from '../buildings/building';
 import { doomStage, doomSurvivalShare, outsideNextZone, shares } from '../rules/victory';
+import { bestCapitalSpot, capitalCooldown, frontDistance } from '../rules/capital';
+import { TACTICS, type Tactics } from './tactics';
+import {
+  assessThreats,
+  frontsOf,
+  joinsCoalition,
+  runawayOf,
+  striking,
+  untilStrike,
+  type ThreatState,
+} from './threat';
+import { thinkNavy } from './navy';
 
 interface Mem {
   nextThink: number;
@@ -57,6 +69,14 @@ interface Mem {
   lastRaid?: number;
   lastRecon?: number;
   lastFighter?: number;
+  /** Who took our cities, and when (1.12: a city is worth taking back). */
+  took?: Map<number, number>;
+  /** Each attacker's biggest wave at us and when it last pressed (1.12: a spent wave is answered). */
+  waves?: Map<number, [peak: number, tick: number]>;
+  /** Start of the last coalition strike window joined (one strike per window). */
+  lastStrike?: number;
+  /** Last look at the capital's safety (moving it is weighed at most every AI_CAPITAL_CHECK ticks). */
+  lastCapital?: number;
 }
 
 export interface AIState {
@@ -65,6 +85,8 @@ export interface AIState {
   /** Victim of a bombing raid → its last raider and when (units/air.ts). */
   raidedBy: Map<number, [by: number, tick: number]>;
   cursor: number;
+  /** Shared threat picture: growth, fronts, the runaway and the coalition's strikes (threat.ts; absent before 1.12). */
+  threat?: ThreatState;
 }
 
 export function createAIState(): AIState {
@@ -184,6 +206,20 @@ const AI_FRIENDLY = 50;
  * the armies, so the same share of the target's army took less land.
  */
 const AI_BITE = 0.75;
+/** A city taken by a country is remembered this long (ticks): it is fought sooner. */
+const AI_RETAKE_MEMORY = 3000;
+/** Acceptance added between two partners of the coalition against the runaway. */
+const AI_COALITION_ODDS = 0.3;
+/** Ticks between two looks at the capital's safety. */
+const AI_CAPITAL_CHECK = 300;
+/** A wave is spent once the troops still pressing fall under this share of its peak. */
+const AI_SPENT_WAVE = 0.3;
+/** Coalition strikes: the members stop starting other ventures this long before one (ticks)… */
+const AI_STRIKE_SAVING = 200;
+/** A wave is forgotten this long (ticks) after it last pressed. */
+const AI_WAVE_MEMORY = 600;
+/** War research (normal and up, at war): attack speed and losses first, then SAMs (prerequisites on the way). */
+const WAR_RESEARCH = ['military.1', 'military.2', 'military.3', 'defense.1', 'military.4', 'military.5'];
 
 function mem(game: Game, p: Player): Mem {
   let m = game.ai.mem.get(p.id);
@@ -207,6 +243,8 @@ function mem(game: Game, p: Player): Mem {
 export function updateAI(game: Game): void {
   if (game.phase !== 'playing') return;
   const diff = game.difficulty();
+  assessThreats(game);
+  noteCaptures(game);
   // Deterministic work budget: each think costs units; stop when exhausted.
   let budget = game.aiBudget;
   const n = game.players.length;
@@ -224,6 +262,22 @@ export function updateAI(game: Game): void {
       m.nextThink = game.tick + Math.round(game.rng.int(AI_THINK_MIN, AI_THINK_MAX) * diff.think);
     }
     game.ai.cursor = id;
+  }
+}
+
+/** Cities taken this tick: their former owners remember who took them (Mem.took). */
+function noteCaptures(game: Game): void {
+  const w = game.map.width;
+  for (const e of game.events) {
+    if (e.k !== 'capture') continue;
+    const bid = game.buildingAt[Math.floor(e.y) * w + Math.floor(e.x)] ?? -1;
+    const b = bid >= 0 ? game.buildings.get(bid) : undefined;
+    if (!b || b.type !== B.City || b.owner !== e.by) continue;
+    const victim = game.players[e.owner];
+    if (!victim || victim.kind !== 'nation' || !victim.alive) continue;
+    const m = game.ai.mem.get(victim.id);
+    if (!m) continue;
+    (m.took ??= new Map()).set(e.by, game.tick);
   }
 }
 
@@ -312,59 +366,45 @@ function thinkTribe(game: Game, p: Player, m: Mem): number {
 function thinkNation(game: Game, p: Player, m: Mem): number {
   const t = TRAITS[p.personality];
   const diff = game.difficulty();
+  const tac = TACTICS[game.config.difficulty];
   let cost = 40;
   const cap = troopCap(game, p);
   const incoming = incomingAttacks(game, p);
   const underAttack = incoming.size > 0;
   for (const [att, troops] of incoming) m.grudge.set(att, (m.grudge.get(att) ?? 0) + troops / 1000);
 
+  const nb = neighbors(game, p, 80);
+  cost += 80;
+  // The runaway (threat.ts) and our part against it: its neighbours fight it together.
+  const runaway = runawayOf(game);
+  const member =
+    runaway > 0 && runaway !== p.id && !game.sameTeam(p.id, runaway) && joinsCoalition(game, p.id, runaway);
+  const front = member && nb.has(runaway) && !p.allies.has(runaway);
+
   // 1-2. Research: the personality's plan, economy first (prerequisites are studied on the
-  // way); a nation under nuclear fire switches to SAM batteries until it has them.
+  // way); a nation under nuclear fire switches to SAM batteries until it has them. From
+  // normal, a nation at war studies the military branch first (1.12).
   if (game.config.features.tech) {
-    const sam = game.ai.nukedBy.has(p.id) ? lockFor(p.tech, 'sam') : -1;
+    const silos = front && tac.posts >= 2 && game.players[runaway]!.buildingCount[B.Silo]! > 0;
+    const sam = game.ai.nukedBy.has(p.id) || silos ? lockFor(p.tech, 'sam') : -1;
     // Bombed (normal and up): interceptors need an airfield, so Aerospace comes next.
     const air =
       sam < 0 && game.config.features.air && diff.aggression >= 1 && raider(game, p, AI_RAID_MEMORY) > 0
         ? lockFor(p.tech, 'airfield')
         : -1;
     const urgent = sam >= 0 ? sam : air;
-    const goal =
-      urgent >= 0 ? urgent : p.researching < 0 ? planGoal(p.tech, NATION_RESEARCH[p.personality]) : -1;
+    let goal = urgent;
+    if (goal < 0 && p.researching < 0) {
+      const atWar = tac.adaptiveResearch && (underAttack || front || game.tick - m.lastWar < 1500);
+      goal = atWar ? warGoal(p) : -1;
+      if (goal < 0) goal = planGoal(p.tech, NATION_RESEARCH[p.personality]);
+    }
     if (goal >= 0 && goal !== p.researching) applyCommand(game, p.id, { t: 'research', tech: goal });
   }
 
-  const nb = neighbors(game, p, 80);
-  cost += 80;
-
-  // 3. Counter-attack / defend chokepoints.
-  if (underAttack) {
-    let worst = -1;
-    let worstTroops = 0;
-    for (const [att, troops] of incoming) {
-      if (troops > worstTroops) {
-        worst = att;
-        worstTroops = troops;
-      }
-    }
-    const enemy = game.players[worst];
-    if (enemy && nb.has(worst) && game.attackAllowed(p.id, worst, true)) {
-      if (p.troops > worstTroops * 0.8 && !hasAttack(game, p, worst)) {
-        applyCommand(game, p.id, {
-          t: 'attack',
-          tile: nb.get(worst)!.tile,
-          ratio: counterRatio(p, enemy, worstTroops),
-        });
-        m.lastAttack = game.tick;
-      } else if (p.gold > buildCost(game, p, B.DefensePost) && game.tick - m.lastBuild > 30) {
-        // Fortify the contact zone.
-        const tile = innerTile(game, p, nb.get(worst)!.tile, 3);
-        if (tile >= 0 && checkPlacement(game, p, B.DefensePost, tile) === 'ok') {
-          applyCommand(game, p.id, { t: 'build', kind: B.DefensePost, tile });
-          m.lastBuild = game.tick;
-        }
-      }
-    }
-  }
+  // 3. Defence: counter-attack, fortify the front, guard the capital, answer spent waves.
+  if (underAttack) cost += defend(game, p, m, tac, nb, incoming, runaway);
+  if (tac.counter) cost += answerSpentWaves(game, p, m, nb, incoming, cap);
 
   // 4. Expansion & offensive choice.
   const sinceAttack = game.tick - m.lastAttack;
@@ -383,9 +423,14 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
     Math.max(0.5, t.aggression * diff.aggression) /
     (idle ? AI_WAR_IDLE_SPEEDUP : 1) /
     (doom >= 3 ? 2 : 1);
-  if (ready && sinceAttack > AI_EXPAND_COOLDOWN) {
+  // The coalition first: timed strikes on the runaway, its weak moments, feeding the offensive.
+  const joined = front && coalitionAttack(game, p, m, nb, cap, runaway);
+  if (!joined && member && !front && striking(game)) cost += coalitionLanding(game, p, m, runaway);
+  // Saving for the next strike: no new venture in the last 20 s before it.
+  const saving = front && untilStrike(game) < AI_STRIKE_SAVING;
+  if (!joined && !saving && ready && sinceAttack > AI_EXPAND_COOLDOWN) {
     // A neighbouring traitor is fair game whatever the war cooldown (OpenFront's findTraitor).
-    const traitor = traitorTarget(game, p, nb);
+    const traitor = member ? null : traitorTarget(game, p, nb);
     if (traitor) {
       applyCommand(game, p.id, {
         t: 'attack',
@@ -398,26 +443,32 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
       applyCommand(game, p.id, { t: 'attack', tile: nb.get(0)!.tile, ratio: 0.25 + 0.1 * t.aggression });
       m.lastAttack = game.tick;
     } else {
-      const target = game.tick - m.lastWar > warCooldown ? pickTarget(game, p, nb, m, t, cap) : null;
-      if (target) {
-        const q = game.players[target.id]!;
-        applyCommand(game, p.id, { t: 'attack', tile: target.tile, ratio: offensiveRatio(p, q, t) });
+      const target =
+        game.tick - m.lastWar > warCooldown ? pickTarget(game, p, nb, m, t, cap, member ? runaway : 0) : null;
+      const q = target ? game.players[target.id]! : null;
+      // Hard and up keep a reserve against their strongest hostile neighbour (OpenFront).
+      const ratio = q ? reserveRatio(game, p, nb, q, offensiveRatio(p, q, t), tac) : 0;
+      if (target && q && ratio > 0) {
+        applyCommand(game, p.id, { t: 'attack', tile: target.tile, ratio });
         m.lastAttack = game.tick;
         if (q.kind !== 'tribe') m.lastWar = game.tick;
-      } else {
+      } else if (!target) {
         // Nothing to attack: a landing overseas, else (team games) troops for a teammate at war.
         const sail = idle || nb.size === 0 || (nb.size === 1 && nb.has(0) === false && game.rng.chance(0.3));
-        const sailed = sail ? tryBoat(game, p, m, t, idle) : 0;
+        const sailed = sail && !member ? tryBoat(game, p, m, t, idle) : 0;
         cost += sailed;
         if (sailed < 400 && donateTroops(game, p, cap)) m.lastAttack = game.tick;
       }
     }
-  } else if (nb.size === 0 && p.troops > cap * 0.5) {
+  } else if (!joined && nb.size === 0 && p.troops > cap * 0.5) {
     cost += tryBoat(game, p, m, t, idle);
   }
 
-  // 5. Economy: build things.
-  if (game.tick - m.lastBuild > AI_BUILD_COOLDOWN / t.build) cost += tryBuild(game, p, m, t, underAttack);
+  // 5. Economy: build things (from normal, defence posts on the border with the runaway).
+  if (game.tick - m.lastBuild > AI_BUILD_COOLDOWN / t.build) {
+    const post = front ? fortifyAgainst(game, p, m, tac, nb.get(runaway)!.tile) : 0;
+    cost += post > 0 ? post : tryBuild(game, p, m, t, underAttack);
+  }
 
   // 6. Diplomacy. Boxed in by allies with an idle army, a nation lets the alliance with
   // its weakest neighbour lapse (and courts nobody new) so that it can fight again.
@@ -437,24 +488,297 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
   if (game.config.features.air && diff.aggression >= 1 && p.buildingCount[B.Airfield]! > 0)
     cost += tryAir(game, p, m, t, nb, incoming);
 
-  // 8. Warships against threats.
-  if (game.config.allowPorts && p.buildingCount[B.Port]! > 0 && game.rng.chance(0.05 * t.naval)) {
-    const c = warshipCost(game, p);
-    let fleet = 0;
-    for (const u of game.units) if (u.alive && u.owner === p.id && u.type === U.Warship) fleet++;
-    if (p.gold > c * 2 && fleet < 2 + p.buildingCount[B.Port]! * 2 && p.coast.length) {
-      const wt = game.map.adjacentWater(p.coast[game.rng.int(0, p.coast.length - 1)]!);
-      if (wt >= 0) applyCommand(game, p.id, { t: 'warship', tile: wt });
-    }
-  }
+  // 8. Warships (navy.ts): bought against the threats, sent where they matter.
+  if (game.config.allowPorts && p.buildingCount[B.Port]! > 0)
+    cost += thinkNavy(game, p, {
+      enemies: enemiesOf(game, p, incoming, runaway, member),
+      war: warTarget(game, p, incoming, runaway, member),
+      naval: t.naval,
+    });
 
-  // 9. Council vote.
+  // 9. Council vote: sanctions on a runaway leader (normal and up), else as before.
   if (game.features.council && !game.features.council.votes.has(p.id)) {
     const leaderId = leader(game);
-    const option = leaderId === p.id ? 2 : underAttack ? 2 : m.grudge.size && t.nukes < 1 ? 1 : 0;
+    const option =
+      leaderId === p.id
+        ? 2
+        : runaway > 0 && leaderId === runaway
+          ? 0
+          : underAttack
+            ? 2
+            : m.grudge.size && t.nukes < 1
+              ? 1
+              : 0;
     castVote(game, p, option);
   }
   return cost;
+}
+
+/** The first war technology not yet researched (WAR_RESEARCH), -1 when all are. */
+function warGoal(p: Player): number {
+  for (const key of WAR_RESEARCH) {
+    const id = techId(key);
+    if (id >= 0 && !isResearched(p.tech, id)) return id;
+  }
+  return -1;
+}
+
+/** Defence posts of p within `r` tiles of `tile`. */
+function postsNear(game: Game, p: Player, tile: number, r: number): number {
+  const w = game.map.width;
+  const x = tile % w;
+  const y = (tile / w) | 0;
+  let n = 0;
+  game.grid.query(x, y, r, (id) => {
+    const b = game.buildings.get(id);
+    if (b && b.owner === p.id && b.type === B.DefensePost && Math.hypot(b.x - x, b.y - y) <= r) n++;
+  });
+  return n;
+}
+
+/** Build a defence post a few tiles inside p from `near` (true when ordered). */
+function buildPost(game: Game, p: Player, m: Mem, near: number): boolean {
+  if (p.gold < buildCost(game, p, B.DefensePost)) return false;
+  for (let k = 0; k < 4; k++) {
+    const tile = innerTile(game, p, near, 3 + game.rng.int(0, 4));
+    if (tile >= 0 && checkPlacement(game, p, B.DefensePost, tile) === 'ok') {
+      applyCommand(game, p.id, { t: 'build', kind: B.DefensePost, tile });
+      m.lastBuild = game.tick;
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Under attack: OpenFront's defence. The biggest attacker's push is met in the clash; the
+ * front is fortified once the incoming troops reach 35 % of ours (one post on easy and
+ * normal, up to TACTICS.posts from hard, OpenFront's ceil(share / 0.4)); from normal, a
+ * capital close to the front gets a post and, if a safer seat exists, moves away.
+ */
+function defend(
+  game: Game,
+  p: Player,
+  m: Mem,
+  tac: Tactics,
+  nb: Map<number, Neighbor>,
+  incoming: Map<number, number>,
+  runaway: number,
+): number {
+  let cost = 20;
+  let worst = -1;
+  let worstTroops = 0;
+  let total = 0;
+  for (const [att, troops] of incoming) {
+    total += troops;
+    if (troops > worstTroops) {
+      worst = att;
+      worstTroops = troops;
+    }
+  }
+  // Waves remembered (answerSpentWaves).
+  if (tac.counter) {
+    const waves = (m.waves ??= new Map());
+    for (const [att, troops] of incoming) {
+      const w = waves.get(att);
+      if (!w || troops > w[0]) waves.set(att, [troops, game.tick]);
+      else w[1] = game.tick;
+    }
+  }
+  const enemy = game.players[worst];
+  if (!enemy || !nb.has(worst) || !game.attackAllowed(p.id, worst, true)) return cost;
+  const contact = nb.get(worst)!.tile;
+  if (p.troops > worstTroops * 0.8 && !hasAttack(game, p, worst)) {
+    applyCommand(game, p.id, { t: 'attack', tile: contact, ratio: counterRatio(p, enemy, worstTroops) });
+    m.lastAttack = game.tick;
+  }
+  // Fortify the contact zone. Before 1.12 (easy): only when the counter-attack was out of reach.
+  const share = total / Math.max(1, p.troops);
+  const fortify =
+    tac.runaway > 0 ? share >= 0.35 || worst === runaway : !(p.troops > worstTroops * 0.8) || share >= 1;
+  if (fortify && game.tick - m.lastBuild > 30) {
+    const want = Math.min(tac.posts, Math.max(1, Math.ceil(share / 0.4)));
+    if (postsNear(game, p, contact, 25) < want && buildPost(game, p, m, contact)) cost += 30;
+  }
+  // The capital near the front: a post beside it, then a safer seat (5-min cooldown).
+  if (tac.counter && p.capital >= 0 && game.tick - (m.lastCapital ?? -AI_CAPITAL_CHECK) >= AI_CAPITAL_CHECK) {
+    m.lastCapital = game.tick;
+    cost += 40;
+    const d = frontDistance(game, p, p.capital, 12);
+    if (d <= 6) {
+      if (postsNear(game, p, p.capital, DEFENSE_POST_RANGE) === 0 && game.tick - m.lastBuild > 30)
+        buildPost(game, p, m, p.capital);
+      if (capitalCooldown(game, p) === 0) {
+        cost += 80;
+        const spot = bestCapitalSpot(game, p);
+        if (spot >= 0 && spot !== p.capital && frontDistance(game, p, spot, 20) >= d + 6)
+          applyCommand(game, p.id, { t: 'moveCapital', tile: spot });
+      }
+    }
+  }
+  return cost;
+}
+
+/**
+ * Normal and up: an attacker whose wave has broken (the troops still pressing fell under
+ * AI_SPENT_WAVE of its peak) and whose home army is now weaker than ours is struck back
+ * at once, before it can regroup.
+ */
+function answerSpentWaves(
+  game: Game,
+  p: Player,
+  m: Mem,
+  nb: Map<number, Neighbor>,
+  incoming: Map<number, number>,
+  cap: number,
+): number {
+  if (!m.waves || m.waves.size === 0) return 0;
+  for (const [att, [peak, at]] of m.waves) {
+    if (game.tick - at > AI_WAVE_MEMORY) {
+      m.waves.delete(att);
+      continue;
+    }
+    if ((incoming.get(att) ?? 0) > peak * AI_SPENT_WAVE) continue;
+    const q = game.players[att];
+    const n = nb.get(att);
+    if (!q || !q.alive || q.kind === 'tribe' || !n || p.allies.has(att)) continue;
+    if (!game.attackAllowed(p.id, att, true) || hasAttack(game, p, att)) continue;
+    if (q.troops > p.troops * 0.9 || p.troops < cap * 0.25) continue;
+    applyCommand(game, p.id, {
+      t: 'attack',
+      tile: n.tile,
+      ratio: Math.min(0.5, Math.max(0.2, (q.troops * 1.2) / p.troops)),
+    });
+    m.waves.delete(att);
+    m.lastAttack = game.tick;
+    m.lastWar = game.tick;
+    return 30;
+  }
+  return 10;
+}
+
+/**
+ * A coalition member on the runaway's border. In each strike window (threat.ts: every
+ * 150 / 120 / 60 s on normal / hard / impossible, all members at once) it throws everything
+ * above a reserve (TACTICS.strikeReserve) at the runaway; on impossible it also hits the
+ * runaway between strikes whenever its home army is spread thin (three fronts or more, or
+ * fewer troops than ours). It feeds an offensive under way. Returns whether it attacked.
+ */
+function coalitionAttack(
+  game: Game,
+  p: Player,
+  m: Mem,
+  nb: Map<number, Neighbor>,
+  cap: number,
+  runaway: number,
+): boolean {
+  if (!game.attackAllowed(p.id, runaway, true)) return false;
+  const tac = TACTICS[game.config.difficulty];
+  const q = game.players[runaway]!;
+  const tile = nb.get(runaway)!.tile;
+  const attacking = hasAttack(game, p, runaway);
+  const go = (ratio: number): true => {
+    applyCommand(game, p.id, { t: 'attack', tile, ratio });
+    m.lastAttack = game.tick;
+    m.lastWar = game.tick;
+    return true;
+  };
+  const strikeAt = game.ai.threat?.strikeAt ?? -1;
+  if (striking(game) && (m.lastStrike ?? -1) < strikeAt && p.troops >= cap * 0.35) {
+    m.lastStrike = strikeAt;
+    return go(Math.min(0.6, Math.max(0.2, 1 - (cap * tac.strikeReserve) / p.troops)));
+  }
+  if (game.tick - m.lastAttack <= AI_EXPAND_COOLDOWN) return false;
+  const thin = frontsOf(game, runaway) >= 3 || q.troops < p.troops * 0.7;
+  if (!attacking && thin && tac.harass && p.troops > cap * 0.4)
+    return go(Math.min(0.5, Math.max(0.25, (q.troops * 0.8) / p.troops)));
+  if (attacking && p.troops > cap * 0.6) return go(0.25);
+  return false;
+}
+
+/** A coalition member without a border with the runaway lands on its coast during a strike (hard and up). */
+function coalitionLanding(game: Game, p: Player, m: Mem, runaway: number): number {
+  const tac = TACTICS[game.config.difficulty];
+  const q = game.players[runaway]!;
+  const strikeAt = game.ai.threat?.strikeAt ?? -1;
+  if (tac.navy < 2 || (m.lastStrike ?? -1) >= strikeAt || !game.config.allowPorts) return 0;
+  if (p.coast.length === 0 || q.coast.length === 0 || p.troops < troopCap(game, p) * 0.4) return 0;
+  m.lastStrike = strikeAt;
+  const before = game.units.length;
+  applyCommand(game, p.id, { t: 'boat', tile: q.coast[game.rng.int(0, q.coast.length - 1)]!, ratio: 0.25 });
+  if (game.units.length > before) {
+    m.lastBoat = game.tick;
+    m.lastAttack = game.tick;
+    return 400;
+  }
+  return 60;
+}
+
+/** Normal and up: defence posts along the border with the runaway (TACTICS.posts of them near the contact). */
+function fortifyAgainst(game: Game, p: Player, m: Mem, tac: Tactics, contact: number): number {
+  if (postsNear(game, p, contact, 30) >= tac.posts) return 0;
+  return buildPost(game, p, m, contact) ? 60 : 0;
+}
+
+/**
+ * The share of the army sent at q, cut so that a reserve stays home against the strongest
+ * hostile neighbour (TACTICS.reserve × its troops, OpenFront hard 0.75 / impossible 0.9).
+ * 0 when the offensive would leave too little (below 10 % of the army). Tribes and the
+ * wilderness need no reserve.
+ */
+function reserveRatio(
+  game: Game,
+  p: Player,
+  nb: Map<number, Neighbor>,
+  q: Player,
+  ratio: number,
+  tac: Tactics,
+): number {
+  if (tac.reserve <= 0 || q.kind === 'tribe') return ratio;
+  let strongest = 0;
+  for (const n of nb.values()) {
+    if (n.id === 0) continue;
+    const o = game.players[n.id]!;
+    if (o.kind === 'tribe' || game.friendly(p.id, o.id)) continue;
+    if (o.troops > strongest) strongest = o.troops;
+  }
+  const keep = tac.reserve * strongest;
+  const r = Math.min(ratio, 1 - keep / Math.max(1, p.troops));
+  return r >= 0.1 ? r : 0;
+}
+
+/** Countries p fights: its offensives' targets, its attackers, the runaway for a coalition member. */
+function enemiesOf(
+  game: Game,
+  p: Player,
+  incoming: Map<number, number>,
+  runaway: number,
+  member: boolean,
+): Set<number> {
+  const out = new Set<number>(incoming.keys());
+  for (const a of game.attacks) if (!a.done && a.attacker === p.id && a.target > 0) out.add(a.target);
+  if (member) out.add(runaway);
+  return out;
+}
+
+/** The country p fights hardest: the runaway for a member, else its biggest attacker, else its offensive's target. */
+function warTarget(
+  game: Game,
+  p: Player,
+  incoming: Map<number, number>,
+  runaway: number,
+  member: boolean,
+): number {
+  if (member) return runaway;
+  let best = -1;
+  let most = 0;
+  for (const [att, troops] of incoming)
+    if (troops > most && game.players[att]?.kind !== 'tribe') [best, most] = [att, troops];
+  if (best > 0) return best;
+  for (const a of game.attacks)
+    if (!a.done && a.attacker === p.id && a.target > 0 && game.players[a.target]!.kind !== 'tribe')
+      return a.target;
+  return -1;
 }
 
 /**
@@ -532,16 +856,20 @@ function pickTarget(
   m: Mem,
   t: Traits,
   cap: number,
+  coalition: number,
 ): Neighbor | null {
   const diff = game.difficulty();
   const factor = p.troops > cap * AI_IDLE_ARMY ? Math.min(1, t.attackFactor) : t.attackFactor;
   const doomLeader = doomStage(game) >= 3 ? leader(game) : -1;
+  const runaway = runawayOf(game);
   let best: Neighbor | null = null;
   let bestScore = 0;
   for (const n of nb.values()) {
     if (n.id === 0) continue;
     const q = game.players[n.id]!;
     if (!game.attackAllowed(p.id, q.id, true)) continue;
+    // A coalition member fights the runaway (coalitionAttack), not its partners: tribes only.
+    if (coalition > 0 && q.kind !== 'tribe') continue;
     const allied = p.allies.has(q.id);
     if (allied) {
       // Betrayal: rare, only against much weaker allies, and never a friend of long standing.
@@ -549,8 +877,18 @@ function pickTarget(
       if (!(game.rng.chance(diff.betrayal * 0.1 * t.aggression) && q.troops < p.troops * 0.35)) continue;
     }
     const strength = p.troops / Math.max(1, q.troops);
-    if (strength < factor * AI_STRENGTH_MARGIN && q.kind !== 'tribe') continue;
+    // A country that took our cities is fought sooner (1.12, normal and up).
+    const took = m.took?.get(q.id);
+    const avenge =
+      took !== undefined && game.tick - took < AI_RETAKE_MEMORY && TACTICS[game.config.difficulty].counter;
+    if (strength < factor * AI_STRENGTH_MARGIN * (avenge ? 0.8 : 1) && q.kind !== 'tribe') continue;
     let score = strength * n.contact;
+    if (avenge) score *= 2;
+    // Overextended: a country fighting on several fronts has its army spread thin (1.12).
+    const fronts = q.kind === 'tribe' ? 0 : frontsOf(game, q.id);
+    if (fronts >= 2 && diff.aggression >= 1) score *= 1 + 0.25 * Math.min(4, fronts - 1);
+    // The runaway, for the nations outside the coalition.
+    if (q.id === runaway) score *= 2;
     if (q.kind === 'tribe') score *= 2.5;
     if (q.kind === 'human') score *= 0.9 + 0.3 * diff.aggression;
     score *= 1 + (m.grudge.get(q.id) ?? 0) * 0.05;
@@ -636,19 +974,23 @@ function tryBuild(game: Game, p: Player, m: Mem, t: Traits, underAttack: boolean
   // Wishes count levels: an upgrade fulfils them as well as a new building. Treasury gates
   // halved in 1.11 with late-game gold (GAME_DESIGN.md §5.4): nations now rarely sit on more
   // than a city's price, and kept away from silos, SAMs and aircraft.
+  // Hard and up, a runaway on the map: a silo to strike it, SAMs when it has silos itself.
+  const runaway = runawayOf(game);
+  const crown = runaway > 0 && runaway !== p.id && TACTICS[game.config.difficulty].crownNukes;
   if (
     game.config.allowNukes &&
-    p.gold > 1_250_000 &&
-    levelsOwned(game, p, B.Silo) < (t.nukes > 1 ? 3 : 1) &&
+    p.gold > (crown ? 800_000 : 1_250_000) &&
+    levelsOwned(game, p, B.Silo) < (t.nukes > 1 || crown ? 3 : 1) &&
     game.tick - game.startTick > 3000
   )
-    scored.push([B.Silo, 1.4 * t.nukes]);
+    scored.push([B.Silo, (crown ? 2 : 1.4) * t.nukes]);
+  const silosAgainst = crown && game.players[runaway]!.buildingCount[B.Silo]! > 0;
   if (
     game.config.allowNukes &&
-    (game.ai.nukedBy.has(p.id) || p.gold > 3_000_000) &&
+    (game.ai.nukedBy.has(p.id) || p.gold > 3_000_000 || (silosAgainst && p.gold > 1_000_000)) &&
     levelsOwned(game, p, B.Sam) < 1 + cities / 5
   )
-    scored.push([B.Sam, game.ai.nukedBy.has(p.id) ? 3 : 1.2]);
+    scored.push([B.Sam, game.ai.nukedBy.has(p.id) ? 3 : silosAgainst ? 2 : 1.2]);
   // Air power (normal and up, GAME_DESIGN.md §11): an airfield once at war (bombers, and
   // interceptors on alert), a second for aggressive nations or after a raid; a radar to guide
   // the interceptors (or, with the fog, to see).
@@ -1014,9 +1356,12 @@ function diplomacy(
   nb: Map<number, Neighbor>,
   prey: number,
 ): number {
+  const runaway = runawayOf(game);
+  const member = runaway > 0 && joinsCoalition(game, p.id, runaway);
   // Propose alliances to strong neighbours we have no grudge against (nor a bad relation, OpenFront).
+  // Never to the runaway (OpenFront); a coalition member courts its partners against it.
   for (const n of nb.values()) {
-    if (n.id === 0 || prey >= 0) continue;
+    if (n.id === 0 || prey >= 0 || n.id === runaway) continue;
     const q = game.players[n.id]!;
     // Teammates are allies for good (no pact to sign): an offer would be wasted.
     if (
@@ -1030,14 +1375,15 @@ function diplomacy(
     const exp = p.allies.get(q.id);
     if (exp !== undefined) continue;
     const strongerThanMe = q.troops > p.troops * 1.1;
-    if (game.rng.chance(0.15 * t.diplomacy * (strongerThanMe ? 1.6 : 0.6))) {
+    const partner = member && joinsCoalition(game, q.id, runaway);
+    if (game.rng.chance(0.15 * t.diplomacy * (strongerThanMe || partner ? 1.6 : 0.6) * (partner ? 2 : 1))) {
       applyCommand(game, p.id, { t: 'allyRequest', target: q.id });
       return 20;
     }
   }
   // Renew alliances about to expire.
   for (const [ally, exp] of p.allies) {
-    if (ally !== prey && exp - game.tick < 280 && game.rng.chance(0.6 * t.diplomacy))
+    if (ally !== prey && ally !== runaway && exp - game.tick < 280 && game.rng.chance(0.6 * t.diplomacy))
       applyCommand(game, p.id, { t: 'allyRequest', target: ally });
   }
   // Help allies and teammates under attack (teammates first: they are allies for good).
@@ -1053,19 +1399,26 @@ function diplomacy(
 }
 
 /** What weighs on a nation's answer to an alliance offer (shares of probability). */
-export type OddsFactor = 'temper' | 'stronger' | 'weaker' | 'grudge' | 'betrayed' | 'human' | 'goodwill';
+export type OddsFactor =
+  'temper' | 'stronger' | 'weaker' | 'grudge' | 'betrayed' | 'human' | 'goodwill' | 'coalition';
 
 /**
  * How likely nation p is to accept q's alliance offer, and why. `p` is the probability of
  * the roll (0.02 … 0.95); `refusal` a reason that turns the offer down whatever the roll:
- * p resents q (relation below 0, OpenFront) — or q is a traitor, refused 9 times in 10.
- * `chance` combines them: the honest odds of an offer sent now.
+ * p resents q (relation below 0, OpenFront), q is running away with the map (1.12, from
+ * normal: OpenFront's nations never ally with the runaway leader) — or q is a traitor,
+ * refused 9 times in 10. `chance` combines them: the honest odds of an offer sent now.
  */
 export function allianceOdds(
   game: Game,
   p: Player,
   q: Player,
-): { p: number; chance: number; refusal: 'resent' | 'traitor' | null; factors: [OddsFactor, number][] } {
+): {
+  p: number;
+  chance: number;
+  refusal: 'resent' | 'runaway' | 'traitor' | null;
+  factors: [OddsFactor, number][];
+} {
   const t = TRAITS[p.personality];
   const diff = game.difficulty();
   const grudge = game.ai.mem.get(p.id)?.grudge.get(q.id) ?? 0;
@@ -1077,11 +1430,21 @@ export function allianceOdds(
   // Isoline's goodwill (alliances, trade, gifts, common enemies) makes a yes likelier.
   const rel = p.relation(q.id);
   if (rel > 0) factors.push(['goodwill', rel * AI_GOODWILL_ODDS]);
+  // Partners against the runaway (1.12).
+  const runaway = runawayOf(game);
+  if (runaway > 0 && joinsCoalition(game, p.id, runaway) && joinsCoalition(game, q.id, runaway))
+    factors.push(['coalition', AI_COALITION_ODDS]);
   let sum = 0;
   for (const [, v] of factors) sum += v;
   const roll = Math.max(0.02, Math.min(0.95, sum));
-  const refusal = rel < 0 ? 'resent' : q.isTraitor(game.tick) ? 'traitor' : null;
-  const chance = refusal === 'resent' ? 0 : refusal === 'traitor' ? roll * (1 - AI_TRAITOR_REFUSAL) : roll;
+  const refusal =
+    rel < 0 ? 'resent' : q.id === runaway ? 'runaway' : q.isTraitor(game.tick) ? 'traitor' : null;
+  const chance =
+    refusal === 'resent' || refusal === 'runaway'
+      ? 0
+      : refusal === 'traitor'
+        ? roll * (1 - AI_TRAITOR_REFUSAL)
+        : roll;
   return { p: roll, chance, refusal, factors };
 }
 
@@ -1097,9 +1460,14 @@ function answerRequests(game: Game, p: Player, m: Mem, prey: number): void {
     if (game.tick < at) continue;
     m.pendingAnswers.delete(from);
     const q = game.players[from]!;
-    const pAccept = allianceOdds(game, p, q).p;
-    // OpenFront: a traitor is nearly always turned down, and so is anyone we feel badly about.
-    const distrust = p.relation(from) < 0 || (q.isTraitor(game.tick) && game.rng.chance(AI_TRAITOR_REFUSAL));
+    const odds = allianceOdds(game, p, q);
+    const pAccept = odds.p;
+    // OpenFront: a traitor is nearly always turned down, and so is anyone we feel badly about
+    // (and, from normal, the runaway leader).
+    const distrust =
+      odds.refusal === 'runaway' ||
+      p.relation(from) < 0 ||
+      (q.isTraitor(game.tick) && game.rng.chance(AI_TRAITOR_REFUSAL));
     applyCommand(game, p.id, {
       t: 'allyAnswer',
       target: from,
@@ -1132,6 +1500,16 @@ function tryNuke(game: Game, p: Player, m: Mem, t: Traits): number {
   // Who deserves it? Revenge first, then the biggest grudge, then the leader (warmongers).
   let enemy = -1;
   for (const [victim, by] of game.ai.nukedBy) if (victim === p.id && game.players[by]?.alive) enemy = by;
+  // Hard and up: the runaway leader (OpenFront nukes its crown), before old grudges.
+  const runaway = runawayOf(game);
+  if (
+    enemy < 0 &&
+    runaway > 0 &&
+    runaway !== p.id &&
+    !p.allies.has(runaway) &&
+    TACTICS[game.config.difficulty].crownNukes
+  )
+    enemy = runaway;
   if (enemy < 0) {
     let g = 8 / t.nukes;
     for (const [id, v] of m.grudge) {

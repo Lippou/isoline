@@ -2377,11 +2377,13 @@
       "grudge": "Grudge (the troops you took from them)",
       "betrayed": "Past betrayal",
       "human": "Wary of human leaders",
-      "goodwill": "Goodwill"
+      "goodwill": "Goodwill",
+      "coalition": "Partners against the runaway leader"
     },
     "refusal": {
       "resent": "Certain refusal while their opinion stays negative.",
-      "traitor": "You bear the traitor's mark: 9 refusals in 10."
+      "traitor": "You bear the traitor's mark: 9 refusals in 10.",
+      "runaway": "You are running away with the map: no nation allies with the runaway leader."
     },
     "accept": "≈ {pct} % yes",
     "acceptTip": "Estimated chance they accept an alliance offered now (they answer within 2–6 s). Details: click their opinion."

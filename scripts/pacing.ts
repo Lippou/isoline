@@ -60,6 +60,10 @@ function main(): void {
         players: [],
         spawnSeconds: 1,
         difficulty,
+        // LOYALTY=0: without secessions (the 1.12 default).
+        ...(process.env.LOYALTY
+          ? { features: { ...defaultConfig(seed).features, loyalty: process.env.LOYALTY === '1' } }
+          : {}),
       });
       const marks: string[] = [];
       const happenings: string[] = [];

@@ -2377,11 +2377,13 @@
       "grudge": "Rancune (les troupes que vous lui avez prises)",
       "betrayed": "Trahison passée",
       "human": "Méfiance envers les dirigeants humains",
-      "goodwill": "Bonne entente"
+      "goodwill": "Bonne entente",
+      "coalition": "Alliés contre le meneur qui s'envole"
     },
     "refusal": {
       "resent": "Refus certain tant que son opinion reste négative.",
-      "traitor": "Vous portez la marque du traître : 9 refus sur 10."
+      "traitor": "Vous portez la marque du traître : 9 refus sur 10.",
+      "runaway": "Vous écrasez la partie : aucune nation ne s'allie au meneur qui s'envole."
     },
     "accept": "≈ {pct} % d'accord",
     "acceptTip": "Chance estimée qu'il accepte une alliance proposée maintenant (il répond en 2 à 6 s). Le détail : cliquez sur son opinion."

@@ -26,7 +26,7 @@ export interface Opinion {
   accept: number;
   /** What weighs on that answer (probability shares) and a refusal that overrides them. */
   odds: [OddsFactor, number][];
-  refusal: 'resent' | 'traitor' | null;
+  refusal: 'resent' | 'runaway' | 'traitor' | null;
 }
 
 export function opinionLevel(r: number): OpinionLevel {
