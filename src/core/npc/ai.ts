@@ -633,17 +633,19 @@ function tryBuild(game: Game, p: Player, m: Mem, t: Traits, underAttack: boolean
   const factories = levelsOwned(game, p, B.Factory);
   if (game.config.allowFactories && cities >= 2 && factories < cities / 2)
     scored.push([B.Factory, factories === 0 ? 1.9 : 1.0]);
-  // Wishes count levels: an upgrade fulfils them as well as a new building.
+  // Wishes count levels: an upgrade fulfils them as well as a new building. Treasury gates
+  // halved in 1.11 with late-game gold (GAME_DESIGN.md §5.4): nations now rarely sit on more
+  // than a city's price, and kept away from silos, SAMs and aircraft.
   if (
     game.config.allowNukes &&
-    p.gold > 2_500_000 &&
+    p.gold > 1_250_000 &&
     levelsOwned(game, p, B.Silo) < (t.nukes > 1 ? 3 : 1) &&
     game.tick - game.startTick > 3000
   )
     scored.push([B.Silo, 1.4 * t.nukes]);
   if (
     game.config.allowNukes &&
-    (game.ai.nukedBy.has(p.id) || p.gold > 6_000_000) &&
+    (game.ai.nukedBy.has(p.id) || p.gold > 3_000_000) &&
     levelsOwned(game, p, B.Sam) < 1 + cities / 5
   )
     scored.push([B.Sam, game.ai.nukedBy.has(p.id) ? 3 : 1.2]);
@@ -653,12 +655,12 @@ function tryBuild(game: Game, p: Player, m: Mem, t: Traits, underAttack: boolean
   const raided = raider(game, p, AI_RAID_MEMORY) > 0;
   const flies = game.config.features.air && game.difficulty().aggression >= 1;
   const atWar = raided || m.grudge.size > 0 || game.tick - m.lastWar < 3000;
-  if (flies && atWar && p.gold > 1_500_000) {
-    const want = raided || (t.aggression > 1 && p.gold > 6_000_000) ? 2 : 1;
+  if (flies && atWar && p.gold > 1_000_000) {
+    const want = raided || (t.aggression > 1 && p.gold > 3_000_000) ? 2 : 1;
     if (levelsOwned(game, p, B.Airfield) < want) scored.push([B.Airfield, raided ? 2 : 1.1 * t.aggression]);
   }
   const radarUse = game.config.features.fog || (flies && (counts[B.Airfield]! > 0 || raided));
-  if (game.config.features.radar && radarUse && counts[B.Radar]! < 1 && p.gold > 1_000_000)
+  if (game.config.features.radar && radarUse && counts[B.Radar]! < 1 && p.gold > 600_000)
     scored.push([B.Radar, raided ? 1.8 : 0.9]);
   // Research centres: their levels follow the city levels, by personality and difficulty.
   if (game.config.features.tech && cities >= 1) {
@@ -714,8 +716,8 @@ function raider(game: Game, p: Player, window: number): number {
   return r && game.tick - r[1] <= window ? r[0] : -1;
 }
 
-/** Gold a nation keeps for its economy before paying for planes. */
-const AI_AIR_RESERVE = 1_000_000;
+/** Gold a nation keeps for its economy before paying for planes (1 M before 1.11). */
+const AI_AIR_RESERVE = 250_000;
 
 /**
  * Air power. Raids on the country we fight (the defence post holding our offensive first,

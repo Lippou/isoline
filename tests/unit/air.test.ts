@@ -344,12 +344,13 @@ describe('determinism', () => {
 });
 
 describe('nations fly (normal difficulty)', () => {
-  it('build airfields once at war and send bombers and reconnaissance within 20 minutes', () => {
-    // (A seed whose wars start early enough: 20 min is close to the first airfields.)
+  // 25 minutes since 1.11: with less gold (GAME_DESIGN.md §5.4) the first airfield owner has
+  // the bombers' price later. (A seed whose wars start early enough on the 1.11 maps.)
+  it('build airfields once at war and send bombers and reconnaissance within 25 minutes', () => {
     const g = makeGame('black-sea', { players: [], difficulty: 'normal', seed: 6 });
     const seen = new Set<number>();
     const flown = new Map<number, number>();
-    while (g.tick < 20 * 600 && g.phase !== 'ended') {
+    while (g.tick < 25 * 600 && g.phase !== 'ended') {
       g.step([]);
       for (const u of g.units) {
         if (u.type < U.Fighter || u.type > U.Recon || seen.has(u.id)) continue;

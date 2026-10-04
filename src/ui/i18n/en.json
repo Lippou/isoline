@@ -1090,7 +1090,7 @@
     },
     "factory": {
       "name": "Factory",
-      "desc": "Lays railways to stations within 110 tiles and runs trains.",
+      "desc": "Lays railways to stations within 55 tiles and runs trains.",
       "short": "Factory"
     },
     "defensePost": {
