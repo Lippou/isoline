@@ -17,6 +17,7 @@ import {
   LOYALTY_CONQUERED,
   LOYALTY_MAX,
   LOYALTY_SETTLED,
+  RECON_LOSS_MULT,
 } from './constants';
 import type { EliminationCause, GameEvent } from './events';
 import { Player, type PlayerKind } from './player';
@@ -437,6 +438,22 @@ export class Game {
       if ((b.x - x) ** 2 + (b.y - y) ** 2 <= r2) found = true;
     });
     return found;
+  }
+
+  /**
+   * Reconnaissance (GAME_DESIGN.md §11): inside a zone spotted by the attacker (or a friend
+   * of it), its land attacks lose RECON_LOSS_MULT of their usual losses.
+   */
+  reconLossMult(attacker: number, tile: number): number {
+    const zones = this.features.reveals;
+    if (zones.length === 0) return 1;
+    const w = this.map.width;
+    const x = (tile % w) + 0.5;
+    const y = ((tile / w) | 0) + 0.5;
+    for (const z of zones)
+      if ((z.x - x) ** 2 + (z.y - y) ** 2 <= z.r * z.r && this.friendly(z.owner, attacker))
+        return RECON_LOSS_MULT;
+    return 1;
   }
 
   /** How much cheaper attacking p gets because p is huge (OpenFront's large-defender bonus, hover card). */

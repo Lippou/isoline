@@ -20,7 +20,7 @@
   import Modal from './Modal.svelte';
   import ScreenSweep from './components/ScreenSweep.svelte';
   import { defaultConfig } from '../core/game/config';
-  import { withMyFlag, startMission } from './screens/launch';
+  import { withMyFlag, startMission, startFromSave } from './screens/launch';
   import { applyUiScale, setInGame, startViewport } from './stores/viewport.svelte';
 
   let booted = $state(false);
@@ -71,12 +71,20 @@
     if (booted) setInGame(app.screen === 'game');
   });
 
-  /** Automation hooks (tests, screenshots, media): ?autostart=<map>&nations=&tribes=&spectate&screen=<name>, ?mission=<id> */
+  /**
+   * Automation hooks (tests, screenshots, media): ?autostart=<map>&nations=&tribes=&spectate&notech&screen=<name>,
+   * ?mission=<id>, ?load=<save slot>
+   */
   function autostart(): void {
     const q = new URLSearchParams(location.search);
     const screen = q.get('screen');
     if (screen) {
       app.screen = screen as typeof app.screen;
+      return;
+    }
+    const load = q.get('load');
+    if (load) {
+      void startFromSave(Number(load));
       return;
     }
     const mission = q.get('mission');
@@ -93,6 +101,7 @@
     cfg.spawnSeconds = Number(q.get('spawn') ?? 15);
     if (q.get('mode')) cfg.mode = q.get('mode') as typeof cfg.mode;
     if (q.has('fog')) cfg.features.fog = true;
+    if (q.has('notech')) cfg.features.tech = false;
     if (q.get('gold')) cfg.goldMultiplier = Number(q.get('gold'));
     if (q.get('startGold')) cfg.startGold = Number(q.get('startGold'));
     if (q.get('threshold')) cfg.victoryThreshold = Number(q.get('threshold'));

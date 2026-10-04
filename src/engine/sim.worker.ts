@@ -7,7 +7,7 @@ import { decodeGreyPng, decodeTerrainPng } from '../core/map/format';
 import { generateMapData } from '../core/map/generator';
 import { restoreSnapshot, takeSnapshot } from '../core/net/snapshot';
 import { hashGame } from '../core/net/hash';
-import { B, BUILDING_COUNT, HASH_EVERY, N, RADAR_RANGE } from '../core/game/constants';
+import { B, BUILDING_COUNT, HASH_EVERY, N, radarRange } from '../core/game/constants';
 import { buildCost, levelsByType, planBuild } from '../core/buildings/buildings';
 import { warshipCost, planBoat, TRANSPORT_RETREATING } from '../core/units/ships';
 import { maxLaunchable, nukeCost } from '../core/units/nukes';
@@ -37,6 +37,7 @@ import type { Turn } from '../core/net/commands';
 import { TradeLedger, embargoesOf } from './tradeLedger';
 import { TradeRoutes } from './tradeRoutes';
 import { ThreatWatch } from './threats';
+import { RadarWatch } from './radarWatch';
 import { bestCapitalSpot, capitalCooldown } from '../core/rules/capital';
 import { opinionsOf, type Opinion } from '../core/rules/opinion';
 import { computeLabels, type Label } from '../core/game/labels';
@@ -54,6 +55,7 @@ const ledger = new TradeLedger();
 const routes = new TradeRoutes();
 /** Threatened borders of the viewer (view-only intelligence). */
 const threats = new ThreatWatch();
+const radar = new RadarWatch();
 /** Safest spot for a new capital while the viewer has none (recomputed every 2 s). */
 let capitalHint = { tick: -1, tile: -1 };
 /** What the nations think of the viewer (recomputed every second). */
@@ -88,6 +90,7 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
         ledger.reset();
         routes.reset();
         threats.reset();
+        radar.reset();
         capitalHint = { tick: -1, tile: -1 };
         opinions = { tick: -1, list: [] };
         neighbors = { tick: -1, id: -1, list: [] };
@@ -133,6 +136,7 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
         ledger.reset();
         routes.resetViewer();
         threats.reset();
+        radar.reset();
         capitalHint = { tick: -1, tile: -1 };
         opinions = { tick: -1, list: [] };
         if (game) sendUpdate(game, [], [], 0, true);
@@ -170,6 +174,8 @@ function stepTurns(turns: Turn[]): void {
     for (const t of g.changedTiles) changed.add(t);
     for (const t of g.changedFallout) state.add(t);
     if (turns.length === 1 || events.length < 400) events.push(...g.events);
+    // Radar early warnings (view-only): what the viewer's radars pick up this tick.
+    events.push(...radar.scan(g, viewer));
   }
   if (stepped === 0) return;
   const ms = (performance.now() - t0) / stepped;
@@ -485,7 +491,7 @@ function warsOf(g: Game, p: Player): number[] {
       const o = u.dest; // the landing's owner at launch
       if (u.owner === p.id) touch(o);
       else if (o === p.id) touch(u.owner);
-    } else if (u.type === U.Nuke && u.dest >= 0) {
+    } else if ((u.type === U.Nuke || u.type === U.Bomber) && u.dest >= 0) {
       const o = g.owner[u.dest]!;
       if (u.owner === p.id) touch(o);
       else if (o === p.id) touch(u.owner);
@@ -634,7 +640,11 @@ function buildingViews(g: Game): BuildingView[] {
       progress: b.buildTotal > 0 ? 1 - b.buildLeft / b.buildTotal : 1,
       ready: b.buildLeft === 0,
       upgrade: b.upgradeLeft > 0 ? 1 - b.upgradeLeft / b.upgradeTotal : -1,
-      tubesReady: b.tubes.filter((x) => x === 0).length,
+      // Airfields: their alert interceptors (a slot not created yet is loaded, units/air.ts).
+      tubesReady:
+        b.type === B.Airfield
+          ? Math.max(0, b.level - b.tubes.slice(0, b.level).filter((x) => x > 0).length)
+          : b.tubes.filter((x) => x === 0).length,
       cooldown: b.cooldown,
     });
   }
@@ -723,7 +733,7 @@ function computeFog(g: Game): { w: number; h: number; data: Uint8Array } {
     if (!friends.has(b.owner)) continue;
     // Weather: a radar (or a ship, a plane) inside a fog bank sees half as far.
     if (b.type === B.Radar && b.buildLeft === 0 && radarsOn)
-      disc(b.x, b.y, sightAt(g, b.x + 0.5, b.y + 0.5, RADAR_RANGE + 20 * (b.level - 1)));
+      disc(b.x, b.y, sightAt(g, b.x + 0.5, b.y + 0.5, radarRange(b.level)));
   }
   for (const u of g.units) {
     if (!u.alive || !friends.has(u.owner)) continue;

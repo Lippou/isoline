@@ -34,6 +34,32 @@ export type GameEvent =
     }
   | { k: 'intercept'; x: number; y: number; owner: number }
   /**
+   * A bomber of `owner` dropped its bombs: `victim`'s building of `type` lost `levels` levels
+   * (`destroyed`: nothing is left of it); `type` −1 and `victim` 0 when no structure was hit.
+   */
+  | {
+      k: 'airStrike';
+      x: number;
+      y: number;
+      owner: number;
+      victim: number;
+      type: number;
+      levels: number;
+      destroyed: boolean;
+    }
+  /** An aircraft of `owner` (unit type `kind`) was shot down by `by`'s SAM or fighter. */
+  | {
+      k: 'planeDown';
+      x: number;
+      y: number;
+      owner: number;
+      kind: number;
+      by: number;
+      cause: 'sam' | 'fighter';
+    }
+  /** An airfield of `owner` scrambled an interceptor at unit `target` (`radar`: detected by radar). */
+  | { k: 'scramble'; x: number; y: number; owner: number; radar: boolean; target: number }
+  /**
    * A wave of troops sent at `target`: a new land attack, troops added to one already under
    * way, or a landing. `tile`: a tile of its front (or the beach), −1 if none. `riposte`:
    * `target` was already attacking `attacker` when this attack began — the wave answers it.

@@ -4,7 +4,8 @@
   import { ratioText } from '../game/capitalWatch';
   import { currentSession } from '../stores/app.svelte';
   import { TERRAIN, RESOURCE_KEYS } from '../../core/map/terrain';
-  import { BUILDING_KEYS } from '../../core/game/constants';
+  import { B, BUILDING_KEYS, RECON_LOSS_MULT } from '../../core/game/constants';
+  import { reconZones } from '../game/airPreview';
   import { flagUrl } from '../../render/flags';
   import Icon from '../icons/Icon.svelte';
   import { BUILDING_ICONS } from '../icons/icons';
@@ -104,6 +105,42 @@
     })).filter((x) => x.n > 0);
     return { items, warships, transports };
   });
+  /**
+   * Reconnaissance (GAME_DESIGN.md §11): over a foreign country under one of our zones, what
+   * is hidden otherwise — its treasury, loaded silo tubes, SAM missiles and interceptors on
+   * alert — and the edge our attacks get there.
+   */
+  const intel = $derived.by(() => {
+    const i = info;
+    const s = currentSession()?.state;
+    if (!i?.p || !s || i.p.id === hud.viewer || i.allied || hud.viewer <= 0) return null;
+    const x = (i.h.tile % s.width) + 0.5;
+    const y = Math.floor(i.h.tile / s.width) + 0.5;
+    if (!reconZones(s, hud.viewer).some((z) => (z.x - x) ** 2 + (z.y - y) ** 2 <= z.r * z.r)) return null;
+    const sum = (type: number) => {
+      let ready = 0;
+      let all = 0;
+      for (const b of s.buildings) {
+        if (b.owner !== i.p!.id || b.type !== type || !b.ready) continue;
+        ready += Math.min(b.level, b.tubesReady);
+        all += b.level;
+      }
+      return { ready, all };
+    };
+    return {
+      gold: i.p.gold,
+      silos: sum(B.Silo),
+      sams: sum(B.Sam),
+      alert: sum(B.Airfield),
+      pct: Math.round((1 - RECON_LOSS_MULT) * 100),
+    };
+  });
+  /** Our own airfield under the pointer: its interceptors on alert. */
+  const alert = $derived.by(() => {
+    const b = info?.h.building;
+    if (!b || b.type !== B.Airfield || b.owner !== hud.viewer) return null;
+    return { ready: Math.min(b.level, b.tubes ?? b.level), all: b.level };
+  });
   const relation = $derived.by(() => {
     const i = info;
     if (!i?.p) return '';
@@ -192,6 +229,26 @@
             >{/if}
         </div>
       {/if}
+      {#if intel}
+        <div class="line intel" data-testid="hover-recon">
+          <Icon name="eye" size={13} />
+          <span
+            >{t('hover.recon.title')}<small
+              >{t('hover.recon.gold', { gold: short(intel.gold) })}{#if intel.silos.all}
+                · {t('hover.recon.silos', {
+                  n: intel.silos.ready,
+                  m: intel.silos.all,
+                })}{/if}{#if intel.sams.all}
+                · {t('hover.recon.sams', {
+                  n: intel.sams.ready,
+                  m: intel.sams.all,
+                })}{/if}{#if intel.alert.all}
+                · {t('hover.recon.alert', { n: intel.alert.ready, m: intel.alert.all })}{/if}
+              · {t('hover.recon.attack', { pct: intel.pct })}</small
+            ></span
+          >
+        </div>
+      {/if}
       {#if info.p.bigMalus > 0}<div class="note">
           {t('hud.bigEmpire', { pct: Math.round(info.p.bigMalus * 100) })}
         </div>{/if}
@@ -234,6 +291,9 @@
               next: info.h.building.level + 1,
               pct: Math.floor(info.h.building.upgrade * 100),
             })}</span
+          >{/if}
+        {#if alert}<span class="up mono" data-testid="hover-alert"
+            >{t('hover.alert', { n: alert.ready, m: alert.all })}</span
           >{/if}
       </div>
     {/if}
@@ -412,6 +472,23 @@
   }
   .line.threat {
     align-items: flex-start;
+  }
+  /* Reconnaissance: the hidden numbers, in the sea ink of intelligence. */
+  .line.intel {
+    align-items: flex-start;
+    color: var(--np-sea);
+  }
+  .line.intel :global(svg) {
+    flex: none;
+    margin-top: 2px;
+  }
+  .line.intel span {
+    display: grid;
+    font-weight: 600;
+  }
+  .line.intel small {
+    font-weight: 400;
+    color: var(--np-ink-2);
   }
   .border {
     color: var(--np-ink-2);

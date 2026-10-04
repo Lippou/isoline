@@ -474,7 +474,6 @@
       "airfield": "Aérodromes et avions"
     },
     "economy": {
-      "title": "Économie",
       "1": {
         "name": "Comptoirs",
         "desc": "+10 % de revenu de base"
@@ -499,13 +498,13 @@
         "name": "Mondialisation",
         "desc": "+10 % de revenus du commerce et des trains"
       },
+      "title": "Économie",
       "r": {
         "name": "Prospérité",
         "desc": "+2 % sur tous les revenus par niveau"
       }
     },
     "industry": {
-      "title": "Industrie",
       "1": {
         "name": "Chemins de fer",
         "desc": "+10 % de revenus des trains"
@@ -530,13 +529,13 @@
         "name": "Robotique",
         "desc": "−10 % sur le coût des bâtiments"
       },
+      "title": "Industrie",
       "r": {
         "name": "Productivité",
         "desc": "−1 % sur le coût des bâtiments par niveau"
       }
     },
     "military": {
-      "title": "Militaire",
       "1": {
         "name": "Chasseurs alpins",
         "desc": "−10 % de pertes en collines et montagnes"
@@ -561,13 +560,13 @@
         "name": "Forces spéciales",
         "desc": "−10 % de pertes partout"
       },
+      "title": "Militaire",
       "r": {
         "name": "Entraînement",
         "desc": "−1 % de pertes par niveau"
       }
     },
     "naval": {
-      "title": "Marine",
       "1": {
         "name": "Blindage",
         "desc": "+20 % de points de vie des navires de guerre"
@@ -592,13 +591,13 @@
         "name": "Porte-conteneurs",
         "desc": "+10 % de revenu commercial"
       },
+      "title": "Marine",
       "r": {
         "name": "Fret",
         "desc": "+3 % de revenu commercial par niveau"
       }
     },
     "defense": {
-      "title": "Défense",
       "1": {
         "name": "Missiles sol-air",
         "desc": "Débloque les batteries SAM"
@@ -623,13 +622,13 @@
         "name": "Bouclier antimissile",
         "desc": "SAM : +1 cible, portée +10"
       },
+      "title": "Défense",
       "r": {
         "name": "Interception",
         "desc": "SAM : portée +1 par niveau"
       }
     },
     "nuclear": {
-      "title": "Nucléaire",
       "1": {
         "name": "Physique atomique",
         "desc": "+10 % de vitesse de recherche ; ouvre la voie au programme nucléaire"
@@ -654,6 +653,7 @@
         "name": "Production de masse",
         "desc": "−25 % sur le coût des bombes"
       },
+      "title": "Nucléaire",
       "r": {
         "name": "Cadence de tir",
         "desc": "Silos rechargés 5 % plus vite par niveau"
@@ -966,11 +966,11 @@
     },
     "air": {
       "name": "Aviation",
-      "desc": "Aérodromes, chasseurs, bombardiers et reconnaissance."
+      "desc": "Aérodromes et intercepteurs, bombardiers (frappes sur les bâtiments), chasseurs, reconnaissance."
     },
     "radar": {
       "name": "Tours radar",
-      "desc": "Révèlent le brouillard dans un rayon de 60 tuiles."
+      "desc": "Alerte avancée et guidage des intercepteurs sur 60 tuiles ; révèlent le brouillard."
     },
     "council": {
       "name": "Conseil mondial",
@@ -1056,12 +1056,12 @@
     },
     "radar": {
       "name": "Tour radar",
-      "desc": "Révèle le brouillard de guerre dans un rayon de 60 tuiles.",
+      "desc": "Couverture de 60 tuiles (+20 par niveau) : alerte avancée des avions et transports en approche, guidage des intercepteurs jusqu'à 90 tuiles de vos aérodromes ; révèle le brouillard.",
       "short": "Radar"
     },
     "airfield": {
       "name": "Aérodrome",
-      "desc": "Produit chasseurs, bombardiers et avions de reconnaissance.",
+      "desc": "Lance chasseurs, bombardiers et reconnaissances (4 en vol par niveau). Un intercepteur d'alerte par niveau décolle contre les bombardiers et reconnaissances détectés : 50 tuiles, 90 sous vos radars.",
       "short": "Aérodrome"
     },
     "lab": {
@@ -1081,17 +1081,17 @@
     },
     "fighter": {
       "name": "Chasseur",
-      "desc": "Intercepte bombardiers et transports à moins de 90 tuiles de l'aérodrome.",
+      "desc": "Patrouille 60 s à 90 tuiles au plus d'un aérodrome : abat bombardiers, chasseurs, reconnaissances et transports d'invasion à moins de 30 tuiles. Escorte vos raids, couvre un front ou une côte.",
       "short": "Chasseur"
     },
     "bomber": {
       "name": "Bombardier",
-      "desc": "Tue des troupes dans un rayon de 6 tuiles, sans retombées. Interceptable.",
+      "desc": "Frappe le bâtiment ennemi le plus proche de la cible (portée 300) : −1 niveau, détruit au niveau 1 ; silos et SAM vidés de leurs missiles. Deux niveaux sous votre reconnaissance. Abattu par les SAM et les chasseurs.",
       "short": "Bombardier"
     },
     "recon": {
       "name": "Reconnaissance",
-      "desc": "Révèle une zone pendant 40 secondes.",
+      "desc": "40 s au-dessus d'une zone de 40 tuiles (portée 400) : vos attaques y perdent 25 % de troupes en moins, vos bombardiers y frappent deux niveaux, et le survol y révèle trésor, tubes chargés et missiles prêts.",
       "short": "Reconnaiss."
     }
   },
@@ -1194,7 +1194,7 @@
     "crisis.desc": "Les revenus de tous les pays baissent de 25 % pendant 2 minutes. Le commerce et les trains ne sont pas touchés.",
     "pandemic.desc": "La croissance des troupes est divisée par deux pendant 2 minutes. Toutes les armées ont perdu 3 % de leurs effectifs au début de l'épidémie.",
     "boom.desc": "Navires marchands et trains rapportent le double pendant 2 minutes : c'est le moment de commercer.",
-    "solarStorm.desc": "Les radars sont aveugles pendant 90 secondes : le brouillard de guerre retombe sur les zones qu'ils éclairaient.",
+    "solarStorm.desc": "Les radars sont aveugles pendant 90 secondes : plus d'alerte avancée ni de guidage des intercepteurs, et le brouillard retombe sur ce qu'ils révélaient.",
     "peaceSummit.desc": "Trêve forcée de 60 secondes : aucun pays ne peut en attaquer un autre. Les tribus restent attaquables.",
     "crisis.fx": "Revenus −25 %",
     "pandemic.fx": "Croissance des troupes −50 %",
@@ -1235,7 +1235,7 @@
     "intercepted": "Vos SAM ont intercepté un missile !",
     "nukeIntercepted": "Votre missile a été intercepté.",
     "bombed": "Bombardement de {by} : {troops} troupes perdues.",
-    "planeLost": "Un avion a été abattu.",
+    "planeLost": "{by} a abattu un de vos appareils ({plane}).",
     "sabotaged": "Sabotage ordonné par {by} !",
     "researchDone": "Recherche terminée : {tech}.",
     "secession": "Sécession : {tiles} tuiles se sont révoltées !",
@@ -1250,7 +1250,19 @@
     "labReady": "Centre de recherche opérationnel : la recherche accélère.",
     "labLost": "{by} s'est emparé d'un de vos centres de recherche.",
     "labTaken": "Vous prenez un centre de recherche à {player}.",
-    "secessionRegion": "Une région fait sécession : {tribe} ({tiles} cases) se soulève dans votre pays."
+    "secessionRegion": "Une région fait sécession : {tribe} ({tiles} cases) se soulève dans votre pays.",
+    "raidDamaged": "Raid aérien ({by}) — {building} : −{n} niv.",
+    "raidDestroyed": "Raid aérien ({by}) — {building} : en ruine.",
+    "raidHit": "Raid sur {player} — {building} : −{n} niv.",
+    "raidHitDestroyed": "Raid sur {player} — {building} : en ruine.",
+    "planeDowned": "Vous avez abattu un appareil ennemi ({player}, {plane}).",
+    "radar": {
+      "bomber": "Radar — bombardier ennemi ({by}) en approche, cible : {building}.",
+      "bomberLand": "Radar — bombardier ennemi ({by}) en approche de vos terres.",
+      "fighter": "Radar — chasseurs ennemis ({by}) au-dessus de vos terres.",
+      "recon": "Radar — avion de reconnaissance ennemi ({by}) au-dessus de vos terres.",
+      "transport": "Radar — transport ennemi ({by}) en approche : {troops} troupes."
+    }
   },
   "error": {
     "nukeSelfMirv": "Un MIRV ne peut pas viser votre propre pays : ses ogives tomberaient sur tout votre territoire.",
@@ -1258,7 +1270,7 @@
     "noFrontier": "Aucune frontière commune : pour l'atteindre, envoyez un bateau (touche B ou clic droit → Débarquer).",
     "warship": "Impossible d'armer un navire : port requis sur cette mer, ou or insuffisant.",
     "nuke": "Aucun missile disponible (silo, or ou rechargement).",
-    "air": "Aucun aérodrome disponible, cible hors de portée ou or insuffisant.",
+    "air": "Aucun aérodrome libre à portée, cible invalide ou or insuffisant.",
     "general": "Capacité indisponible.",
     "simulation": "Erreur de simulation — consultez le journal.",
     "boat": {
@@ -1849,7 +1861,16 @@
     "capital": "Capitale",
     "yourCapital": "Votre capitale",
     "disorg": "Désorganisé par la perte de sa capitale ({clock})",
-    "threat": "Armée ×{ratio} massée à votre frontière"
+    "threat": "Armée ×{ratio} massée à votre frontière",
+    "recon": {
+      "title": "Reconnaissance",
+      "gold": "trésor {gold}",
+      "silos": "tubes chargés {n}/{m}",
+      "sams": "missiles SAM {n}/{m}",
+      "alert": "intercepteurs {n}/{m}",
+      "attack": "vos attaques ici : −{pct} % de pertes"
+    },
+    "alert": "intercepteurs {n}/{m}"
   },
   "weather": {
     "stormNear": "Un orage se forme près de chez vous : navires ralentis de {pct} %.",
@@ -2365,5 +2386,29 @@
     "phase": "Pas avant le début de la partie",
     "upgrading": "Amélioration déjà en cours",
     "constructing": "Encore en construction"
+  },
+  "air": {
+    "role": {
+      "fighter": "Patrouille de 60 s : abat les avions et les transports d'invasion à 30 tuiles.",
+      "bomber": "Frappe le bâtiment le plus proche du viseur : −1 niveau (détruit au niveau 1).",
+      "recon": "Zone de 40 tuiles pendant 40 s : −25 % de pertes pour vos attaques, frappes doublées, renseignements au survol."
+    },
+    "flying": "{n}/{max} en vol",
+    "flyingTip": "Avions en vol / places de vos aérodromes (4 par niveau)",
+    "reach": "Portée {n} tuiles",
+    "problem": {
+      "noAirfield": "Aucun aérodrome : construisez-en un",
+      "full": "Aérodromes pleins : attendez un retour",
+      "range": "Hors de portée de vos aérodromes",
+      "noTarget": "Aucune cible ennemie ici",
+      "teammate": "Vous ne pouvez pas viser un coéquipier"
+    },
+    "hitLevel": "{building} ({player}) : niv. {from} → {to}",
+    "hitDestroy": "{building} ({player}) : en ruine",
+    "spotted": "Sous votre reconnaissance : frappe doublée",
+    "railsOnly": "Aucun bâtiment : seuls rails et trains",
+    "sam": "{n} missile(s) SAM sur la route : un bombardier abattu par missile",
+    "interceptors": "{n} aérodrome(s) ennemi(s) en alerte au-dessus de la cible",
+    "clear": "Route dégagée : aucune défense connue"
   }
 }

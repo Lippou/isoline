@@ -19,8 +19,9 @@ import { t, i18n, clock, short } from '../i18n/i18n.svelte';
 import { mapsBase, bridge, writeJson } from '../bridge';
 import { app, setSession, go, confirmModal, type LaunchRequest } from '../stores/app.svelte';
 import type { GameEvent } from '../../core/game/events';
-import { portRange, B, N, RAIL_CONNECT_RANGE, FIGHTER_RANGE } from '../../core/game/constants';
+import { portRange, A, B, N, RAIL_CONNECT_RANGE, FIGHTER_RANGE, radarRange } from '../../core/game/constants';
 import { launchInfo, type LaunchInfo } from './nukePreview';
+import { AIR_REACH, airAim, type AirAim } from './airPreview';
 import { audio } from '../../audio/audio';
 import { noteLaunch, profile, recordGameEnd, recordMission, score } from '../stores/profile.svelte';
 import { takeSnapshotSave } from './saves';
@@ -338,6 +339,7 @@ export class GameController {
       hud.tool = { k: 'none' };
       this.renderer.overlay.ghost = null;
       this.renderer.overlay.nukePreview = null;
+      this.renderer.overlay.airPreview = null;
     } else audio.ui('click');
   }
 
@@ -374,6 +376,7 @@ export class GameController {
         this.input.setSelection([]);
         this.renderer.overlay.ghost = null;
         this.renderer.overlay.nukePreview = null;
+        this.renderer.overlay.airPreview = null;
       } else if (hud.panels.menu) hud.panels.menu = false;
       // A window open: Escape closes the one in front (then the next…), the menu comes after.
       else if (!closeTopWindow()) hud.panels.menu = true;
@@ -719,6 +722,7 @@ export class GameController {
     const hover = hud.hover?.tile ?? -1;
     ov.ghost = null;
     ov.nukePreview = null;
+    ov.airPreview = null;
     ov.ranges = [];
     // Choosing a new capital: the marker and its border clearance, ok or not.
     ov.capitalGhost =
@@ -737,7 +741,7 @@ export class GameController {
       st.owner[hover]! > 0 &&
       this.renderer.relation(st.owner[hover]!) === 'foe';
     const cur =
-      tool.k === 'nuke'
+      tool.k === 'nuke' || (tool.k === 'air' && tool.kind === A.Bomber)
         ? 'var(--cursor-aim)'
         : enemy
           ? 'var(--cursor-attack)'
@@ -765,12 +769,16 @@ export class GameController {
             ? [B.Silo, B.Sam]
             : tool.k === 'warship'
               ? [B.Port]
-              : tool.k === 'air'
+              : tool.k === 'air' && tool.kind !== A.Bomber
                 ? [B.Airfield]
                 : null;
+    // Aiming a bomber, every building stays lit: the enemy's are the targets.
     ov.buildingFilter = filter;
     // SAM coverage while aiming a missile, or with silos / SAMs in the filter.
-    ov.samCoverage = tool.k === 'nuke' || !!filter?.some((k) => k === B.Sam || k === B.Silo);
+    ov.samCoverage =
+      tool.k === 'nuke' ||
+      (tool.k === 'air' && tool.kind === A.Bomber) ||
+      !!filter?.some((k) => k === B.Sam || k === B.Silo);
     let launch: LaunchInfo | null = null;
     const place = hover >= 0 && tool.k === 'build' ? this.placementAt(tool.kind, hover) : null;
     this.publishPlacement(place);
@@ -783,6 +791,10 @@ export class GameController {
       ov.nukePreview = launch.overlay;
     }
     this.publishLaunch(launch);
+    // Aiming a plane: route, reach, the building in a bomber's sights, defences on the way.
+    const aim = hover >= 0 && tool.k === 'air' ? this.airAimAt(tool.kind as A, hover) : null;
+    ov.airPreview = aim?.overlay ?? null;
+    this.publishAirAim(aim);
     // Radius of action: hovered building, building being placed, or all own ports for the warship tool.
     const rangeOf = (type: number, level: number, owner: number): number =>
       type === B.Sam
@@ -790,7 +802,7 @@ export class GameController {
         : type === B.DefensePost
           ? 30
           : type === B.Radar
-            ? 60 + 20 * (level - 1)
+            ? radarRange(level)
             : type === B.Port
               ? portRange(level)
               : type === B.Factory
@@ -825,10 +837,14 @@ export class GameController {
     }
     // Reach of our own buildings of the filtered types (SAMs: the coverage view above).
     if (filter) {
+      // A plane's button or tool: its own reach around our airfields (bombers 300, recon 400).
+      const plane = tool.k === 'air' ? tool.kind : bh?.startsWith('a') ? Number(bh.slice(1)) : -1;
       for (const b of this.session.state.buildings) {
         if (b.owner !== this.session.viewer || !b.ready || b.type === B.Sam || !filter.includes(b.type))
           continue;
-        const r = rangeOf(b.type, b.level, b.owner);
+        // While aiming, the preview draws the reach of the airfield that would take off.
+        if (b.type === B.Airfield && tool.k === 'air' && hover >= 0) continue;
+        const r = b.type === B.Airfield && plane >= 0 ? AIR_REACH[plane]! : rangeOf(b.type, b.level, b.owner);
         if (r > 0) ov.ranges.push({ x: b.x + 0.5, y: b.y + 0.5, r, color: colorOf(b.type) });
       }
     }
@@ -931,6 +947,43 @@ export class GameController {
     return this.launchCache;
   }
 
+  private airKey = '';
+  private airCache: AirAim | null = null;
+
+  /** Aircraft preview for the hovered tile (recomputed when the target or the world changes). */
+  private airAimAt(kind: A, tile: number): AirAim {
+    const st = this.session.state;
+    const key = `${kind}|${tile}|${st.buildingsVersion}|${Math.floor(st.tick / 5)}`;
+    if (key !== this.airKey || !this.airCache) {
+      this.airKey = key;
+      this.airCache = airAim(st, this.session.viewer, kind, tile, (o, x, y) =>
+        this.renderer.revealed(o, x, y),
+      );
+    }
+    return this.airCache;
+  }
+
+  /** Feed the aircraft panel (AirPanel.svelte) only when its verdict changed. */
+  private publishAirAim(a: AirAim | null): void {
+    if (!a) {
+      if (hud.airAim) hud.airAim = null;
+      return;
+    }
+    const next = {
+      problem: a.problem,
+      target: a.target,
+      samMissiles: a.samMissiles,
+      interceptors: a.interceptors,
+      spotted: a.spotted,
+      victim: a.victim,
+      betrays: a.betrays,
+      flying: a.flying,
+      room: a.room,
+    };
+    if (hud.airAim && JSON.stringify(hud.airAim) === JSON.stringify(next)) return;
+    hud.airAim = next;
+  }
+
   /** Feed the launch panel, touching the reactive store only when something changed. */
   private publishLaunch(l: LaunchInfo | null): void {
     const cur = hud.launch;
@@ -985,6 +1038,8 @@ export class GameController {
     for (const [k, v] of Object.entries(e.params ?? {})) {
       if (PLAYER_PARAMS.has(k) && typeof v === 'number') params[k] = this.session.state.name(v, i18n.lang);
       else if (k === 'tech' && typeof v === 'string') params[k] = t(`${v}.name`);
+      else if (k === 'building' && typeof v === 'string') params[k] = t(`building.${v}.name`);
+      else if (k === 'plane' && typeof v === 'string') params[k] = t(`unit.${v}.name`);
       else if (typeof v === 'number' && (k === 'troops' || k === 'gold'))
         params[k] = v.toLocaleString(i18n.lang);
       else if (k === 'eta' && typeof v === 'number') params[k] = (v / 10).toFixed(0);
@@ -1027,6 +1082,8 @@ export class GameController {
           toast(text, e.level, e.tile);
         }
         if (e.key.startsWith('error.')) audio.ui('error');
+        // Radar early warning: a soft double blip (synthesised, src/audio/audio.ts).
+        else if (e.key.startsWith('notify.radar.')) audio.sfx('radar', 0.8);
         break;
       }
       case 'nukeLaunch': {
@@ -1070,6 +1127,11 @@ export class GameController {
         break;
       case 'intercept':
         if (e.owner === me || this.onScreen(e.x, e.y)) audio.sfx('intercept', 0.8);
+        break;
+      case 'planeDown':
+        // SAM kills already sound through 'intercept'; a dogfight's kill is a muffled burst.
+        if (e.cause === 'fighter' && (e.owner === me || e.by === me || this.onScreen(e.x, e.y)))
+          audio.sfx('intercept', 0.55);
         break;
       case 'shipSunk':
         if (e.owner === me || e.by === me || this.onScreen(e.x, e.y)) audio.sfx('sunk', 0.6);

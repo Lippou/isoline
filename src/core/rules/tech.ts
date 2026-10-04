@@ -367,11 +367,12 @@ const plan = (s: string): readonly string[] => s.split(' ');
 /**
  * Nations' research plans by personality (missing prerequisites are studied on the way).
  * Every plan starts with the economy and reaches the nuclear programme and SAM batteries
- * in the mid-game, so that nations still build silos and SAMs and use them.
+ * in the mid-game, so that nations still build silos and SAMs and use them; expansionists,
+ * builders and warmongers also study Aerospace (airfields and aircraft).
  */
 export const NATION_RESEARCH: Record<Personality, readonly string[]> = {
   expansionist: plan(
-    'military.1 economy.1 industry.1 economy.2 military.2 industry.2 defense.1 nuclear.2 military.3 economy.3 nuclear.3 military.4 economy.4 military.5',
+    'military.1 economy.1 industry.1 economy.2 military.2 industry.2 defense.1 nuclear.2 military.3 economy.3 industry.3 nuclear.3 military.4 economy.4 military.5',
   ),
   builder: plan(
     'economy.1 industry.1 economy.2 industry.2 defense.1 economy.3 nuclear.2 industry.3 economy.4 defense.2 nuclear.3 industry.4 economy.5',
@@ -386,7 +387,7 @@ export const NATION_RESEARCH: Record<Personality, readonly string[]> = {
     'economy.1 defense.1 economy.2 industry.1 industry.2 nuclear.2 defense.2 defense.3 economy.3 nuclear.3 defense.4 defense.5',
   ),
   warmonger: plan(
-    'economy.1 military.1 industry.1 economy.2 industry.2 nuclear.2 defense.1 military.2 economy.3 nuclear.3 nuclear.4 industry.4 nuclear.5',
+    'economy.1 military.1 industry.1 economy.2 industry.2 nuclear.2 defense.1 military.2 economy.3 industry.3 nuclear.3 nuclear.4 industry.4 nuclear.5',
   ),
 };
 

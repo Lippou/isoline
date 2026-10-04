@@ -10,7 +10,7 @@ import { B, BUILDING_COUNT, N } from './constants';
 import { demolishBuilding, placeBuilding, planBuild, upgradeBuilding } from '../buildings/buildings';
 import { buildWarship, launchBoat, orderShips, retreatTransport } from '../units/ships';
 import { launchNukes } from '../units/nukes';
-import { launchAircraft } from '../units/air';
+import { bomberTarget, launchAircraft } from '../units/air';
 import {
   answerAlliance,
   betray,
@@ -149,7 +149,7 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
 
     case 'air': {
       if (!inMap(c.tile) || c.kind < 0 || c.kind > 2) return;
-      const o = game.owner[c.tile]!;
+      const o = c.kind === 1 ? (bomberTarget(game, p, c.tile)?.owner ?? game.owner[c.tile]!) : 0;
       if (!launchAircraft(game, p, c.kind as A, c.tile)) game.notify(p.id, 'error.air', 'warn');
       // Bombing an ally betrays it — once the bomber has taken off.
       else if (c.kind === 1 && o > 0 && p.allies.has(o)) betray(game, p, game.players[o]!);

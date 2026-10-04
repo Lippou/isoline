@@ -175,7 +175,8 @@ export interface TileOutcome {
 /**
  * OpenFront's attackLogic for attack `a` taking `tile`, with `borderSize` tiles on its
  * front this tick. mag and tile cost come from the terrain, ×5 / ×3 near an enemy
- * defence post, ×(5 − 2 × fallout share) on fallout.
+ * defence post, ×(5 − 2 × fallout share) on fallout; mag ×0.75 inside the attacker's
+ * reconnaissance zone (Isoline's aviation).
  * - Wilderness: loss mag / 5 (tribes mag / 10); fraction clamp(2,000 × cost / troops, 5, 100) / (2 × border).
  * - Player: loss mag × clamp(r, 0.6, 2) × (0.463 × bonus(A, 0.7) × bonus(D, 0.3) + 0.0039 × D troops per tile),
  *   ×0.7 against a tribe, ×0.5 against a traitor; the defender loses its troops per tile;
@@ -189,7 +190,7 @@ export function attackLogic(game: Game, a: Attack, tile: number, borderSize: num
   let mag = MAG[t]! * game.techMagMult(a.attacker, t);
   let cost = SPEED[t]!;
   if (T) {
-    mag *= game.defenseMagMult(tile, a.target);
+    mag *= game.defenseMagMult(tile, a.target) * game.reconLossMult(a.attacker, tile);
     cost *= game.defenseSpeedMult(tile, a.target);
   }
   const fo = falloutMult(game, tile);

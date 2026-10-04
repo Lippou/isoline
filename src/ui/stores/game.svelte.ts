@@ -137,6 +137,18 @@ export const hud = $state({
     victim: number;
     teammate: boolean;
   },
+  /** Aircraft panel: what a plane sent at the hovered tile would do (ui/game/airPreview.ts). */
+  airAim: null as null | {
+    problem: '' | 'noAirfield' | 'full' | 'range' | 'noTarget' | 'teammate';
+    target: { type: number; owner: number; level: number; after: number } | null;
+    samMissiles: number;
+    interceptors: number;
+    spotted: boolean;
+    victim: number;
+    betrays: number;
+    flying: number;
+    room: number;
+  },
   toasts: [] as Toast[],
   log: [] as LogEntry[],
   nukeAlerts: [] as NukeAlert[],
@@ -177,8 +189,8 @@ export const hud = $state({
     y: number;
     sx: number;
     sy: number;
-    /** `upgrade`: next level under construction, 0..1 (−1: none). */
-    building: { type: number; level: number; owner: number; upgrade: number } | null;
+    /** `upgrade`: next level under construction, 0..1 (−1: none); `tubes`: loaded tubes / missiles / interceptors. */
+    building: { type: number; level: number; owner: number; upgrade: number; tubes?: number } | null;
     fallout: number;
     resource: number;
     /** Owner of the capital marker under the pointer (0: none). */
@@ -293,6 +305,7 @@ export function resetHud(): void {
   hud.pact = null;
   pactQueue.length = 0;
   hud.launch = null;
+  hud.airAim = null;
   hud.toasts = [];
   hud.log = [];
   hud.breaking = null;
