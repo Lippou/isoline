@@ -17,6 +17,7 @@ import {
   TRADE_SIGMOID_GOLD,
   TRADE_SIGMOID_K,
   TRADE_SPAWN_RATE,
+  TRADE_CAPACITY_KNEE,
   TRANSPORT_HP,
   TRANSPORT_MIN_TROOPS,
   TRANSPORT_SPEED,
@@ -746,6 +747,26 @@ export function tradeGold(dist: number): number {
   );
 }
 
+/**
+ * Trade capacity of a player with `portLevels` completed port levels: the share of its
+ * successful launch rolls that sail, and the factor on its ports' weight as destinations.
+ * 1 for a single port; P ports trade like P × (1 + K) / (P + K), never more than K + 1.
+ */
+export function tradeCapacity(portLevels: number): number {
+  return Math.min(1, (1 + TRADE_CAPACITY_KNEE) / (Math.max(1, portLevels) + TRADE_CAPACITY_KNEE));
+}
+
+// Scratch buffer: completed port levels per player id, rebuilt at every launch window.
+let portLevelsBuf = new Float64Array(0);
+
+function countPortLevels(game: Game): Float64Array {
+  if (portLevelsBuf.length < game.players.length) portLevelsBuf = new Float64Array(game.players.length * 2);
+  portLevelsBuf.fill(0);
+  for (const b of game.buildings.values())
+    if (b.type === B.Port && b.buildLeft === 0) portLevelsBuf[b.owner]! += b.level;
+  return portLevelsBuf;
+}
+
 /** A port rolls once per level; the first success launches a merchant. */
 function rollMerchant(game: Game, port: Building, merchants: number): boolean {
   for (let k = 0; k < port.level; k++) {
@@ -764,7 +785,7 @@ function rollMerchant(game: Game, port: Building, merchants: number): boolean {
  * (at least 4) count twice and friendly ports once more, unless they lie within
  * TRADE_SHORT_RANGE tiles (Manhattan).
  */
-function pickTradePort(game: Game, port: Building, owner: Player): Building | null {
+function pickTradePort(game: Game, port: Building, owner: Player, portLevels: Float64Array): Building | null {
   const wt = game.map.adjacentWater(port.tile);
   if (wt < 0) return null;
   const body = game.map.navBody[wt];
@@ -785,19 +806,24 @@ function pickTradePort(game: Game, port: Building, owner: Player): Building | nu
     let w = b.level;
     if (far && i < closeBonus) w += b.level;
     if (far && game.friendly(port.owner, b.owner)) w += b.level;
-    return w;
+    return w * tradeCapacity(portLevels[b.owner]!);
   });
   return candidates[game.rng.weighted(weights)]!.b;
 }
 
 function spawnMerchants(game: Game, merchants: number): void {
+  let portLevels: Float64Array | null = null;
   for (const port of game.buildings.values()) {
     if (port.type !== B.Port || port.buildLeft > 0) continue;
     if ((game.tick + port.createdTick) % TRADE_ROLL_TICKS !== 0) continue;
     const owner = game.players[port.owner]!;
     if (!owner.alive || owner.kind === 'tribe') continue;
     if (!rollMerchant(game, port, merchants)) continue;
-    const dest = pickTradePort(game, port, owner);
+    portLevels ??= countPortLevels(game);
+    // Trade capacity: past the first port, a success only sails with probability (1 + K) / (P + K).
+    const capacity = tradeCapacity(portLevels[owner.id]!);
+    if (capacity < 1 && !game.rng.chance(capacity)) continue;
+    const dest = pickTradePort(game, port, owner, portLevels);
     if (!dest) continue;
     const path = tradePath(game, port, dest);
     if (!path) continue;

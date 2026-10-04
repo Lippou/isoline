@@ -1074,7 +1074,7 @@
     },
     "factory": {
       "name": "Usine",
-      "desc": "Pose des voies ferrées vers les gares à moins de 110 tuiles et fait circuler des trains.",
+      "desc": "Pose des voies ferrées vers les gares à moins de 55 tuiles et fait circuler des trains.",
       "short": "Usine"
     },
     "defensePost": {

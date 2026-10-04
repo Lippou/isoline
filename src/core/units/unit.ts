@@ -34,7 +34,7 @@ export interface Unit {
   y: number;
   hp: number;
   maxHp: number;
-  /** Waypoints (tile indices) and progress along them. */
+  /** Waypoints (tile indices) and progress along them; train: ids of the stations that paid it. */
   path: number[];
   pathIdx: number;
   speed: number;

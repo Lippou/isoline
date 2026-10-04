@@ -4,6 +4,8 @@ import { maxTroops } from '../../src/core/game/economy';
 import {
   B,
   BUILD_TICKS,
+  RAIL_CONNECT_RANGE,
+  RAIL_MAX_SEGMENT,
   RETREAT_DELAY_TICKS,
   RETREAT_MALUS,
   SPAWN_IMMUNITY_TICKS,
@@ -16,7 +18,7 @@ import { attackLogic, largeTerritoryBonus, launchAttack } from '../../src/core/r
 import { claimDisc } from '../../src/core/game/spawn';
 import type { Game } from '../../src/core/game/state';
 import { U } from '../../src/core/units/unit';
-import { buildWarship, tradeGold, warshipCost } from '../../src/core/units/ships';
+import { buildWarship, tradeCapacity, tradeGold, warshipCost } from '../../src/core/units/ships';
 import { trainStopGold } from '../../src/core/units/trains';
 
 const FIELD = [
@@ -778,6 +780,54 @@ describe('trade', () => {
     expect(g.players[1]!.stats.tradeGold).toBe(g.players[2]!.stats.tradeGold);
   });
 
+  it('trade capacity: P port levels trade like P × 4 / (P + 3), never more than 4 (1.11)', () => {
+    expect(tradeCapacity(0)).toBe(1);
+    expect(tradeCapacity(1)).toBe(1);
+    expect(tradeCapacity(5)).toBeCloseTo(0.5);
+    expect(tradeCapacity(13)).toBeCloseTo(0.25);
+    const effective = (p: number) => p * tradeCapacity(p);
+    expect(effective(3)).toBeCloseTo(2);
+    expect(effective(10)).toBeCloseTo(40 / 13);
+    expect(effective(200)).toBeLessThan(4);
+    // Each further port is worth less: the 20th adds under a twentieth of the first.
+    expect(effective(20) - effective(19)).toBeLessThan(0.05);
+  });
+
+  it('a port spammer launches merchants like a few ports, not like all of them', () => {
+    // Player 1 holds one port, then six; player 2 one port across the sea (their destination).
+    const launches = (spots: [number, number][]) => {
+      const g = testGame(asciiMap(ISLANDS, 6), 2, { victoryThreshold: 101 });
+      startWith(g, [
+        [20, 18],
+        [160, 18],
+      ]);
+      own(g, 1, 0, 0, 90, 36);
+      own(g, 2, 90, 0, 186, 36);
+      for (const [x, y] of spots)
+        expect(placeBuilding(g, g.players[1]!, B.Port, g.map.idx(x, y), true)).toBeTruthy();
+      placeBuilding(g, g.players[2]!, B.Port, g.map.idx(144, 18), true);
+      const seen = new Set<number>();
+      for (let k = 0; k < 6_000; k++) {
+        g.step([]);
+        for (const u of g.units) if (u.type === U.Merchant && u.owner === 1) seen.add(u.id);
+      }
+      return seen.size;
+    };
+    const one = launches([[41, 18]]);
+    const six = launches([
+      [41, 9],
+      [41, 25],
+      [12, 6],
+      [28, 6],
+      [12, 29],
+      [28, 29],
+    ]);
+    expect(one).toBeGreaterThan(20);
+    // Six ports trade like 6 × 4 / 9 ≈ 2.7 of them (OpenFront: 6).
+    expect(six / one).toBeGreaterThan(1.8);
+    expect(six / one).toBeLessThan(3.8);
+  });
+
   it('an embargo declared mid-voyage scraps the merchant', () => {
     const { g, a } = ports();
     a.rejections = 1_000;
@@ -792,12 +842,51 @@ describe('trade', () => {
 });
 
 describe('trains', () => {
+  it('a factory reaches 55 tiles (half of 1.10’s 110), rails at most 55 × √2', () => {
+    expect(RAIL_CONNECT_RANGE).toBe(55);
+    expect(RAIL_MAX_SEGMENT).toBe(Math.round(55 * Math.SQRT2));
+    const g = testGame(asciiMap(FIELD, 8), 1, { victoryThreshold: 101 });
+    startWith(g, [[60, 28]]);
+    own(g, 1, 0, 0, 160, 56);
+    const p = g.players[1]!;
+    const f = placeBuilding(g, p, B.Factory, g.map.idx(60, 28), true)!;
+    const near = placeBuilding(g, p, B.City, g.map.idx(110, 28), true)!; // 50 tiles
+    const far = placeBuilding(g, p, B.City, g.map.idx(10, 28), true)!; // 50 tiles
+    const tooFar = placeBuilding(g, p, B.City, g.map.idx(60 + 60, 40), true)!; // ~61 tiles
+    const linked = (b: { id: number }) => g.rails.some((r) => r.alive && r.a === f.id && r.b === b.id);
+    expect(linked(near)).toBe(true);
+    expect(linked(far)).toBe(true);
+    expect(linked(tooFar)).toBe(false);
+  });
+
   it('stop pay: 5k own, 12.5k other, 17.5k ally, −2.5k per stop after the 10th, floor 2.5k', () => {
     expect(trainStopGold(5_000, 0)).toBe(5_000);
     expect(trainStopGold(12_500, 9)).toBe(12_500);
     expect(trainStopGold(12_500, 10)).toBe(10_000);
     expect(trainStopGold(17_500, 13)).toBe(7_500);
     expect(trainStopGold(5_000, 30)).toBe(2_500);
+  });
+
+  it('a station pays a given train once: no farming a short line by bouncing (1.11)', () => {
+    const g = testGame(asciiMap(FIELD, 8), 1, { victoryThreshold: 101 });
+    startWith(g, [[40, 28]]);
+    own(g, 1, 0, 0, 160, 56);
+    const p = g.players[1]!;
+    placeBuilding(g, p, B.Factory, g.map.idx(60, 28), true);
+    placeBuilding(g, p, B.City, g.map.idx(100, 28), true);
+    // The only line: factory → city → factory → city… for 16 stops; the city pays each train once
+    // (before 1.11: 8 times).
+    let pays = 0;
+    const trains = new Set<number>();
+    for (let k = 0; k < 3000; k++) {
+      g.step([]);
+      for (const u of g.units) if (u.type === U.Train) trains.add(u.id);
+      for (const e of g.events) if (e.k === 'trainPay') pays++;
+    }
+    expect(trains.size).toBeGreaterThan(2);
+    expect(pays).toBeGreaterThan(0);
+    expect(pays).toBeLessThanOrEqual(trains.size);
+    expect(p.stats.trainGold).toBe(pays * 5_000);
   });
 
   it('a foreign station pays its owner as much as the train owner', () => {

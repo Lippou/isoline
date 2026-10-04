@@ -313,6 +313,16 @@ export const MERCHANT_SPEED = 1;
 export const TRADE_ROLL_TICKS = 10;
 export const TRADE_SPAWN_RATE = 100;
 /**
+ * Isoline's trade capacity (1.11; OpenFront has none: its only brake is the world fleet,
+ * so whoever held the most ports took a growing share of a world trade that no longer
+ * grew, up to 300–370k gold/s on the World map at 40 min). A player's P completed port
+ * levels trade like P × (1 + K) / (P + K) levels, K = TRADE_CAPACITY_KNEE: one port as
+ * before, 3 like 2, 10 like 3.1, never more than K + 1 = 4. Outbound, a successful launch
+ * roll sails with probability (1 + K) / (P + K); inbound, a port weighs as a destination
+ * its level × (1 + K) / (P + K).
+ */
+export const TRADE_CAPACITY_KNEE = 3;
+/**
  * Cargo value = TRADE_SIGMOID_GOLD / (1 + e^(−TRADE_SIGMOID_K × (d − TRADE_SHORT_RANGE))) + TRADE_PER_TILE × d:
  * half of OpenFront's 75,000 and 50 (trade and trains made most of the gold, far too much of it).
  */
@@ -324,8 +334,14 @@ export const TRADE_SHORT_RANGE = 300;
 export const PIRACY_RANGE = 4;
 
 // ------------------------------------------------------------------ rails
-export const RAIL_CONNECT_RANGE = 110;
-export const RAIL_MAX_SEGMENT = 155;
+/**
+ * A factory's reach (OpenFront's trainStationMaxRange is 110 of its tiles). Halved from 110
+ * in 1.11: an Isoline tile is ~1.6 OpenFront tiles across, so 110 reached ~175 OpenFront
+ * tiles and one factory joined a whole region's cities (play-test: « beaucoup trop grand »).
+ * The longest rail is reach × √2 (OpenFront's railroadMaxSize).
+ */
+export const RAIL_CONNECT_RANGE = 55;
+export const RAIL_MAX_SEGMENT = 78;
 export const RAIL_MIN_GAP = 15;
 export const TRAIN_SPEED = 2;
 /**

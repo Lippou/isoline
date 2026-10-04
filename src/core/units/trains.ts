@@ -290,9 +290,17 @@ function payTrain(game: Game, p: Player, amount: number, station: Building): voi
   game.emit({ k: 'trainPay', x: station.x, y: station.y, owner: p.id, amount: Math.round(gold) });
 }
 
-/** Cities and ports pay the train owner AND (the same amount) the station owner; factories are junctions. */
+/**
+ * Cities and ports pay the train owner AND (the same amount) the station owner; factories are
+ * junctions. A station pays a given train once: OpenFront's trains ride a shortest path and
+ * never call twice at a station, while a random walk bouncing on a short line (factory, city,
+ * factory, the same city…) was paid at every pass (1.11). The stations paid are kept in
+ * `train.path`.
+ */
 function payStop(game: Game, train: Unit, station: Building): void {
   if (station.type !== B.City && station.type !== B.Port) return;
+  if (train.path.includes(station.id)) return;
+  train.path.push(station.id);
   const p = game.players[train.owner]!;
   const host = game.players[station.owner]!;
   if (!p.alive || !host.alive || p.hasEmbargoWith(host, game.tick)) return;
