@@ -20,6 +20,7 @@ import {
 import { resourceBonus } from '../rules/resources';
 import { techEconomy, techTroopCap } from '../rules/tech';
 import { capitalGoldMult, capitalGrowthMult } from '../rules/capital';
+import { doomIncomeMult } from '../rules/victory';
 
 /** Sum of the levels of p's completed cities (cities under construction add nothing yet). */
 export function completedCityLevels(game: Game, p: Player): number {
@@ -90,7 +91,11 @@ export function updateEconomy(game: Game): void {
     const sanctioned = game.features.sanction && game.features.sanction.target === p.id ? 0.5 : 1;
     // Capital lost: disorganised, then still without a seat of government (rules/capital.ts).
     const mult =
-      game.config.goldMultiplier * game.features.incomeMult * sanctioned * capitalGoldMult(game, p);
+      game.config.goldMultiplier *
+      game.features.incomeMult *
+      sanctioned *
+      capitalGoldMult(game, p) *
+      doomIncomeMult(game);
     const techMult = game.config.features.tech ? techEconomy(p) : 1;
     const base = Math.floor(GOLD_PER_TICK[p.kind] * mult * techMult);
     const res = game.config.features.resources

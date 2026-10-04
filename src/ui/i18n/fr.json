@@ -291,7 +291,36 @@
     "goalShort": "{pct} %",
     "goalMissionShort": "Mission",
     "windowMoveTip": "Glisser pour déplacer · double-clic : remettre à sa place",
-    "windowResize": "Redimensionner"
+    "windowResize": "Redimensionner",
+    "doom": {
+      "toMidnight": "Minuit moins {left}",
+      "mins": "{m} min",
+      "minSecs": "{m} min {s} s",
+      "secs": "{s} s",
+      "at": "Minuit moins {m}",
+      "next": "Prochain palier :",
+      "end": "Ensuite :",
+      "in": "dans",
+      "etaTip": "Au rythme actuel. Chaque bombe, chute ou trahison rapproche minuit ; un sommet pour la paix ou une décision du Conseil le recule.",
+      "pushUp": "+{secs} s : {why}",
+      "pushDown": "−{secs} s : {why}",
+      "tip": "Horloge de l'apocalypse : à minuit, la partie s'arrête et le plus grand pays l'emporte. L'horloge avance seule (une seconde toutes les 5 s), et plus vite à chaque bombe, chute ou trahison. Paliers :"
+    },
+    "zone": {
+      "title": "Zone {n}/{steps}",
+      "closesIn": "se referme dans",
+      "closing": "la zone se referme",
+      "final": "Dernière zone",
+      "finalIn": "fin de la partie dans",
+      "finalSub": "Au terme du compte, le plus grand pays dans la zone l'emporte.",
+      "out": "{pct} % de vos terres hors de la prochaine zone",
+      "safe": "Toutes vos terres sont dans la prochaine zone",
+      "spect": "Les terres hors du cercle en tirets meurent quand la zone se referme.",
+      "tip": "Battle Royale : la zone (liseré rouge) se referme par paliers sur la prochaine zone (cercle en tirets), tirée au hasard sur les terres. Les terres qu'elle quitte deviennent inhabitables. Le dernier pays debout gagne ; sinon, après la dernière zone, le plus grand."
+    },
+    "goalRoyale": "Survivre à la zone",
+    "goalRoyaleShort": "Zone",
+    "goalRoyaleTip": "Battle Royale : pas de victoire au territoire. Le dernier pays debout gagne ; sinon, le plus grand dans la dernière zone."
   },
   "panel": {
     "diplomacy": "Diplomatie",
@@ -474,7 +503,6 @@
       "airfield": "Aérodromes et avions"
     },
     "economy": {
-      "title": "Économie",
       "1": {
         "name": "Comptoirs",
         "desc": "+10 % de revenu de base"
@@ -499,13 +527,13 @@
         "name": "Mondialisation",
         "desc": "+10 % de revenus du commerce et des trains"
       },
+      "title": "Économie",
       "r": {
         "name": "Prospérité",
         "desc": "+2 % sur tous les revenus par niveau"
       }
     },
     "industry": {
-      "title": "Industrie",
       "1": {
         "name": "Chemins de fer",
         "desc": "+10 % de revenus des trains"
@@ -530,13 +558,13 @@
         "name": "Robotique",
         "desc": "−10 % sur le coût des bâtiments"
       },
+      "title": "Industrie",
       "r": {
         "name": "Productivité",
         "desc": "−1 % sur le coût des bâtiments par niveau"
       }
     },
     "military": {
-      "title": "Militaire",
       "1": {
         "name": "Chasseurs alpins",
         "desc": "−10 % de pertes en collines et montagnes"
@@ -561,13 +589,13 @@
         "name": "Forces spéciales",
         "desc": "−10 % de pertes partout"
       },
+      "title": "Militaire",
       "r": {
         "name": "Entraînement",
         "desc": "−1 % de pertes par niveau"
       }
     },
     "naval": {
-      "title": "Marine",
       "1": {
         "name": "Blindage",
         "desc": "+20 % de points de vie des navires de guerre"
@@ -592,13 +620,13 @@
         "name": "Porte-conteneurs",
         "desc": "+10 % de revenu commercial"
       },
+      "title": "Marine",
       "r": {
         "name": "Fret",
         "desc": "+3 % de revenu commercial par niveau"
       }
     },
     "defense": {
-      "title": "Défense",
       "1": {
         "name": "Missiles sol-air",
         "desc": "Débloque les batteries SAM"
@@ -623,13 +651,13 @@
         "name": "Bouclier antimissile",
         "desc": "SAM : +1 cible, portée +10"
       },
+      "title": "Défense",
       "r": {
         "name": "Interception",
         "desc": "SAM : portée +1 par niveau"
       }
     },
     "nuclear": {
-      "title": "Nucléaire",
       "1": {
         "name": "Physique atomique",
         "desc": "+10 % de vitesse de recherche ; ouvre la voie au programme nucléaire"
@@ -654,6 +682,7 @@
         "name": "Production de masse",
         "desc": "−25 % sur le coût des bombes"
       },
+      "title": "Nucléaire",
       "r": {
         "name": "Cadence de tir",
         "desc": "Silos rechargés 5 % plus vite par niveau"
@@ -721,7 +750,9 @@
       "lastStanding": "Dernier survivant",
       "humansEliminated": "Tous les humains ont été éliminés",
       "mission": "Fin de mission",
-      "none": "Partie terminée"
+      "none": "Partie terminée",
+      "midnight": "Minuit a sonné",
+      "lastZone": "La dernière zone"
     },
     "showResults": "Rouvrir le journal",
     "playAgainTip": "Une nouvelle partie avec les mêmes réglages, sur un monde tiré à nouveau.",
@@ -924,7 +955,10 @@
     "startHint": "Vous choisirez ensuite l'emplacement de votre capitale sur la carte.",
     "procPreview": "Monde généré à partir de la graine {seed}",
     "noCustomTitle": "Aucune carte personnalisée",
-    "noCustom": "Dessinez votre propre monde dans l'éditeur de cartes : il apparaîtra ici dès qu'il sera enregistré."
+    "noCustom": "Dessinez votre propre monde dans l'éditeur de cartes : il apparaîtra ici dès qu'il sera enregistré.",
+    "modeHow": "Comment on joue :",
+    "summaryRoyale": "{mode}, difficulté {diff}. Vous affronterez {nations} nations et {tribes} tribus. La zone se referme : le dernier debout l'emporte, sinon le plus grand dans la dernière zone.",
+    "summaryDoomsday": "{mode}, difficulté {diff}. Vous affronterez {nations} nations et {tribes} tribus. À minuit, le plus grand pays l'emporte (ou le premier à {pct} % des terres)."
   },
   "rule": {
     "allowPorts": "Ports et marine",
@@ -1209,7 +1243,15 @@
     "doomsdayStep": "L'horloge avance : il faut désormais {share} % du territoire.",
     "ringShrink": "La zone jouable se resserre !",
     "capitalFell": "La capitale de {player} tombe aux mains de {by}.",
-    "capitalRazed": "La capitale de {player} est rasée."
+    "capitalRazed": "La capitale de {player} est rasée.",
+    "zoneAnnounced": "Zone {n}/{steps} annoncée (cercle en tirets) : elle se referme dans {secs} s.",
+    "zoneClosing": "La zone se referme ({n}/{steps}) : les terres hors du cercle en tirets deviennent inhabitables.",
+    "zoneFinal": "Dernière zone : dans {secs} s, le plus grand pays à l'intérieur l'emporte.",
+    "doomStage": "Horloge de l'apocalypse — {name} : {effect}.",
+    "doomPush": "L'horloge de l'apocalypse avance de {secs} s : {why}.",
+    "doomPushBy": "L'horloge de l'apocalypse avance de {secs} s : {why} ({by}).",
+    "doomPull": "L'horloge de l'apocalypse recule de {secs} s : {why}.",
+    "midnight": "Minuit : l'horloge de l'apocalypse a sonné."
   },
   "alert": {
     "nuke": "Missile nucléaire lancé par {by} — impact dans {eta} s !",
@@ -1285,7 +1327,8 @@
       "fallout": "Terre irradiée : la capitale ne peut pas s'y installer.",
       "front": "Trop près d'une frontière : la capitale doit être à plus de 5 tuiles de toute terre étrangère (alliés exceptés).",
       "cooldown": "Capitale déplacée récemment : nouveau transfert possible dans {s} s."
-    }
+    },
+    "pactsFrozen": "Dernière minute avant minuit : plus aucune alliance ne peut être signée."
   },
   "keys": {
     "attackHover": "Attaque terrestre (cible survolée)",
@@ -1900,7 +1943,9 @@
       "forfeit": "Capitulation",
       "defeat": "Défaite",
       "points": "Victoire aux points",
-      "none": "Fin de partie"
+      "none": "Fin de partie",
+      "midnight": "Minuit a sonné",
+      "lastZone": "La dernière zone"
     },
     "title": {
       "blitz": "{winner} : la guerre éclair",
@@ -1913,7 +1958,9 @@
       "forfeit": "{winner} : la victoire par forfait",
       "finalBlow": "{winner} : le coup de grâce",
       "points": "{winner} : la victoire aux points",
-      "none": "Fin de partie sans vainqueur"
+      "none": "Fin de partie sans vainqueur",
+      "midnight": "{winner} : debout à minuit",
+      "lastZone": "{winner} : maîtresse de la dernière zone"
     },
     "deck": {
       "territory": "{share} % des terres utiles, au-delà du seuil de {threshold} %, après {duration} de partie.",
@@ -1924,7 +1971,9 @@
       "defeatBy": "Vos dernières terres tombent à {clock}. Coup de grâce : {by}.",
       "defeat": "Vos dernières terres tombent à {clock}.",
       "points": "Plus aucun humain en lice : la nation la plus vaste l'emporte avec {share} % des terres utiles.",
-      "none": "La partie s'achève après {duration}."
+      "none": "La partie s'achève après {duration}.",
+      "midnight": "Quand l'horloge de l'apocalypse sonne minuit, après {duration} de partie, la nation victorieuse tient {share} % des terres utiles.",
+      "lastZone": "La dernière zone refermée, après {duration} de partie, la nation victorieuse y tient {share} % des terres utiles."
     },
     "lead": {
       "territory": "Fin de partie après {duration} sur la carte « {map} » : la nation victorieuse contrôle {share} % des terres utiles, au-delà du seuil de {threshold} %.",
@@ -1947,7 +1996,9 @@
       "betrayalsMany": "{n} alliances ont été trahies.",
       "youWon": "Votre nation a culminé à {peak} % des terres utiles, à {clock}.",
       "youRank": "Votre nation termine {rank} sur {n}, après un pic à {peak} % des terres utiles à {clock}.",
-      "youRankOnly": "Votre nation termine {rank} sur {n}."
+      "youRankOnly": "Votre nation termine {rank} sur {n}.",
+      "midnight": "Fin de partie après {duration} sur la carte « {map} » : l'horloge de l'apocalypse sonne minuit, et la nation victorieuse, la plus grande, tient {share} % des terres utiles.",
+      "lastZone": "Fin de partie après {duration} sur la carte « {map} » : la dernière zone s'est refermée, et la nation victorieuse, la plus grande, y tient {share} % des terres utiles."
     },
     "maps": {
       "title": "L'empire au fil du temps",
@@ -2076,7 +2127,12 @@
       "capitalRazed": "Votre capitale est rasée",
       "capitalTaken": "Vous prenez la capitale de {player}",
       "capitalFell": "La capitale de {player} tombe aux mains de {by}",
-      "capitalRazedOther": "La capitale de {player} est rasée"
+      "capitalRazedOther": "La capitale de {player} est rasée",
+      "doomStage": "Horloge de l'apocalypse : {name}",
+      "midnight": "Minuit a sonné",
+      "zoneAnnounced": "Zone {n}/{steps} : le prochain cercle est connu",
+      "zoneClosing": "La zone se referme ({n}/{steps})",
+      "zoneFinal": "La dernière zone"
     },
     "deck": {
       "betrayal": "L'alliance vole en éclats : {traitor} porte la marque du traître, et {victim} rompt tout commerce avec {traitor} pendant 5 minutes.",
@@ -2090,7 +2146,12 @@
       "capitalLost": "{gold} or du trésor saisis et une minute de désorganisation : choisissez un nouveau siège du gouvernement.",
       "capitalRazed": "Le trésor qui s'y trouvait part en fumée ; choisissez un nouveau siège du gouvernement.",
       "capitalTaken": "{gold} or saisis dans son trésor ; le pays est désorganisé pendant une minute.",
-      "capitalFell": "Le pays est désorganisé pendant une minute et doit choisir un nouveau siège."
+      "capitalFell": "Le pays est désorganisé pendant une minute et doit choisir un nouveau siège.",
+      "doomStage": "Désormais, {effect}.",
+      "midnight": "L'horloge de l'apocalypse arrête la partie : le plus grand pays l'emporte.",
+      "zoneAnnounced": "Elle se referme dans {secs} s ; les terres hors du cercle en tirets seront perdues.",
+      "zoneClosing": "Les terres hors du cercle en tirets deviennent inhabitables.",
+      "zoneFinal": "Dans {secs} s, le plus grand pays à l'intérieur l'emporte."
     },
     "flash": {
       "title": "Flash info",
@@ -2343,5 +2404,49 @@
     "dispatches": "{n} dépêches",
     "dispatchesOne": "1 dépêche",
     "dispatchesShow": "Déplier les dépêches ({n})"
+  },
+  "doom": {
+    "why": {
+      "atom": "bombe atomique",
+      "hydrogen": "bombe H",
+      "mirv": "MIRV lancé",
+      "fall": "un pays tombe",
+      "betrayal": "trahison",
+      "crisis": "crise mondiale",
+      "peace": "sommet pour la paix",
+      "council": "décision du Conseil mondial"
+    },
+    "stage1": {
+      "name": "Course aux armements",
+      "effect": "les bombes coûtent 35 % de moins"
+    },
+    "stage2": {
+      "name": "Rationnement",
+      "effect": "revenu passif −40 % (commerce, trains et butins intacts)"
+    },
+    "stage3": {
+      "name": "Loi du plus fort",
+      "effect": "sous {share} % des terres, les troupes fondent"
+    },
+    "stage4": {
+      "name": "Dernière minute",
+      "effect": "toutes les alliances sont rompues, aucune ne peut plus être signée ; sous {share} % des terres, les troupes fondent"
+    },
+    "midnight": {
+      "name": "Minuit",
+      "effect": "la partie s'arrête, le plus grand pays l'emporte"
+    }
+  },
+  "modeInfo": {
+    "doomsday": "Une horloge avance vers minuit, plus vite à chaque bombe, chute ou trahison. Quatre paliers changent les règles (bombes moins chères, rationnement, les petits pays fondent, alliances rompues). À minuit, le plus grand pays l'emporte.",
+    "battleRoyale": "Une zone se resserre par paliers sur un point tiré au hasard, annoncé à l'avance (cercle en tirets) ; les terres hors zone deviennent inhabitables. Le dernier debout gagne, sinon le plus grand dans la dernière zone."
+  },
+  "modeLine": {
+    "ffa": "Le premier au seuil de terres gagne",
+    "teams": "Des camps qui additionnent leurs terres",
+    "humansVsNations": "Tous les humains contre les nations",
+    "tribes": "Seul face aux tribus, pour s'entraîner",
+    "doomsday": "À minuit, le plus grand l'emporte",
+    "battleRoyale": "Une zone qui se referme au hasard"
   }
 }

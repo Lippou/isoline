@@ -74,6 +74,12 @@ const WEIGHT: Record<string, number> = {
   'council.ceasefire': 55,
   'event.doomsdayStep': 50,
   'event.ringShrink': 50,
+  // The game modes (GAME_DESIGN.md §14.1, §14.2).
+  'event.midnight': 95,
+  'event.doomStage': 62,
+  'event.zoneFinal': 62,
+  'event.zoneClosing': 52,
+  'event.zoneAnnounced': 45,
   'notify.allianceFormed': 40,
   'event.gameStart': 30,
 };
@@ -147,6 +153,30 @@ function headline(key: string, p: Record<string, string | number>, name: Name): 
       return [t('news.head.doomsday', { share: num(p.share) }), t('news.deck.doomsday'), []];
     case 'event.ringShrink':
       return [t('news.head.ring'), t('news.deck.ring'), []];
+    case 'event.doomStage': {
+      const k = num(p.stage);
+      return [
+        t('news.head.doomStage', { name: t(`doom.stage${k}.name`) }),
+        t('news.deck.doomStage', { effect: t(`doom.stage${k}.effect`, { share: num(p.share) }) }),
+        [],
+      ];
+    }
+    case 'event.midnight':
+      return [t('news.head.midnight'), t('news.deck.midnight'), []];
+    case 'event.zoneAnnounced':
+      return [
+        t('news.head.zoneAnnounced', { n: num(p.n), steps: num(p.steps) }),
+        t('news.deck.zoneAnnounced', { secs: num(p.secs) }),
+        [],
+      ];
+    case 'event.zoneClosing':
+      return [
+        t('news.head.zoneClosing', { n: num(p.n), steps: num(p.steps) }),
+        t('news.deck.zoneClosing'),
+        [],
+      ];
+    case 'event.zoneFinal':
+      return [t('news.head.zoneFinal'), t('news.deck.zoneFinal', { secs: num(p.secs) }), []];
     case 'notify.allianceFormed':
       return [t('news.head.alliance', { with: name(num(p.with)) }), '', [num(p.with)]];
     case 'event.gameStart':

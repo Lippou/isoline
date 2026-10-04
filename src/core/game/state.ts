@@ -395,9 +395,9 @@ export class Game {
     const ring = this.victory.ring;
     if (ring && tile >= 0) {
       const w = this.map.width;
-      const dx = (tile % w) + 0.5 - ring.cx;
-      const dy = ((tile / w) | 0) + 0.5 - ring.cy;
-      if (dx * dx + dy * dy > ring.nextR * ring.nextR) return 'zone';
+      const dx = (tile % w) + 0.5 - ring.nx;
+      const dy = ((tile / w) | 0) + 0.5 - ring.ny;
+      if (dx * dx + dy * dy > ring.nr * ring.nr) return 'zone';
     }
     return 'nuked';
   }

@@ -10,6 +10,7 @@
   import { minimapPalette } from '../../render/worldPalette';
   import { hudSize } from '../stores/hudBox.svelte';
   import { layout, zonePiece } from '../stores/layout.svelte';
+  import { liveRing } from '../../core/rules/victory';
 
   let { ctl }: { ctl: GameController } = $props();
   let canvas: HTMLCanvasElement;
@@ -110,6 +111,12 @@
           g = g * 0.5 + 220 * 0.5;
           b = b * 0.5 + 60 * 0.5;
         }
+        // Battle royale: land the zone has left (dark, with a hint of red).
+        if (st.flags[i]! & 1) {
+          r = 34 + ((x + y) & 2 ? 14 : 0);
+          g = 14;
+          b = 20;
+        }
         if (fog) {
           const m = v === 255 ? 1 : v > 0 ? 0.5 : 0.32;
           r *= m;
@@ -147,6 +154,28 @@
       } else if (type === U.Warship && st.units[o + 2] === ctl.session.viewer) {
         ctx.fillStyle = '#eae6da';
         ctx.fillRect(st.units[o + 3]! * sx - 1, st.units[o + 4]! * sy - 1, 2, 2);
+      }
+    }
+    // Battle royale: the zone in force (red) and the next one (paper-white dashes ruled in ink).
+    const ring = st.world?.ring;
+    if (ring) {
+      const [lx, ly, lr] = liveRing(ring, st.tick);
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = 'rgba(214,52,84,0.95)';
+      ctx.beginPath();
+      ctx.ellipse(lx * sx, ly * sy, lr * sx, lr * sy, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      if (ring.endAt < 0) {
+        ctx.setLineDash([4, 3]);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(23,42,60,0.7)';
+        ctx.beginPath();
+        ctx.ellipse(ring.nx * sx, ring.ny * sy, ring.nr * sx, ring.nr * sy, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 1.4;
+        ctx.strokeStyle = '#f8f4ec';
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
     }
     // The view: a paper-white frame, ruled in ink so it reads on sea and land alike.

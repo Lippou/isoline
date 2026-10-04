@@ -8,6 +8,7 @@
   import { keyLabel } from '../stores/settings.svelte';
   import type { GameController } from '../game/controller';
   import { hudSize } from '../stores/hudBox.svelte';
+  import ModeBanner from './ModeBanner.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   const solo = ctl.session.kind === 'solo';
@@ -90,18 +91,27 @@
         </span>
       {/if}
       <span class="item mode">{t(`mode.${mode}`)}</span>
-      <span class="item goal-txt" data-tip={t('hud.victoryThresholdTip', { pct: threshold })}>
+      <span
+        class="item goal-txt"
+        data-tip={mode === 'battleRoyale'
+          ? t('hud.goalRoyaleTip')
+          : t('hud.victoryThresholdTip', { pct: threshold })}
+      >
         <Icon name="target" size={15} />
         <!-- Narrow windows: the short form (the full one is in the tooltip). -->
         <span class="full"
-          >{#if mode === 'campaign'}{t('hud.goalMission')}{:else if threshold > 100}{t(
-              'hud.noVictory',
-            )}{:else}{t('hud.goal', { pct: threshold })}{/if}</span
+          >{#if mode === 'campaign'}{t('hud.goalMission')}{:else if mode === 'battleRoyale'}{t(
+              'hud.goalRoyale',
+            )}{:else if threshold > 100}{t('hud.noVictory')}{:else}{t('hud.goal', {
+              pct: threshold,
+            })}{/if}</span
         >
         <span class="short"
-          >{#if mode === 'campaign'}{t('hud.goalMissionShort')}{:else if threshold > 100}{t(
-              'hud.noVictory',
-            )}{:else}{t('hud.goalShort', { pct: threshold })}{/if}</span
+          >{#if mode === 'campaign'}{t('hud.goalMissionShort')}{:else if mode === 'battleRoyale'}{t(
+              'hud.goalRoyaleShort',
+            )}{:else if threshold > 100}{t('hud.noVictory')}{:else}{t('hud.goalShort', {
+              pct: threshold,
+            })}{/if}</span
         >
         {#if hud.viewer > 0}<span class="mine mono"
             >{t('hud.youHold', { pct: (myShare * 100).toFixed(1) })}</span
@@ -117,11 +127,16 @@
           title="{s.name} — {(s.share * 100).toFixed(1)} %"
         ></div>
       {/each}
-      {#if threshold <= 100 && mode !== 'campaign'}<div class="goal" style="left:{threshold}%"></div>{/if}
+      {#if threshold <= 100 && mode !== 'campaign' && mode !== 'battleRoyale'}<div
+          class="goal"
+          style="left:{threshold}%"
+        ></div>{/if}
     </div>
+    <ModeBanner {mode} playerName={(id) => ctl.session.state.name(id, i18n.lang)} />
     <div class="status">
-      {#if (hud.world?.doomsday ?? -1) > 0}
-        <span class="chip warn"
+      <!-- Doomsday, survival of the strongest: only when we are under the bar (the banner tells the rule). -->
+      {#if (hud.world?.doomsday ?? -1) > 0 && hud.viewer > 0 && myShare * 100 < (hud.world?.doomsday ?? 0)}
+        <span class="chip bad"
           ><Icon name="nuke" size={13} />{t('hud.doomsday', { pct: hud.world?.doomsday ?? 0 })}</span
         >
       {/if}

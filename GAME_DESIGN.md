@@ -352,9 +352,37 @@ Le revenu d'or est le même à toutes les difficultés (§5.4).
 | Équipes | 2 à 8 équipes ; part cumulée de l'équipe ; une encre par équipe |
 | Humains contre nations | humains équipe 1, nations équipe 2 |
 | Solo contre tribus | aucune nation, entraînement |
-| Horloge de l'apocalypse | 10 min de grâce, puis seuils croissants toutes les 2 min : 2, 4, 7, 11, 17, 25, 35 % (FFA) ou 5, 10, 16, 24, 33, 45, 60 % (équipes). Sous le seuil : avertissement, puis −2 % de troupes par seconde (plancher 5 % du plafond) et −2 % de PV pour les navires |
-| Battle Royale | toutes les 3 min, l'anneau se resserre (rayon × 0,8, minimum 8 % du petit côté) ; les tuiles hors zone deviennent inhabitables (hachures rouges) |
+| Horloge de l'apocalypse | une horloge avance vers minuit, plus vite à chaque bombe, chute et trahison ; quatre paliers changent les règles (course aux armements, rationnement, loi du plus fort, dernière minute) ; à minuit, le plus grand pays l'emporte (§14.2) |
+| Battle Royale | une zone sûre se resserre par paliers sur un point tiré au hasard, annoncé à l'avance ; les terres hors zone deviennent inhabitables ; après la dernière zone, le plus grand pays l'emporte (§14.1) |
 | Campagne | 6 missions à objectifs, qui servent aussi de didacticiel (§15.11) |
+
+### 14.1 Battle Royale (1.10.0)
+
+Avant : un anneau centré sur le milieu de la carte, rayon × 0,8 toutes les 3 min, sans préavis visible ni fin propre au mode. Maintenant, comme dans les jeux du genre :
+- **La zone** est un cercle. Au départ, le cercle circonscrit à la carte ; la **prochaine zone** est tirée aussitôt **à l'intérieur de la zone en cours** (rayon × 0,8, au plus petit 8 % du petit côté de la carte : 10 à 12 paliers selon la carte), son centre au hasard (PRNG propre au mode, graine de la partie et numéro du palier : la suite des zones ne dépend que de la graine et de la carte). Dix centres candidats sont tirés ; on garde ceux dont le cercle contient au moins 75 % des terres utiles du meilleur, puis on en tire un : jamais une zone au milieu de l'océan sur une carte d'îles.
+- **Rythme** : premier resserrement à 5 min ; chaque prochaine zone est annoncée (cercle en tirets sur la carte et la minimap) 3 min avant de se refermer ; le resserrement dure 45 s : le cercle glisse et rétrécit continûment vers la zone annoncée et les terres qu'il quitte meurent (balayage de la carte en 3 s). Les terres mortes sont rendues aux terres libres, inhabitables (hachures).
+- **Fin** : une fois la dernière zone refermée, un dernier compte à rebours de 3 min ; à son terme, **le plus grand pays (ou équipe) dans la zone l'emporte** (raison `lastZone`). **Pas de victoire territoriale** dans ce mode (80 % des terres restantes s'atteignait dès le quatrième palier, vers 17 min) : le dernier survivant gagne avant.
+- **Lisibilité** : bandeau sous la barre du haut (palier n/N, compte à rebours, part de vos terres hors de la prochaine zone, barre de progression) ; dépêches et sons à l'annonce, au début du resserrement et à la dernière zone ; zone en cours (liseré rouge) et prochaine zone (tirets clairs, bande condamnée légèrement hachurée) sur la carte et la minimap.
+- **IA** : les nations ignorent les terres hors de la prochaine zone (ni expansion ni conquête), n'y construisent plus, et s'embarquent vers la zone quand elles en sont coupées.
+
+### 14.2 Horloge de l'apocalypse (1.10.0)
+
+Avant : 10 min de grâce, puis un pourcentage minimal de terres (2, 4, 7, 11, 17, 25, 35 % en FFA) sous lequel les troupes fondaient. Un joueur moyen dépasse toujours ces seuils : rien ne se voyait, rien ne changeait, pas de fin propre au mode — une partie normale. Maintenant, **minuit est la fin de la partie**, et tout le monde voit l'horloge avancer :
+- **L'horloge** part de **minuit moins 12** et avance d'une seconde d'horloge toutes les 5 s de jeu (minuit à 60 min si rien ne l'accélère). **L'escalade la pousse** : bombe A qui explose +3 s, bombe H +10 s, MIRV lancé +30 s, pays tombé +6 s, trahison +6 s, crise mondiale +15 s ; **la détente la recule** : sommet pour la paix −30 s, interdiction nucléaire ou cessez-le-feu du Conseil −20 s (jamais en deçà d'un palier franchi).
+- **Paliers**, annoncés (nom, effet, heure d'horloge, temps estimé) et définitifs :
+  1. **Minuit moins 10 — Course aux armements** : bombes −35 %.
+  2. **Minuit moins 7 — Rationnement** : revenu passif (base et gisements) −40 % ; commerce, trains et butins intacts.
+  3. **Minuit moins 4 — Loi du plus fort** : un pays (une équipe) sous 3 % des terres utiles (10 % en équipes) est averti puis perd 2 % de ses troupes par seconde (plancher 5 % du plafond) et ses navires 2 % de PV par seconde ; le seuil passe à 5 % (15 %) à la dernière minute. Les nations hors course se liguent contre le meneur.
+  4. **Minuit moins 1 — Dernière minute** : toutes les alliances sont rompues (sans trahison) et aucune ne peut plus être signée.
+- **Minuit** : la partie s'arrête, **le plus grand pays (ou équipe) l'emporte** (raison `midnight`). La victoire territoriale et le dernier survivant restent possibles avant. Le meneur a donc intérêt à précipiter minuit (frapper), les autres à le rattraper avant.
+- **Lisibilité** : cadran sous la barre du haut (heure d'horloge, frise des paliers, prochain palier et son effet, temps estimé, dernière poussée « +10 s : bombe H (France) ») ; dépêche et cloche à chaque palier, tic-tac discret à chaque minute d'horloge, douze coups à minuit.
+- **IA** : dès le rationnement, une nation sans cible nucléaire vise le meneur, et le meneur son premier poursuivant (chaque bombe rapproche minuit) ; dès la loi du plus fort, les guerres reviennent deux fois plus vite, les pays derrière se liguent contre le meneur (cible ×3) et une nation proche du seuil de survie attaque dès 20 % de son plafond de troupes.
+
+**Rythme des deux modes** (`npx tsx scripts/pacing.ts <cartes> normal 90 <mode> 1234,42,7`, IA seules, 30 nations au plus, 40 tribus) :
+- Battle Royale, Mer Noire / Europe / Monde : 28,3, 22,7, 33,8 / 35,7, 39,3, 37,4 / 42,7, 33,1, 36,8 min (8 parties sur 9 entre 25 et 60 min, toutes au dernier survivant) ; 5 à 10 resserrements par partie, 91 à 100 % des terres perdues à la fin. Réglages précédents : rayon × 0,75 avec la victoire territoriale, 17 à 28 min (fin au seuil dès le quatrième palier) ; sans elle, 20,8 à 35,4 min (une fin par la dernière zone).
+- Horloge de l'apocalypse, Mer Noire / Europe / Monde : 35,1, 32,8, 44,0 / 37,4, 35,8, 28,6 / 45,3, 39,5, 38,0 min (9 sur 9 entre 25 et 60 min ; 7 à minuit, 2 au seuil de 80 %) ; les paliers tombent vers 7-14 (course aux armements), 16-22 (rationnement), 23-33 (loi du plus fort) et 26-39 min (dernière minute) ; poussées par partie : bombes A +57 à +255 s, bombes H +50 à +120 s, chutes +42 à +114 s, trahisons +30 à +84 s, crises +15 à +45 s, sommets pour la paix −30 à −180 s, Conseil −40 à −80 s ; 53 à 227 lancements nucléaires (Chacun pour soi, Mer Noire : 84 en 29 min). Premiers réglages (une seconde d'horloge pour 4 s, bombe A +20 s) : minuit dès 17,8 min.
+
+**Lobby** : le mode se choisit sur des cartes (`src/ui/components/ModePicker.svelte`, groupe de boutons radio : flèches, Début, Fin) : un pictogramme à l'encre, le nom en Fraunces, la règle en une ligne ; sous les cartes, « Comment on joue » pour le mode choisi. Le résumé de lancement dit la fin propre au mode.
 
 Fins de partie supplémentaires : **dernier survivant** (si la partie a commencé avec au moins deux prétendants) et « tous les humains éliminés » (le leader gagne).
 
@@ -486,7 +514,7 @@ Chacune est implémentée, testée (`tests/unit/rules.test.ts`, `units.test.ts`)
 ## 16. Interface et contrôles
 
 - **HUD** :
-  - en haut : barre de territoire, chronomètre, mode, seuil, alertes (événement, cessez-le-feu, interdiction, immunité, traître, apocalypse) ;
+  - en haut : barre de territoire, chronomètre, mode, seuil, alertes (événement, cessez-le-feu, interdiction, immunité, traître) ; dans les modes Battle Royale et Horloge de l'apocalypse, un bandeau du mode entre la barre de territoire et les alertes (§14.1, §14.2) ;
   - en bas à gauche : troupes / plafond avec courbe et régénération par seconde, or et revenu par seconde avec détail au survol (base, gisements, commerce, trains), ratio d'attaque, général, attaques en cours (annulables) ;
   - en bas à droite : minimap interactive (combats récents, missiles, navires) et barre de construction (coûts, raccourcis, infobulles riches) ;
   - à droite : classement (top 10 + soi, top 5 sur un écran bas ; clic pour centrer) ;

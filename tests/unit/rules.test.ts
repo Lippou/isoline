@@ -9,13 +9,23 @@ import {
   TRAITOR_MARK_TICKS,
   B,
   OVERTIME_START,
-  DOOMSDAY_GRACE,
-  BATTLE_ROYALE_STEP,
+  DOOM_MIDNIGHT,
+  DOOM_NUKE_DISCOUNT,
+  DOOM_PUSH,
+  DOOM_RATION,
+  DOOM_STAGES,
+  DOOM_UNIT,
+  N,
+  ROYALE_CLOSE,
+  ROYALE_FIRST,
+  ROYALE_SWEEP,
+  ROYALE_WAIT,
   GENERAL_COOLDOWN,
   COUNCIL_PERIOD,
   COUNCIL_VOTE_TICKS,
 } from '../../src/core/game/constants';
-import { currentThreshold } from '../../src/core/rules/victory';
+import { currentThreshold, doomIncomeMult, liveRing } from '../../src/core/rules/victory';
+import { nukeCost } from '../../src/core/units/nukes';
 import { placeBuilding, buildCost } from '../../src/core/buildings/buildings';
 import { nextTechCost, techId, techSam, techSpeedMultiplier, TIER_COST } from '../../src/core/rules/tech';
 import { recountResources, resourceBonus } from '../../src/core/rules/resources';
@@ -284,35 +294,178 @@ describe('victory & modes', () => {
     expect(g.victory.reason).toBe('territory');
   });
 
-  it('doomsday clock drains players below the threshold', () => {
+  it('doomsday clock: ticks, pushes, milestones and their effects', () => {
+    const g = testGame(asciiMap(FIELD, 12), 3, { mode: 'doomsday' });
+    startWith(g, [
+      [25, 20],
+      [80, 20],
+      [140, 20],
+    ]);
+    g.step([]);
+    const d = g.victory.doom!;
+    expect(d.stage).toBe(0);
+    const u0 = d.units;
+    g.step([]);
+    expect(d.units).toBe(u0 + 1); // one unit per tick at rest
+    // A country falls: +10 clock seconds.
+    const before = d.units;
+    g.step([cmd(3, { t: 'surrender' })]);
+    expect(d.units).toBe(before + 1 + DOOM_PUSH.fall * DOOM_UNIT);
+    expect(d.pushes.at(-1)?.why).toBe('fall');
+    // The arms race: bombs 35 % cheaper.
+    const p = g.players[1]!;
+    const atom = nukeCost(g, p, N.Atom);
+    d.units = DOOM_STAGES[0] * DOOM_UNIT - 1;
+    g.step([]);
+    expect(d.stage).toBe(1);
+    expect(g.events.some((e) => e.k === 'notify' && e.key === 'event.doomStage')).toBe(true);
+    expect(nukeCost(g, p, N.Atom)).toBe(Math.round(atom * (1 - DOOM_NUKE_DISCOUNT)));
+    // Pulled back, never beyond a milestone passed.
+    d.units = 0;
+    g.step([]);
+    expect(d.units).toBe(DOOM_STAGES[0] * DOOM_UNIT);
+    // Rationing: the passive income falls.
+    const income = p.income;
+    d.units = DOOM_STAGES[1] * DOOM_UNIT;
+    g.step([]);
+    expect(d.stage).toBe(2);
+    expect(doomIncomeMult(g)).toBe(DOOM_RATION);
+    g.step([]);
+    expect(p.income).toBeLessThan(income);
+    // An alliance, torn up at the last minute; no new one may be signed.
+    g.step([cmd(1, { t: 'allyRequest', target: 2 })]);
+    g.step([cmd(2, { t: 'allyAnswer', target: 1, accept: true })]);
+    expect(p.allies.has(2)).toBe(true);
+    // Survival of the strongest: ~1.5 % each, under the 3 % bar → troops melt.
+    d.units = DOOM_STAGES[2] * DOOM_UNIT;
+    g.step([]);
+    expect(g.victory.doomsday).toBe(3);
+    const q = g.players[2]!;
+    for (let k = 0; k < 20; k++) g.step([]);
+    q.troops = q.popCap;
+    const troops = q.troops;
+    for (let k = 0; k < 20; k++) g.step([]);
+    expect(q.troops).toBeLessThan(troops);
+    d.units = DOOM_STAGES[3] * DOOM_UNIT;
+    g.step([]);
+    expect(d.stage).toBe(4);
+    expect(g.victory.doomsday).toBe(5);
+    expect(p.allies.has(2)).toBe(false);
+    expect(p.isTraitor(g.tick)).toBe(false);
+    g.step([cmd(1, { t: 'allyRequest', target: 2 })]);
+    expect(q.allyRequests.has(1)).toBe(false);
+  });
+
+  it('doomsday clock: midnight ends the game, the largest country wins', () => {
     const g = testGame(asciiMap(FIELD, 12), 2, { mode: 'doomsday' });
     startWith(g, [
       [25, 20],
-      [80, 20],
+      [140, 20],
     ]);
-    g.startTick = g.tick - DOOMSDAY_GRACE - 1;
-    const p = g.players[2]!;
     g.step([]);
-    p.troops = p.popCap; // at the troop ceiling: no regeneration to offset the drain
-    const troops = p.troops;
-    for (let k = 0; k < 40; k++) g.step([]);
-    expect(g.victory.doomsday).toBe(2);
-    // ~1.5 % share each: both under 2 % → troops drain.
-    expect(p.troops).toBeLessThan(troops);
+    for (let i = 0; i < g.map.size; i++)
+      if (g.map.isLand(i) && g.owner[i] === 0 && g.map.x(i) > 150 && g.map.x(i) < 175) g.setOwner(i, 2);
+    g.victory.doom!.units = DOOM_MIDNIGHT * DOOM_UNIT - 1;
+    g.step([]);
+    expect(g.phase).toBe('ended');
+    expect(g.victory.reason).toBe('midnight');
+    expect(g.victory.winner).toBe(2);
   });
 
-  it('battle royale shrinks the ring and kills outer tiles', () => {
+  it('battle royale: the next zone is drawn at random inside the current one, over land', () => {
+    // Land on the left third only: the zones must follow it, not the map's centre.
+    const ISLAND = [
+      '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+      '~.........~~~~~~~~~~~~~~~~~~~~',
+      '~.........~~~~~~~~~~~~~~~~~~~~',
+      '~.........~~~~~~~~~~~~~~~~~~~~',
+      '~.........~~~~~~~~~~~~~~~~~~~~',
+      '~.........~~~~~~~~~~~~~~~~~~~~',
+      '~.........~~~~~~~~~~~~~~~~~~~~',
+      '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+    ];
+    const zones = (seed: number) => {
+      const g = testGame(asciiMap(ISLAND, 8), 2, { mode: 'battleRoyale', seed });
+      startWith(g, [
+        [20, 20],
+        [60, 40],
+      ]);
+      g.step([]);
+      g.victory.continued = true; // no victory: the zones go on whoever they kill
+      const ring = g.victory.ring!;
+      const out: [number, number, number][] = [];
+      // The first zones (forced: no need to wait for each closing).
+      for (let k = 0; k < 4; k++) {
+        expect(Math.hypot(ring.nx - ring.cx, ring.ny - ring.cy)).toBeLessThanOrEqual(ring.r - ring.nr + 1e-6);
+        out.push([ring.nx, ring.ny, ring.nr]);
+        g.victory.ring!.closeAt = g.tick;
+        for (let t = 0; t <= ROYALE_CLOSE + ROYALE_SWEEP; t++) g.step([]);
+        expect(ring.step).toBe(k + 1);
+      }
+      return { g, out };
+    };
+    const a = zones(11);
+    // Deterministic: the same seed draws the same zones; another seed, others.
+    expect(zones(11).out).toEqual(a.out);
+    expect(zones(12).out).not.toEqual(a.out);
+    // Not the map's centre: the third zone sits over the island (left third of the map).
+    const w = a.g.map.width;
+    expect(a.out[2]![0]).toBeLessThan(w / 2);
+    // The land left of the zone in force is dead; inside, alive.
+    const ring = a.g.victory.ring!;
+    for (let i = 0; i < a.g.map.size; i++) {
+      if (!a.g.map.isLand(i)) continue;
+      const d = Math.hypot(a.g.map.x(i) + 0.5 - ring.cx, a.g.map.y(i) + 0.5 - ring.cy);
+      if (d > ring.r + 1) expect(a.g.isDead(i)).toBe(true);
+      if (d < ring.r - 1) expect(a.g.isDead(i)).toBe(false);
+    }
+    expect(invariants(a.g)).toEqual([]);
+  });
+
+  it('battle royale: announced, closes on schedule, then the last zone decides', () => {
     const g = testGame(asciiMap(FIELD, 6), 2, { mode: 'battleRoyale' });
     startWith(g, [
-      [25, 20],
-      [80, 20],
+      [55, 20],
+      [72, 20],
     ]);
     const land = g.usefulLand;
-    for (let k = 0; k < BATTLE_ROYALE_STEP + 60; k++) g.step([]);
+    g.step([]);
+    const ring = g.victory.ring!;
+    expect(ring.closeAt - g.tick).toBe(ROYALE_FIRST - 1);
+    // The zone slides during the closing: half-way, the live circle is half-way.
+    const first = ring.closeAt;
+    while (g.tick <= ring.closeAt) g.step([]);
+    expect(g.events.some((e) => e.k === 'notify' && e.key === 'event.zoneClosing')).toBe(true);
+    const mid = liveRing(ring, ring.closeAt + ROYALE_CLOSE / 2);
+    expect(mid[2]).toBeCloseTo((ring.r + ring.nr) / 2, 5);
+    for (let k = 0; k <= ROYALE_CLOSE + ROYALE_SWEEP; k++) g.step([]);
+    expect(ring.step).toBe(1);
     expect(g.usefulLand).toBeLessThan(land);
-    expect(g.isDead(g.map.idx(7, 7))).toBe(true);
+    expect(ring.closeAt).toBe(first + ROYALE_CLOSE + ROYALE_SWEEP + ROYALE_WAIT);
+    // Jump to the last closing: then the final countdown, and the largest country wins.
+    ring.step = ring.steps - 1;
+    ring.closeAt = g.tick;
+    for (let k = 0; k <= ROYALE_CLOSE + ROYALE_SWEEP + 1; k++) g.step([]);
+    expect(ring.endAt).toBeGreaterThan(g.tick);
+    while (g.phase === 'playing' && g.tick <= ring.endAt) g.step([]);
+    expect(g.phase).toBe('ended');
+    expect(g.victory.reason).toBe('lastZone');
+    expect(g.victory.winner).toBe(g.players[1]!.usefulTiles >= g.players[2]!.usefulTiles ? 1 : 2);
   });
 
+  it('both modes stay deterministic across a snapshot taken mid-closing / mid-clock', () => {
+    for (const mode of ['battleRoyale', 'doomsday'] as const) {
+      const g = makeGame('black-sea', { mode, nations: 8, tribes: 6, players: [] });
+      run(g, 30);
+      run(g, ROYALE_FIRST + 200); // inside the first closing (battle royale)
+      const snap = snapshotFromJson(snapshotToJson(takeSnapshot(g)));
+      const h = restoreSnapshot(g.map, snap);
+      run(g, 400);
+      run(h, 400);
+      expect(hashGame(h)).toBe(hashGame(g));
+      expect(JSON.stringify(h.victory)).toBe(JSON.stringify(g.victory));
+    }
+  });
   it('a human can keep playing after the end: no further victory, the result is kept', () => {
     /** Player 1 wins on territory; `extra` commands are then applied tick by tick. */
     const play = (extra: (tick: number) => StampedCommand[]) => {

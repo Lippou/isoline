@@ -36,6 +36,8 @@ export interface MapUniforms {
   /** 1: animated weather (lightning flashes); 0 with reduced motion. */
   motion: number;
   ring: [number, number, number, number];
+  /** Battle royale: the announced next zone (x, y, r, 0 none / 1 announced / 2 closing now). */
+  ringNext: [number, number, number, number];
   /** 0…1: drifting cloud cover, shown when zoomed far out. */
   clouds: number;
 }
@@ -168,6 +170,7 @@ export class MapLayer {
           uWeather: { value: new Float32Array(32).fill(-1), type: 'vec4<f32>', size: 8 },
           uMotion: { value: 1, type: 'f32' },
           uRing: { value: new Float32Array(4), type: 'vec4<f32>' },
+          uRingNext: { value: new Float32Array(4), type: 'vec4<f32>' },
           uClouds: { value: 0, type: 'f32' },
           uBorders: { value: 1, type: 'f32' },
           uWorld: { value: worldCode(state.meta?.palette), type: 'f32' },
@@ -378,6 +381,7 @@ export class MapLayer {
     (g.uWeather as Float32Array).set(u.weather);
     g.uMotion = u.motion;
     (g.uRing as Float32Array).set(u.ring);
+    (g.uRingNext as Float32Array).set(u.ringNext);
     g.uClouds = u.clouds;
     g.uBorders = u.borders ? 1 : 0;
   }

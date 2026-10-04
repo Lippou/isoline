@@ -25,6 +25,11 @@ import { U } from '../units/unit';
 export function requestAlliance(game: Game, from: Player, to: Player): void {
   if (from.id === to.id || !to.alive || to.kind === 'tribe' || from.kind === 'tribe') return;
   if (game.sameTeam(from.id, to.id)) return;
+  // Doomsday clock, the last minute: no pact may be signed any more (victory.ts pactsFrozen).
+  if (game.config.mode === 'doomsday' && (game.victory.doom?.stage ?? 0) >= 4) {
+    game.notify(from.id, 'error.pactsFrozen', 'warn');
+    return;
+  }
   const exp = from.allies.get(to.id);
   if (exp !== undefined) {
     // Renewal: only inside the renewal window; both sides must ask.
