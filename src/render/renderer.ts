@@ -44,7 +44,12 @@ export interface RenderSettings {
 
 export interface Overlay {
   hoverTile: number;
-  ghost: { kind: number; tile: number; ok: boolean } | null;
+  /**
+   * Building being placed: where the order would put it (`tile`, the click snapped to the
+   * nearest free spot, or the building it would upgrade), whether it can, and the cursor's
+   * tile (`from`) when the spot is elsewhere.
+   */
+  ghost: { kind: number; tile: number; ok: boolean; from?: number } | null;
   /** Radii of action; `strong`: the one of a building being placed (bolder). */
   ranges: { x: number; y: number; r: number; color: number; strong?: boolean }[];
   boatPath: number[] | null;
@@ -72,6 +77,9 @@ export interface Overlay {
   /** Time of day forced by the photo mode (0 day … 1 deep night); -1: the game's clock. */
   night: number;
 }
+
+/** How long a front stays marked after a wave (ms). */
+const FRONT_MARK_MS = 2600;
 
 /** No storm nor fog bank (the shader's weather cells, all empty). */
 const NO_WEATHER = new Float32Array(32).fill(-1);
@@ -212,6 +220,8 @@ export class GameRenderer {
   private shake = 0;
   private startTime = performance.now();
   private pings: { x: number; y: number; t: number; color: number; kind: number }[] = [];
+  /** Fronts marked for a moment: a wave sent at us (red: an invasion in view, brass: a riposte). */
+  private frontMarks: { x: number; y: number; t: number; color: number }[] = [];
   private pacts: { ax: number; ay: number; bx: number; by: number; t: number }[] = [];
   private emojis: { x: number; y: number; t: number; text: Container }[] = [];
   private popups: { x: number; y: number; t: number; text: BitmapText }[] = [];
@@ -1177,6 +1187,21 @@ export class GameRenderer {
       const y = ((ov.ghost.tile / w) | 0) + 0.5;
       const color = ov.ghost.ok ? UI.aurora : UI.signal;
       const rad = Math.max(1.2, 14 / z);
+      const from = ov.ghost.from ?? -1;
+      if (from >= 0 && from !== ov.ghost.tile) {
+        // The click lands elsewhere (snapped): a thin lead from the cursor to the spot.
+        const fx = (from % w) + 0.5;
+        const fy = ((from / w) | 0) + 0.5;
+        const d = Math.hypot(x - fx, y - fy);
+        if (d > rad) {
+          const ux = (x - fx) / d;
+          const uy = (y - fy) / d;
+          g.moveTo(fx, fy)
+            .lineTo(x - ux * rad, y - uy * rad)
+            .stroke({ width: lw(1.5), color, alpha: 0.8 });
+        }
+        g.circle(fx, fy, lw(3)).stroke({ width: lw(1.5), color, alpha: 0.8 });
+      }
       g.circle(x, y, rad)
         .fill({ color, alpha: 0.25 })
         .stroke({ width: lw(2), color });
@@ -1229,6 +1254,24 @@ export class GameRenderer {
       for (let k = 0; k < 2; k++) {
         const r = ((a * 2 + k * 0.5) % 1) * Math.max(6, 60 / z);
         g.circle(p.x, p.y, r).stroke({ width: lw(2), color: p.color, alpha: 1 - ((a * 2 + k * 0.5) % 1) });
+      }
+    }
+    // A wave's front: a ring held a moment, and two slow ripples (screen-sized at any zoom).
+    this.frontMarks = this.frontMarks.filter((f) => now - f.t < FRONT_MARK_MS);
+    for (const f of this.frontMarks) {
+      const a = (now - f.t) / FRONT_MARK_MS;
+      const fade = a < 0.75 ? 1 : 1 - (a - 0.75) / 0.25;
+      const r0 = 11 / z;
+      g.circle(f.x, f.y, r0).stroke({ width: lw(4.5), color: 0x0b1824, alpha: 0.35 * fade });
+      g.circle(f.x, f.y, r0).stroke({ width: lw(2.5), color: f.color, alpha: 0.95 * fade });
+      g.circle(f.x, f.y, lw(2.6)).fill({ color: f.color, alpha: 0.95 * fade });
+      for (let k = 0; k < 2; k++) {
+        const u = (a * 2 + k * 0.5) % 1;
+        g.circle(f.x, f.y, r0 * (1 + u * 2.6)).stroke({
+          width: lw(2),
+          color: f.color,
+          alpha: (1 - u) * 0.7 * fade,
+        });
       }
     }
     // Alliance pacts: a green arc drawn from one capital to the other, then fading.
@@ -1637,6 +1680,14 @@ export class GameRenderer {
     this.particles.ring(x, y, radius * 1.3, 0xffb070, big ? 1.2 : 0.8);
     this.particles.burst(x, y, Math.round((big ? 120 : 50) * P), 0xffd38a, radius * 0.35, 'spark');
     this.particles.mushroom(x, y, radius, big, P);
+  }
+
+  /** Marks a front on the map for a moment (tile coordinates): a wave of troops sent at us. */
+  markFront(x: number, y: number, color: number): void {
+    this.frontMarks = [
+      ...this.frontMarks.filter((f) => Math.hypot(f.x - x, f.y - y) > 3),
+      { x, y, t: performance.now(), color },
+    ];
   }
 
   /** An alliance was signed between the capitals at (ax, ay) and (bx, by). */

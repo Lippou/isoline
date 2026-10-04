@@ -123,15 +123,16 @@ const NoTrade: IconNode = [
   ['path', { d: 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' }],
   ['path', { d: 'm3 3 18 18' }],
 ];
+// (Centred in the 24-unit box: the arcs used to sit 2.5 units low / high.)
 const ArcUp: IconNode = [
-  ['path', { d: 'M3 19C6 5 18 5 21 19' }],
-  ['circle', { cx: '3', cy: '19', r: '1.5' }],
-  ['path', { d: 'm17.5 16 3.5 3 1.5-4.3' }],
+  ['path', { d: 'M3 16.5C6 2.5 18 2.5 21 16.5' }],
+  ['circle', { cx: '3', cy: '16.5', r: '1.5' }],
+  ['path', { d: 'm17.5 13.5 3.5 3 1.5-4.3' }],
 ];
 const ArcDown: IconNode = [
-  ['path', { d: 'M3 5c3 14 15 14 18 0' }],
-  ['circle', { cx: '3', cy: '5', r: '1.5' }],
-  ['path', { d: 'm17.5 8 3.5-3 1.5 4.3' }],
+  ['path', { d: 'M3 7.5c3 14 15 14 18 0' }],
+  ['circle', { cx: '3', cy: '7.5', r: '1.5' }],
+  ['path', { d: 'm17.5 10.5 3.5-3 1.5 4.3' }],
 ];
 
 export const ICONS = {
@@ -209,6 +210,8 @@ export const ICONS = {
   warning: TriangleAlert,
   close: X,
   check: Check,
+  /** An order that cannot go through (the build cursor's reason). */
+  blocked: Ban,
   plus: Plus,
   minus: Minus,
   back: ArrowLeft,

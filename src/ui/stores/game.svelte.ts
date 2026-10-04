@@ -110,6 +110,25 @@ export const hud = $state({
     silent?: boolean;
     betrayed?: boolean;
   },
+  /**
+   * Build cursor (PlacementTip.svelte): what an order on the hovered tile would do — `error`
+   * 'ok' or why not (buildings.ts PlaceError, 'upgrading', 'constructing'), its cost and the
+   * gold missing, an upgrade to `level`, the technology to research (`tech`: i18n key),
+   * `snapped` when the building goes on a free spot beside the cursor; `sx`, `sy`: the
+   * cursor's tile on screen.
+   */
+  placement: null as null | {
+    kind: number;
+    error: string;
+    cost: number;
+    missing: number;
+    upgrade: boolean;
+    level: number;
+    tech: string;
+    snapped: boolean;
+    sx: number;
+    sy: number;
+  },
   /** Launch panel: what a missile fired at the hovered tile would do. */
   launch: null as null | {
     silo: 'ready' | 'reloading' | 'none';
@@ -122,10 +141,17 @@ export const hud = $state({
   log: [] as LogEntry[],
   nukeAlerts: [] as NukeAlert[],
   /**
-   * Last wave of troops sent at us (InvasionFlash.svelte): `n` restarts the flash; `ex`, `ey`
-   * place the glow on the screen edge facing the attack (fractions of the screen).
+   * Last wave of troops sent at us (InvasionFlash.svelte): `n` restarts the flash; `edges`
+   * says which screen edges face the attack (game/invasion.ts), `ex`, `ey` where the glow
+   * peaks along them (fractions of the screen).
    */
-  invasion: null as null | { n: number; ex: number; ey: number; strength: number },
+  invasion: null as null | {
+    n: number;
+    ex: number;
+    ey: number;
+    strength: number;
+    edges: import('../game/invasion').EdgeGlow;
+  },
   panels: {
     diplomacy: false,
     tech: false,
@@ -273,6 +299,7 @@ export function resetHud(): void {
   hud.journalSeen = 0;
   hud.nukeAlerts = [];
   hud.invasion = null;
+  hud.placement = null;
   hud.radial = null;
   hud.hover = null;
   hud.selection = [];

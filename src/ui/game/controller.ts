@@ -15,7 +15,7 @@ import {
 import { closeTopWindow } from '../stores/windows.svelte';
 import { settings, saveSettings } from '../stores/settings.svelte';
 import { WeatherNews } from './weatherNews';
-import { t, i18n, clock } from '../i18n/i18n.svelte';
+import { t, i18n, clock, short } from '../i18n/i18n.svelte';
 import { mapsBase, bridge, writeJson } from '../bridge';
 import { app, setSession, go, confirmModal, type LaunchRequest } from '../stores/app.svelte';
 import type { GameEvent } from '../../core/game/events';
@@ -27,8 +27,9 @@ import { takeSnapshotSave } from './saves';
 import { CampaignDirector } from '../campaign/director';
 import { MISSIONS } from '../campaign/missions';
 import { type LanClient, currentLan } from '../../engine/lanClient';
-import { UNIT_STRIDE } from '../../engine/protocol';
+import { UNIT_STRIDE, type PlacementView } from '../../engine/protocol';
 import { CapitalWatch, clientSpotError } from './capitalWatch';
+import { classifyWave, edgesToward } from './invasion';
 import { Chronicle, keepEdition, keptEdition, type Edition } from './chronicle';
 import type { ReplayFile } from '../../engine/replay';
 import type { Snapshot } from '../../core/net/snapshot';
@@ -45,7 +46,7 @@ import { WORLD_EVENT_TICKS, type WorldEventId } from '../../core/rules/features'
 import { emulateScreen } from '../stores/viewport.svelte';
 import type { WinId } from '../stores/windows.svelte';
 
-const PLAYER_PARAMS = new Set(['player', 'by', 'from', 'with', 'traitor', 'victim', 'target']);
+const PLAYER_PARAMS = new Set(['player', 'by', 'from', 'with', 'traitor', 'victim', 'target', 'tribe']);
 
 export class GameController {
   session!: Session;
@@ -298,6 +299,8 @@ export class GameController {
         /** QA: a notification (the dispatches tray). */
         toast: (text: string, level: 'info' | 'good' | 'warn' | 'danger' = 'info', tile?: number) =>
           toast(text, level, tile),
+        /** QA: handle a game event as if the simulation had sent it (an attack wave, a dispatch…). */
+        event: (e: GameEvent) => this.event(e),
         /** QA: fields laid over the worker's view every tick (offers, a nuclear ban…); null clears. */
         patch: (p: { local?: Record<string, unknown>; world?: Record<string, unknown> } | null) =>
           (this.qaPatch = p),
@@ -502,32 +505,39 @@ export class GameController {
   }
 
   private lastWave = -Infinity;
+  /** Last riposte dispatch per country (performance.now()). */
+  private lastRiposte = new Map<number, number>();
 
   /**
-   * A wave of troops was sent at us: the screen's edges flash red (InvasionFlash.svelte),
-   * brightest on the side facing the attack, stronger for a bigger wave. Waves closer than
-   * 2 s apart (a landing and a land push together) make one flash.
+   * A wave of troops was sent at us (game/invasion.ts). An invasion: the screen edge facing
+   * the attack flashes red (InvasionFlash.svelte), stronger for a bigger wave; a front in
+   * view is marked on the map and only its nearest edge glows. Waves closer than 2 s apart
+   * (a landing and a land push together) make one flash. A riposte — the country we are
+   * attacking defends itself — is no invasion: a brass mark on the front and a dispatch.
    */
-  private invasionFlash(troops: number, tile: number): void {
+  private wave(e: Extract<GameEvent, { k: 'attackWave' }>, me: number): void {
+    const kind = classifyWave(e, me);
+    if (!kind || hud.photo || hud.end) return;
+    const w = this.session.state.width;
+    const at: [number, number] | null = e.tile >= 0 ? [(e.tile % w) + 0.5, ((e.tile / w) | 0) + 0.5] : null;
     const now = performance.now();
-    if (hud.photo || hud.end || now - this.lastWave < 2000) return;
-    this.lastWave = now;
-    const me = this.session.state.players.get(this.session.viewer);
-    const strength = Math.max(0.8, Math.min(1, 0.7 + troops / Math.max(1, me?.troops ?? 1)));
-    // Direction from the screen's centre to the attack, carried out to the screen's edge.
-    let ex = 0.5;
-    let ey = 0;
-    const cam = this.renderer.camera;
-    if (tile >= 0 && cam.viewW > 1) {
-      const w = this.session.state.width;
-      const [sx, sy] = cam.worldToScreen((tile % w) + 0.5, ((tile / w) | 0) + 0.5);
-      const dx = sx / cam.viewW - 0.5;
-      const dy = sy / cam.viewH - 0.5;
-      const k = 0.5 / Math.max(Math.abs(dx), Math.abs(dy), 1e-6);
-      ex = 0.5 + dx * k;
-      ey = 0.5 + dy * k;
+    if (kind === 'riposte') {
+      if (at) this.renderer.markFront(at[0], at[1], UI.brass);
+      if (now - (this.lastRiposte.get(e.attacker) ?? -Infinity) < 20_000) return;
+      this.lastRiposte.set(e.attacker, now);
+      const name = this.session.state.name(e.attacker, i18n.lang);
+      toast(t('alert.riposte', { player: name }), 'warn', e.tile >= 0 ? e.tile : undefined);
+      return;
     }
-    hud.invasion = { n: (hud.invasion?.n ?? 0) + 1, ex, ey, strength };
+    if (now - this.lastWave < 2000) return;
+    this.lastWave = now;
+    const mine = this.session.state.players.get(this.session.viewer);
+    const strength = Math.max(0.8, Math.min(1, 0.7 + e.troops / Math.max(1, mine?.troops ?? 1)));
+    const cam = this.renderer.camera;
+    const [sx, sy] = at ? cam.worldToScreen(at[0], at[1]) : [null, null];
+    const cue = edgesToward(sx, sy, cam.viewW, cam.viewH);
+    if (cue.onScreen && at) this.renderer.markFront(at[0], at[1], UI.signal);
+    hud.invasion = { n: (hud.invasion?.n ?? 0) + 1, ex: cue.ex, ey: cue.ey, strength, edges: cue.edges };
   }
 
   /** Country lit up on the map while the pointer rests on a panel about it (−1: none). */
@@ -762,12 +772,12 @@ export class GameController {
     // SAM coverage while aiming a missile, or with silos / SAMs in the filter.
     ov.samCoverage = tool.k === 'nuke' || !!filter?.some((k) => k === B.Sam || k === B.Silo);
     let launch: LaunchInfo | null = null;
+    const place = hover >= 0 && tool.k === 'build' ? this.placementAt(tool.kind, hover) : null;
+    this.publishPlacement(place);
     if (hover >= 0 && tool.k === 'build') {
-      const s = this.session.state;
-      const ok =
-        s.owner[hover] === this.session.viewer &&
-        (hud.local?.gold ?? 0) >= (hud.local?.buildCosts[tool.kind] ?? Infinity);
-      ov.ghost = { kind: tool.kind, tile: hover, ok };
+      // Where the order would actually go (snapped, or the building it upgrades), and whether it can.
+      const at = place && place.at >= 0 ? place.at : hover;
+      ov.ghost = { kind: tool.kind, tile: at, ok: place ? place.error === 'ok' : false, from: hover };
     } else if (hover >= 0 && tool.k === 'nuke') {
       launch = this.launchPreview(tool.kind, hover);
       ov.nukePreview = launch.overlay;
@@ -799,14 +809,15 @@ export class GameController {
       const r = rangeOf(b.type, b.level, hud.hover.owner);
       if (r > 0) ov.ranges.push({ x: hud.hover.x + 0.5, y: hud.hover.y + 0.5, r, color: colorOf(b.type) });
     }
-    if (hover >= 0 && tool.k === 'build') {
-      // Placing a building: its radius of action around the cursor, bold (red where it can't go).
+    if (hover >= 0 && tool.k === 'build' && ov.ghost) {
+      // Placing a building: its radius of action around the spot, bold (red where it can't go).
       const w = this.session.state.width;
-      const r = rangeOf(tool.kind, 1, this.session.viewer);
+      const at = ov.ghost.tile;
+      const r = rangeOf(tool.kind, place?.upgrade ? place.level : 1, this.session.viewer);
       if (r > 0)
         ov.ranges.push({
-          x: (hover % w) + 0.5,
-          y: Math.floor(hover / w) + 0.5,
+          x: (at % w) + 0.5,
+          y: Math.floor(at / w) + 0.5,
           r,
           color: ov.ghost?.ok === false ? UI.signal : colorOf(tool.kind),
           strong: true,
@@ -830,6 +841,78 @@ export class GameController {
     // Expire nuke alerts.
     if (hud.nukeAlerts.length && hud.nukeAlerts.some((a) => a.impact <= hud.tick))
       hud.nukeAlerts = hud.nukeAlerts.filter((a) => a.impact > hud.tick);
+  }
+
+  /** The worker's answer for the build cursor (one query in flight at a time). */
+  private placeQ: {
+    key: string;
+    busy: boolean;
+    answer: { kind: number; tile: number; v: PlacementView } | null;
+  } = { key: '', busy: false, answer: null };
+
+  /**
+   * What a build order of `kind` on `tile` would do, from the simulation's own rules
+   * (planBuild: snapping, upgrades, spacing, coast, research, gold), asked again when the
+   * hovered tile, the buildings or the territory change. Until the answer for a new tile
+   * comes back (a frame or two), the previous one stands — the cursor never blinks. The
+   * gold is judged here, against the treasury of the moment.
+   */
+  private placementAt(kind: number, tile: number): PlacementView | null {
+    const st = this.session.state;
+    const q = this.placeQ;
+    const key = `${kind}|${tile}|${st.buildingsVersion}|${st.owner[tile]}|${Math.floor(st.tick / 10)}`;
+    if (key !== q.key && !q.busy) {
+      q.key = key;
+      q.busy = true;
+      void this.session.sim
+        .query<PlacementView>({ q: 'placement', kind, tile })
+        .then((v) => (q.answer = { kind, tile, v }))
+        .finally(() => (q.busy = false));
+    }
+    const a = q.answer;
+    if (!a || a.kind !== kind) return null;
+    const gold = hud.local?.gold ?? 0;
+    const v = a.v;
+    if (v.error !== 'ok' && v.error !== 'gold') return v;
+    return { ...v, error: gold >= v.cost ? 'ok' : 'gold' };
+  }
+
+  /** The reason label beside the build cursor (PlacementTip.svelte), touched only on change. */
+  private publishPlacement(v: PlacementView | null): void {
+    const h = hud.hover;
+    const kind = hud.tool.k === 'build' ? hud.tool.kind : -1;
+    if (!v || !h || kind < 0) {
+      if (hud.placement) hud.placement = null;
+      return;
+    }
+    const gold = hud.local?.gold ?? 0;
+    const next = {
+      kind,
+      error: v.error,
+      cost: v.cost,
+      missing: Math.max(0, v.cost - gold),
+      upgrade: v.upgrade,
+      level: v.level,
+      tech: v.tech,
+      snapped: !v.upgrade && v.at >= 0 && v.at !== h.tile,
+      sx: h.sx,
+      sy: h.sy,
+    };
+    const cur = hud.placement;
+    // The shortfall moves every tick: shown rounded, so the label only changes now and then.
+    const same =
+      cur &&
+      cur.kind === next.kind &&
+      cur.error === next.error &&
+      cur.cost === next.cost &&
+      cur.upgrade === next.upgrade &&
+      cur.level === next.level &&
+      cur.tech === next.tech &&
+      cur.snapped === next.snapped &&
+      cur.sx === next.sx &&
+      cur.sy === next.sy &&
+      short(cur.missing) === short(next.missing);
+    if (!same) hud.placement = next;
   }
 
   private launchKey = '';
@@ -983,7 +1066,7 @@ export class GameController {
         break;
       // Battles elsewhere stay silent: only what concerns us or what we are looking at.
       case 'attackWave':
-        if (e.target === me) this.invasionFlash(e.troops, e.tile);
+        this.wave(e, me);
         break;
       case 'intercept':
         if (e.owner === me || this.onScreen(e.x, e.y)) audio.sfx('intercept', 0.8);

@@ -541,9 +541,10 @@
       transform 0.25s var(--ease-out),
       background 0.16s;
   }
+  /* Centred on the diamond: no nudge (the play triangle carries its own optical offset,
+     and a nudge pushed every other glyph — the Solo globe — off centre). */
   .primary .key :global(svg) {
     position: relative;
-    margin-left: 2px;
     width: 15px;
     height: 15px;
   }
