@@ -48,6 +48,14 @@ import { emulateScreen } from '../stores/viewport.svelte';
 import type { WinId } from '../stores/windows.svelte';
 
 const PLAYER_PARAMS = new Set(['player', 'by', 'from', 'with', 'traitor', 'victim', 'target', 'tribe']);
+/** The game modes' milestones (GAME_DESIGN.md §14.1, §14.2): a dispatch for everyone, and a sound. */
+const MODE_NEWS = new Set([
+  'event.zoneAnnounced',
+  'event.zoneClosing',
+  'event.zoneFinal',
+  'event.doomStage',
+  'event.midnight',
+]);
 
 export class GameController {
   session!: Session;
@@ -232,6 +240,9 @@ export class GameController {
           return out;
         },
         hud: () => ({ tick: hud.tick, end: !!hud.end, paper: hud.paper, page: hud.paperPage }),
+        /** QA: the world view (game modes: the zone, the doomsday clock) and the game speed. */
+        world: () => this.session.state.world,
+        speed: (v: number) => this.setSpeed(v),
         /** QA: a nuke from `by`'s silo at (sx, sy) heading for our land (alert, sender medallion). */
         nukeAlert: (by: number, sx: number, sy: number, kind = 1, secs = 20) => {
           const me = this.session.state.players.get(this.session.viewer);
@@ -1040,12 +1051,31 @@ export class GameController {
       else if (k === 'tech' && typeof v === 'string') params[k] = t(`${v}.name`);
       else if (k === 'building' && typeof v === 'string') params[k] = t(`building.${v}.name`);
       else if (k === 'plane' && typeof v === 'string') params[k] = t(`unit.${v}.name`);
-      else if (typeof v === 'number' && (k === 'troops' || k === 'gold'))
+      // The game modes (GAME_DESIGN.md §14.2): what moved the doomsday clock, the milestone reached.
+      else if (k === 'why' && typeof v === 'string') params[k] = t(`doom.why.${v}`);
+      else if (k === 'stage' && typeof v === 'number') {
+        params[k] = v;
+        params.name = t(`doom.stage${v}.name`);
+        params.effect = t(`doom.stage${v}.effect`, { share: e.params?.share ?? 0 });
+      } else if (typeof v === 'number' && (k === 'troops' || k === 'gold'))
         params[k] = v.toLocaleString(i18n.lang);
       else if (k === 'eta' && typeof v === 'number') params[k] = (v / 10).toFixed(0);
       else params[k] = v;
     }
     return t(e.key, params);
+  }
+
+  /** The game modes' signals: quiet, they mark time (audio.ts chime). */
+  private modeSound(key: string): void {
+    if (this.session.kind === 'replay' && hud.speed > 2) return;
+    if (key === 'event.zoneAnnounced') audio.chime('ping', 0.9);
+    else if (key === 'event.zoneClosing') audio.sfx('horn', 0.55);
+    else if (key === 'event.zoneFinal') audio.chime('bell', 0.9);
+    else if (key === 'event.doomStage') audio.chime('bell', 1);
+    else if (key === 'event.midnight') {
+      // Midnight: twelve strokes of a tower bell (cut short by the end of the game's sounds).
+      for (let k = 0; k < 12; k++) setTimeout(() => audio.chime('toll', 0.8), k * 650);
+    }
   }
 
   private event(e: GameEvent): void {
@@ -1077,10 +1107,12 @@ export class GameController {
           e.level === 'danger' ||
           e.key.startsWith('worldEvent') ||
           e.key.startsWith('council') ||
-          e.key === 'event.gameStart'
+          e.key === 'event.gameStart' ||
+          MODE_NEWS.has(e.key)
         ) {
           toast(text, e.level, e.tile);
         }
+        this.modeSound(e.key);
         if (e.key.startsWith('error.')) audio.ui('error');
         // Radar early warning: a soft double blip (synthesised, src/audio/audio.ts).
         else if (e.key.startsWith('notify.radar.')) audio.sfx('radar', 0.8);

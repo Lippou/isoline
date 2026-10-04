@@ -37,6 +37,7 @@ import { hash2 } from '../rng';
 import { resourceBonus } from '../rules/resources';
 import { nukeLock, techNukes, techSam, techShelter } from '../rules/tech';
 import { betray } from '../rules/diplomacy';
+import { doomNukeMult } from '../rules/victory';
 import { ARC_DOWN, ARC_STRAIGHT, ARC_UP, Trajectory, flightTicks, mirvSplitPoint } from './trajectory';
 
 export function nukeCost(game: Game, p: Player, kind: N): number {
@@ -44,6 +45,8 @@ export function nukeCost(game: Game, p: Player, kind: N): number {
   if (kind === N.Mirv) c += MIRV_COST_STEP * game.features.mirvLaunches;
   if (game.config.features.resources) c *= 1 - resourceBonus(game, p).nukeDiscount;
   if (game.config.features.tech) c *= techNukes(p).cost;
+  // Doomsday clock: the arms race.
+  c *= doomNukeMult(game);
   return Math.round(c);
 }
 

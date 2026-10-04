@@ -291,7 +291,36 @@
     "goalShort": "{pct}%",
     "goalMissionShort": "Mission",
     "windowMoveTip": "Drag to move · double-click: back to its place",
-    "windowResize": "Resize"
+    "windowResize": "Resize",
+    "doom": {
+      "toMidnight": "{left} to midnight",
+      "mins": "{m} min",
+      "minSecs": "{m} min {s} s",
+      "secs": "{s} s",
+      "at": "{m} min to midnight",
+      "next": "Next:",
+      "end": "Then:",
+      "in": "in",
+      "etaTip": "At the present pace. Every bomb, fall or betrayal brings midnight closer; a peace summit or a Council decision pushes it back.",
+      "pushUp": "+{secs} s: {why}",
+      "pushDown": "−{secs} s: {why}",
+      "tip": "Doomsday clock: at midnight the game ends and the largest country wins. The clock runs by itself (one second every 5 s of play), and faster with every bomb, fall or betrayal. Milestones:"
+    },
+    "zone": {
+      "title": "Zone {n}/{steps}",
+      "closesIn": "closes in",
+      "closing": "the zone is closing",
+      "final": "Last zone",
+      "finalIn": "game ends in",
+      "finalSub": "When the time runs out, the largest country in the zone wins.",
+      "out": "{pct}% of your land lies outside the next zone",
+      "safe": "All your land lies inside the next zone",
+      "spect": "Land outside the dashed circle dies when the zone closes.",
+      "tip": "Battle Royale: the zone (red edge) closes step by step on the next zone (dashed circle), drawn at random over the land. The land it leaves becomes uninhabitable. The last country standing wins; otherwise, after the last zone, the largest."
+    },
+    "goalRoyale": "Survive the zone",
+    "goalRoyaleShort": "Zone",
+    "goalRoyaleTip": "Battle Royale: no territorial victory. The last country standing wins; otherwise, the largest in the last zone."
   },
   "panel": {
     "diplomacy": "Diplomacy",
@@ -721,7 +750,9 @@
       "lastStanding": "Last one standing",
       "humansEliminated": "All humans were eliminated",
       "mission": "Mission over",
-      "none": "Game over"
+      "none": "Game over",
+      "midnight": "Midnight struck",
+      "lastZone": "The last zone"
     },
     "showResults": "Reopen the paper",
     "playAgainTip": "A new game with the same settings, in a freshly drawn world.",
@@ -924,7 +955,10 @@
     "startHint": "You will then choose where to place your capital on the map.",
     "procPreview": "World generated from seed {seed}",
     "noCustomTitle": "No custom maps",
-    "noCustom": "Draw your own world in the map editor: it will appear here as soon as it is saved."
+    "noCustom": "Draw your own world in the map editor: it will appear here as soon as it is saved.",
+    "modeHow": "How it plays:",
+    "summaryRoyale": "{mode}, {diff} difficulty. You will face {nations} nations and {tribes} tribes. The zone closes in: the last one standing wins, otherwise the largest in the last zone.",
+    "summaryDoomsday": "{mode}, {diff} difficulty. You will face {nations} nations and {tribes} tribes. At midnight the largest country wins (or the first to hold {pct}% of the land)."
   },
   "rule": {
     "allowPorts": "Ports and navy",
@@ -1209,7 +1243,15 @@
     "doomsdayStep": "The clock ticks: {share}% of the land is now required.",
     "ringShrink": "The playable zone is shrinking!",
     "capitalFell": "{player}'s capital falls to {by}.",
-    "capitalRazed": "{player}'s capital is razed."
+    "capitalRazed": "{player}'s capital is razed.",
+    "zoneAnnounced": "Zone {n}/{steps} announced (dashed circle): it closes in {secs} s.",
+    "zoneClosing": "The zone is closing ({n}/{steps}): land outside the dashed circle becomes uninhabitable.",
+    "zoneFinal": "Last zone: in {secs} s, the largest country inside wins.",
+    "doomStage": "Doomsday clock — {name}: {effect}.",
+    "doomPush": "The doomsday clock jumps {secs} s: {why}.",
+    "doomPushBy": "The doomsday clock jumps {secs} s: {why} ({by}).",
+    "doomPull": "The doomsday clock goes back {secs} s: {why}.",
+    "midnight": "Midnight: the doomsday clock has struck."
   },
   "alert": {
     "nuke": "Nuclear missile launched by {by} — impact in {eta}s!",
@@ -1299,7 +1341,8 @@
       "fallout": "Irradiated land: the capital cannot sit there.",
       "front": "Too close to a border: the capital must stand more than 5 tiles from any foreign land (allies excepted).",
       "cooldown": "Capital moved recently: it can move again in {s} s."
-    }
+    },
+    "pactsFrozen": "The last minute before midnight: no alliance can be signed any more."
   },
   "keys": {
     "attackHover": "Land attack (hovered target)",
@@ -1925,7 +1968,9 @@
       "forfeit": "Surrender",
       "defeat": "Defeat",
       "points": "Won on points",
-      "none": "Game over"
+      "none": "Game over",
+      "midnight": "Midnight struck",
+      "lastZone": "The last zone"
     },
     "title": {
       "blitz": "{winner} wins the lightning war",
@@ -1938,7 +1983,9 @@
       "forfeit": "{winner} wins by forfeit",
       "finalBlow": "{winner} deals the final blow",
       "points": "{winner} wins on points",
-      "none": "Game over, and no winner"
+      "none": "Game over, and no winner",
+      "midnight": "{winner} stands at midnight",
+      "lastZone": "{winner} holds the last zone"
     },
     "deck": {
       "territory": "{share}% of the usable land, past the {threshold}% threshold, after {duration} of play.",
@@ -1949,7 +1996,9 @@
       "defeatBy": "Your last lands fell at {clock}. Final blow: {by}.",
       "defeat": "Your last lands fell at {clock}.",
       "points": "With no human left in the race, the largest nation wins with {share}% of the usable land.",
-      "none": "The game ends after {duration}."
+      "none": "The game ends after {duration}.",
+      "midnight": "When the doomsday clock struck midnight, after {duration} of play, the winner held {share}% of the usable land.",
+      "lastZone": "Once the last zone had closed, after {duration} of play, the winner held {share}% of the usable land in it."
     },
     "lead": {
       "territory": "The game ends after {duration} on the {map} map: the winner holds {share}% of the usable land, past the {threshold}% threshold.",
@@ -1972,7 +2021,9 @@
       "betrayalsMany": "{n} alliances were betrayed.",
       "youWon": "Your nation peaked at {peak}% of the usable land, at {clock}.",
       "youRank": "Your nation finishes {rank} of {n}, after peaking at {peak}% of the usable land at {clock}.",
-      "youRankOnly": "Your nation finishes {rank} of {n}."
+      "youRankOnly": "Your nation finishes {rank} of {n}.",
+      "midnight": "The game ends after {duration} on the {map} map: the doomsday clock strikes midnight, and the largest nation wins with {share}% of the usable land.",
+      "lastZone": "The game ends after {duration} on the {map} map: the last zone has closed, and the largest nation in it wins with {share}% of the usable land."
     },
     "maps": {
       "title": "The empire over time",
@@ -2102,7 +2153,12 @@
       "capitalTaken": "You take {player}'s capital",
       "capitalFell": "{player}'s capital falls to {by}",
       "capitalRazedOther": "{player}'s capital is razed",
-      "secessionRegion": "{tribe} secedes"
+      "secessionRegion": "{tribe} secedes",
+      "doomStage": "Doomsday clock: {name}",
+      "midnight": "Midnight strikes",
+      "zoneAnnounced": "Zone {n}/{steps}: the next circle is known",
+      "zoneClosing": "The zone closes in ({n}/{steps})",
+      "zoneFinal": "The last zone"
     },
     "deck": {
       "betrayal": "The alliance is shattered: {traitor} bears the traitor's mark, and {victim} cuts all trade with {traitor} for 5 minutes.",
@@ -2117,7 +2173,12 @@
       "capitalRazed": "The treasury kept there goes up in smoke; choose a new seat of government.",
       "capitalTaken": "{gold} gold seized from its treasury; the country is disorganised for a minute.",
       "capitalFell": "The country is disorganised for a minute and must choose a new seat.",
-      "secessionRegion": "{tiles} poorly held tiles declare independence. Cities and defence posts settle recent conquests."
+      "secessionRegion": "{tiles} poorly held tiles declare independence. Cities and defence posts settle recent conquests.",
+      "doomStage": "From now on, {effect}.",
+      "midnight": "The doomsday clock ends the game: the largest country wins.",
+      "zoneAnnounced": "It closes in {secs} s; land outside the dashed circle will be lost.",
+      "zoneClosing": "Land outside the dashed circle becomes uninhabitable.",
+      "zoneFinal": "In {secs} s, the largest country inside wins."
     },
     "flash": {
       "title": "News flash",
@@ -2410,5 +2471,49 @@
     "sam": "{n} SAM missile(s) on the route: one bomber downed per missile",
     "interceptors": "{n} enemy airfield(s) on alert over the target",
     "clear": "Clear route: no known defences"
+  },
+  "doom": {
+    "why": {
+      "atom": "atomic bomb",
+      "hydrogen": "hydrogen bomb",
+      "mirv": "MIRV launched",
+      "fall": "a country falls",
+      "betrayal": "betrayal",
+      "crisis": "world crisis",
+      "peace": "peace summit",
+      "council": "World Council decision"
+    },
+    "stage1": {
+      "name": "Arms race",
+      "effect": "nuclear weapons cost 35% less"
+    },
+    "stage2": {
+      "name": "Rationing",
+      "effect": "passive income −40% (trade, trains and loot untouched)"
+    },
+    "stage3": {
+      "name": "Survival of the strongest",
+      "effect": "below {share}% of the land, troops melt away"
+    },
+    "stage4": {
+      "name": "Last minute",
+      "effect": "every alliance is torn up and none can be signed; below {share}% of the land, troops melt away"
+    },
+    "midnight": {
+      "name": "Midnight",
+      "effect": "the game ends, the largest country wins"
+    }
+  },
+  "modeInfo": {
+    "doomsday": "A clock runs towards midnight, faster with every bomb, fall or betrayal. Four milestones change the rules (cheaper bombs, rationing, small countries melt away, alliances torn up). At midnight, the largest country wins.",
+    "battleRoyale": "A zone closes step by step on a random point, announced in advance (dashed circle); land outside it becomes uninhabitable. The last one standing wins, otherwise the largest in the last zone."
+  },
+  "modeLine": {
+    "ffa": "First to the land threshold wins",
+    "teams": "Camps whose lands add up",
+    "humansVsNations": "All humans against the nations",
+    "tribes": "Alone against tribes, for practice",
+    "doomsday": "At midnight, the largest wins",
+    "battleRoyale": "A zone closing on random points"
   }
 }

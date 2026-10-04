@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { app, go } from '../stores/app.svelte';
   import { t, i18n } from '../i18n/i18n.svelte';
+  import ModePicker from '../components/ModePicker.svelte';
   import { mapsBase, bridge, readText } from '../bridge';
   import { GENERALS, type GameConfig, type GameMode, type Difficulty } from '../../core/game/config';
   import { defaultGenParams } from '../../core/map/generator';
@@ -475,13 +476,19 @@
             <h3>{t('lobby.gGame')}</h3>
             <p>{t('lobby.gGameDesc')}</p>
           </div>
-          <label class="field"
-            ><span>{t('lobby.mode')}</span>
-            <select bind:value={cfg.mode} onchange={push} disabled={!isHost} data-testid="opt-mode">
-              {#each MODES as m (m)}<option value={m}>{t(`mode.${m}`)}</option>{/each}
-            </select>
-            <small>{t(`modeDesc.${cfg.mode}`)}</small>
-          </label>
+          <!-- The game mode: a card per mode, how the chosen one plays underneath (1.10.0). -->
+          <div class="field">
+            <span id="mode-label">{t('lobby.mode')}</span>
+            <ModePicker
+              modes={MODES}
+              value={cfg.mode}
+              disabled={!isHost}
+              onpick={(m) => {
+                cfg.mode = m;
+                push();
+              }}
+            />
+          </div>
           {#if cfg.mode === 'teams'}
             <label class="field"
               ><span>{t('lobby.teams')}</span>
@@ -735,13 +742,20 @@
           {/if}
         </div>
         <p class="summary">
-          {t('lobby.summaryLong', {
-            mode: t(`mode.${cfg.mode}`),
-            diff: t(`difficulty.${cfg.difficulty}`),
-            nations: cfg.nations,
-            tribes: cfg.tribes,
-            pct: cfg.victoryThreshold,
-          })}
+          {t(
+            cfg.mode === 'battleRoyale'
+              ? 'lobby.summaryRoyale'
+              : cfg.mode === 'doomsday'
+                ? 'lobby.summaryDoomsday'
+                : 'lobby.summaryLong',
+            {
+              mode: t(`mode.${cfg.mode}`),
+              diff: t(`difficulty.${cfg.difficulty}`),
+              nations: cfg.nations,
+              tribes: cfg.tribes,
+              pct: cfg.victoryThreshold,
+            },
+          )}
         </p>
 
         <div class="who">

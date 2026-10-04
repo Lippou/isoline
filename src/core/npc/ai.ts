@@ -37,6 +37,7 @@ import { castVote } from '../rules/features';
 import { NATION_RESEARCH, lockFor, planGoal } from '../rules/tech';
 import { maxTroops } from '../game/economy';
 import type { Building } from '../buildings/building';
+import { doomStage, doomSurvivalShare, outsideNextZone, shares } from '../rules/victory';
 
 interface Mem {
   nextThink: number;
@@ -245,7 +246,9 @@ function neighbors(game: Game, p: Player, samples: number): Map<number, Neighbor
     for (let j = 0; j < c; j++) {
       const v = NB[j]!;
       const o = game.owner[v]!;
-      if (o === p.id || !IS_LAND[game.map.terrain[v]!] || game.isDead(v)) continue;
+      // Battle royale: land the zone is about to leave is worth nothing.
+      if (o === p.id || !IS_LAND[game.map.terrain[v]!] || game.isDead(v) || outsideNextZone(game, v))
+        continue;
       const e = out.get(o);
       if (e) e.contact++;
       else out.set(o, { id: o, contact: 1, tile: v });
@@ -364,12 +367,21 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
 
   // 4. Expansion & offensive choice.
   const sinceAttack = game.tick - m.lastAttack;
-  const ready = p.troops > cap * (0.36 / Math.max(0.5, t.aggression * diff.aggression));
+  // Doomsday clock (GAME_DESIGN.md §14.2): from the survival of the strongest on, a country
+  // near the bar grabs land at once, and every war comes sooner (midnight ends the game).
+  const doom = doomStage(game);
+  const bar = doomSurvivalShare(game);
+  const myShare = bar > 0 ? (shares(game).get(p.team > 0 ? -p.team : p.id) ?? 0) * 100 : 100;
+  const urgent = bar > 0 && myShare < bar * 1.5;
+  const ready = p.troops > cap * ((urgent ? 0.2 : 0.36) / Math.max(0.5, t.aggression * diff.aggression));
   // Offensives against players are spaced out (51–260 s, shorter for aggressive nations);
   // an idle army (near its ceiling, no longer regenerating) is sent 1.5 times as often.
   const idle = p.troops > cap * AI_IDLE_ARMY;
   const warCooldown =
-    AI_WAR_COOLDOWN / Math.max(0.5, t.aggression * diff.aggression) / (idle ? AI_WAR_IDLE_SPEEDUP : 1);
+    AI_WAR_COOLDOWN /
+    Math.max(0.5, t.aggression * diff.aggression) /
+    (idle ? AI_WAR_IDLE_SPEEDUP : 1) /
+    (doom >= 3 ? 2 : 1);
   if (ready && sinceAttack > AI_EXPAND_COOLDOWN) {
     // A neighbouring traitor is fair game whatever the war cooldown (OpenFront's findTraitor).
     const traitor = traitorTarget(game, p, nb);
@@ -495,6 +507,19 @@ function leader(game: Game): number {
   return best;
 }
 
+/** The largest country after `leaderId` (tribes aside), -1 if none. */
+function runnerUp(game: Game, leaderId: number): number {
+  let best = -1;
+  let bt = -1;
+  for (const p of game.alivePlayers()) {
+    if (p.kind !== 'tribe' && p.id !== leaderId && p.tiles > bt) {
+      bt = p.tiles;
+      best = p.id;
+    }
+  }
+  return best;
+}
+
 function pickTarget(
   game: Game,
   p: Player,
@@ -505,6 +530,7 @@ function pickTarget(
 ): Neighbor | null {
   const diff = game.difficulty();
   const factor = p.troops > cap * AI_IDLE_ARMY ? Math.min(1, t.attackFactor) : t.attackFactor;
+  const doomLeader = doomStage(game) >= 3 ? leader(game) : -1;
   let best: Neighbor | null = null;
   let bestScore = 0;
   for (const n of nb.values()) {
@@ -526,6 +552,8 @@ function pickTarget(
     if (q.isTraitor(game.tick)) score *= 1.5;
     // OpenFront's "hated" players (relation below −50: betrayed us, attacked us hard).
     if (p.relation(q.id) < RELATION_HOSTILE) score *= 1.5;
+    // Doomsday, the final stretch: the countries behind gang up on the leader before midnight.
+    if (q.id === doomLeader && p.id !== q.id) score *= 3;
     if (score > bestScore) {
       bestScore = score;
       best = n;
@@ -583,7 +611,7 @@ function upgradeTarget(game: Game, p: Player, kind: B): Building | null {
 function findSpot(game: Game, p: Player, kind: B): number {
   for (let k = 0; k < 6; k++) {
     const c = kind === B.Port ? p.coast[game.rng.int(0, p.coast.length - 1)]! : randomInterior(game, p);
-    if (c >= 0 && checkPlacement(game, p, kind, c) === 'ok') return c;
+    if (c >= 0 && checkPlacement(game, p, kind, c) === 'ok' && !outsideNextZone(game, c)) return c;
   }
   return -1;
 }
@@ -878,7 +906,7 @@ function tryBoat(game: Game, p: Player, m: Mem, _t: Traits, idle = false): numbe
     const y = fy + game.rng.int(-150, 150);
     if (!game.map.inBounds(x, y)) continue;
     const tile = y * w + x;
-    if (!IS_LAND[game.map.terrain[tile]!]) continue;
+    if (!IS_LAND[game.map.terrain[tile]!] || game.isDead(tile) || outsideNextZone(game, tile)) continue;
     const o = game.owner[tile]!;
     if (o === p.id || (o > 0 && (game.friendly(o, p.id) || !game.attackAllowed(p.id, o, true)))) continue;
     if (o > 0 && game.players[o]!.troops > p.troops * 0.7) continue;
@@ -1061,6 +1089,13 @@ function tryNuke(game: Game, p: Player, m: Mem, t: Traits): number {
   if (enemy < 0 && t.nukes > 1.2 && game.tick - game.startTick > 9000) {
     const l = leader(game);
     if (l !== p.id && !p.allies.has(l)) enemy = l;
+  }
+  // Doomsday, from the rationing on: the leader strikes its nearest rival (each blast brings
+  // midnight, and its victory, closer); the others strike the leader.
+  if (enemy < 0 && doomStage(game) >= 2) {
+    const l = leader(game);
+    const target = l === p.id ? runnerUp(game, p.id) : l;
+    if (target > 0 && !p.allies.has(target)) enemy = target;
   }
   if (enemy < 0 || !game.attackAllowed(p.id, enemy, true)) return 10;
   const kind =

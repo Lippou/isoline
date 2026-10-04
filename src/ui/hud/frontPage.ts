@@ -213,13 +213,16 @@ export type HeadKind =
   | 'attrition'
   | 'domination'
   | 'lastStanding'
+  | 'midnight'
+  | 'lastZone'
   | 'team'
   | 'forfeit'
   | 'finalBlow'
   | 'points'
   | 'none';
 
-export type Kicker = 'territory' | 'lastStanding' | 'team' | 'forfeit' | 'defeat' | 'points' | 'none';
+export type Kicker =
+  'territory' | 'lastStanding' | 'midnight' | 'lastZone' | 'team' | 'forfeit' | 'defeat' | 'points' | 'none';
 
 type FactOf<K extends Fact['k']> = Extract<Fact, { k: K }>;
 const factsOf = <K extends Fact['k']>(ed: Edition, k: K): FactOf<K>[] =>
@@ -235,6 +238,9 @@ export function headKind(ed: Edition, lead: Lead | null = leadInfo(ed)): HeadKin
   if (ed.winner <= 0 && ed.winnerTeam <= 0) return 'none';
   if (teamMode(ed) && ed.winnerTeam > 0) return 'team';
   if (ed.reason === 'lastStanding') return 'lastStanding';
+  // The timed modes' ends (GAME_DESIGN.md §14.1, §14.2).
+  if (ed.reason === 'midnight') return 'midnight';
+  if (ed.reason === 'lastZone') return 'lastZone';
   if (ed.reason === 'humansEliminated') {
     const fall = viewerFall(ed);
     if (fall && ed.viewer !== ed.winner)
@@ -256,6 +262,7 @@ export function kickerOf(ed: Edition, kind: HeadKind): Kicker {
   if (kind === 'none') return 'none';
   if (kind === 'team') return 'team';
   if (ed.reason === 'lastStanding') return 'lastStanding';
+  if (kind === 'midnight' || kind === 'lastZone') return kind;
   if (ed.reason === 'humansEliminated') return 'points';
   return ed.reason === 'territory' ? 'territory' : 'none';
 }
@@ -293,6 +300,8 @@ export function headline(ed: Edition, lead: Lead | null = leadInfo(ed)): Headlin
   else if (kind === 'lastStanding') {
     const n = rivalsOf(ed);
     deck = line(n === 1 ? 'front.deck.lastStandingOne' : 'front.deck.lastStanding', { n, duration });
+  } else if (kind === 'midnight' || kind === 'lastZone') {
+    deck = line(`front.deck.${kind}`, { share, duration });
   } else if (ed.reason === 'humansEliminated' && fall && ed.viewer !== ed.winner) {
     const when = { clock: fall.tick };
     deck =
@@ -337,6 +346,8 @@ export function leadParagraph(ed: Edition, lead: Lead | null = leadInfo(ed)): Li
   else if (kind === 'team') out.push(line('front.lead.team', { ...base, share }));
   else if (kind === 'lastStanding')
     out.push(line('front.lead.lastStanding', { ...base, n: ed.roster.length }));
+  else if (kind === 'midnight' || kind === 'lastZone')
+    out.push(line(`front.lead.${kind}`, { ...base, share }));
   else if (ed.reason === 'humansEliminated' && fall && ed.viewer !== ed.winner)
     out.push(
       line(fall.cause === 'surrender' ? 'front.lead.forfeit' : 'front.lead.defeat', { ...base, share }),

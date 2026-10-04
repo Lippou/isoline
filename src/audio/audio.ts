@@ -307,6 +307,75 @@ class AudioEngine {
     this.play(name, this.uiBus, 0.8, true);
   }
 
+  /**
+   * The game modes' signals, synthesised (no recording fits them): a clock's dry tick
+   * ('tick'), a small hand bell for a doomsday milestone ('bell'), a deep tower bell at
+   * midnight ('toll'), and a soft two-note chime when the next battle royale zone is
+   * announced ('ping'). Quiet by design: they mark time, they do not alarm.
+   */
+  chime(kind: 'tick' | 'bell' | 'toll' | 'ping', vol = 1): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const now = performance.now();
+    const gap = kind === 'tick' ? 120 : 600;
+    if (now - (this.lastPlay.get(`chime-${kind}`) ?? -1e9) < gap) return;
+    this.lastPlay.set(`chime-${kind}`, now);
+    const t0 = ctx.currentTime + 0.01;
+    const out = ctx.createGain();
+    out.gain.value = vol;
+    out.connect(this.sfxBus);
+    /** A decaying sine partial. */
+    const partial = (freq: number, amp: number, decay: number, at = 0) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0, t0 + at);
+      g.gain.linearRampToValueAtTime(amp, t0 + at + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + decay);
+      o.connect(g).connect(out);
+      o.start(t0 + at);
+      o.stop(t0 + at + decay + 0.05);
+    };
+    if (kind === 'tick') {
+      // A short burst of filtered noise: the escapement of a wall clock.
+      const len = Math.floor(ctx.sampleRate * 0.03);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 6);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const f = ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = 2400;
+      f.Q.value = 4;
+      const g = ctx.createGain();
+      g.gain.value = 0.5;
+      src.connect(f).connect(g).connect(out);
+      src.start(t0);
+    } else if (kind === 'bell') {
+      // Inharmonic partials of a small bell.
+      for (const [r, a, d] of [
+        [1, 0.22, 1.6],
+        [2.4, 0.12, 1.1],
+        [3.0, 0.08, 0.8],
+        [4.5, 0.05, 0.5],
+      ] as const)
+        partial(660 * r, a, d);
+    } else if (kind === 'toll') {
+      for (const [r, a, d] of [
+        [0.5, 0.25, 3.2],
+        [1, 0.2, 2.6],
+        [1.19, 0.1, 2.0],
+        [2.0, 0.08, 1.4],
+        [2.74, 0.05, 1.0],
+      ] as const)
+        partial(220 * r, a, d);
+    } else {
+      partial(880, 0.12, 0.7);
+      partial(1175, 0.1, 0.9, 0.14);
+    }
+  }
+
   // -------------------------------------------------------------------- music
   setScene(scene: Scene): void {
     const same = scene === this.scene && this.mood !== null;

@@ -248,6 +248,35 @@ describe('front page headline', () => {
     const none = edition({ minutes: 5, shares: { 1: ramp(0.1, 0.1) }, winner: -1, reason: '' });
     expect(headKind(none)).toBe('none');
   });
+
+  it('the timed modes end at midnight or with the last zone', () => {
+    for (const reason of ['midnight', 'lastZone'] as const) {
+      const ed = edition({
+        minutes: 38,
+        shares: { 1: ramp(0.1, 0.2), 2: ramp(0.1, 0.35), 3: ramp(0.1, 0.1) },
+        winner: 2,
+        reason,
+        viewer: -1,
+      });
+      expect(headKind(ed)).toBe(reason);
+      expect(kickerOf(ed, headKind(ed))).toBe(reason);
+      for (const lang of ['fr', 'en'] as const) {
+        const h = headline(ed);
+        for (const l of [h.kicker, h.title, h.deck, ...leadParagraph(ed)])
+          expect(render(ed, l, tx(lang))).not.toMatch(/[{}]|front\./);
+      }
+    }
+    const mid = edition({
+      minutes: 38,
+      shares: { 1: ramp(0.1, 0.2), 2: ramp(0.1, 0.35) },
+      winner: 2,
+      reason: 'midnight',
+      viewer: -1,
+    });
+    expect(render(mid, headline(mid).deck, tx('en'))).toBe(
+      'When the doomsday clock struck midnight, after 38 min of play, the winner held 35% of the usable land.',
+    );
+  });
 });
 
 // --------------------------------------------------------- turning points

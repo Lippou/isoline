@@ -484,14 +484,56 @@ export const CAPITAL_AI_DELAY = sec(10);
 // ------------------------------------------------------------------ misc
 export const HISTORY_EVERY = 50;
 export const HASH_EVERY = 50;
-export const DOOMSDAY_GRACE = min(10);
-export const DOOMSDAY_STEP = min(2);
-export const DOOMSDAY_FFA = [2, 4, 7, 11, 17, 25, 35] as const;
-export const DOOMSDAY_TEAMS = [5, 10, 16, 24, 33, 45, 60] as const;
 export const OVERTIME_START = min(30);
 export const OVERTIME_STEP = min(5);
 export const OVERTIME_THRESHOLDS = [80, 70, 60, 50, 45, 40, 35] as const;
-export const BATTLE_ROYALE_STEP = min(3);
+
+// --------------------------------------------------------- battle royale
+// (GAME_DESIGN.md §14.1) A safe zone closing step by step on random points.
+/** The first closing starts this long after the start (the first zone is announced at once). */
+export const ROYALE_FIRST = min(5);
+/** From the end of a closing to the start of the next: the next zone is shown all along. */
+export const ROYALE_WAIT = min(3);
+/** A closing: the circle slides and shrinks to the announced zone over this time… */
+export const ROYALE_CLOSE = sec(45);
+/** …then one last sweep of the map with the final circle (ticks). */
+export const ROYALE_SWEEP = 30;
+/** Each zone's radius is the previous one's × this. */
+export const ROYALE_SHRINK = 0.8;
+/** The last zone's radius, as a share of the map's short side. */
+export const ROYALE_MIN = 0.08;
+/** After the last zone has closed: the largest country in it wins this long after. */
+export const ROYALE_FINAL = min(3);
+/** Centres tried for each new zone; one is drawn among those holding ≥ this share of the best's land. */
+export const ROYALE_CANDIDATES = 10;
+export const ROYALE_LAND_KEEP = 0.75;
+
+// -------------------------------------------------------- doomsday clock
+// (GAME_DESIGN.md §14.2) Midnight ends the game. The clock is counted in "clock units":
+// one tick of play is one unit, a clock second is DOOM_UNIT units (5 s of play).
+export const DOOM_UNIT = 50;
+/** Clock seconds from the start (twelve minutes to midnight) to midnight. */
+export const DOOM_MIDNIGHT = 720;
+/** Milestones (clock seconds gone): arms race, rationing, survival of the strongest, last minute. */
+export const DOOM_STAGES = [120, 300, 480, 660] as const;
+/** Clock seconds each happening pushes the clock by (a negative one pulls it back). */
+export const DOOM_PUSH = {
+  atom: 3,
+  hydrogen: 10,
+  mirv: 30,
+  fall: 6,
+  betrayal: 6,
+  crisis: 15,
+  peace: -30,
+  council: -20,
+} as const;
+/** Arms race: bombs cost this much less. */
+export const DOOM_NUKE_DISCOUNT = 0.35;
+/** Rationing: passive income (base and deposits) × this. */
+export const DOOM_RATION = 0.6;
+/** Survival of the strongest: share of the useful land (%) under which troops melt; [from 11:56, last minute]. */
+export const DOOM_SURVIVAL_FFA = [3, 5] as const;
+export const DOOM_SURVIVAL_TEAMS = [10, 15] as const;
 export const GENERAL_COOLDOWN = min(5);
 export const COUNCIL_PERIOD = min(10);
 export const COUNCIL_VOTE_TICKS = sec(30);

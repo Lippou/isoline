@@ -41,6 +41,7 @@ import { RadarWatch } from './radarWatch';
 import { bestCapitalSpot, capitalCooldown } from '../core/rules/capital';
 import { opinionsOf, type Opinion } from '../core/rules/opinion';
 import { computeLabels, type Label } from '../core/game/labels';
+import { outsideNextZone } from '../core/rules/victory';
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 let game: Game | null = null;
@@ -60,6 +61,7 @@ const radar = new RadarWatch();
 let capitalHint = { tick: -1, tile: -1 };
 /** What the nations think of the viewer (recomputed every second). */
 let opinions: { tick: number; list: Opinion[] } = { tick: -1, list: [] };
+let zoneOut = { tick: -1, id: -1, share: 0 };
 
 function post(msg: FromWorker, transfer: Transferable[] = []): void {
   ctx.postMessage(msg, transfer);
@@ -600,6 +602,21 @@ function capitalHintOf(g: Game, p: Player): number {
   return capitalHint.tile;
 }
 
+/** Share of the viewer's useful land outside the next zone (battle royale; refreshed every second). */
+function landOutsideZone(g: Game): number {
+  const p = g.players[viewer];
+  if (!p || !p.alive || p.usefulTiles === 0) return -1;
+  const t = g.tick;
+  if (zoneOut.tick >= 0 && t >= zoneOut.tick && t - zoneOut.tick < 10 && zoneOut.id === p.id)
+    return zoneOut.share;
+  let out = 0;
+  const owner = g.owner;
+  for (let i = 0; i < owner.length; i++)
+    if (owner[i] === p.id && g.isUsefulLand(i) && outsideNextZone(g, i)) out++;
+  zoneOut = { tick: t, id: p.id, share: out / p.usefulTiles };
+  return zoneOut.share;
+}
+
 function worldView(g: Game): WorldView {
   const f = g.features;
   const ring = g.victory.ring;
@@ -609,7 +626,28 @@ function worldView(g: Game): WorldView {
     spawnEndTick: g.spawnEndTick,
     threshold: g.victory.threshold,
     doomsday: g.victory.doomsday ?? -1,
-    ring: ring ? { cx: ring.cx, cy: ring.cy, r: ring.r, nextR: ring.nextR } : null,
+    doom: g.victory.doom
+      ? {
+          units: g.victory.doom.units,
+          stage: g.victory.doom.stage,
+          pushes: g.victory.doom.pushes.map((p) => ({ ...p })),
+        }
+      : null,
+    ring: ring
+      ? {
+          cx: ring.cx,
+          cy: ring.cy,
+          r: ring.r,
+          nx: ring.nx,
+          ny: ring.ny,
+          nr: ring.nr,
+          closeAt: ring.closeAt,
+          step: ring.step,
+          steps: ring.steps,
+          endAt: ring.endAt,
+          mineOut: landOutsideZone(g),
+        }
+      : null,
     weather: f.weather.map((c) => ({ ...c })),
     event: f.event ? { ...f.event } : null,
     council: f.council

@@ -18,6 +18,7 @@
   import PactBanner from './PactBanner.svelte';
   import type { GameController } from '../game/controller';
   import type { PieceId } from '../stores/zones';
+  import { DOOM_MIDNIGHT, DOOM_UNIT, ROYALE_CLOSE } from '../../core/game/constants';
 
   let { ctl }: { ctl: GameController } = $props();
   const L = $derived(hud.local);
@@ -67,6 +68,30 @@
         >{hud.phase === 'spawn' ? `${Math.ceil(spawnLeft / 10)} s` : clock(elapsed)}</b
       >{#if hud.paused}<Icon name="pause" size={12} />{/if}</span
     >
+    <!-- The game mode's countdown stays in sight (ModeBanner.svelte has the whole of it). -->
+    {#if hud.phase === 'playing' && hud.world?.ring}
+      {@const r = hud.world.ring}
+      <span class="fig" data-tip={t('hud.zone.tip')} data-testid="reading-mode"
+        ><Icon name="target" size={14} /><b class="mono" class:spot={r.endAt < 0 && hud.tick >= r.closeAt}
+          >{clock(
+            r.endAt >= 0
+              ? r.endAt - hud.tick
+              : hud.tick < r.closeAt
+                ? r.closeAt - hud.tick
+                : r.closeAt + ROYALE_CLOSE - hud.tick,
+          )}</b
+        ></span
+      >
+    {:else if hud.phase === 'playing' && hud.world?.doom}
+      {@const left = Math.max(0, Math.ceil((DOOM_MIDNIGHT * DOOM_UNIT - hud.world.doom.units) / DOOM_UNIT))}
+      <span class="fig" data-tip={t('hud.doom.tip')} data-testid="reading-mode"
+        ><Icon name="time" size={14} /><b class="mono" class:spot={hud.world.doom.stage >= 3}
+          >{t('hud.doom.toMidnight', {
+            left: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`,
+          })}</b
+        ></span
+      >
+    {/if}
   </div>
   <div class="chips" aria-live="polite">
     {#if invaded}
@@ -162,6 +187,9 @@
   }
   .fig b.brass {
     color: var(--np-brass);
+  }
+  .fig b.spot {
+    color: var(--np-spot);
   }
   .fig small {
     font-size: 0.8em;

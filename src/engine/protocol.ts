@@ -10,6 +10,7 @@ import type { WeatherCell } from '../core/rules/features';
 import type { Threat } from './threats';
 import type { PlayerFlag } from '../core/data/flagSpec';
 import type { Opinion } from '../core/rules/opinion';
+import type { DoomPush } from '../core/rules/victory';
 
 /** Commerce panel: trade income is summed over this sliding window (5 minutes). */
 export const TRADE_WINDOW_TICKS = 3000;
@@ -206,13 +207,48 @@ export interface LocalView {
   opinions: Opinion[];
 }
 
+/**
+ * The battle royale zone. The circle in force at a tick is `liveRing(view, tick)` (it slides
+ * from (cx, cy, r) to the next zone (nx, ny, nr) during a closing).
+ */
+export interface ZoneView {
+  cx: number;
+  cy: number;
+  r: number;
+  nx: number;
+  ny: number;
+  nr: number;
+  /** Tick the next closing starts (it lasts ROYALE_CLOSE + ROYALE_SWEEP). */
+  closeAt: number;
+  /** Closings done, out of `steps`. */
+  step: number;
+  steps: number;
+  /** After the last zone: the tick the game ends (-1 before). */
+  endAt: number;
+  /** Share (0..1) of the viewer's land outside the next zone (-1: no viewer). */
+  mineOut: number;
+}
+
+export interface DoomView {
+  /** Clock units gone (DOOM_UNIT per clock second; midnight at DOOM_MIDNIGHT × DOOM_UNIT). */
+  units: number;
+  /** Milestones passed. */
+  stage: number;
+  /** The last pushes, oldest first. */
+  pushes: DoomPush[];
+}
+
 export interface WorldView {
   tick: number;
   startTick: number;
   spawnEndTick: number;
   threshold: number;
+  /** Doomsday: the share (%) under which troops melt, -1 while not in force. */
   doomsday: number;
-  ring: { cx: number; cy: number; r: number; nextR: number } | null;
+  /** Doomsday clock (GAME_DESIGN.md §14.2), null in other modes. */
+  doom: DoomView | null;
+  /** Battle royale zone (GAME_DESIGN.md §14.1), null in other modes. */
+  ring: ZoneView | null;
   weather: WeatherCell[];
   event: { id: string; until: number } | null;
   council: { closes: number; votes: number; myVote: number } | null;

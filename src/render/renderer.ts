@@ -21,6 +21,7 @@ import {
 import { Trajectory } from '../core/units/trajectory';
 import type { GameEvent } from '../core/game/events';
 import { dayPhase } from '../core/rules/features';
+import { liveRing } from '../core/rules/victory';
 import { ParticleSystem } from './particles';
 import { ShipLayer } from './ships';
 import { WeatherLayer } from './weatherLayer';
@@ -478,6 +479,7 @@ export class GameRenderer {
     this.weather.container.visible = skies;
     this.labels.visible = !photo || photo.labels;
     const ring = s.world?.ring;
+    const live = ring ? liveRing(ring, tickF) : null;
     const q = this.settings.quality;
     this.map.setUniforms({
       time: this.settings.reducedMotion ? 0 : t,
@@ -495,7 +497,10 @@ export class GameRenderer {
       weather,
       borders: !photo || photo.borders,
       motion: this.settings.reducedMotion ? 0 : 1,
-      ring: ring ? [ring.cx, ring.cy, ring.r, 1] : [0, 0, 0, 0],
+      // Battle royale: the zone in force, sliding while it closes, and the next one announced.
+      ring: live ? [live[0], live[1], live[2], 1] : [0, 0, 0, 0],
+      ringNext:
+        ring && ring.endAt < 0 ? [ring.nx, ring.ny, ring.nr, tickF >= ring.closeAt ? 2 : 1] : [0, 0, 0, 0],
       // Clouds fade in as the camera pulls back past the medium zoom.
       clouds:
         q === 'performance' || this.settings.reducedMotion || !skies

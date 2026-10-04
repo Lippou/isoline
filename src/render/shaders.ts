@@ -49,7 +49,8 @@ uniform float uContrast;     // 1 = high contrast
 uniform float uLoyaltyView;  // 1 = loyalty overlay on the viewer's land
 uniform vec4 uWeather[8];    // x, y, radius, code: -1 none, 0…1 storm (intensity), 2…3 fog bank (2 + intensity)
 uniform float uMotion;       // 1 = animated weather (lightning); 0 with reduced motion
-uniform vec4 uRing;          // battle royale: cx, cy, r, active
+uniform vec4 uRing;          // battle royale, the zone in force (sliding while it closes): cx, cy, r, active
+uniform vec4 uRingNext;      // battle royale, the announced next zone: cx, cy, r, active (2: closing now)
 uniform float uClouds;       // 0…1 drifting cloud cover (zoomed far out)
 uniform float uBorders;      // 1 = country borders drawn (0: photo mode without borders)
 uniform float uWorld;        // ground & sea palette: 0 Earth, 1 Mars, 2 Moon, 3 Titan, 4 8-bit (map meta "palette")
@@ -458,6 +459,22 @@ void main() {
   if (uRing.w > 0.5) {
     float dr = abs(length(tp - uRing.xy) - uRing.z) * pxPerTile;
     col += vec3(0.95, 0.25, 0.3) * exp(-dr / 2.5) * (0.6 + 0.4 * sin(uTime * 3.0));
+  }
+  if (uRingNext.w > 0.5) {
+    vec2 dn = tp - uRingNext.xy;
+    float dist = length(dn);
+    // The land the zone is about to leave: a faint red hatch (stronger while it closes).
+    if (!water && dist > uRingNext.z && uRing.w > 0.5 && length(tp - uRing.xy) < uRing.z) {
+      float hatch2 = step(0.7, fract((tp.x - tp.y) * pxPerTile / 10.0));
+      float k = uRingNext.w > 1.5 ? 0.16 + 0.22 * hatch2 : 0.08 + 0.16 * hatch2;
+      col = mix(col, vec3(0.74, 0.12, 0.22), k);
+    }
+    // Its edge: paper-white dashes ruled in ink, a constant size on screen.
+    float dd = abs(dist - uRingNext.z) * pxPerTile;
+    float along = atan(dn.y, dn.x) * uRingNext.z * pxPerTile;
+    float dash = step(0.38, fract(along / 16.0));
+    col = mix(col, vec3(0.07, 0.1, 0.14), (1.0 - smoothstep(2.0, 3.4, dd)) * dash * 0.6);
+    col = mix(col, vec3(0.98, 0.96, 0.9), (1.0 - smoothstep(0.9, 1.8, dd)) * dash);
   }
 
   // High clouds drifting over the world when zoomed far out (life on the map), with a
