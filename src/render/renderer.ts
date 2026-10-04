@@ -10,7 +10,14 @@ import { inkNum, inkRgb, type ColorVision, UI } from './colors';
 import type { ClientState } from '../engine/clientState';
 import { UNIT_STRIDE, type BuildingView } from '../engine/protocol';
 import { U } from '../core/units/unit';
-import { B, N, NUKE_FALLOUT_RADIUS, NUKE_RADIUS, NUKE_TARGETABLE_RANGE } from '../core/game/constants';
+import {
+  B,
+  N,
+  NUKE_FALLOUT_RADIUS,
+  NUKE_RADIUS,
+  NUKE_TARGETABLE_RANGE,
+  RECON_RADIUS,
+} from '../core/game/constants';
 import { Trajectory } from '../core/units/trajectory';
 import type { GameEvent } from '../core/game/events';
 import { dayPhase } from '../core/rules/features';
@@ -50,6 +57,8 @@ export interface Overlay {
   boatPath: number[] | null;
   /** Missile launch preview: path from the silo that would fire, predicted interception, blast. */
   nukePreview: NukePreview | null;
+  /** Aircraft aiming preview: route from the airfield, reach, the building hit, the danger on the way. */
+  airPreview: AirPreview | null;
   /** Show every known SAM's coverage (own green, allies yellow, others red). */
   samCoverage: boolean;
   /** Build-bar filter: these building types light up, the others fade (null: no filter). */
@@ -88,6 +97,30 @@ export interface NukePreview {
   betray: boolean;
   /** A loaded silo would fire (false: drawn from the nearest silo, still reloading). */
   ready: boolean;
+}
+
+/** Aiming an aircraft (ui/game/airPreview.ts). */
+export interface AirPreview {
+  /** A.Fighter, A.Bomber or A.Recon. */
+  kind: number;
+  /** The airfield it would take off from (NaN: none). */
+  fx: number;
+  fy: number;
+  /** Aim point (a bomber's: the centre of the building it would hit). */
+  tx: number;
+  ty: number;
+  /** How far the plane flies from its airfield. */
+  reach: number;
+  /** The order would be carried out. */
+  ok: boolean;
+  /** Fighter patrol / reconnaissance zone radius (0: none). */
+  zone: number;
+  /** Bomber: a building is in its sights (`destroy`: nothing would be left of it). */
+  target: { destroy: boolean } | null;
+  /** Fraction of the route where a loaded hostile SAM would down the bomber (-1: none). */
+  samF: number;
+  /** SAMs or interceptors wait for it. */
+  danger: boolean;
 }
 
 /** Map colours of a relation: own, ally or teammate, everyone else. */
@@ -225,6 +258,7 @@ export class GameRenderer {
     ranges: [],
     boatPath: null,
     nukePreview: null,
+    airPreview: null,
     samCoverage: false,
     buildingFilter: null,
     selection: new Set(),
@@ -1154,6 +1188,120 @@ export class GameRenderer {
         .stroke({ width: lw(1.5), color: 0xffffff, alpha: 0.5 * a });
   }
 
+  /**
+   * What planes are doing (GAME_DESIGN.md §11), kept faint: our bombers and those bound for
+   * our buildings draw a thin line to their target (red when it is ours), our reconnaissance
+   * zones a dashed circle in our ink, a hostile one over our land a dashed red circle.
+   */
+  private drawAirActivity(g: Graphics, t: number): void {
+    const s = this.state;
+    const me = s.viewer;
+    if (me <= 0 || s.unitCount === 0) return;
+    const z = this.camera.zoom;
+    const lw = (px: number) => Math.max(0.08, px / z);
+    const w = s.width;
+    const myInk = this.inkOf(me);
+    const buf = s.units;
+    for (let k = 0; k < s.unitCount; k++) {
+      const o = k * UNIT_STRIDE;
+      const type = buf[o + 1]!;
+      if (type !== U.Bomber && type !== U.Recon) continue;
+      const owner = buf[o + 2]!;
+      const [x, y, tx, ty] = [buf[o + 3]!, buf[o + 4]!, buf[o + 10]!, buf[o + 11]!];
+      const tile = Math.floor(ty) * w + Math.floor(tx);
+      const mine = owner === me;
+      const aimed = s.owner[tile] === me;
+      if ((!mine && !aimed) || !this.revealed(owner, x, y)) continue;
+      const col = mine ? myInk : REL_COLOR.foe;
+      if (type === U.Bomber) {
+        if (buf[o + 6] !== 0) continue; // bombs dropped: flying home
+        g.moveTo(x, y)
+          .lineTo(tx, ty)
+          .stroke({ width: lw(1.2), color: col, alpha: mine ? 0.45 : 0.6 });
+        const pulse = 0.5 + 0.5 * Math.sin(t * 5 + k);
+        const r = lw(8);
+        g.circle(tx, ty, r * (1.3 + pulse * 0.5)).stroke({
+          width: lw(1.2),
+          color: col,
+          alpha: 0.5 * (1 - pulse) + 0.15,
+        });
+        g.circle(tx, ty, r).stroke({ width: lw(2), color: col, alpha: 0.85 });
+      } else if (buf[o + 6] === 1) {
+        // Orbiting reconnaissance: its zone.
+        this.dashedCircle(g, tx, ty, RECON_RADIUS, col, mine ? 0.55 : 0.7, 1.4, 10, 7, t * 10, null);
+      }
+    }
+  }
+
+  /** Aiming an aircraft: reach of the airfield, route, the building in its sights and the danger on the way. */
+  private drawAirPreview(g: Graphics, p: AirPreview, t: number): void {
+    const z = this.camera.zoom;
+    const lw = (px: number) => Math.max(0.08, px / z);
+    const col = p.ok ? 0xffffff : UI.signal;
+    const hasField = Number.isFinite(p.fx);
+    if (hasField) {
+      g.circle(p.fx, p.fy, p.reach).stroke({ width: lw(1.2), color: 0xd1a64a, alpha: 0.55 });
+      // Dashed route, red past the point where a loaded SAM would fire.
+      const len = Math.hypot(p.tx - p.fx, p.ty - p.fy);
+      const n = Math.max(2, Math.ceil((len * z) / 12));
+      const safe: number[] = [];
+      const hit: number[] = [];
+      for (let k = 0; k < n; k += 2) {
+        const f0 = k / n;
+        const f1 = Math.min(1, (k + 1) / n);
+        const seg = [
+          p.fx + (p.tx - p.fx) * f0,
+          p.fy + (p.ty - p.fy) * f0,
+          p.fx + (p.tx - p.fx) * f1,
+          p.fy + (p.ty - p.fy) * f1,
+        ];
+        (p.samF >= 0 && f0 >= p.samF ? hit : safe).push(...seg);
+      }
+      const stroke = (segs: number[], width: number, color: number, alpha: number) => {
+        for (let k = 0; k < segs.length; k += 4)
+          g.moveTo(segs[k]!, segs[k + 1]!).lineTo(segs[k + 2]!, segs[k + 3]!);
+        if (segs.length) g.stroke({ width: lw(width), color, alpha, cap: 'round' });
+      };
+      stroke(safe, 3.5, 0x6d6a70, 0.8);
+      stroke(safe, 2, p.ok ? 0xffffff : UI.signal, 0.95);
+      stroke(hit, 3.5, 0x965a5a, 0.8);
+      stroke(hit, 2, 0xff5050, 0.95);
+      if (p.samF >= 0) {
+        const ix = p.fx + (p.tx - p.fx) * p.samF;
+        const iy = p.fy + (p.ty - p.fy) * p.samF;
+        const d = lw(8);
+        for (const [wd, c] of [
+          [5.5, 0x000000],
+          [3, 0xff4040],
+        ] as const)
+          g.moveTo(ix - d, iy - d)
+            .lineTo(ix + d, iy + d)
+            .moveTo(ix + d, iy - d)
+            .lineTo(ix - d, iy + d)
+            .stroke({ width: lw(wd), color: c, cap: 'round' });
+      }
+    }
+    if (p.zone > 0) {
+      g.circle(p.tx, p.ty, p.zone).fill({ color: col, alpha: 0.06 });
+      this.dashedCircle(g, p.tx, p.ty, p.zone, col, 0.85, 1.8, 10, 6, t * 12, null);
+    }
+    // The target: a reticle (on the building a bomber would hit, doubled when it would be razed).
+    const r = Math.max(2.2, lw(13));
+    const ret = p.kind === 1 && !p.target ? UI.signal : p.danger && p.ok ? 0xf2b84b : col;
+    g.circle(p.tx, p.ty, r).stroke({ width: lw(4), color: 0x0b0e12, alpha: 0.55 });
+    g.circle(p.tx, p.ty, r).stroke({ width: lw(2), color: ret });
+    if (p.target?.destroy) g.circle(p.tx, p.ty, r * 1.35).stroke({ width: lw(1.5), color: ret, alpha: 0.8 });
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const)
+      g.moveTo(p.tx + dx * r * 0.5, p.ty + dy * r * 0.5)
+        .lineTo(p.tx + dx * r * 1.5, p.ty + dy * r * 1.5)
+        .stroke({ width: lw(2), color: ret });
+  }
+
   // -------------------------------------------------------------- overlay
   private drawOverlay(t: number): void {
     const g = this.overlayG;
@@ -1215,6 +1363,8 @@ export class GameRenderer {
     }
     if (ov.samCoverage) this.drawSamCoverage(g, t);
     if (ov.nukePreview) this.drawNukePreview(g, ov.nukePreview);
+    this.drawAirActivity(g, t);
+    if (ov.airPreview) this.drawAirPreview(g, ov.airPreview, t);
     if (ov.dragRect) {
       const [x0, y0, x1, y1] = ov.dragRect;
       g.rect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0))
@@ -1548,6 +1698,21 @@ export class GameRenderer {
         case 'intercept':
           this.particles.burst(e.x, e.y, Math.round(30 * P), UI.aurora, 3, 'spark');
           this.particles.ring(e.x, e.y, 10, UI.aurora, 0.6);
+          break;
+        case 'planeDown':
+          // Debris and a puff of smoke where the plane fell.
+          if (!this.revealed(e.owner, e.x, e.y)) break;
+          this.particles.burst(e.x, e.y, Math.round(16 * P), 0xffb070, 1.2, 'spark');
+          this.particles.burst(e.x, e.y, Math.round(8 * P), 0x6d6a70, 0.7, 'smoke');
+          break;
+        case 'airStrike':
+          // The building hit: a ring in the raider's ink, a column of smoke when it is razed.
+          if (e.type < 0) break;
+          this.particles.ring(e.x, e.y, 7, this.inkOf(e.owner), 0.7);
+          if (e.destroyed) this.particles.burst(e.x, e.y, Math.round(14 * P), 0x5d5a60, 0.9, 'smoke');
+          break;
+        case 'scramble':
+          if (this.revealed(e.owner, e.x, e.y)) this.particles.ring(e.x, e.y, 4, this.inkOf(e.owner), 0.5);
           break;
         case 'shipSunk':
           this.particles.burst(e.x, e.y, Math.round(18 * P), 0xffb070, 1.4, 'spark');

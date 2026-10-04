@@ -400,20 +400,54 @@ export const WARHEAD_TROOP_LOSS = 500;
 export const NUKE_BETRAYAL_TILES = 100;
 
 // ------------------------------------------------------------------ air
+// Isoline's own (GAME_DESIGN.md §11): every plane has one job. Bombers knock levels off
+// buildings, fighters rule the sky, reconnaissance gives intelligence on a zone, airfields
+// scramble interceptors, radars warn and guide them — all of it with or without the fog.
 export const enum A {
   Fighter = 0,
   Bomber = 1,
   Recon = 2,
 }
-export const AIR_COST = [400_000, 900_000, 150_000] as const;
+export const AIR_COST = [300_000, 450_000, 100_000] as const;
 export const AIR_SPEED = [4, 2.6, 5] as const;
-export const AIR_HP = [400, 700, 150] as const;
+export const AIR_HP = [400, 600, 150] as const;
+/** Planes in flight per airfield level (scrambled interceptors apart). */
+export const AIRFIELD_CAPACITY = 4;
+/** A fighter patrols (and chases) within this distance of its airfield. */
 export const FIGHTER_RANGE = 90;
+export const FIGHTER_PATROL_TICKS = sec(60);
+/** A fighter engages what comes within this distance of it… */
+export const FIGHTER_SIGHT = 30;
+/** …and deals this much damage a tick once within FIGHTER_CONTACT tiles of it. */
+export const FIGHTER_DAMAGE = 100;
+export const FIGHTER_CONTACT = 3;
+/**
+ * Every airfield level keeps one interceptor on alert (free), rearmed SCRAMBLE_REARM after
+ * it took off. It scrambles at a hostile bomber or reconnaissance plane within FIGHTER_RANGE
+ * that is detected: within SCRAMBLE_SIGHT of the airfield, or inside friendly radar
+ * coverage. It gives up after SCRAMBLE_TICKS.
+ */
+export const SCRAMBLE_SIGHT = 50;
+export const SCRAMBLE_REARM = sec(30);
+export const SCRAMBLE_TICKS = sec(30);
+/** Bombers reach this far from their airfield. */
+export const BOMBER_RANGE = 300;
+/** A bomber hits the hostile structure nearest the aim point within this distance. */
+export const BOMBER_SNAP = 12;
+/** Rails and trains within this radius of the impact are cut / destroyed. */
 export const BOMBER_RADIUS = 6;
-export const BOMBER_KILL = 0.35;
+/** Levels a hit knocks off (a level-1 building, a defence post, is destroyed)… */
+export const BOMBER_LEVELS = 1;
+/** …and inside one of the bomber owner's reconnaissance zones. */
+export const BOMBER_LEVELS_SPOTTED = 2;
+export const RECON_RANGE = 400;
 export const RECON_RADIUS = 40;
 export const RECON_TICKS = sec(40);
-export const AIRFIELD_CAPACITY = 4;
+/** Inside one of your reconnaissance zones, your land attacks lose this share of their usual losses. */
+export const RECON_LOSS_MULT = 0.75;
+/** Radar coverage: RADAR_RANGE + RADAR_RANGE_PER_LEVEL per level above the first. */
+export const RADAR_RANGE_PER_LEVEL = 20;
+export const radarRange = (level: number) => RADAR_RANGE + RADAR_RANGE_PER_LEVEL * Math.max(0, level - 1);
 
 // --------------------------------------------------------------- loyalty
 /** Below the secession threshold (60): a fresh conquest stays at risk ~24 s (one sweep near a city). */

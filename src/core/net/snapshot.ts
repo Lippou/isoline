@@ -219,6 +219,7 @@ export function restoreSnapshot(map: GameMap, snap: Snapshot): Game {
   game.victory = fromPlain(snap.victory) as Game['victory'];
   Object.assign(game.features, fromPlain(snap.features) as object);
   game.ai = fromPlain(snap.ai) as Game['ai'];
+  game.ai.raidedBy ??= new Map(); // saves from before the 1.10 air raids
   // Saves from before capitals (1.3.0): every living country gets one (largest city, centre…).
   if (snap.players.some((raw) => !!raw && typeof raw === 'object' && !('capital' in raw)))
     migrateCapitals(game);

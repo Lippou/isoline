@@ -9,6 +9,7 @@
   import { currentSession } from '../stores/app.svelte';
   import { buildingUnlock, lockFor, nukeUnlock, techKey, type Unlock } from '../../core/rules/tech';
   import ResearchReminder from './ResearchReminder.svelte';
+  import { AIR_REACH } from '../game/airPreview';
   import { hudSize } from '../stores/hudBox.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
@@ -36,9 +37,9 @@
     : [];
   const air = cfg.features.air
     ? [
-        { kind: 0, name: 'fighter' },
-        { kind: 1, name: 'bomber' },
-        { kind: 2, name: 'recon' },
+        { kind: 0, name: 'fighter', icon: 'airfield' as IconName },
+        { kind: 1, name: 'bomber', icon: 'bomb' as IconName },
+        { kind: 2, name: 'recon', icon: 'eye' as IconName },
       ]
     : [];
   let hovered: string | null = $state(null);
@@ -238,7 +239,7 @@
             <div class="slot" class:locked={lock >= 0}>
               {@render tool(
                 `a${a.kind}`,
-                'airfield',
+                a.icon,
                 t(`unit.${a.name}.short`),
                 short(AIR_COST[a.kind as 0 | 1 | 2]),
                 '',
@@ -255,6 +256,7 @@
                   t(`unit.${a.name}.desc`),
                   [
                     t('hud.costN', { n: short(AIR_COST[a.kind as 0 | 1 | 2]) }),
+                    t('air.reach', { n: AIR_REACH[a.kind as 0 | 1 | 2] }),
                     L.buildingCount[B.Airfield] === 0 ? t('hud.needsAirfield') : '',
                   ].filter(Boolean),
                   requires(lock),

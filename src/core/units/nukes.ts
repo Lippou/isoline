@@ -327,6 +327,15 @@ export function samLoaded(game: Game, sam: Building): number {
   return -1;
 }
 
+/** Loaded SAM missiles (a bomber raid's planners count them). */
+export function samMissilesReady(game: Game, sam: Building): number {
+  if (sam.buildLeft > 0) return 0;
+  const slots = ensureSamSlots(game, sam);
+  let n = 0;
+  for (let k = 0; k < slots; k++) if (sam.tubes[k] === 0) n++;
+  return n;
+}
+
 export function samFire(sam: Building, slot: number): void {
   sam.tubes[slot] = SAM_COOLDOWN;
 }

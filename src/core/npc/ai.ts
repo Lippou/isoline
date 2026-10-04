@@ -4,10 +4,31 @@
 import type { Game } from '../game/state';
 import type { Player, Personality } from '../game/player';
 import { applyCommand } from '../game/commands';
-import { B, N, NUKE_SPEED, RELATION_HOSTILE } from '../game/constants';
+import {
+  A,
+  AIR_COST,
+  B,
+  BOMBER_RANGE,
+  DEFENSE_POST_RANGE,
+  FIGHTER_RANGE,
+  N,
+  NUKE_SPEED,
+  RECON_RANGE,
+  RELATION_HOSTILE,
+  SCRAMBLE_SIGHT,
+} from '../game/constants';
 import { IS_LAND } from '../map/terrain';
 import { MAX_LEVEL, buildCost, checkPlacement, levelsOwned } from '../buildings/buildings';
-import { hostileSams, launchSilo, maxLaunchable, nukeCost, samRangeOf } from '../units/nukes';
+import {
+  hostileSams,
+  launchSilo,
+  maxLaunchable,
+  nukeCost,
+  samMissilesReady,
+  samRangeOf,
+} from '../units/nukes';
+import { alertReady, airfieldFor, radarSees, spotted } from '../units/air';
+import { airLock } from '../rules/tech';
 import { ARC_DOWN, ARC_UP, Trajectory, predictInterception } from '../units/trajectory';
 import { U } from '../units/unit';
 import { planBoat, warshipCost } from '../units/ships';
@@ -30,16 +51,22 @@ interface Mem {
   pendingAnswers: Map<number, number>; // requester → tick to answer
   /** Ally whose alliance is left to lapse (boxed in by allies with an idle army), -1 none. */
   prey?: number;
+  /** Last bombing raid, reconnaissance flight and fighter sortie (absent in older saves). */
+  lastRaid?: number;
+  lastRecon?: number;
+  lastFighter?: number;
 }
 
 export interface AIState {
   mem: Map<number, Mem>;
   nukedBy: Map<number, number>; // victim → last attacker
+  /** Victim of a bombing raid → its last raider and when (units/air.ts). */
+  raidedBy: Map<number, [by: number, tick: number]>;
   cursor: number;
 }
 
 export function createAIState(): AIState {
-  return { mem: new Map(), nukedBy: new Map(), cursor: 1 };
+  return { mem: new Map(), nukedBy: new Map(), raidedBy: new Map(), cursor: 1 };
 }
 
 interface Traits {
@@ -291,7 +318,14 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
   // way); a nation under nuclear fire switches to SAM batteries until it has them.
   if (game.config.features.tech) {
     const sam = game.ai.nukedBy.has(p.id) ? lockFor(p.tech, 'sam') : -1;
-    const goal = sam >= 0 ? sam : p.researching < 0 ? planGoal(p.tech, NATION_RESEARCH[p.personality]) : -1;
+    // Bombed (normal and up): interceptors need an airfield, so Aerospace comes next.
+    const air =
+      sam < 0 && game.config.features.air && diff.aggression >= 1 && raider(game, p, AI_RAID_MEMORY) > 0
+        ? lockFor(p.tech, 'airfield')
+        : -1;
+    const urgent = sam >= 0 ? sam : air;
+    const goal =
+      urgent >= 0 ? urgent : p.researching < 0 ? planGoal(p.tech, NATION_RESEARCH[p.personality]) : -1;
     if (goal >= 0 && goal !== p.researching) applyCommand(game, p.id, { t: 'research', tech: goal });
   }
 
@@ -381,6 +415,10 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
 
   // 7. Nukes.
   if (game.config.allowNukes && game.tick - m.lastNuke > 300 / t.nukes) cost += tryNuke(game, p, m, t);
+
+  // 7b. Air power (normal and up): raids, reconnaissance before offensives, fighters at landings.
+  if (game.config.features.air && diff.aggression >= 1 && p.buildingCount[B.Airfield]! > 0)
+    cost += tryAir(game, p, m, t, nb, incoming);
 
   // 8. Warships against threats.
   if (game.config.allowPorts && p.buildingCount[B.Port]! > 0 && game.rng.chance(0.05 * t.naval)) {
@@ -576,9 +614,19 @@ function tryBuild(game: Game, p: Player, m: Mem, t: Traits, underAttack: boolean
     levelsOwned(game, p, B.Sam) < 1 + cities / 5
   )
     scored.push([B.Sam, game.ai.nukedBy.has(p.id) ? 3 : 1.2]);
-  if (game.config.features.radar && counts[B.Radar]! < 1 && p.gold > 1_000_000) scored.push([B.Radar, 0.9]);
-  if (game.config.features.air && counts[B.Airfield]! < 1 && p.gold > 3_000_000 && t.aggression > 1)
-    scored.push([B.Airfield, 1.1]);
+  // Air power (normal and up, GAME_DESIGN.md §11): an airfield once at war (bombers, and
+  // interceptors on alert), a second for aggressive nations or after a raid; a radar to guide
+  // the interceptors (or, with the fog, to see).
+  const raided = raider(game, p, AI_RAID_MEMORY) > 0;
+  const flies = game.config.features.air && game.difficulty().aggression >= 1;
+  const atWar = raided || m.grudge.size > 0 || game.tick - m.lastWar < 3000;
+  if (flies && atWar && p.gold > 1_500_000) {
+    const want = raided || (t.aggression > 1 && p.gold > 6_000_000) ? 2 : 1;
+    if (levelsOwned(game, p, B.Airfield) < want) scored.push([B.Airfield, raided ? 2 : 1.1 * t.aggression]);
+  }
+  const radarUse = game.config.features.fog || (flies && (counts[B.Airfield]! > 0 || raided));
+  if (game.config.features.radar && radarUse && counts[B.Radar]! < 1 && p.gold > 1_000_000)
+    scored.push([B.Radar, raided ? 1.8 : 0.9]);
   // Research centres: their levels follow the city levels, by personality and difficulty.
   if (game.config.features.tech && cities >= 1) {
     const labs = levelsOwned(game, p, B.Lab);
@@ -616,6 +664,205 @@ function tryBuild(game: Game, p: Player, m: Mem, t: Traits, underAttack: boolean
     }
   }
   return 30;
+}
+
+/** Ticks between two raids (÷ aggression × difficulty), reconnaissance flights and fighter sorties. */
+const AI_RAID_COOLDOWN = 450;
+const AI_RECON_COOLDOWN = 600;
+const AI_FIGHTER_COOLDOWN = 200;
+/** A raid is remembered this long (airfield, radar, Aerospace)… */
+const AI_RAID_MEMORY = 6000;
+/** …and avenged by bombers this long after it. */
+const AI_RETALIATION = 1800;
+
+/** Who bombed p within the last `window` ticks (-1: nobody). */
+function raider(game: Game, p: Player, window: number): number {
+  const r = game.ai.raidedBy.get(p.id);
+  return r && game.tick - r[1] <= window ? r[0] : -1;
+}
+
+/** Gold a nation keeps for its economy before paying for planes. */
+const AI_AIR_RESERVE = 1_000_000;
+
+/**
+ * Air power. Raids on the country we fight (the defence post holding our offensive first,
+ * SAMs before a nuclear strike, then silos, airfields, cities, labs, factories, ports): smart
+ * nations see the SAMs and interceptors guarding a target and send enough bombers to empty
+ * the SAMs, or look elsewhere. A reconnaissance plane over the front of an offensive (always
+ * from hard, one in two on normal). A fighter at a transport sailing for our coast.
+ */
+function tryAir(
+  game: Game,
+  p: Player,
+  m: Mem,
+  t: Traits,
+  nb: Map<number, Neighbor>,
+  incoming: Map<number, number>,
+): number {
+  if (airLock(game, p) >= 0) return 0;
+  const diff = game.difficulty();
+  const w = game.map.width;
+  let cost = 20;
+  // Fighters: a hostile transport sailing for our coast, within reach of an airfield.
+  if (
+    game.tick - (m.lastFighter ?? -10_000) > AI_FIGHTER_COOLDOWN &&
+    p.gold > AIR_COST[A.Fighter] + AI_AIR_RESERVE / 2
+  ) {
+    for (const u of game.units) {
+      if (!u.alive || u.type !== U.Transport || u.dest !== p.id || game.friendly(u.owner, p.id)) continue;
+      if (u.troops < Math.max(2_000, p.troops * 0.03)) continue;
+      const f = airfieldFor(game, p, u.x, u.y);
+      if (!f || f.d > FIGHTER_RANGE) continue;
+      applyCommand(game, p.id, { t: 'air', kind: A.Fighter, tile: Math.floor(u.y) * w + Math.floor(u.x) });
+      m.lastFighter = game.tick;
+      cost += 30;
+      break;
+    }
+  }
+  // Whom we fight: our offensive's target, else the biggest attacker, else whoever bombed us.
+  let enemy = -1;
+  for (const a of game.attacks)
+    if (!a.done && a.attacker === p.id && a.target > 0 && game.players[a.target]!.kind !== 'tribe')
+      enemy = a.target;
+  if (enemy < 0) {
+    let most = 0;
+    for (const [att, troops] of incoming) {
+      if (troops > most && game.players[att]?.kind !== 'tribe') {
+        enemy = att;
+        most = troops;
+      }
+    }
+  }
+  if (enemy < 0) enemy = raider(game, p, AI_RETALIATION);
+  const q = enemy > 0 ? game.players[enemy] : null;
+  if (!q || !q.alive || game.friendly(p.id, q.id) || !game.attackAllowed(p.id, q.id, true)) return cost;
+
+  // Reconnaissance over the front of an offensive under way.
+  const front = nb.get(q.id);
+  if (
+    front &&
+    hasAttack(game, p, q.id) &&
+    game.tick - (m.lastRecon ?? -10_000) > AI_RECON_COOLDOWN &&
+    p.gold > AIR_COST[A.Recon] + AI_AIR_RESERVE &&
+    game.rng.chance(diff.targeting >= 0.9 ? 1 : 0.5)
+  ) {
+    const fx = (front.tile % w) + 0.5;
+    const fy = Math.floor(front.tile / w) + 0.5;
+    const f = airfieldFor(game, p, fx, fy);
+    if (f && f.d <= RECON_RANGE && !spotted(game, p.id, fx, fy)) {
+      applyCommand(game, p.id, { t: 'air', kind: A.Recon, tile: front.tile });
+      m.lastRecon = game.tick;
+      cost += 30;
+    }
+  }
+
+  // Bombing raid.
+  const raidEvery = AI_RAID_COOLDOWN / Math.max(0.5, t.aggression * diff.aggression);
+  const bomber = AIR_COST[A.Bomber];
+  if (game.tick - (m.lastRaid ?? -10_000) < raidEvery || p.gold < bomber + AI_AIR_RESERVE) return cost;
+  m.lastRaid = game.tick;
+  cost += 80;
+  const fields: Building[] = [];
+  for (const b of game.buildings.values())
+    if (b.owner === p.id && b.type === B.Airfield && b.buildLeft === 0) fields.push(b);
+  // Our offensive's front against q (a few frontier tiles), to find the defence post holding it.
+  const frontTiles: number[] = [];
+  for (const a of game.attacks) {
+    if (a.done || a.attacker !== p.id || a.target !== q.id) continue;
+    const h = a.heapTiles;
+    const step = Math.max(1, Math.floor(h.length / 8));
+    for (let k = 0; k < h.length; k += step) frontTiles.push(h[k]!);
+  }
+  const nukes = game.config.allowNukes && p.buildingCount[B.Silo]! > 0;
+  const sams: { b: Building; range: number }[] = [];
+  for (const b of game.buildings.values())
+    if (b.type === B.Sam && b.buildLeft === 0 && !game.friendly(b.owner, p.id))
+      sams.push({ b, range: samRangeOf(game, b) });
+  let best: Building | null = null;
+  let bestScore = 0;
+  let bestNeed = 1;
+  for (const b of game.buildings.values()) {
+    if (b.owner !== q.id) continue;
+    if (!fields.some((f) => Math.hypot(f.x - b.x, f.y - b.y) <= BOMBER_RANGE)) continue;
+    let score: number;
+    switch (b.type) {
+      case B.DefensePost: {
+        const r2 = (DEFENSE_POST_RANGE + 5) ** 2;
+        const onFront = frontTiles.some((ft) => ((ft % w) - b.x) ** 2 + (((ft / w) | 0) - b.y) ** 2 <= r2);
+        score = onFront ? 9 : 0.5;
+        break;
+      }
+      case B.Sam:
+        score = nukes ? 6 : 2;
+        break;
+      case B.Silo:
+        score = 4 + b.level;
+        break;
+      case B.Airfield:
+        score = 4;
+        break;
+      case B.City:
+        score = 2 + 0.6 * b.level;
+        break;
+      case B.Lab:
+        score = 2.5;
+        break;
+      case B.Factory:
+      case B.Port:
+        score = 1.5 + 0.3 * b.level;
+        break;
+      default:
+        score = 1;
+    }
+    // Defences on the way: loaded SAM missiles covering the target (each takes a bomber),
+    // interceptors that would rise against it. Smart nations see them, dumb ones do not.
+    // Defences: every nation sees the SAMs guarding the target itself (one bomber per loaded
+    // missile); the smart ones also those along the route and the interceptors on alert.
+    let need = 1;
+    const smart = game.rng.chance(diff.targeting);
+    let f0 = fields[0]!;
+    for (const f of fields) if (Math.hypot(f.x - b.x, f.y - b.y) < Math.hypot(f0.x - b.x, f0.y - b.y)) f0 = f;
+    for (const s of sams) {
+      const d = smart
+        ? segmentDist(s.b.x, s.b.y, f0.x, f0.y, b.x, b.y)
+        : Math.hypot(s.b.x - b.x, s.b.y - b.y);
+      if (d <= s.range) need += samMissilesReady(game, s.b);
+    }
+    if (smart) {
+      game.grid.query(b.x, b.y, FIGHTER_RANGE, (id) => {
+        const s = game.buildings.get(id)!;
+        if (s.type !== B.Airfield || s.buildLeft > 0 || game.friendly(s.owner, p.id) || alertReady(s) < 0)
+          return;
+        const d = Math.hypot(s.x - b.x, s.y - b.y);
+        if (d <= (radarSees(game, s.owner, b.x, b.y) ? FIGHTER_RANGE : SCRAMBLE_SIGHT)) score *= 0.5;
+      });
+    }
+    score = score / need + game.rng.next() * (1 - diff.targeting) * 3;
+    if (score > bestScore) {
+      bestScore = score;
+      best = b;
+      bestNeed = need;
+    }
+  }
+  if (!best || bestScore < 1) return cost;
+  // Emptying a SAM takes a bomber per loaded missile, plus the one that gets through.
+  const send = Math.min(
+    bestNeed,
+    diff.targeting >= 0.9 ? 4 : 2,
+    Math.floor((p.gold - AI_AIR_RESERVE) / bomber),
+  );
+  if (send < bestNeed) return cost;
+  for (let k = 0; k < send; k++) applyCommand(game, p.id, { t: 'air', kind: A.Bomber, tile: best.tile });
+  return cost;
+}
+
+/** Distance from (px, py) to the segment (ax, ay)–(bx, by). */
+function segmentDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const l2 = dx * dx + dy * dy;
+  const k = l2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
+  return Math.hypot(px - ax - k * dx, py - ay - k * dy);
 }
 
 function tryBoat(game: Game, p: Player, m: Mem, _t: Traits, idle = false): number {

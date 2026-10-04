@@ -32,7 +32,9 @@ export type Sfx =
   | 'victory'
   | 'defeat'
   | 'eliminated'
-  | 'warHorn';
+  | 'warHorn'
+  /** Radar early warning: synthesised (two soft sine blips), no recording. */
+  | 'radar';
 
 export type UiSound = 'click' | 'hover' | 'confirm' | 'error' | 'open';
 export type Scene = 'silent' | 'menu' | 'game' | 'victory' | 'defeat';
@@ -70,6 +72,7 @@ const FILE: Record<Sfx | UiSound, string | null> = {
   defeat: 'defeat',
   eliminated: 'eliminated',
   warHorn: 'warHorn',
+  radar: null,
   click: 'click',
   hover: null,
   confirm: 'confirm',
@@ -104,6 +107,7 @@ const THROTTLE: Partial<Record<Sfx | UiSound, number>> = {
   siren: 4000,
   launch: 150,
   explosionMirv: 250,
+  radar: 2500,
 };
 
 const PLAYLISTS: Record<Mood, string[]> = {
@@ -267,7 +271,36 @@ class AudioEngine {
   }
 
   sfx(name: Sfx, vol = 1): void {
+    if (name === 'radar') {
+      this.blip(vol);
+      return;
+    }
     this.play(name, this.sfxBus, vol, !['victory', 'defeat', 'alliance', 'betrayal', 'siren'].includes(name));
+  }
+
+  /** The radar's warning: two short, soft sine pings a fifth apart, like a scope's return. */
+  private blip(vol: number): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const now = performance.now();
+    if (now - (this.lastPlay.get('radar') ?? -1e9) < (THROTTLE.radar ?? 0)) return;
+    this.lastPlay.set('radar', now);
+    for (const [at, freq] of [
+      [0, 1318.5],
+      [0.16, 987.8],
+    ] as const) {
+      const t0 = ctx.currentTime + at;
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.18 * vol, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.32);
+      osc.connect(g).connect(this.sfxBus);
+      osc.start(t0);
+      osc.stop(t0 + 0.34);
+    }
   }
 
   ui(name: UiSound): void {

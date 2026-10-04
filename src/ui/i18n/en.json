@@ -474,7 +474,6 @@
       "airfield": "Airfields and aircraft"
     },
     "economy": {
-      "title": "Economy",
       "1": {
         "name": "Trading posts",
         "desc": "+10% base income"
@@ -499,13 +498,13 @@
         "name": "Globalisation",
         "desc": "+10% trade and train income"
       },
+      "title": "Economy",
       "r": {
         "name": "Prosperity",
         "desc": "+2% on all income per level"
       }
     },
     "industry": {
-      "title": "Industry",
       "1": {
         "name": "Railways",
         "desc": "+10% train income"
@@ -530,13 +529,13 @@
         "name": "Robotics",
         "desc": "−10% building costs"
       },
+      "title": "Industry",
       "r": {
         "name": "Productivity",
         "desc": "−1% building costs per level"
       }
     },
     "military": {
-      "title": "Military",
       "1": {
         "name": "Mountain troops",
         "desc": "−10% losses in hills and mountains"
@@ -561,13 +560,13 @@
         "name": "Special forces",
         "desc": "−10% losses everywhere"
       },
+      "title": "Military",
       "r": {
         "name": "Drill",
         "desc": "−1% losses per level"
       }
     },
     "naval": {
-      "title": "Navy",
       "1": {
         "name": "Armour plating",
         "desc": "+20% warship hit points"
@@ -592,13 +591,13 @@
         "name": "Container ships",
         "desc": "+10% trade income"
       },
+      "title": "Navy",
       "r": {
         "name": "Freight",
         "desc": "+3% trade income per level"
       }
     },
     "defense": {
-      "title": "Defence",
       "1": {
         "name": "Surface-to-air missiles",
         "desc": "Unlocks SAM batteries"
@@ -623,13 +622,13 @@
         "name": "Missile shield",
         "desc": "SAM: +1 target, range +10"
       },
+      "title": "Defence",
       "r": {
         "name": "Interception",
         "desc": "SAM: range +1 per level"
       }
     },
     "nuclear": {
-      "title": "Nuclear",
       "1": {
         "name": "Atomic physics",
         "desc": "+10% research speed; leads to the nuclear programme"
@@ -654,6 +653,7 @@
         "name": "Mass production",
         "desc": "−25% bomb costs"
       },
+      "title": "Nuclear",
       "r": {
         "name": "Launch cadence",
         "desc": "Silos reload 5% faster per level"
@@ -966,11 +966,11 @@
     },
     "air": {
       "name": "Air power",
-      "desc": "Airfields, fighters, bombers and reconnaissance."
+      "desc": "Airfields and interceptors, bombers (strikes on buildings), fighters, reconnaissance."
     },
     "radar": {
       "name": "Radar towers",
-      "desc": "Reveal the fog within 60 tiles."
+      "desc": "Early warning and interceptor guidance within 60 tiles; reveal the fog."
     },
     "council": {
       "name": "World Council",
@@ -1056,12 +1056,12 @@
     },
     "radar": {
       "name": "Radar tower",
-      "desc": "Reveals the fog of war within 60 tiles.",
+      "desc": "60-tile coverage (+20 per level): early warning of incoming aircraft and transports, guides interceptors up to 90 tiles from your airfields; reveals the fog.",
       "short": "Radar"
     },
     "airfield": {
       "name": "Airfield",
-      "desc": "Produces fighters, bombers and reconnaissance planes.",
+      "desc": "Launches fighters, bombers and reconnaissance (4 in flight per level). One alert interceptor per level scrambles at detected bombers and reconnaissance: 50 tiles, 90 under your radars.",
       "short": "Airfield"
     },
     "lab": {
@@ -1081,17 +1081,17 @@
     },
     "fighter": {
       "name": "Fighter",
-      "desc": "Intercepts bombers and transports within 90 tiles of its airfield.",
+      "desc": "Patrols for 60 s within 90 tiles of an airfield: shoots down bombers, fighters, reconnaissance and invading transports within 30 tiles. Escorts your raids, covers a front or a coast.",
       "short": "Fighter"
     },
     "bomber": {
       "name": "Bomber",
-      "desc": "Kills troops in a 6-tile radius, no fallout. Can be intercepted.",
+      "desc": "Hits the enemy building nearest the target (range 300): −1 level, destroyed at level 1; silos and SAMs lose their loaded missiles. Two levels under your reconnaissance. Shot down by SAMs and fighters.",
       "short": "Bomber"
     },
     "recon": {
       "name": "Reconnaissance",
-      "desc": "Reveals an area for 40 seconds.",
+      "desc": "40 s over a 40-tile zone (range 400): your attacks there lose 25% fewer troops, your bombers hit two levels, and hovering there reveals treasury, loaded tubes and ready missiles.",
       "short": "Recon"
     }
   },
@@ -1194,7 +1194,7 @@
     "crisis.desc": "Every country's income drops by 25% for 2 minutes. Trade and trains are unaffected.",
     "pandemic.desc": "Troop growth is halved for 2 minutes. Every army lost 3% of its troops when the outbreak began.",
     "boom.desc": "Merchant ships and trains pay double for 2 minutes: a good time to trade.",
-    "solarStorm.desc": "Radars are blind for 90 seconds: the fog of war falls back over the areas they revealed.",
+    "solarStorm.desc": "Radars are blind for 90 seconds: no early warning, no interceptor guidance, and the fog falls back over what they revealed.",
     "peaceSummit.desc": "A forced 60-second truce: no country can attack another. Tribes can still be attacked.",
     "crisis.fx": "Income −25%",
     "pandemic.fx": "Troop growth −50%",
@@ -1234,7 +1234,7 @@
     "intercepted": "Your SAMs intercepted a missile!",
     "nukeIntercepted": "Your missile was intercepted.",
     "bombed": "Bombing by {by}: {troops} troops lost.",
-    "planeLost": "An aircraft was shot down.",
+    "planeLost": "{by} shot down one of your aircraft ({plane}).",
     "sabotaged": "Sabotage ordered by {by}!",
     "researchDone": "Research complete: {tech}.",
     "secession": "Secession: {tiles} tiles revolted!",
@@ -1248,7 +1248,19 @@
     "researchIdle": "Nothing is being researched: pick the next technology.",
     "labReady": "Research centre ready: research speeds up.",
     "labLost": "{by} has seized one of your research centres.",
-    "labTaken": "You take a research centre from {player}."
+    "labTaken": "You take a research centre from {player}.",
+    "raidDamaged": "Air raid by {by} — {building}: −{n} lvl.",
+    "raidDestroyed": "Air raid by {by} — {building}: in ruins.",
+    "raidHit": "Raid on {player} — {building}: −{n} lvl.",
+    "raidHitDestroyed": "Raid on {player} — {building}: in ruins.",
+    "planeDowned": "You shot down an aircraft of {player} ({plane}).",
+    "radar": {
+      "bomber": "Radar — bomber from {by} inbound, target: {building}.",
+      "bomberLand": "Radar — bomber from {by} inbound to your land.",
+      "fighter": "Radar — fighters from {by} over your land.",
+      "recon": "Radar — reconnaissance plane from {by} over your land.",
+      "transport": "Radar — transport from {by} inbound: {troops} troops."
+    }
   },
   "error": {
     "nukeSelfMirv": "A MIRV cannot target your own country: its warheads would fall all over your land.",
@@ -1256,7 +1268,7 @@
     "noFrontier": "No shared border: to reach it, send a boat (B key or right click → Land troops).",
     "warship": "Cannot arm a warship: a port on this sea is required, or not enough gold.",
     "nuke": "No missile available (silo, gold or reload).",
-    "air": "No airfield available, target out of range or not enough gold.",
+    "air": "No free airfield in range, invalid target or not enough gold.",
     "general": "Ability unavailable.",
     "simulation": "Simulation error — see the log.",
     "boat": {
@@ -1845,7 +1857,16 @@
     "capital": "Capital",
     "yourCapital": "Your capital",
     "disorg": "Disorganised by the loss of its capital ({clock})",
-    "threat": "Army ×{ratio} massed on your border"
+    "threat": "Army ×{ratio} massed on your border",
+    "recon": {
+      "title": "Reconnaissance",
+      "gold": "treasury {gold}",
+      "silos": "loaded tubes {n}/{m}",
+      "sams": "SAM missiles {n}/{m}",
+      "alert": "interceptors {n}/{m}",
+      "attack": "your attacks here: −{pct}% losses"
+    },
+    "alert": "interceptors {n}/{m}"
   },
   "weather": {
     "stormNear": "A storm is forming near you: ships {pct}% slower.",
@@ -2343,5 +2364,29 @@
     "dispatches": "{n} dispatches",
     "dispatchesOne": "1 dispatch",
     "dispatchesShow": "Unfold the dispatches ({n})"
+  },
+  "air": {
+    "role": {
+      "fighter": "60 s patrol: shoots down aircraft and invading transports within 30 tiles.",
+      "bomber": "Hits the building nearest the sights: −1 level (destroyed at level 1).",
+      "recon": "40-tile zone for 40 s: −25% losses for your attacks, doubled strikes, intelligence on hover."
+    },
+    "flying": "{n}/{max} in flight",
+    "flyingTip": "Planes in flight / room at your airfields (4 per level)",
+    "reach": "Range {n} tiles",
+    "problem": {
+      "noAirfield": "No airfield: build one first",
+      "full": "Airfields full: wait for a plane to land",
+      "range": "Out of your airfields' range",
+      "noTarget": "No enemy target here",
+      "teammate": "You cannot target a teammate"
+    },
+    "hitLevel": "{player}'s {building}: lvl {from} → {to}",
+    "hitDestroy": "{player}'s {building}: in ruins",
+    "spotted": "Under your reconnaissance: double strike",
+    "railsOnly": "No building: rails and trains only",
+    "sam": "{n} SAM missile(s) on the route: one bomber downed per missile",
+    "interceptors": "{n} enemy airfield(s) on alert over the target",
+    "clear": "Clear route: no known defences"
   }
 }

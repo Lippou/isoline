@@ -414,7 +414,7 @@
         ].map((x) => ({
           id: x.id,
           label: x.label,
-          icon: 'airfield' as IconName,
+          icon: (['airfield', 'bomb', 'eye'] as IconName[])[x.k]!,
           desc: t(`unit.${['fighter', 'bomber', 'recon'][x.k]}.desc`),
           run: act(() => s.cmd({ t: 'air', kind: x.k, tile })),
         })),

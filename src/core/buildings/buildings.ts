@@ -14,8 +14,10 @@ import {
   LAB_COST_CAP,
   MIN_BUILDING_SPACING,
   RADAR_COST,
+  SAM_COOLDOWN,
   SAM_COSTS,
   SILO_COST,
+  SILO_RELOAD_TICKS,
   STATION_TYPES,
 } from '../game/constants';
 import type { Building } from './building';
@@ -350,6 +352,38 @@ export function demolishBuilding(game: Game, p: Player, b: Building): boolean {
   return true;
 }
 
+/**
+ * A bomb hit (GAME_DESIGN.md §11): `levels` come off the building, an upgrade under way
+ * first; a building under construction, at level 1 or that cannot be upgraded (defence
+ * post) is destroyed. A silo or a SAM that survives has every missile to reload. True when
+ * the building is gone.
+ */
+export function damageBuilding(game: Game, b: Building, levels: number): boolean {
+  const p = game.players[b.owner];
+  for (let k = 0; k < levels; k++) {
+    if (b.buildLeft > 0 || (b.upgradeLeft === 0 && b.level <= 1)) {
+      removeBuilding(game, b, false);
+      return true;
+    }
+    if (b.upgradeLeft > 0) {
+      b.upgradeLeft = 0;
+      b.upgradeTotal = 0;
+    } else {
+      b.invested *= (b.level - 1) / b.level;
+      b.level--;
+      if (b.type === B.Silo) b.tubes.pop();
+    }
+    if (b.type === B.City && p) p.cityLevels--;
+  }
+  if (b.type === B.Silo)
+    for (let k = 0; k < b.tubes.length; k++) b.tubes[k] = Math.max(b.tubes[k]!, SILO_RELOAD_TICKS);
+  if (b.type === B.Sam) for (let k = 0; k < b.tubes.length; k++) b.tubes[k] = SAM_COOLDOWN;
+  if (b.type === B.Airfield) b.tubes.length = Math.min(b.tubes.length, b.level);
+  game.buildingsDirty = true;
+  game.buildingsVersion++;
+  return false;
+}
+
 export function removeBuilding(game: Game, b: Building, _voluntary: boolean): void {
   if (!b.alive) return;
   b.alive = false;
@@ -375,7 +409,8 @@ export function updateBuildings(game: Game): void {
     }
     if (b.upgradeLeft > 0 && --b.upgradeLeft === 0) completeUpgrade(game, b);
     if (b.cooldown > 0) b.cooldown--;
-    if (b.type === B.Silo) {
+    // Silo tubes reload; airfields rearm their alert interceptors (units/air.ts).
+    if (b.type === B.Silo || b.type === B.Airfield) {
       for (let k = 0; k < b.tubes.length; k++) if (b.tubes[k]! > 0) b.tubes[k]!--;
     }
   }

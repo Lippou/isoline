@@ -16,6 +16,7 @@
   import HoverCard from '../hud/HoverCard.svelte';
   import NukeAlerts from '../hud/NukeAlerts.svelte';
   import NukePanel from '../hud/NukePanel.svelte';
+  import AirPanel from '../hud/AirPanel.svelte';
   import PactBanner from '../hud/PactBanner.svelte';
   import Alliances from '../hud/Alliances.svelte';
   import Isolines from '../components/Isolines.svelte';
@@ -152,7 +153,7 @@
       <!-- The right column, between the leaderboard and the minimap: the launch panel while
            aiming, then the dispatches and, nearest the minimap, the alliance offers. -->
       <div class="tr">
-        {#if live}<NukePanel {ctl} />{/if}
+        {#if live}<NukePanel {ctl} /><AirPanel {ctl} />{/if}
         <Toasts {ctl} />
         {#if live}<AllyRequests {ctl} />{/if}
       </div>
