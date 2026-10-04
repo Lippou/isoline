@@ -10,10 +10,11 @@
   import { audio } from '../../audio/audio';
   import type { GameController } from '../game/controller';
   import { layout, zonePiece } from '../stores/layout.svelte';
+  import { setFold } from '../stores/folds.svelte';
+  import FoldButton from './FoldButton.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   const s = ctl.session;
-  let open = $state(true);
 
   const rows = $derived(
     (hud.local?.allies ?? [])
@@ -22,13 +23,15 @@
       .sort((a, b) => a.expiresIn - b.expiresIn),
   );
   const level = $derived(layout.levelOf('alliances'));
+  /** The list printed (folded by the player, remembered, or short of room: its header only). */
+  const open = $derived(level === 'full');
   /** Unfolded by the player, the list asks the column for its room. */
   function toggle(): void {
-    if (level !== 'full') {
-      open = true;
+    if (!open) {
+      setFold('alliances', false);
       layout.pin('alliances');
     } else {
-      open = !open;
+      setFold('alliances', true);
       layout.pin('alliances', false);
     }
   }
@@ -52,13 +55,22 @@
     aria-label={t('alliances.title')}
     use:zonePiece={{ id: 'alliances', level, n: rows.length }}
   >
-    <button class="head" onclick={toggle} aria-expanded={open && level === 'full'}>
-      <Icon name="alliance" size={15} />
-      <b>{t('alliances.title')}</b>
-      <span class="n mono">{rows.length}</span>
-      <Icon name={open && level === 'full' ? 'chevronDown' : 'chevronRight'} size={14} />
-    </button>
-    {#if open && level === 'full'}
+    <div class="headline">
+      <button class="head" onclick={toggle} tabindex="-1" aria-expanded={open}>
+        <Icon name="alliance" size={15} />
+        <b>{t('alliances.title')}</b>
+        <span class="n mono">{rows.length}</span>
+      </button>
+      <FoldButton
+        folded={!open}
+        name={t('fold.alliances')}
+        dir="up"
+        tip="below"
+        onclick={toggle}
+        testid="fold-alliances"
+      />
+    </div>
+    {#if open}
       <ul>
         {#each rows as r (r.id)}
           {@const renew = r.expiresIn <= ALLIANCE_RENEW_WINDOW}
@@ -103,13 +115,20 @@
     box-shadow: var(--np-lift);
     font-size: 0.86em;
   }
+  .headline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-right: 8px;
+  }
   .head {
     appearance: none;
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 7px;
-    width: 100%;
-    padding: 5px 10px 4px;
+    padding: 5px 4px 4px 10px;
     border: 0;
     background: transparent;
     color: var(--np-good);

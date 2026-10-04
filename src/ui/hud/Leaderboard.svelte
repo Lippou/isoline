@@ -8,23 +8,36 @@
   import Icon from '../icons/Icon.svelte';
   import { hudSize } from '../stores/hudBox.svelte';
   import { layout, zonePiece } from '../stores/layout.svelte';
+  import { setFold } from '../stores/folds.svelte';
+  import FoldButton from './FoldButton.svelte';
 
   // The head of the right column (zones.ts). Short of room in it, the table shows the top 5
-  // (and us; a button unfolds the top 10), then folds to its title (a click unfolds it).
+  // (and us; a button unfolds the top 10), then folds to a slim tab (a click unfolds it).
+  // The player folds it to that tab by its fold control or its title (remembered,
+  // folds.svelte.ts); the tab keeps our rank and our share of the land.
   let { ctl }: { ctl: GameController } = $props();
-  let open = $state(true);
   let all = $state(false);
   const level = $derived(layout.levelOf('leaderboard'));
-  /** The player's choice, as far as the column's room allows (or asked for: pinned). */
-  const shown = $derived(open && level !== 'chip');
+  /** Printed whole or as its top 5 (folded by the player, or short of room: the tab). */
+  const shown = $derived(level !== 'chip');
   const more = $derived(level === 'full');
-  function toggleOpen(): void {
-    if (open && level === 'chip') layout.pin('leaderboard');
-    else {
-      open = !open;
-      if (!open) layout.pin('leaderboard', false);
-    }
+  function fold(): void {
+    setFold('leaderboard', true);
+    layout.pin('leaderboard', false);
   }
+  function unfold(): void {
+    setFold('leaderboard', false);
+    layout.pin('leaderboard');
+  }
+  /** The folded tab's figure: our rank among the countries (else the leader's share). */
+  const standing = $derived.by(() => {
+    const list = hud.players.filter((p) => p.alive && p.tiles > 0 && p.kind !== 'tribe');
+    list.sort((a, b) => b.tiles - a.tiles);
+    const total = Math.max(1, hud.world?.usefulLand ?? 1);
+    const k = list.findIndex((p) => p.id === hud.viewer);
+    const p = k >= 0 ? list[k] : list[0];
+    return p ? { rank: k >= 0 ? k + 1 : 1, share: (p.usefulTiles / total) * 100, me: k >= 0 } : null;
+  });
   const rows = $derived.by(() => {
     const list = hud.players
       .filter((p) => p.alive && p.tiles > 0 && (all || p.kind !== 'tribe'))
@@ -39,18 +52,35 @@
 </script>
 
 <aside
-  class="lb panel"
+  class="lb"
+  class:panel={shown}
   class:closed={!shown}
   class:more
   data-testid="leaderboard"
+  data-folded={!shown || undefined}
   use:hudSize={'lb'}
   use:zonePiece={{ id: 'leaderboard', level }}
 >
-  <header>
-    <button class="title" onclick={toggleOpen} aria-expanded={shown}
-      ><Icon name={shown ? 'chevronDown' : 'chevronRight'} size={15} />{t('hud.leaderboard')}</button
+  {#if !shown}
+    <button
+      class="ftab fold-in"
+      onclick={unfold}
+      aria-expanded="false"
+      aria-label={t('fold.unfold', { name: t('fold.leaderboard') })}
+      title={t('fold.unfold', { name: t('fold.leaderboard') })}
+      data-testid="leaderboard-tab"
     >
-    {#if shown}
+      <FoldButton glyph folded name={t('fold.leaderboard')} dir="up" />
+      <Icon name="trophy" size={16} />
+      <span class="lbl">{t('fold.rank')}</span>
+      {#if standing}
+        <span class="fig">{standing.me ? `${standing.rank}` : '—'}</span>
+        <span class="mono share">{standing.share.toFixed(1)} %</span>
+      {/if}
+    </button>
+  {:else}
+    <header>
+      <button class="title" onclick={fold} aria-expanded="true" tabindex="-1">{t('hud.leaderboard')}</button>
       <span class="tools">
         {#if rows.length > 5 && (level === 'compact' || layout.pieces.leaderboard?.pinned)}<button
             class="more-btn"
@@ -62,10 +92,16 @@
             })}</button
           >{/if}
         <label class="all"><input type="checkbox" bind:checked={all} /> {t('hud.showTribes')}</label>
+        <FoldButton
+          folded={false}
+          name={t('fold.leaderboard')}
+          dir="up"
+          tip="below"
+          onclick={fold}
+          testid="fold-leaderboard"
+        />
       </span>
-    {/if}
-  </header>
-  {#if shown}
+    </header>
     <div class="cols">
       <span>#</span><span>{t('hud.colCountry')}</span><span class="r">{t('hud.colLand')}</span><span class="r"
         >{t('hud.colTroops')}</span
@@ -132,8 +168,16 @@
   .lb:not(.more) li.extra:not(.me) {
     display: none;
   }
+  /* Folded: the tab, at the size of the other panels' tabs. */
   .lb.closed {
     width: auto;
+    font-size: 1em;
+    padding: 0;
+  }
+  .share {
+    font-size: 0.92em;
+    font-weight: 600;
+    color: var(--np-ink-2);
   }
   /* The title over a heavy rule. */
   header {
@@ -143,9 +187,6 @@
     margin: 0 10px;
     padding: 6px 0 5px;
     border-bottom: 2px solid var(--np-ink);
-  }
-  .lb.closed header {
-    border-bottom: 0;
   }
   .title {
     display: inline-flex;

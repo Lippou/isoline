@@ -5,6 +5,8 @@
   // (a click unfolds it, the other pieces giving way). In reading mode it waits.
   import { hud, openPanel } from '../stores/game.svelte';
   import { layout, zonePiece } from '../stores/layout.svelte';
+  import { setFold } from '../stores/folds.svelte';
+  import FoldButton from './FoldButton.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
   import { flagUrl } from '../../render/flags';
   import Icon from '../icons/Icon.svelte';
@@ -76,7 +78,8 @@
   const level = $derived(layout.levelOf('flash'));
 
   // A new story is printed in full for half a minute, then folds to a one-line strip
-  // (it also folds while a special edition is on screen), unless the player chose.
+  // (it also folds while a special edition is on screen), unless the player chose. Folded by
+  // the player (the news fold, remembered: folds.svelte.ts), it stays on its one line.
   const FRESH_MS = 30000;
   const story = $derived(
     (ev ? `${ev.id}@${ev.since}` : '') + council.map((c) => c.key).join(',') + (voting ? 'vote' : ''),
@@ -91,13 +94,15 @@
     return () => clearTimeout(timer);
   });
   const open = $derived(level === 'full' && (manual ?? (fresh && !hud.breaking)));
-  /** The player unfolds it: the column makes room (the others give way). */
+  /** The player folds the news (remembered), or unfolds it: the column makes room (the others give way). */
   function toggle(): void {
     if (open) {
       manual = false;
+      setFold('news', true);
       layout.pin('flash', false);
     } else {
       manual = true;
+      setFold('news', false);
       if (level !== 'full') layout.pin('flash');
     }
   }
@@ -121,19 +126,29 @@
     aria-label={t('news.flash.title')}
     use:zonePiece={{ id: 'flash', level }}
   >
-    <button
-      class="top"
-      onclick={toggle}
-      aria-expanded={open}
-      aria-label={open ? t('news.flash.collapse') : t('news.flash.expand')}
-    >
-      <span class="kicker">{t('news.flash.title')}</span>
-      {#if !open}
-        <span class="peek">{ev ? t(`worldEvent.${ev.id}.title`) : council[0]?.title}</span>
-      {/if}
-      {#if ev}<time class="left">{clock(ev.left)}</time>{/if}
-      <Icon name={open ? 'chevronDown' : 'chevronRight'} size={14} />
-    </button>
+    <div class="topline">
+      <button
+        class="top"
+        onclick={toggle}
+        tabindex="-1"
+        aria-expanded={open}
+        aria-label={open ? t('news.flash.collapse') : t('news.flash.expand')}
+      >
+        <span class="kicker">{t('news.flash.title')}</span>
+        {#if !open}
+          <span class="peek">{ev ? t(`worldEvent.${ev.id}.title`) : council[0]?.title}</span>
+        {/if}
+        {#if ev}<time class="left">{clock(ev.left)}</time>{/if}
+      </button>
+      <FoldButton
+        folded={!open}
+        name={t('fold.news')}
+        dir="up"
+        tip="below"
+        onclick={toggle}
+        testid="fold-news"
+      />
+    </div>
     {#if ev && !open}
       <span class="bar slim" aria-hidden="true"><i style="width:{(ev.left / ev.total) * 100}%"></i></span>
     {/if}
@@ -201,14 +216,21 @@
   .flash:has(.slim) {
     padding-bottom: 8px;
   }
+  .topline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 -14px;
+    padding-right: 8px;
+  }
   .top {
     appearance: none;
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 8px;
-    width: calc(100% + 28px);
-    margin: 0 -14px;
-    padding: 7px 14px 6px;
+    padding: 7px 4px 6px 14px;
     border: 0;
     background: none;
     color: var(--np-ink-2);

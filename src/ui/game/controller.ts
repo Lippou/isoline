@@ -2,18 +2,11 @@
 import { Session, loadMapSource } from '../../engine/session';
 import { GameRenderer } from '../../render/renderer';
 import { InputController, BUILD_KEYS, NUKE_KEYS, guardBetrayal } from './input';
-import {
-  hud,
-  resetHud,
-  toast,
-  subtitle,
-  reportFall,
-  showPact,
-  openPanel,
-  holdToasts,
-} from '../stores/game.svelte';
+import { hud, resetHud, toast, subtitle, reportFall, showPact, openPanel } from '../stores/game.svelte';
+import { note } from '../stores/note.svelte';
+import { toggleAllFolds, setFold, FOLD_IDS, type FoldId } from '../stores/folds.svelte';
 import { closeTopWindow } from '../stores/windows.svelte';
-import { settings, saveSettings } from '../stores/settings.svelte';
+import { settings, saveSettings, keyLabel } from '../stores/settings.svelte';
 import { WeatherNews } from './weatherNews';
 import { t, i18n, clock, short } from '../i18n/i18n.svelte';
 import { mapsBase, bridge, writeJson } from '../bridge';
@@ -48,14 +41,6 @@ import { emulateScreen } from '../stores/viewport.svelte';
 import type { WinId } from '../stores/windows.svelte';
 
 const PLAYER_PARAMS = new Set(['player', 'by', 'from', 'with', 'traitor', 'victim', 'target', 'tribe']);
-/** The game modes' milestones (GAME_DESIGN.md §14.1, §14.2): a dispatch for everyone, and a sound. */
-const MODE_NEWS = new Set([
-  'event.zoneAnnounced',
-  'event.zoneClosing',
-  'event.zoneFinal',
-  'event.doomStage',
-  'event.midnight',
-]);
 
 export class GameController {
   session!: Session;
@@ -306,13 +291,16 @@ export class GameController {
         screen: (w = 0, h = 0, dpr = 1) => emulateScreen(w, h, dpr),
         /** QA: opens or closes a window of the dock (diplomacy, trade, tech, stats, log, chat). */
         window: (id: WinId, on = true) => (hud.panels[id] = on),
-        /** QA: the dispatches stay while true (as under the pointer). */
-        holdToasts: (on = true) => holdToasts(on),
-        /** QA: a notification (the dispatches tray). */
+        /** QA: a notification (to the journal, counted on its dock button). */
         toast: (text: string, level: 'info' | 'good' | 'warn' | 'danger' = 'info', tile?: number) =>
           toast(text, level, tile),
         /** QA: handle a game event as if the simulation had sent it (an attack wave, a dispatch…). */
         event: (e: GameEvent) => this.event(e),
+        /** QA: a cursor note (the answer to a refused order). */
+        note: (text: string, level: 'info' | 'good' | 'warn' | 'danger' = 'warn') => note(text, level),
+        /** QA: folds a panel (minimap, leaderboard, bar, res, news, alliances) or all of them. */
+        fold: (id: FoldId | 'all', on = true) =>
+          id === 'all' ? FOLD_IDS.forEach((k) => setFold(k, on)) : setFold(id, on),
         /** QA: fields laid over the worker's view every tick (offers, a nuclear ban…); null clears. */
         patch: (p: { local?: Record<string, unknown>; world?: Record<string, unknown> } | null) =>
           (this.qaPatch = p),
@@ -357,7 +345,7 @@ export class GameController {
   toggleLoyaltyView(): void {
     hud.views.loyalty = !hud.views.loyalty;
     this.session.sim.setLayers(hud.views.loyalty);
-    if (hud.views.loyalty) toast(t('hud.loyaltyHint'), 'info');
+    if (hud.views.loyalty) note(t('hud.loyaltyHint'), 'info');
   }
 
   /** Trade-route view (sea lanes, busy railways): a remembered setting, on by default. */
@@ -435,7 +423,7 @@ export class GameController {
       case 'fogView':
         // Lifting the fog is a spectator/replay tool, not a way to peek in a live game.
         if (this.session.kind !== 'replay' && this.session.viewer > 0) {
-          toast(t('hud.fogLocked'), 'info');
+          note(t('hud.fogLocked'), 'info');
           break;
         }
         hud.views.fog = !hud.views.fog;
@@ -471,15 +459,25 @@ export class GameController {
       case 'fps':
         hud.showPerf = !hud.showPerf;
         break;
+      case 'hudFold':
+        this.toggleHudFolds();
+        break;
     }
     void e;
+  }
+
+  /** The minimal interface: every panel over the map folds (or unfolds) at once, remembered. */
+  toggleHudFolds(): void {
+    const folded = toggleAllFolds();
+    audio.ui('click');
+    note(folded ? t('fold.allOn', { key: keyLabel(settings.keys.hudFold ?? '') }) : t('fold.allOff'), 'info');
   }
 
   /** Mirror the missile arc (towards the top or the bottom of the map) to fly around SAMs. */
   flipArc(): void {
     hud.nukeArcUp = !hud.nukeArcUp;
     audio.ui('click');
-    if (hud.tool.k !== 'nuke') toast(t(hud.nukeArcUp ? 'launch.arcUpToast' : 'launch.arcDownToast'), 'info');
+    if (hud.tool.k !== 'nuke') note(t(hud.nukeArcUp ? 'launch.arcUpToast' : 'launch.arcDownToast'), 'info');
   }
 
   /** After the victory: keep playing the same world (victory checks stay off from now on). */
@@ -634,7 +632,7 @@ export class GameController {
 
   async screenshot(): Promise<void> {
     const file = await bridge.screenshot();
-    toast(file ? t('hud.screenshotSaved', { file }) : t('hud.screenshotFailed'), file ? 'good' : 'warn');
+    note(file ? t('hud.screenshotSaved', { file }) : t('hud.screenshotFailed'), file ? 'good' : 'warn');
   }
 
   // ---------------------------------------------------------------- ticks
@@ -1100,20 +1098,14 @@ export class GameController {
             ...(e.tile !== undefined ? { tile: e.tile } : {}),
           },
         ];
-        // Alliance offers have their own card (AllyRequests.svelte): no toast on top of it.
-        const offer = e.key === 'notify.allianceRequest' || e.key === 'notify.renewRequest';
-        if (
-          (e.to === me && !offer) ||
-          e.level === 'danger' ||
-          e.key.startsWith('worldEvent') ||
-          e.key.startsWith('council') ||
-          e.key === 'event.gameStart' ||
-          MODE_NEWS.has(e.key)
-        ) {
-          toast(text, e.level, e.tile);
-        }
         this.modeSound(e.key);
-        if (e.key.startsWith('error.')) audio.ui('error');
+        // Everything else is in the journal (its dock button counts the unread); an order of
+        // ours refused is answered beside the pointer (the build cursor already says why a
+        // building cannot stand there: no second word for it).
+        if (e.key.startsWith('error.')) {
+          audio.ui('error');
+          if (e.to === me && !e.key.startsWith('error.build.')) note(text, 'warn');
+        }
         // Radar early warning: a soft double blip (synthesised, src/audio/audio.ts).
         else if (e.key.startsWith('notify.radar.')) audio.sfx('radar', 0.8);
         break;

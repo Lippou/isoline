@@ -47,6 +47,8 @@ export const DEFAULT_KEYS: Record<string, string> = {
   flipArc: 'KeyU',
   speedDown: 'BracketLeft',
   speedUp: 'BracketRight',
+  /** Fold or unfold every panel over the map (folds.svelte.ts). */
+  hudFold: 'KeyX',
 };
 
 export interface Settings {

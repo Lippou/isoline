@@ -1,12 +1,12 @@
 // Capital and threatened-border news for the HUD: the war horn and the capital card
 // when our capital falls, the conqueror's sting, and a brief in the journal's
-// « Vigilance » section plus a discreet toast when a neighbour masses an army on our
-// border (view-only intelligence from the worker, throttled per neighbour).
+// « Vigilance » section (counted unread on the Journal's button) when a neighbour masses an
+// army on our border (view-only intelligence from the worker, throttled per neighbour).
 import type { GameEvent } from '../../core/game/events';
 import type { ClientState } from '../../engine/clientState';
 import type { Session } from '../../engine/session';
 import { capitalSpotError, type CapitalSpotError } from '../../core/rules/capital';
-import { hud, toast, subtitle } from '../stores/game.svelte';
+import { hud, subtitle } from '../stores/game.svelte';
 import { settings } from '../stores/settings.svelte';
 import { t, i18n } from '../i18n/i18n.svelte';
 import { audio } from '../../audio/audio';
@@ -54,7 +54,7 @@ export class CapitalWatch {
     }
   }
 
-  /** Every tick: a threat appearing on one of our borders makes a brief and a toast. */
+  /** Every tick: a threat appearing on one of our borders makes a brief in the journal. */
   tick(tick: number): void {
     const st = this.session.state;
     const L = st.local;
@@ -88,7 +88,6 @@ export class CapitalWatch {
           tile,
         },
       ];
-      toast(text, 'warn', tile);
     }
     this.seen = now;
   }

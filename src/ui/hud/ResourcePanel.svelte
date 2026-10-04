@@ -6,6 +6,8 @@
   import Icon from '../icons/Icon.svelte';
   import { MediaQuery } from 'svelte/reactivity';
   import { hudSize } from '../stores/hudBox.svelte';
+  import { folds, setFold } from '../stores/folds.svelte';
+  import FoldButton from './FoldButton.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   const L = $derived(hud.local);
@@ -67,16 +69,54 @@
   let unfolded = $state<'' | 'attacks' | 'boats'>('');
   const shows = (k: 'attacks' | 'boats') => !folded.current || unfolded === k;
   const unfold = (k: 'attacks' | 'boats') => (unfolded = unfolded === k ? '' : k);
+  // Folded by the player (remembered, folds.svelte.ts): one line of essentials — troops,
+  // gold, the attack ratio — and the attacks coming at us, in magenta, when there are.
+  const strip = $derived(folds.res);
 </script>
 
-{#if L}
+{#if L && strip}
+  <section class="res panel folded" data-testid="resource-panel" data-folded="true" use:hudSize={'res'}>
+    <button
+      class="fstrip fold-in"
+      onclick={() => setFold('res', false)}
+      aria-expanded="false"
+      aria-label={t('fold.unfold', { name: t('fold.res') })}
+      title={t('fold.unfold', { name: t('fold.res') })}
+      data-testid="resource-strip"
+    >
+      <FoldButton glyph folded name={t('fold.res')} dir="down" />
+      <span class="fig"
+        ><Icon name="troops" size={13} /><b class="mono">{short(L.troops)}</b><small class="mono"
+          >/{short(L.popCap)}</small
+        ></span
+      >
+      <span class="fig"><Icon name="gold" size={13} /><b class="mono brass">{short(L.gold)}</b></span>
+      <span class="fig"
+        ><Icon name="war" size={13} /><b class="mono">{Math.round(hud.attackRatio * 100)} %</b></span
+      >
+      {#if incoming.length}<span class="alarm mono" data-testid="resource-strip-incoming"
+          ><Icon name="sword" size={12} />{incoming.length}</span
+        >{/if}
+    </button>
+  </section>
+{:else if L}
   <section class="res panel" data-testid="resource-panel" use:hudSize={'res'}>
     <div class="block">
       <div class="head">
         <span class="section-title" data-tip={t('hud.armyTip')}
           ><Icon name="troops" size={14} />{t('hud.army')}</span
         >
-        <svg viewBox="0 0 100 24" class="spark" aria-hidden="true"><polyline points={spark} /></svg>
+        <span class="headr">
+          <svg viewBox="0 0 100 24" class="spark" aria-hidden="true"><polyline points={spark} /></svg>
+          <FoldButton
+            folded={false}
+            name={t('fold.res')}
+            dir="down"
+            tip="above-start"
+            onclick={() => setFold('res', true)}
+            testid="fold-res"
+          />
+        </span>
       </div>
       <div class="troops-row">
         <span class="value mono" data-tip={t('hud.troopsTip')}
@@ -292,6 +332,64 @@
   }
   .head .section-title {
     margin: 0;
+  }
+  .headr {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  /* Folded (the player's choice): one line of essentials; a click unfolds the panel. */
+  .res.folded {
+    width: auto;
+    max-width: var(--res-w, 290px);
+  }
+  .fstrip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 34px;
+    padding: 0 10px 0 6px;
+    border: 0;
+    border-top: 3px solid var(--np-ink);
+    background: transparent;
+    color: var(--np-ink);
+    white-space: nowrap;
+    cursor: var(--cursor-pointer, pointer);
+    transition: background 0.12s;
+  }
+  .fstrip:hover,
+  .fstrip:focus-visible {
+    background: var(--np-card);
+  }
+  .fstrip :global(.fold) {
+    border-color: transparent;
+    background: transparent;
+  }
+  .fig {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .fig :global(svg) {
+    align-self: center;
+    color: var(--np-ink-2);
+  }
+  .fig b {
+    font-weight: 600;
+  }
+  .fig small {
+    font-size: 0.8em;
+    color: var(--np-ink-3);
+  }
+  .alarm {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0 5px;
+    border-radius: 1px;
+    background: var(--np-spot);
+    color: #fff7f9;
+    font-weight: 700;
   }
   .section-title {
     margin: 0;

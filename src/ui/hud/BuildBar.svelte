@@ -11,6 +11,8 @@
   import ResearchReminder from './ResearchReminder.svelte';
   import { AIR_REACH } from '../game/airPreview';
   import { hudSize } from '../stores/hudBox.svelte';
+  import { folds, setFold } from '../stores/folds.svelte';
+  import FoldButton from './FoldButton.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   const cfg = currentSession()!.config;
@@ -71,6 +73,50 @@
   }
 
   void ctl;
+
+  // Folded by the player (remembered, folds.svelte.ts): a slim strip at the foot of the map.
+  // The keys still choose the tools; the strip shows the one in hand.
+  const folded = $derived(folds.bar);
+  /** The tool in hand, for the folded strip: its mark, its name, its key. */
+  const inHand = $derived.by((): { icon: IconName; name: string; key: string; danger: boolean } | null => {
+    const tl = hud.tool;
+    if (tl.k === 'build') {
+      const b = buildings.find((x) => x.kind === tl.kind);
+      return {
+        icon: BUILDING_ICONS[tl.kind] ?? 'city',
+        name: t(`building.${BUILDING_KEYS[tl.kind]}.short`),
+        key: b ? keyLabel(settings.keys[b.key] ?? '') : '',
+        danger: false,
+      };
+    }
+    if (tl.k === 'nuke') {
+      const n = nukes.find((x) => x.kind === tl.kind);
+      return {
+        icon: 'nuke',
+        name: (n ? t(`nuke.${n.key}.short`) : '') + (tl.count > 1 ? ` ×${tl.count}` : ''),
+        key: n ? keyLabel(settings.keys[n.key] ?? '') : '',
+        danger: true,
+      };
+    }
+    if (tl.k === 'warship')
+      return {
+        icon: 'warship',
+        name: t('unit.warship.short'),
+        key: keyLabel(settings.keys.warship ?? ''),
+        danger: false,
+      };
+    if (tl.k === 'air') {
+      const a = air.find((x) => x.kind === tl.kind);
+      return { icon: 'airfield', name: a ? t(`unit.${a.name}.short`) : '', key: '', danger: false };
+    }
+    return null;
+  });
+  /** The keys of the first and last tools (1–0 by default). */
+  const keyRange = $derived.by(() => {
+    const first = keyLabel(settings.keys.buildCity ?? '');
+    const last = keyLabel(settings.keys[nukes.length ? 'nukeMirv' : 'warship'] ?? '');
+    return `${first}–${last}`;
+  });
 </script>
 
 {#snippet tip(title: string, body: string, meta: string[], req: string = '', ban: string = '')}
@@ -119,7 +165,34 @@
   </button>
 {/snippet}
 
-{#if L}
+{#if L && folded}
+  <section class="bar panel folded" data-testid="build-bar" data-folded="true" use:hudSize={'bar'}>
+    <ResearchReminder {ctl} />
+    <button
+      class="fstrip fold-in"
+      onclick={() => setFold('bar', false)}
+      aria-expanded="false"
+      aria-label={t('fold.unfold', { name: t('fold.bar') })}
+      data-tip="{t('fold.unfold', { name: t('fold.bar') })} · {t('fold.allKey', {
+        key: keyLabel(settings.keys.hudFold ?? ''),
+      })}"
+      data-testid="build-bar-tab"
+    >
+      <FoldButton glyph folded name={t('fold.bar')} dir="down" />
+      <Icon name="city" size={15} />
+      <b>{t('fold.barTab')}</b>
+      {#if inHand}
+        <span class="hand" class:danger={inHand.danger} data-testid="build-bar-in-hand"
+          ><Icon name={inHand.icon} size={14} />{inHand.name}{#if inHand.key}<span class="np-kbd"
+              >{inHand.key}</span
+            >{/if}</span
+        >
+      {:else}
+        <span class="keys">{t('fold.keys', { keys: keyRange })}</span>
+      {/if}
+    </button>
+  </section>
+{:else if L}
   <section class="bar panel" data-testid="build-bar" use:hudSize={'bar'}>
     <ResearchReminder {ctl} />
     <div class="group">
@@ -310,6 +383,17 @@
             aria-label={t('hud.view.tradeRoutes')}><Icon name="tradeRoutes" size={16} /></button
           >{/if}
       </div>
+      <!-- The fold control, in the corner of the last group (it takes no room of its own). -->
+      <span class="vfold"
+        ><FoldButton
+          folded={false}
+          name={t('fold.bar')}
+          dir="down"
+          tip="above"
+          onclick={() => setFold('bar', true)}
+          testid="fold-bar"
+        /></span
+      >
     </div>
   </section>
 {/if}
@@ -332,6 +416,74 @@
     justify-content: center;
     padding: 0;
     z-index: 6;
+  }
+  /* Folded (the player's choice): a slim strip, the tool in hand printed on it. */
+  .fstrip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 32px;
+    padding: 0 12px 0 6px;
+    border: 0;
+    border-top: 3px solid var(--np-ink);
+    background: transparent;
+    color: var(--np-ink);
+    font-family: var(--text);
+    font-size: 0.84em;
+    white-space: nowrap;
+    cursor: var(--cursor-pointer, pointer);
+    transition: background 0.12s;
+  }
+  .fstrip:hover,
+  .fstrip:focus-visible {
+    background: var(--np-card);
+  }
+  .fstrip b {
+    font-family: var(--title);
+    font-weight: 600;
+  }
+  .fstrip :global(.fold) {
+    border-color: transparent;
+    background: transparent;
+  }
+  .fstrip .keys {
+    font-style: italic;
+    color: var(--np-ink-3);
+  }
+  /* The tool in hand: reversed, as on the bar. */
+  .hand {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 1px 4px 1px 6px;
+    border-radius: 2px;
+    background: var(--np-ink);
+    color: var(--np-paper);
+    font-weight: 600;
+  }
+  .hand.danger {
+    background: var(--np-spot);
+  }
+  .hand .np-kbd {
+    border-color: color-mix(in srgb, var(--np-paper) 45%, transparent);
+    color: color-mix(in srgb, var(--np-paper) 80%, transparent);
+  }
+  /* The fold control, in the corner of the views' group, beside its kicker. */
+  .views {
+    position: relative;
+  }
+  .vfold {
+    position: absolute;
+    top: 3px;
+    right: 4px;
+  }
+  .vfold :global(.fold) {
+    width: 18px;
+    height: 18px;
+  }
+  .vfold :global(.fold svg) {
+    width: 12px;
+    height: 12px;
   }
   /* Narrower windows: the tools lose their name (it is in the tooltip), then shrink. */
   @media (max-width: 1750px) {

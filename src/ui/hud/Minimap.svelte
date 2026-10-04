@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from '../icons/Icon.svelte';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, untrack } from 'svelte';
   import type { GameController } from '../game/controller';
   import { settings } from '../stores/settings.svelte';
   import { inkRgb } from '../../render/colors';
@@ -11,6 +11,8 @@
   import { hudSize } from '../stores/hudBox.svelte';
   import { layout, zonePiece } from '../stores/layout.svelte';
   import { liveRing } from '../../core/rules/victory';
+  import { setFold } from '../stores/folds.svelte';
+  import FoldButton from './FoldButton.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   let canvas: HTMLCanvasElement;
@@ -21,18 +23,21 @@
   const H = Math.max(80, Math.round((st.height / st.width) * W));
   let base: ImageData | null = null;
   let img: ImageData | null = null;
-  // The foot of the right column (zones.ts): folded when the column is short of room
-  // (the button unfolds it, the other pieces giving way), or when the player folds it.
-  let folded = $state(false);
+  // The foot of the right column (zones.ts): folded to a slim tab when the player folds it
+  // (remembered, folds.svelte.ts) or when the column is short of room; the tab unfolds it
+  // (the other pieces giving way). Folded, it still shows the missiles in flight.
   const level = $derived(layout.levelOf('minimap'));
-  const collapsed = $derived(folded || level === 'chip');
-  function toggle(): void {
-    if (!folded && level === 'chip') layout.pin('minimap');
-    else {
-      folded = !folded;
-      if (folded) layout.pin('minimap', false);
-    }
+  const collapsed = $derived(level === 'chip');
+  function fold(): void {
+    setFold('minimap', true);
+    layout.pin('minimap', false);
   }
+  function unfold(): void {
+    setFold('minimap', false);
+    layout.pin('minimap');
+  }
+  /** Missiles in flight (the folded tab's alarm). */
+  let missiles = $state(0);
 
   const EARTH_COLORS: [number, number, number][] = [
     [10, 20, 36],
@@ -68,7 +73,10 @@
   }
 
   function refresh(): void {
-    if (!base || !img) return;
+    let n = 0;
+    for (let k = 0; k < st.unitCount; k++) if (st.units[k * UNIT_STRIDE + 1] === U.Nuke) n++;
+    if (n !== missiles) missiles = n;
+    if (!base || !img || collapsed) return;
     const colors = new Map<number, [number, number, number]>();
     for (const p of st.playerList) colors.set(p.id, inkRgb(p.color, settings.access.vision));
     const now = performance.now();
@@ -133,6 +141,7 @@
 
   function draw(): void {
     raf = requestAnimationFrame(draw);
+    if (collapsed) return;
     const ctx = canvas?.getContext('2d');
     if (!ctx || !img) return;
     ctx.putImageData(img, 0, 0);
@@ -199,6 +208,11 @@
   }
   let dragging = false;
 
+  // Unfolded again: the picture is brought up to date at once.
+  $effect(() => {
+    if (!collapsed) untrack(refresh);
+  });
+
   onMount(() => {
     const ctx = canvas.getContext('2d')!;
     buildBase(ctx);
@@ -213,15 +227,42 @@
 </script>
 
 <aside
-  class="mini panel"
+  class="mini"
+  class:panel={!collapsed}
   class:collapsed
   data-testid="minimap"
+  data-folded={collapsed || undefined}
   use:hudSize={'mini'}
   use:zonePiece={{ id: 'minimap', level }}
 >
-  <button class="toggle" onclick={toggle} title={t('hud.minimap')}
-    ><Icon name={collapsed ? 'expand' : 'collapse'} size={13} /></button
-  >
+  {#if collapsed}
+    <button
+      class="ftab fold-in"
+      onclick={unfold}
+      aria-expanded="false"
+      aria-label={t('fold.unfold', { name: t('fold.minimap') })}
+      title={t('fold.unfold', { name: t('fold.minimap') })}
+      data-testid="minimap-tab"
+    >
+      <FoldButton glyph folded name={t('fold.minimap')} dir="down" />
+      <Icon name="globe" size={17} />
+      <span class="lbl">{t('fold.map')}</span>
+      {#if missiles > 0}<span class="alarm mono" title={t('fold.missiles', { n: missiles })}
+          ><Icon name="nuke" size={12} />{missiles}</span
+        >{/if}
+    </button>
+  {:else}
+    <span class="fbtn"
+      ><FoldButton
+        folded={false}
+        name={t('fold.minimap')}
+        dir="down"
+        tip="left"
+        onclick={fold}
+        testid="fold-minimap"
+      /></span
+    >
+  {/if}
   <canvas
     bind:this={canvas}
     width={W}
@@ -250,6 +291,12 @@
   .mini.collapsed canvas {
     display: none;
   }
+  .fbtn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 1;
+  }
   /* As wide as the layout allows (--mini-w, GameScreen.svelte), never taller than a third of the window. */
   canvas {
     display: block;
@@ -259,27 +306,7 @@
     cursor: crosshair;
     image-rendering: pixelated;
   }
-  .toggle {
-    position: absolute;
-    top: -11px;
-    left: -11px;
-    width: 22px;
-    height: 22px;
-    display: grid;
-    place-items: center;
-    border-radius: 2px;
-    border: 1px solid var(--np-edge);
-    background: var(--np-paper);
-    box-shadow: 0 1px 3px rgba(3, 10, 16, 0.3);
-    color: var(--np-ink-2);
-    cursor: var(--cursor-pointer, pointer);
-  }
-  .toggle:hover,
-  .toggle:focus-visible {
-    color: var(--np-ink);
-    border-color: var(--np-ink);
-  }
-  .mini.collapsed .toggle {
-    position: static;
+  .mini.collapsed {
+    padding: 0;
   }
 </style>

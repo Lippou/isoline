@@ -86,6 +86,29 @@ const WEIGHT: Record<string, number> = {
 };
 export const weightOf = (key = '') => (key.startsWith('worldEvent.') ? 60 : (WEIGHT[key] ?? 0));
 
+/**
+ * What the journal holds unread (newer than `seen`, the tick it was last read at): how many
+ * notices, whether an alert ('danger': a port attacked, a missile) or a headline is among them.
+ * The dock's Journal button prints the count (magenta with an alert).
+ */
+export function unreadOf(
+  log: readonly LogEntry[],
+  seen: number,
+): { n: number; danger: boolean; head: boolean } {
+  let n = 0;
+  let danger = false;
+  let head = false;
+  for (let k = log.length - 1; k >= 0; k--) {
+    const e = log[k]!;
+    if (e.tick <= seen) break;
+    if (!inPaper(e)) continue;
+    n++;
+    if (e.level === 'danger') danger = true;
+    if (weightOf(e.key) > 0) head = true;
+  }
+  return { n, danger, head };
+}
+
 /** Headline and deck of a notice (a brief keeps its own text as the title). */
 function headline(key: string, p: Record<string, string | number>, name: Name): [string, string, number[]] {
   if (key.startsWith('worldEvent.')) {

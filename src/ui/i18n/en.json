@@ -162,7 +162,9 @@
       "help": "The gestures and every key",
       "photo": "The map without the interface, for a picture",
       "resetWindows": "Windows go back to where they started",
-      "quit": "Back to the main menu"
+      "quit": "Back to the main menu",
+      "foldHud": "The map in full view: every panel folds to a tab",
+      "unfoldHud": "Every panel unfolds again"
     },
     "used": "{n} of {of} used",
     "autoEvery": "Autosave every two minutes",
@@ -171,7 +173,9 @@
     "colSaved": "Saved on",
     "colAction": "Action",
     "saveHere": "Save here",
-    "overwrite": "Overwrite"
+    "overwrite": "Overwrite",
+    "foldHud": "Fold the interface",
+    "unfoldHud": "Unfold everything"
   },
   "help": {
     "intro": "Isoline is played on a living atlas: spread your ink, build an economy, forge alliances and hold the world.",
@@ -1385,7 +1389,8 @@
     "speedDown": "Slow time down (solo)",
     "speedUp": "Speed time up (solo)",
     "buildLab": "Research centre",
-    "photoMode": "Photo mode"
+    "photoMode": "Photo mode",
+    "hudFold": "Fold / unfold the interface"
   },
   "settings": {
     "tab": {
@@ -2515,5 +2520,28 @@
     "tribes": "Alone against tribes, for practice",
     "doomsday": "At midnight, the largest wins",
     "battleRoyale": "A zone closing on random points"
+  },
+  "fold": {
+    "fold": "Fold {name}",
+    "unfold": "Unfold {name}",
+    "allKey": "{key}: fold or unfold the whole interface",
+    "bar": "the build bar",
+    "res": "the army and treasury",
+    "news": "the news",
+    "alliances": "the current alliances",
+    "minimap": "the minimap",
+    "leaderboard": "the leaderboard",
+    "barTab": "Build",
+    "keys": "keys {keys}",
+    "map": "Map",
+    "rank": "Rank",
+    "missiles": "{n} missile(s) in flight",
+    "incoming": "{n} attack(s) on you",
+    "allOn": "Interface folded — {key} to unfold everything",
+    "allOff": "Interface unfolded"
+  },
+  "inbox": {
+    "tip": "News: {n} unread item(s)",
+    "tipDanger": "News: {n} unread item(s), alerts among them"
   }
 }
