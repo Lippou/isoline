@@ -277,6 +277,9 @@
           >×{((info.terrain.mag || 80) / 80).toFixed(2)}</span
         >{/if}
     </div>
+    {#if info.terrain?.harsh && info.terrain.passable}<div class="note" data-testid="hover-harsh">
+        {t('hover.harshTerrain')}
+      </div>{/if}
     {#if info.h.fallout > 0}<div class="line bad"><Icon name="nuke" size={13} />{t('hud.fallout')}</div>{/if}
     {#if sky}<div class="line sky" data-testid="hover-weather">
         <Icon name={sky.icon} size={13} />{sky.text}

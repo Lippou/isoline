@@ -1052,7 +1052,9 @@
     "desert": "Desert",
     "forest": "Forest",
     "tundra": "Tundra / ice",
-    "impassable": "Impassable"
+    "impassable": "Impassable",
+    "glacier": "Glacier",
+    "peaks": "High peaks"
   },
   "resource": {
     "none": "—",
@@ -1918,7 +1920,8 @@
       "alert": "interceptors {n}/{m}",
       "attack": "your attacks here: −{pct}% losses"
     },
-    "alert": "interceptors {n}/{m}"
+    "alert": "interceptors {n}/{m}",
+    "harshTerrain": "Slow to conquer · nothing can be built here"
   },
   "weather": {
     "stormNear": "A storm is forming near you: ships {pct}% slower.",

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { mapFromDisk, makeGame, run, invariants } from '../helpers';
 import { decodeTerrainPng } from '../../src/core/map/format';
-import { T } from '../../src/core/map/terrain';
+import { T, TERRAIN_COUNT } from '../../src/core/map/terrain';
 import { SPAWN_RADIUS } from '../../src/core/game/constants';
 import { PACKS } from '../../scripts/maps/packs';
 import { buildWorld } from '../../scripts/maps/worlds';
@@ -72,7 +72,7 @@ describe('map packs (1.5)', () => {
     expect(minimapPalette(undefined)).toBeNull();
     for (const p of PACKS.filter((d) => d.palette)) {
       expect(worldCode(p.palette)).toBeGreaterThan(0);
-      expect(minimapPalette(p.palette)!.length).toBe(11);
+      expect(minimapPalette(p.palette)!.length).toBe(TERRAIN_COUNT);
     }
     expect(PACKS.filter((d) => d.category === 'planets' && d.palette).length).toBeGreaterThanOrEqual(3);
   });

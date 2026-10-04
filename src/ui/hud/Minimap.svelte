@@ -51,6 +51,8 @@
     [32, 54, 42],
     [140, 150, 156],
     [40, 36, 44],
+    [176, 188, 198],
+    [118, 112, 112],
   ];
   const TERRAIN_COLORS = minimapPalette(st.meta?.palette) ?? EARTH_COLORS;
 

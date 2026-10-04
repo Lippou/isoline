@@ -21,7 +21,7 @@ import {
   STATION_TYPES,
 } from '../game/constants';
 import type { Building } from './building';
-import { IS_LAND } from '../map/terrain';
+import { HABITABLE } from '../map/terrain';
 import { onStationBuilt, onStationRemoved } from '../units/trains';
 import { resourceBonus } from '../rules/resources';
 import { RESEARCH_PER_LAB_LEVEL, buildingLock, techBuildCost, techBuildTime } from '../rules/tech';
@@ -163,7 +163,8 @@ export function checkPlacement(game: Game, p: Player, type: B, tile: number): Pl
 function spotError(game: Game, p: Player, type: B, tile: number): PlaceError {
   if (tile < 0 || tile >= game.map.size) return 'notLand';
   if (game.owner[tile] !== p.id) return 'notOwned';
-  if (!IS_LAND[game.map.terrain[tile]!] || game.isDead(tile)) return 'notLand';
+  // Glaciers and high peaks are held, never built on.
+  if (!HABITABLE[game.map.terrain[tile]!] || game.isDead(tile)) return 'notLand';
   if (game.buildingAt[tile]! >= 0) return 'occupied';
   if (type === B.Port) {
     const wt = game.map.adjacentWater(tile);

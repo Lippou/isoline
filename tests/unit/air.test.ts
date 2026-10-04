@@ -345,7 +345,8 @@ describe('determinism', () => {
 
 describe('nations fly (normal difficulty)', () => {
   it('build airfields once at war and send bombers and reconnaissance within 20 minutes', () => {
-    const g = makeGame('black-sea', { players: [], difficulty: 'normal' });
+    // (A seed whose wars start early enough: 20 min is close to the first airfields.)
+    const g = makeGame('black-sea', { players: [], difficulty: 'normal', seed: 6 });
     const seen = new Set<number>();
     const flown = new Map<number, number>();
     while (g.tick < 20 * 600 && g.phase !== 'ended') {

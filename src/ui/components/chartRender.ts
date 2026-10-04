@@ -10,7 +10,7 @@ import { parseIsoMap } from '../../core/map/format';
 type RGB = readonly [number, number, number];
 
 // Terrain index order: deepOcean, shallow, lake, river, plains, hills, mountain, desert,
-// forest, tundra, impassable.
+// forest, tundra, impassable (walls), glacier, peaks.
 const FILL: readonly RGB[] = [
   [248, 244, 236],
   [214, 232, 239],
@@ -23,6 +23,8 @@ const FILL: readonly RGB[] = [
   [222, 225, 196],
   [244, 241, 232],
   [208, 201, 188],
+  [247, 248, 248],
+  [212, 198, 172],
 ];
 const SHOAL: RGB = [214, 232, 239];
 const DEPTH_LINE: RGB = [176, 208, 222];

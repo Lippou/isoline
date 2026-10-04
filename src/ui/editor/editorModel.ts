@@ -95,7 +95,16 @@ export class EditorModel {
           this.terrain[i] = terrainType;
           if (TERRAIN[terrainType]!.water) this.elevation[i] = 0;
           else if (this.elevation[i] === 0)
-            this.elevation[i] = terrainType === T.Mountain ? 200 : terrainType === T.Hills ? 140 : 50;
+            this.elevation[i] =
+              terrainType === T.Peaks
+                ? 245
+                : terrainType === T.Mountain
+                  ? 200
+                  : terrainType === T.Hills
+                    ? 140
+                    : terrainType === T.Glacier
+                      ? 120
+                      : 50;
         } else if (brush === 'raise' || brush === 'lower') {
           if (!IS_LAND[this.terrain[i]!]) continue;
           const v = this.elevation[i]! + (brush === 'raise' ? 6 : -6) * fall;
@@ -185,4 +194,6 @@ export const EDITOR_COLORS: [number, number, number][] = [
   [52, 92, 64],
   [190, 200, 205],
   [70, 62, 72],
+  [200, 212, 222],
+  [168, 162, 160],
 ];

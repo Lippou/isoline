@@ -26,7 +26,7 @@ import {
 } from '../game/constants';
 import { U } from '../units/unit';
 import { Rng } from '../rng';
-import { IS_LAND } from '../map/terrain';
+import { HARSH, IS_LAND } from '../map/terrain';
 import { breakAlliance } from './diplomacy';
 
 /**
@@ -387,31 +387,106 @@ export function outsideNextZone(game: Game, tile: number): boolean {
   return dx * dx + dy * dy > ring.nr * ring.nr;
 }
 
-/** Useful land inside a circle (sampled on a grid of about 60 × 60 points). */
-function landIn(game: Game, cx: number, cy: number, r: number): number {
+/** Zone choice: weight of a glacier or high-peak tile (slow to take, holds nothing to build). */
+const ROYALE_HARSH_WEIGHT = 0.4;
+
+/** Land of the zone in force that the living countries can walk to, and its centroid. */
+interface Reach {
+  /** 1 = reachable on foot. */
+  seen: Uint8Array;
+  /** Reachable tiles (0: no living country inside the zone). */
+  n: number;
+  x: number;
+  y: number;
+}
+
+/**
+ * Land of the zone in force (cx, cy, r) that the living countries can reach on foot: a
+ * flood fill over live land inside the circle from every tile they hold there. Land cut
+ * off by the sea (or by dead land) is only reached by boat.
+ */
+function reachableLand(game: Game, cx: number, cy: number, r: number): Reach {
+  const map = game.map;
+  const { width: w, height: h, size } = map;
+  const seen = new Uint8Array(size);
+  const x0 = Math.max(0, Math.floor(cx - r));
+  const x1 = Math.min(w - 1, Math.ceil(cx + r));
+  const y0 = Math.max(0, Math.floor(cy - r));
+  const y1 = Math.min(h - 1, Math.ceil(cy + r));
+  const r2 = r * r;
+  const inside = (i: number): boolean => {
+    const dx = (i % w) + 0.5 - cx;
+    const dy = ((i / w) | 0) + 0.5 - cy;
+    return dx * dx + dy * dy <= r2;
+  };
+  const open = (i: number): boolean => IS_LAND[map.terrain[i]!] === 1 && !game.isDead(i) && inside(i);
+  const queue = new Int32Array(size);
+  let qt = 0;
+  for (let y = y0; y <= y1; y++)
+    for (let x = x0; x <= x1; x++) {
+      const i = y * w + x;
+      const o = game.owner[i]!;
+      if (o > 0 && game.players[o]!.alive && open(i)) {
+        seen[i] = 1;
+        queue[qt++] = i;
+      }
+    }
+  const visit = (j: number): void => {
+    if (seen[j] || !open(j)) return;
+    seen[j] = 1;
+    queue[qt++] = j;
+  };
+  let sx = 0;
+  let sy = 0;
+  for (let qh = 0; qh < qt; qh++) {
+    const i = queue[qh]!;
+    const x = i % w;
+    sx += x + 0.5;
+    sy += (i - x) / w + 0.5;
+    if (x > 0) visit(i - 1);
+    if (x < w - 1) visit(i + 1);
+    if (i >= w) visit(i - w);
+    if (i < size - w) visit(i + w);
+  }
+  return { seen, n: qt, x: qt > 0 ? sx / qt : cx, y: qt > 0 ? sy / qt : cy };
+}
+
+/**
+ * Land inside a circle (sampled on a grid of about 60 × 60 points), glaciers and high
+ * peaks counting less: [land the countries can walk to, all land].
+ */
+function landIn(game: Game, cx: number, cy: number, r: number, reach: Uint8Array): [number, number] {
   const map = game.map;
   const s = Math.max(1, Math.floor(r / 30));
   const x0 = Math.max(0, Math.ceil(cx - r));
   const x1 = Math.min(map.width - 1, Math.floor(cx + r));
   const y0 = Math.max(0, Math.ceil(cy - r));
   const y1 = Math.min(map.height - 1, Math.floor(cy + r));
-  let n = 0;
+  let walk = 0;
+  let all = 0;
   for (let y = y0; y <= y1; y += s) {
     const dy = y + 0.5 - cy;
     for (let x = x0; x <= x1; x += s) {
       const dx = x + 0.5 - cx;
       if (dx * dx + dy * dy > r * r) continue;
       const i = y * map.width + x;
-      if (IS_LAND[map.terrain[i]!] && !game.isDead(i)) n++;
+      const t = map.terrain[i]!;
+      if (!IS_LAND[t] || game.isDead(i)) continue;
+      const v = HARSH[t] ? ROYALE_HARSH_WEIGHT : 1;
+      all += v;
+      if (reach[i]) walk += v;
     }
   }
-  return n;
+  return [walk, all];
 }
 
 /**
  * Draws the next zone inside the one in force: a random centre (the mode's own PRNG, from
- * the game's seed and the step: the sequence depends on nothing else), among the
- * candidates holding most of the land — never a zone over open ocean.
+ * the game's seed and the step), among the candidates holding most of the land the
+ * countries can walk to — never a zone over open ocean, nor one that pens the survivors
+ * behind the sea (land only boats reach counts only when no candidate holds any other)
+ * or leaves them a field of ice and peaks. Besides the random candidates, one leans
+ * towards the heart of that land, so a zone drifting off it can always come back.
  */
 function pickNextZone(game: Game, ring: RingState): void {
   const { width: w, height: h } = game.map;
@@ -419,19 +494,32 @@ function pickNextZone(game: Game, ring: RingState): void {
   const nr = ring.step + 1 >= ring.steps ? rMin : Math.max(rMin, ring.r * ROYALE_SHRINK);
   const slack = Math.max(0, ring.r - nr);
   const rng = new Rng((game.config.seed ^ Math.imul(ring.step + 1, 0x9e3779b1)) >>> 0);
-  const cands: [number, number, number][] = [];
+  const reach = reachableLand(game, ring.cx, ring.cy, ring.r);
+  const cands: [number, number, number, number][] = [];
+  const add = (x: number, y: number) => cands.push([x, y, ...landIn(game, x, y, nr, reach.seen)]);
   for (let tries = 0; cands.length < ROYALE_CANDIDATES && tries < 200; tries++) {
     const a = rng.next() * Math.PI * 2;
     const d = Math.sqrt(rng.next()) * slack;
     const x = ring.cx + Math.cos(a) * d;
     const y = ring.cy + Math.sin(a) * d;
     if (x < 0 || y < 0 || x > w || y > h) continue; // the centre stays on the map
-    cands.push([x, y, landIn(game, x, y, nr)]);
+    add(x, y);
   }
-  if (cands.length === 0) cands.push([ring.cx, ring.cy, 0]);
-  let best = 0;
-  for (const c of cands) best = Math.max(best, c[2]);
-  const pool = cands.filter((c) => c[2] >= best * ROYALE_LAND_KEEP);
+  if (reach.n > 0) {
+    const d = Math.hypot(reach.x - ring.cx, reach.y - ring.cy);
+    const k = d > slack ? slack / d : 1;
+    add(ring.cx + (reach.x - ring.cx) * k, ring.cy + (reach.y - ring.cy) * k);
+  }
+  if (cands.length === 0) cands.push([ring.cx, ring.cy, 0, 0]);
+  let bestWalk = 0;
+  let bestAll = 0;
+  for (const c of cands) {
+    bestWalk = Math.max(bestWalk, c[2]);
+    bestAll = Math.max(bestAll, c[3]);
+  }
+  const pool = cands.filter((c) =>
+    bestWalk > 0 ? c[2] >= bestWalk * ROYALE_LAND_KEEP : c[3] >= bestAll * ROYALE_LAND_KEEP,
+  );
   const [x, y] = pool[rng.int(0, pool.length - 1)]!;
   ring.nx = x;
   ring.ny = y;

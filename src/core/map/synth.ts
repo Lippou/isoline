@@ -5,7 +5,7 @@
 import { Noise2D } from '../noise';
 import { Rng } from '../rng';
 import type { DepositSpec } from './gamemap';
-import { IS_LAND, Resource, T } from './terrain';
+import { HABITABLE, HARSH, Resource, T } from './terrain';
 
 export interface SynthInput {
   width: number;
@@ -272,9 +272,9 @@ export function synthesize(inp: SynthInput): SynthOutput {
 
       let t: number;
       if (glacierInner && inp.glaciers![i]) {
-        t = glacierInner[i]! * pxKm > 90 ? T.Impassable : T.Tundra;
+        t = glacierInner[i]! * pxKm > 90 ? T.Glacier : T.Tundra; // ice sheet, its rim tundra
       } else if (e >= 0.93 && mtnCore[i]! > 0.75 && ridge01(noise2, x * fRidge, y * fRidge) > 0.72) {
-        t = T.Impassable; // jagged peaks / cliffs
+        t = T.Peaks; // jagged high peaks
       } else if (e >= 0.66) {
         t = T.Mountain;
       } else if (temp < 0.13 || (tun[i]! > 0.5 && temp < 0.3)) {
@@ -293,7 +293,7 @@ export function synthesize(inp: SynthInput): SynthOutput {
         t = T.Plains;
         if (moist > 0.4 && noise.get(x * fDetail * 0.7 - 40, y * fDetail * 0.7) > 0.36) t = T.Forest;
       }
-      if (inp.rivers && inp.rivers[i] && t !== T.Impassable) t = T.River;
+      if (inp.rivers && inp.rivers[i] && !HARSH[t]) t = T.River;
       terrain[i] = t;
     }
   }
@@ -310,7 +310,7 @@ export function generateDeposits(
 ): DepositSpec[] {
   const rng = new Rng(seed ^ 0xdeadbeef);
   let landCount = 0;
-  for (let i = 0; i < terrain.length; i++) if (IS_LAND[terrain[i]!]) landCount++;
+  for (let i = 0; i < terrain.length; i++) if (HABITABLE[terrain[i]!]) landCount++;
   const target = Math.max(10, Math.min(180, Math.round((landCount / 9000) * density)));
   const minDist = Math.max(12, Math.sqrt(landCount / target) * 0.55);
   const out: DepositSpec[] = [];
@@ -341,7 +341,7 @@ export function generateDeposits(
     const x = rng.int(3, w - 4);
     const y = rng.int(3, h - 4);
     const t = terrain[y * w + x]!;
-    if (!IS_LAND[t]) continue;
+    if (!HABITABLE[t]) continue;
     if (out.some((d) => (d.x - x) ** 2 + (d.y - y) ** 2 < minDist * minDist)) continue;
     const wts = weights(t);
     if (wts.every((v) => v === 0)) continue;
@@ -364,7 +364,7 @@ export function generateSpawnPoints(
   const sizes: number[] = [];
   const stack: number[] = [];
   for (let s = 0; s < w * h; s++) {
-    if (comp[s] !== -1 || !IS_LAND[terrain[s]!]) continue;
+    if (comp[s] !== -1 || !HABITABLE[terrain[s]!]) continue;
     const id = sizes.length;
     let c = 0;
     comp[s] = id;
@@ -375,7 +375,7 @@ export function generateSpawnPoints(
       const x = i % w;
       const nb = [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w];
       for (const j of nb) {
-        if (j < 0 || j >= w * h || comp[j] !== -1 || !IS_LAND[terrain[j]!]) continue;
+        if (j < 0 || j >= w * h || comp[j] !== -1 || !HABITABLE[terrain[j]!]) continue;
         comp[j] = id;
         stack.push(j);
       }
@@ -383,7 +383,7 @@ export function generateSpawnPoints(
     sizes.push(c);
   }
   let land = 0;
-  for (let i = 0; i < w * h; i++) if (IS_LAND[terrain[i]!]) land++;
+  for (let i = 0; i < w * h; i++) if (HABITABLE[terrain[i]!]) land++;
   const minDist = Math.max(6, Math.sqrt(land / count) * 0.7);
   const out: [number, number][] = [];
   let attempts = 0;
@@ -393,7 +393,7 @@ export function generateSpawnPoints(
     const y = rng.int(2, h - 3);
     const i = y * w + x;
     const t = terrain[i]!;
-    if (!IS_LAND[t] || t === T.Mountain) continue;
+    if (!HABITABLE[t] || t === T.Mountain) continue;
     if ((sizes[comp[i]!] ?? 0) < 250) continue;
     if (out.some(([px, py]) => (px - x) ** 2 + (py - y) ** 2 < minDist * minDist)) continue;
     out.push([x, y]);

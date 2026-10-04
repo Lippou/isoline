@@ -33,7 +33,7 @@ import { tick as uiTick } from 'svelte';
 import { startTakeover } from '../screens/launch';
 import { worthPrinting } from '../hud/frontPage';
 import { newAwards } from '../hud/results';
-import { IS_LAND } from '../../core/map/terrain';
+import { HABITABLE, IS_LAND } from '../../core/map/terrain';
 import { UI } from '../../render/colors';
 import type { MissionResult } from './missionResult';
 import { WORLD_EVENT_TICKS, type WorldEventId } from '../../core/rules/features';
@@ -281,7 +281,7 @@ export class GameController {
         ownerOf: (t: number) => this.session.state.owner[t] ?? 0,
         freeLand: (t: number) => {
           const st = this.session.state;
-          return st.terrain[t]! > 2 && st.terrain[t]! < 10 && st.owner[t] === 0;
+          return HABITABLE[st.terrain[t]!] === 1 && st.owner[t] === 0;
         },
         setTool: (k: string) => (hud.tool = { k: 'none' } as never) && k,
         weather: () => this.session.state.world?.weather ?? [],

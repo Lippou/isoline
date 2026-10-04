@@ -19,7 +19,7 @@ import { Noise2D } from '../../src/core/noise';
 import { encodeTerrainPng, encodeGreyPng } from '../../src/core/map/format';
 import { generateMapData, generateLabyrinth, markEnclosedLakes } from '../../src/core/map/generator';
 import type { MapMeta, MapCategory, NationSpawn, LocalizedName } from '../../src/core/map/gamemap';
-import { IS_LAND, IS_WATER, T, TERRAIN } from '../../src/core/map/terrain';
+import { HABITABLE, IS_LAND, IS_WATER, T, TERRAIN } from '../../src/core/map/terrain';
 import { connectRivers } from '../../src/core/map/rivers';
 import { hashString } from '../../src/core/rng';
 import { REGIONS, DESCRIPTIONS, type ExtraNation, type ReliefLine } from './catalogue';
@@ -456,7 +456,7 @@ function landmassSizes(terrain: Uint8Array, w: number, h: number): Int32Array {
   const stack: number[] = [];
   const members: number[] = [];
   for (let s = 0; s < n; s++) {
-    if (comp[s] !== -1 || !IS_LAND[terrain[s]!]) continue;
+    if (comp[s] !== -1 || !HABITABLE[terrain[s]!]) continue;
     members.length = 0;
     comp[s] = s;
     stack.push(s);
@@ -465,7 +465,7 @@ function landmassSizes(terrain: Uint8Array, w: number, h: number): Int32Array {
       members.push(i);
       const x = i % w;
       for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w]) {
-        if (j < 0 || j >= n || comp[j] !== -1 || !IS_LAND[terrain[j]!]) continue;
+        if (j < 0 || j >= n || comp[j] !== -1 || !HABITABLE[terrain[j]!]) continue;
         comp[j] = s;
         stack.push(j);
       }
@@ -578,7 +578,7 @@ function buildReal(def: RealMapDef, data: Record<string, Feature[]>): void {
             py = yi + dy;
           if (px < 2 || py < 2 || px >= w - 2 || py >= h - 2) continue;
           const t = terrain[py * w + px]!;
-          if (IS_LAND[t] && t !== T.Mountain) return [px, py];
+          if (HABITABLE[t] && t !== T.Mountain) return [px, py];
         }
     }
     return null;
@@ -655,7 +655,9 @@ const PREVIEW: Record<number, [number, number, number]> = {
   [T.Desert]: [176, 156, 106],
   [T.Forest]: [52, 92, 64],
   [T.Tundra]: [190, 200, 205],
-  [T.Impassable]: [80, 76, 80],
+  [T.Impassable]: [56, 52, 56],
+  [T.Glacier]: [200, 212, 222],
+  [T.Peaks]: [168, 162, 160],
 };
 
 function writeMap(meta: MapMeta, terrain: Uint8Array, elevation: Uint8Array): void {

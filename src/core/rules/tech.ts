@@ -461,7 +461,7 @@ const reps = (p: Player, b: number): number => Math.min(MAX_REPEAT, repeatCount(
 /** Attacker losses. */
 export function techMagMultiplier(p: Player, terrain: number): number {
   let m = 1;
-  if (lv(p, MIL) >= 1 && (terrain === T.Mountain || terrain === T.Hills)) m *= 0.9;
+  if (lv(p, MIL) >= 1 && (terrain === T.Mountain || terrain === T.Hills || terrain === T.Peaks)) m *= 0.9;
   if (lv(p, MIL) >= 3) m *= 0.9;
   if (lv(p, MIL) >= 6) m *= 0.9;
   return m * (1 - 0.01 * reps(p, MIL)); // Drill: −1% a level

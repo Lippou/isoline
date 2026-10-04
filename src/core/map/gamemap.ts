@@ -1,7 +1,7 @@
 // The static map: terrain, altitude, deposits and derived topology
 // (water bodies / landmasses, naval bodies with their navigable rivers, coast distance,
 // coarse naval graph).
-import { IS_LAND, IS_WATER, T } from './terrain';
+import { HABITABLE, IS_LAND, IS_WATER, T } from './terrain';
 import { NavGrid } from './nav';
 import { navigableRivers } from './rivers';
 
@@ -58,7 +58,7 @@ export class GameMap {
   readonly elevation: Uint8Array;
   /** Deposit type per tile (Resource enum), 0 = none. */
   readonly resource: Uint8Array;
-  /** Connected-component id: water bodies and landmasses share one id space (0 = impassable). */
+  /** Connected-component id: water bodies and landmasses share one id space (0 = impassable wall). */
   readonly component: Int32Array;
   /** Size of each component in tiles. */
   readonly componentSize: number[] = [0];
@@ -97,7 +97,7 @@ export class GameMap {
   }
 
   private stampDeposit(d: DepositSpec): void {
-    // A deposit is a small diamond of ~13 tiles centred on (x, y), land only.
+    // A deposit is a small diamond of ~13 tiles centred on (x, y), habitable land only.
     for (let dy = -2; dy <= 2; dy++) {
       for (let dx = -2; dx <= 2; dx++) {
         if (Math.abs(dx) + Math.abs(dy) > 2) continue;
@@ -105,7 +105,7 @@ export class GameMap {
         const y = d.y + dy;
         if (!this.inBounds(x, y)) continue;
         const i = y * this.width + x;
-        if (IS_LAND[this.terrain[i]!]) this.resource[i] = d.type;
+        if (HABITABLE[this.terrain[i]!]) this.resource[i] = d.type;
       }
     }
   }

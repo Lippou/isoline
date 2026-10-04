@@ -9,7 +9,7 @@ import { inventNationName } from '../../src/core/names';
 import { synthesize, generateDeposits, generateSpawnPoints } from '../../src/core/map/synth';
 import { flowParents, markEnclosedLakes } from '../../src/core/map/generator';
 import { connectRivers } from '../../src/core/map/rivers';
-import { IS_LAND, T } from '../../src/core/map/terrain';
+import { HABITABLE, T } from '../../src/core/map/terrain';
 import type {
   DepositSpec,
   LocalizedName,
@@ -227,7 +227,7 @@ function landmassSizes(terrain: Uint8Array, w: number, h: number): Int32Array {
   const stack: number[] = [];
   const members: number[] = [];
   for (let s = 0; s < n; s++) {
-    if (comp[s] !== -1 || !IS_LAND[terrain[s]!]) continue;
+    if (comp[s] !== -1 || !HABITABLE[terrain[s]!]) continue;
     members.length = 0;
     comp[s] = s;
     stack.push(s);
@@ -236,7 +236,7 @@ function landmassSizes(terrain: Uint8Array, w: number, h: number): Int32Array {
       members.push(i);
       const x = i % w;
       for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w]) {
-        if (j < 0 || j >= n || comp[j] !== -1 || !IS_LAND[terrain[j]!]) continue;
+        if (j < 0 || j >= n || comp[j] !== -1 || !HABITABLE[terrain[j]!]) continue;
         comp[j] = s;
         stack.push(j);
       }
@@ -330,7 +330,7 @@ export function buildWorld(def: WorldDef): { meta: MapMeta; terrain: Uint8Array;
     if (s.stamp)
       for (let i = 0; i < n; i++) {
         const t = s.stamp[i]! - 1;
-        if (t < 0 || !IS_LAND[terrain[i]!] || terrain[i] === T.River) continue;
+        if (t < 0 || !HABITABLE[terrain[i]!] || terrain[i] === T.River) continue;
         terrain[i] = t;
         if (t === T.Mountain) elevation[i] = Math.max(elevation[i]!, 175);
         else if (t === T.Hills) elevation[i] = Math.max(elevation[i]!, 105);
@@ -359,7 +359,7 @@ export function buildWorld(def: WorldDef): { meta: MapMeta; terrain: Uint8Array;
     if (x < 3 || y < 3 || x >= w - 3 || y >= h - 3) return false;
     const i = y * w + x;
     const t = terrain[i]!;
-    return IS_LAND[t] === 1 && t !== T.Mountain && sizes[i]! >= 400;
+    return HABITABLE[t] === 1 && t !== T.Mountain && sizes[i]! >= 400;
   };
   const snap = (x0: number, y0: number): [number, number] | null => {
     const xi = Math.round(x0);
