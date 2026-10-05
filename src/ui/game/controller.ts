@@ -256,8 +256,28 @@ export class GameController {
             else setTimeout(at, Math.random() * secs * 1000);
           }
         },
-        /** QA: nuclear blasts still unfolding, and the frame rate. */
-        fx: () => ({ blasts: this.renderer.nukeFxCount, fps: this.renderer.fps }),
+        /**
+         * QA: missiles drawn without the simulation (render only): kind 0 A, 1 H, 2 MIRV,
+         * 4 interceptor; `clear` wipes them first. Returns the flight time in seconds.
+         */
+        missileFx: (
+          kind: number,
+          sx: number,
+          sy: number,
+          tx: number,
+          ty: number,
+          opts: Parameters<GameRenderer['qaMissile']>[5] = {},
+          clear = false,
+        ) => {
+          if (clear) this.renderer.qaClearMissiles();
+          return kind < 0 ? 0 : this.renderer.qaMissile(kind, sx, sy, tx, ty, opts);
+        },
+        /** QA: nuclear blasts still unfolding, missiles and smoke drawn, and the frame rate. */
+        fx: () => ({
+          blasts: this.renderer.nukeFxCount,
+          ...this.renderer.missileFxCount,
+          fps: this.renderer.fps,
+        }),
         /** QA: map render settings for this game only (reduced motion, particle density…). */
         renderSettings: (patch: Partial<RenderSettings>) => {
           Object.assign(this.renderer.settings, patch);

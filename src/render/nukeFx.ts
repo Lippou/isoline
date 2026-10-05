@@ -657,11 +657,11 @@ function set(s: Sprite, x: number, y: number, r: number, tint: number, alpha: nu
   s.alpha = Math.max(0, alpha);
 }
 
-function clamp01(v: number): number {
+export function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
 }
 
-function smooth(a: number, b: number, v: number): number {
+export function smooth(a: number, b: number, v: number): number {
   const t = clamp01((v - a) / (b - a));
   return t * t * (3 - 2 * t);
 }
@@ -694,9 +694,9 @@ export function ramp(stops: readonly (readonly [number, number])[], u: number): 
 // --------------------------------------------------------------- textures
 // Generated once as pixel buffers: smooth radial gradients and value-noise billows.
 
-type Px = (u: number, v: number) => [number, number, number, number];
+export type Px = (u: number, v: number) => [number, number, number, number];
 
-function makeTexture(size: number, px: Px): Texture {
+export function makeTexture(size: number, px: Px): Texture {
   // Raw premultiplied pixels (a 2D canvas upload came out unpremultiplied: hard-edged discs).
   const d = new Uint8Array(size * size * 4);
   for (let j = 0; j < size; j++)
@@ -740,7 +740,7 @@ function vnoise(x: number, y: number, seed: number): number {
   return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
 }
 
-function fbm(x: number, y: number, seed: number, oct = 4): number {
+export function fbm(x: number, y: number, seed: number, oct = 4): number {
   let sum = 0;
   let amp = 0.5;
   let norm = 0;
@@ -756,7 +756,7 @@ function fbm(x: number, y: number, seed: number, oct = 4): number {
 
 const W: [number, number, number] = [255, 255, 255];
 
-function bloomPx(u: number, v: number): [number, number, number, number] {
+export function bloomPx(u: number, v: number): [number, number, number, number] {
   const r2 = u * u + v * v;
   if (r2 >= 1) return [...W, 0];
   const e = Math.exp(-4.2);
@@ -793,7 +793,7 @@ function dustPx(u: number, v: number): [number, number, number, number] {
   return [c, c, c, a];
 }
 
-function puffPx(u: number, v: number, seed: number): [number, number, number, number] {
+export function puffPx(u: number, v: number, seed: number): [number, number, number, number] {
   const r = Math.hypot(u, v);
   const n = fbm(u * 2.8 + seed, v * 2.8 - seed, seed);
   const lobes = fbm(Math.cos(Math.atan2(v, u)) * 1.6 + seed, Math.sin(Math.atan2(v, u)) * 1.6, seed + 5, 2);

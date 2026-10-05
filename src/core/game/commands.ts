@@ -9,7 +9,7 @@ import { IS_LAND } from '../map/terrain';
 import { B, BUILDING_COUNT, N } from './constants';
 import { demolishBuilding, placeBuilding, planBuild, upgradeBuilding } from '../buildings/buildings';
 import { buildWarship, launchBoat, orderShips, retreatTransport } from '../units/ships';
-import { launchNukes } from '../units/nukes';
+import { launchNukes, nuclearHalt } from '../units/nukes';
 import { bomberTarget, launchAircraft } from '../units/air';
 import {
   answerAlliance,
@@ -139,6 +139,12 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       if (o > 0 && o !== p.id && game.sameTeam(p.id, o)) return;
       if (o === p.id && c.kind === N.Mirv) {
         game.notify(p.id, 'error.nukeSelfMirv', 'warn');
+        return;
+      }
+      // The Council's ban and the peace summit stop every silo, the AI's included.
+      const halt = nuclearHalt(game);
+      if (halt) {
+        game.notify(p.id, `error.nukeHalt.${halt}`, 'warn');
         return;
       }
       // Betraying allies under the blast is decided by launchNukes, once a missile flies.

@@ -1190,6 +1190,7 @@
     "noSilo": "Aucun silo : construisez-en un",
     "reloading": "Silos en rechargement",
     "banned": "Le Conseil mondial interdit le nucléaire",
+    "summit": "Sommet de la paix : aucun lancement",
     "gold": "Or insuffisant",
     "mirvClear": "Le porteur ne peut pas être intercepté",
     "intercepted": "Un SAM interceptera ce missile : inversez l'arc ({key}) ou visez ailleurs",
@@ -1213,7 +1214,10 @@
     "kicker": "Interdiction nucléaire",
     "left": "encore {clock}",
     "tip": "Le Conseil mondial interdit les armes nucléaires : aucun lancement pendant encore {clock}.",
-    "short": "Interdit · {clock}"
+    "short": "Interdit · {clock}",
+    "summitKicker": "Sommet de la paix",
+    "summitTip": "Sommet de la paix : trêve forcée entre tous les pays, aucun lancement nucléaire pendant encore {clock}.",
+    "summitShort": "Sommet · {clock}"
   },
   "nuke": {
     "incoming": "Missile en approche",
@@ -1239,7 +1243,7 @@
     "pandemic": "Pandémie : la croissance des troupes est divisée par deux pendant 2 minutes.",
     "boom": "Boom commercial : navires marchands et trains rapportent double pendant 2 minutes !",
     "solarStorm": "Tempête solaire : les radars sont aveugles pendant 90 secondes.",
-    "peaceSummit": "Sommet de la paix : trêve forcée de 60 secondes entre tous les pays.",
+    "peaceSummit": "Sommet de la paix : trêve forcée de 60 secondes entre tous les pays, silos nucléaires compris.",
     "crisis.short": "Crise",
     "pandemic.short": "Pandémie",
     "boom.short": "Boom commercial",
@@ -1254,12 +1258,12 @@
     "pandemic.desc": "La croissance des troupes est divisée par deux pendant 2 minutes. Toutes les armées ont perdu 3 % de leurs effectifs au début de l'épidémie.",
     "boom.desc": "Navires marchands et trains rapportent le double pendant 2 minutes : c'est le moment de commercer.",
     "solarStorm.desc": "Les radars sont aveugles pendant 90 secondes : plus d'alerte avancée ni de guidage des intercepteurs, et le brouillard retombe sur ce qu'ils révélaient.",
-    "peaceSummit.desc": "Trêve forcée de 60 secondes : aucun pays ne peut en attaquer un autre. Les tribus restent attaquables.",
+    "peaceSummit.desc": "Trêve forcée de 60 secondes : aucun pays ne peut en attaquer un autre (ni troupes, ni bateaux, ni avions, ni sabotage) et personne ne lance d'arme nucléaire. Les tribus restent attaquables sur le terrain.",
     "crisis.fx": "Revenus −25 %",
     "pandemic.fx": "Croissance des troupes −50 %",
     "boom.fx": "Commerce et trains ×2",
     "solarStorm.fx": "Radars hors service",
-    "peaceSummit.fx": "Aucune attaque entre pays"
+    "peaceSummit.fx": "Aucune attaque entre pays, aucun lancement nucléaire"
   },
   "event": {
     "gameStart": "La partie commence ! L'immunité protège les joueurs pendant 60 s.",
@@ -1340,6 +1344,10 @@
     "noFrontier": "Aucune frontière commune : pour l'atteindre, envoyez un bateau (touche B ou clic droit → Débarquer).",
     "warship": "Impossible d'armer un navire : port requis sur cette mer, ou or insuffisant.",
     "nuke": "Aucun missile disponible (silo, or ou rechargement).",
+    "nukeHalt": {
+      "nukeBan": "Le Conseil mondial interdit les armes nucléaires : aucun lancement possible.",
+      "peaceSummit": "Sommet de la paix : aucun lancement nucléaire tant que dure la trêve."
+    },
     "air": "Aucun aérodrome libre à portée, cible invalide ou or insuffisant.",
     "general": "Capacité indisponible.",
     "simulation": "Erreur de simulation — consultez le journal.",

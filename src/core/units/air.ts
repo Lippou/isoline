@@ -236,6 +236,7 @@ function bomb(game: Game, u: Unit): void {
       v.alive &&
       v.type === U.Train &&
       !game.friendly(v.owner, u.owner) &&
+      !game.inTruce(v.owner, u.owner) &&
       (v.x - u.tx) ** 2 + (v.y - u.ty) ** 2 <= BOMBER_RADIUS ** 2
     ) {
       v.alive = false;
@@ -283,7 +284,8 @@ function fighterPrey(game: Game, u: Unit): Unit | undefined {
     const pr = PRIORITY[v.type];
     if (pr === undefined) continue;
     const d = (v.x - u.x) ** 2 + (v.y - u.y) ** 2;
-    if (d > r2 || game.friendly(v.owner, u.owner)) continue;
+    // A ceasefire (peace summit, Council) holds in the air too: patrols only shadow.
+    if (d > r2 || game.friendly(v.owner, u.owner) || game.inTruce(v.owner, u.owner)) continue;
     // Transports only when they sail to invade a friend's coast (their landing's owner at launch).
     if (v.type === U.Transport && !(v.dest > 0 && game.friendly(v.dest, u.owner))) continue;
     if (Math.hypot(v.x - u.sx, v.y - u.sy) > FIGHTER_RANGE) continue;
@@ -299,6 +301,7 @@ function fighterPrey(game: Game, u: Unit): Unit | undefined {
 /** Engage `tgt`: close in, then FIGHTER_DAMAGE a tick within FIGHTER_CONTACT. */
 function engage(game: Game, u: Unit, tgt: Unit, speed: number): void {
   flyTo(u, tgt.x, tgt.y, speed);
+  if (game.inTruce(tgt.owner, u.owner)) return; // a ceasefire began during the chase: no shot
   if (Math.hypot(tgt.x - u.x, tgt.y - u.y) > FIGHTER_CONTACT) return;
   tgt.hp -= FIGHTER_DAMAGE;
   if (tgt.hp > 0) return;
@@ -323,7 +326,13 @@ function scramble(game: Game, planes: Unit[]): void {
     // The nearest loaded airfield of each hostile country in range.
     const best = new Map<number, [Building, number, number]>();
     for (const f of fields) {
-      if (!f.alive || game.friendly(f.owner, t.owner) || chased.has(`${f.owner}:${t.id}`)) continue;
+      if (
+        !f.alive ||
+        game.friendly(f.owner, t.owner) ||
+        game.inTruce(f.owner, t.owner) ||
+        chased.has(`${f.owner}:${t.id}`)
+      )
+        continue;
       const d = Math.hypot(f.x + 0.5 - t.x, f.y + 0.5 - t.y);
       if (d > FIGHTER_RANGE) continue;
       const slot = alertReady(f);

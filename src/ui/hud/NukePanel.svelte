@@ -9,6 +9,7 @@
   import type { GameController } from '../game/controller';
   import { lockFor, nukeUnlock, techKey } from '../../core/rules/tech';
   import { zonePiece } from '../stores/layout.svelte';
+  import { haltIcon, haltKicker, haltTip, haltVerdict, nukeHalt } from './nukeHalt';
 
   let { ctl }: { ctl: GameController } = $props();
   const NAMES = ['nukeA', 'nukeH', 'nukeMirv'];
@@ -16,8 +17,9 @@
   const max = $derived(tool ? (hud.local?.maxLaunch[tool.kind] ?? 0) : 0);
   const cost = $derived(tool ? (hud.local?.nukeCosts[tool.kind] ?? 0) : 0);
   const counts = $derived(tool?.kind === N.Mirv ? [] : [1, 2, 5]);
-  const banLeft = $derived(Math.max(0, (hud.world?.nukeBanUntil ?? 0) - hud.tick));
-  const banned = $derived(banLeft > 0);
+  /** The World Council's nuclear ban or a peace summit: no launch while it lasts. */
+  const halt = $derived(nukeHalt(hud.world, hud.tick));
+  const banned = $derived(!!halt);
   const broke = $derived((hud.local?.gold ?? 0) < cost);
   const name = (id: number) => ctl.session.state.name(id, i18n.lang);
   /** Tech tree: the technology this bomb still needs (-1: researched, or no tech tree). */
@@ -43,10 +45,10 @@
     aria-label={t('launch.title')}
     use:zonePiece={{ id: 'launch' }}
   >
-    {#if banned}
-      <p class="ban" data-testid="launch-ban" data-tip={t('ban.tip', { clock: clock(banLeft) })}>
-        <Icon name="embargo" size={14} />{t('ban.kicker')}<span class="mono"
-          >{t('ban.left', { clock: clock(banLeft) })}</span
+    {#if halt}
+      <p class="ban" data-testid="launch-ban" data-reason={halt.reason} data-tip={haltTip(halt)}>
+        <Icon name={haltIcon(halt)} size={14} />{haltKicker(halt)}<span class="mono"
+          >{t('ban.left', { clock: clock(halt.left) })}</span
         >
       </p>
     {/if}
@@ -111,8 +113,10 @@
         <span class="chip">{t('launch.aim')}</span>
       {:else if hud.launch.teammate}
         <span class="chip bad"><Icon name="close" size={13} />{t('launch.teammate')}</span>
-      {:else if banned}
-        <span class="chip bad"><Icon name="nuke" size={13} />{t('launch.banned')}</span>
+      {:else if halt}
+        <span class="chip bad" data-testid="launch-halted"
+          ><Icon name="nuke" size={13} />{haltVerdict(halt)}</span
+        >
       {:else if hud.launch.silo === 'none'}
         <span class="chip bad"><Icon name="silo" size={13} />{t('launch.noSilo')}</span>
       {:else}

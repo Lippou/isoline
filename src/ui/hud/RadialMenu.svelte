@@ -15,6 +15,7 @@
   import { formatShort } from '../../render/renderer';
   import { clientSpotError } from '../game/capitalWatch';
   import { isTeammate } from '../game/team';
+  import { haltShort, haltTip, nukeHalt } from './nukeHalt';
 
   let { ctl }: { ctl: GameController } = $props();
   type Item = {
@@ -30,7 +31,7 @@
     danger?: boolean;
     /** Highlighted at the top of the menu (alliance offers). */
     featured?: boolean;
-    /** Forbidden for now (the World Council's nuclear ban): printed in magenta, not greyed. */
+    /** Forbidden for now (the World Council's nuclear ban, a peace summit): printed in magenta, not greyed. */
     banned?: boolean;
     group?: string;
   };
@@ -53,15 +54,15 @@
   const NUKE_NAMES = ['nukeA', 'nukeH', 'nukeMirv'];
   const gold = (n: number) => `${formatShort(n)}`;
 
-  /** The World Council's nuclear ban: time left (0: none). */
-  const banLeft = $derived(Math.max(0, (hud.world?.nukeBanUntil ?? 0) - hud.tick));
+  /** The World Council's nuclear ban or a peace summit (null: launches are free). */
+  const halt = $derived(nukeHalt(hud.world, hud.tick));
 
   function nukeItems(tile: number, own: boolean): Item[] {
     const L = hud.local;
     if (!L || !cfg.allowNukes) return [];
-    const ban = banLeft > 0;
-    const banHint = ban ? t('ban.short', { clock: clock(banLeft) }) : '';
-    const banTip = ban ? t('ban.tip', { clock: clock(banLeft) }) : '';
+    const ban = !!halt;
+    const banHint = halt ? haltShort(halt) : '';
+    const banTip = halt ? haltTip(halt) : '';
     // On our own land: A and H bombs only, each behind a confirmation.
     const guard = (fn: () => void) => (own ? selfGuard(fn) : act(fn));
     return (own ? [N.Atom, N.Hydrogen] : [N.Atom, N.Hydrogen, N.Mirv]).map((kind) => {
@@ -460,13 +461,7 @@
         icon: 'nuke',
         sub: nukes,
         danger: true,
-        ...(banLeft > 0
-          ? {
-              banned: true,
-              hint: t('ban.short', { clock: clock(banLeft) }),
-              desc: t('ban.tip', { clock: clock(banLeft) }),
-            }
-          : {}),
+        ...(halt ? { banned: true, hint: haltShort(halt), desc: haltTip(halt) } : {}),
       });
     out.push(...diplomacyItems(owner));
     out.push({

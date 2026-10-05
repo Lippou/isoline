@@ -510,9 +510,17 @@ export class Game {
     const A = this.players[attacker]!;
     if (!T.alive) return false;
     if (T.immuneUntil > this.tick) return false;
-    if (T.kind !== 'tribe' && A.kind !== 'tribe' && this.features.ceasefireUntil > this.tick) return false;
+    if (this.inTruce(attacker, target)) return false;
     if (!fresh && A.allies.has(target)) return false;
     return true;
+  }
+
+  /** A ceasefire (peace summit or the Council's) holds between these two countries; tribes are not covered. */
+  inTruce(a: number, b: number): boolean {
+    if (this.features.ceasefireUntil <= this.tick || a <= 0 || b <= 0 || a === b) return false;
+    const A = this.players[a];
+    const T = this.players[b];
+    return !!A && !!T && A.kind !== 'tribe' && T.kind !== 'tribe';
   }
 
   difficulty() {

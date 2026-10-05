@@ -59,9 +59,21 @@ function readySilos(game: Game, p: Player): Building[] {
   return out;
 }
 
+/**
+ * Why nobody may launch a nuclear weapon right now, null when launches are free: the World
+ * Council's nuclear ban, or a peace summit (its forced truce covers the silos too, tribes or
+ * not). Missiles already in flight are not recalled.
+ */
+export function nuclearHalt(game: Game): 'nukeBan' | 'peaceSummit' | null {
+  const f = game.features;
+  if (f.nukeBanUntil > game.tick) return 'nukeBan';
+  if (f.event?.id === 'peaceSummit' && f.event.until > game.tick) return 'peaceSummit';
+  return null;
+}
+
 /** How many bombs of `kind` p could launch right now (research, gold, loaded tubes, batch cap). */
 export function maxLaunchable(game: Game, p: Player, kind: N): number {
-  if (!game.config.allowNukes || game.phase !== 'playing' || game.features.nukeBanUntil > game.tick) return 0;
+  if (!game.config.allowNukes || game.phase !== 'playing' || nuclearHalt(game)) return 0;
   if (nukeLock(game, p, kind) >= 0) return 0;
   const cost = nukeCost(game, p, kind);
   let tubes = 0;
