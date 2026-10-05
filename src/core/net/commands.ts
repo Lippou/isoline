@@ -10,7 +10,8 @@ export type Command =
   | { t: 'boatRetreat'; id: number }
   | { t: 'build'; kind: number; tile: number }
   | { t: 'upgrade'; id: number }
-  | { t: 'demolish'; id: number }
+  /** Orders one of your buildings down (timed); `cancel`: calls off a demolition under way. */
+  | { t: 'demolish'; id: number; cancel?: boolean }
   | { t: 'warship'; tile: number }
   | { t: 'shipMove'; ids: number[]; tile: number; patrol: boolean }
   /** `up`: arc towards the top of the map (default) or the bottom (A and H bombs). */
@@ -67,8 +68,9 @@ export function isWellFormed(c: unknown): c is Command {
     case 'cancelAttack':
     case 'boatRetreat':
     case 'upgrade':
-    case 'demolish':
       return isInt(o.id);
+    case 'demolish':
+      return isInt(o.id) && (o.cancel === undefined || isBool(o.cancel));
     case 'build':
     case 'air':
       return isInt(o.kind) && isInt(o.tile);

@@ -83,6 +83,11 @@ export class SimHost {
     this.send({ type: 'qa', action: 'shrink', player, keep });
   }
 
+  /** QA (?automation, solo only): a peace summit opens at once for `secs` seconds. */
+  qaSummit(secs: number): void {
+    this.send({ type: 'qa', action: 'summit', secs });
+  }
+
   setViewer(viewer: number, fogEnabled: boolean): void {
     this.send({ type: 'setViewer', viewer, fogEnabled });
   }

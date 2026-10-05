@@ -8,7 +8,9 @@
 //                  strike, then on silos, airfields and the most valuable buildings, avoiding
 //                  loaded SAMs (unless it can empty them); reconnaissance over its offensives
 //                  (one in two) and before half of its raids; fighters at transports sailing
-//                  for its coast and at bombers its radars see coming;
+//                  for its coast (bombers beyond the fighters' reach) and at bombers its
+//                  radars see coming; from 1.16 its raids also go for the enemy's ships at
+//                  sea (invasion transports, warships, trade ships);
 //   2 (hard)       + reconnaissance before every raid (a spotted building loses two levels),
 //                  an escort fighter when interceptors would rise against the bombers,
 //                  fighters at any bomber in sight;
@@ -32,7 +34,8 @@ import {
 } from '../game/constants';
 import { applyCommand } from '../game/commands';
 import { U, type Unit } from '../units/unit';
-import { AIR_OUTBOUND, airfieldFor, alertReady, radarSees, spotted } from '../units/air';
+import { unitById } from '../units/ships';
+import { AIR_OUTBOUND, airfieldFor, alertReady, isShip, radarSees, spotted } from '../units/air';
 import { samMissilesReady, samRangeOf } from '../units/nukes';
 import { airLock } from '../rules/tech';
 import { TACTICS } from './tactics';
@@ -175,8 +178,22 @@ function defendSky(game: Game, p: Player, m: AirMem): number {
     if (u.dest !== p.id || game.friendly(u.owner, p.id)) continue;
     if (u.troops < Math.max(2_000, p.troops * 0.03)) continue;
     const f = airfieldFor(game, p, u.x, u.y);
-    if (!f || f.d > FIGHTER_RANGE) continue;
-    if (launch(game, p, m, A.Fighter, Math.floor(u.y) * w + Math.floor(u.x))) {
+    if (!f) continue;
+    const tile = Math.floor(u.y) * w + Math.floor(u.x);
+    if (f.d <= FIGHTER_RANGE) {
+      if (launch(game, p, m, A.Fighter, tile)) {
+        m.lastFighter = game.tick;
+        return cost + 30;
+      }
+      continue;
+    }
+    // Beyond the fighters' reach (1.16): a bomber at a big invasion fleet, budget allowing.
+    if (
+      f.d <= BOMBER_RANGE &&
+      u.troops >= Math.max(5_000, p.troops * 0.05) &&
+      canPay(p, m, AIR_COST[A.Bomber], AI_AIR_RESERVE / 2) &&
+      launch(game, p, m, A.Bomber, tile)
+    ) {
       m.lastFighter = game.tick;
       return cost + 30;
     }
@@ -187,7 +204,9 @@ function defendSky(game: Game, p: Player, m: AirMem): number {
   for (const u of planes) {
     if (u.type !== U.Bomber || u.kind !== AIR_OUTBOUND || game.friendly(u.owner, p.id)) continue;
     const b = u.target >= 0 ? game.buildings.get(u.target) : undefined;
-    const victim = b ? b.owner : (game.owner[u.dest] ?? 0);
+    // A bomber after a ship (units/air.ts: its id in `patrol`) threatens the ship's owner.
+    const ship = u.patrol >= 0 ? unitById(game, u.patrol) : undefined;
+    const victim = b ? b.owner : ship?.alive ? ship.owner : (game.owner[u.dest] ?? 0);
     if (victim !== p.id) continue;
     const seen = (tac.air >= 2 && !fog) || radarSees(game, p.id, u.x, u.y);
     if (!seen) continue;
@@ -316,41 +335,51 @@ function strike(game: Game, p: Player, m: AirMem, ctx: AirContext): number {
       sams.push({ b, range: samRangeOf(game, b) });
   // Reconnaissance first (two levels a hit): always from hard, half the time on normal.
   const recon = tac.air >= 2 || (tac.air === 1 && game.rng.chance(0.5));
-  let best: Building | null = null;
+  let best: { tile: number; x: number; y: number } | null = null;
   let bestScore = 0;
   let bestNeed = 1;
   let bestEscort = false;
-  for (const b of game.buildings.values()) {
-    if (b.owner !== q.id) continue;
+  /** Scores a raid at (x, y) worth `value` before the defences on the way. */
+  const consider = (x: number, y: number, tile: number, value: number): void => {
     let f0: Building | null = null;
     let d0 = Infinity;
     for (const f of fields) {
-      const d = Math.hypot(f.x - b.x, f.y - b.y);
+      const d = Math.hypot(f.x - x, f.y - y);
       if (d < d0) [f0, d0] = [f, d];
     }
-    if (!f0 || d0 > BOMBER_RANGE) continue;
-    let score = buildingValue(b, frontTiles, nukes, w);
+    if (!f0 || d0 > BOMBER_RANGE) return;
+    let score = value;
     // Defences on the way: every nation sees the SAMs guarding the target itself (one bomber
     // per loaded missile); the smart ones also those along the route and the interceptors.
     let need = 1;
     const smart = game.rng.chance(diff.targeting);
     for (const s of sams) {
-      const d = smart
-        ? segmentDist(s.b.x, s.b.y, f0.x, f0.y, b.x, b.y)
-        : Math.hypot(s.b.x - b.x, s.b.y - b.y);
+      const d = smart ? segmentDist(s.b.x, s.b.y, f0.x, f0.y, x, y) : Math.hypot(s.b.x - x, s.b.y - y);
       if (d <= s.range) need += samMissilesReady(game, s.b);
     }
     let escort = false;
-    if (smart && interceptorsAt(game, p, b.x, b.y)) {
+    if (smart && interceptorsAt(game, p, x, y)) {
       // An escort patrol over the target shoots the interceptors down (hard and up, within fighter reach).
       escort = tac.air >= 2 && d0 <= FIGHTER_RANGE;
       if (!escort) score *= 0.5;
     }
-    if (recon && !spotted(game, p.id, b.x + 0.5, b.y + 0.5)) score *= 1.5;
+    if (recon && !spotted(game, p.id, x + 0.5, y + 0.5)) score *= 1.5;
     score = score / need + game.rng.next() * (1 - diff.targeting) * 3;
-    if (score > bestScore) [best, bestScore, bestNeed, bestEscort] = [b, score, need, escort];
-  }
-  if (!best || bestScore < 1) return cost;
+    if (score > bestScore) [best, bestScore, bestNeed, bestEscort] = [{ tile, x, y }, score, need, escort];
+  };
+  for (const b of game.buildings.values())
+    if (b.owner === q.id) consider(b.x, b.y, b.tile, buildingValue(b, frontTiles, nukes, w));
+  // Its fleet at sea (1.16, normal and up): invasion transports (the troops aboard go down
+  // with them) and veteran warships, when they are worth a bomber.
+  if (tac.air >= 1)
+    for (const u of game.units) {
+      if (!u.alive || u.owner !== q.id || !isShip(u.type)) continue;
+      const value = shipValue(u, p);
+      if (value <= 0) continue;
+      consider(u.x - 0.5, u.y - 0.5, Math.floor(u.y) * w + Math.floor(u.x), value);
+    }
+  const aim = best as { tile: number; x: number; y: number } | null;
+  if (!aim || bestScore < 1) return cost;
   // Emptying a SAM takes a bomber per loaded missile, plus the one that gets through.
   const most = tac.air >= 3 ? 4 : tac.air >= 1 ? 2 : 1;
   if (bestNeed > most) return cost;
@@ -365,11 +394,11 @@ function strike(game: Game, p: Player, m: AirMem, ctx: AirContext): number {
   // Reconnaissance (faster) and the escort (faster still) take off first and get there before
   // the bombers — when the treasury allows them on top of the bombers.
   let spare = p.gold - AI_AIR_RESERVE - bombers;
-  if (bestEscort && spare >= AIR_COST[A.Fighter] && launch(game, p, m, A.Fighter, best.tile))
+  if (bestEscort && spare >= AIR_COST[A.Fighter] && launch(game, p, m, A.Fighter, aim.tile))
     spare -= AIR_COST[A.Fighter];
-  if (recon && spare >= AIR_COST[A.Recon] && !spotted(game, p.id, best.x + 0.5, best.y + 0.5))
-    scout(game, p, m, best.tile);
-  for (let k = 0; k < bestNeed; k++) launch(game, p, m, A.Bomber, best.tile);
+  if (recon && spare >= AIR_COST[A.Recon] && !spotted(game, p.id, aim.x + 0.5, aim.y + 0.5))
+    scout(game, p, m, aim.tile);
+  for (let k = 0; k < bestNeed; k++) launch(game, p, m, A.Bomber, aim.tile);
   return cost + 40;
 }
 
@@ -397,6 +426,21 @@ function buildingValue(b: Building, frontTiles: number[], nukes: boolean, w: num
     default:
       return 1;
   }
+}
+
+/**
+ * What a raid on ship u is worth to p (0: not worth a bomber): an invasion transport by the
+ * troops it carries (more when it sails for p's coast), a veteran warship; a trade ship or a
+ * small transport never (a bomber costs more than it would sink).
+ */
+function shipValue(u: Unit, p: Player): number {
+  if (u.type === U.Transport) {
+    const big = u.troops >= Math.max(15_000, p.troops * 0.04);
+    if (u.dest !== p.id && !big) return 0;
+    return Math.min(6, 1.5 + u.troops / 20_000) * (u.dest === p.id ? 1.5 : 1);
+  }
+  if (u.type === U.Warship) return u.kills >= 2 ? 1 + Math.min(1.5, u.kills * 0.2) : 0;
+  return 0;
 }
 
 /** Distance from (px, py) to the segment (ax, ay)–(bx, by). */

@@ -35,15 +35,22 @@ export interface Building {
    */
   occupiedLeft: number;
   occupiedTotal: number;
+  /**
+   * Demolition under way (1.16, the player's request: « quand on démolit un bâtiment, il faut
+   * aussi du temps »): ticks left before it comes down (0 = none). Meanwhile it is out of
+   * service, its construction or upgrade halted; the order can be cancelled.
+   */
+  demolishLeft: number;
+  demolishTotal: number;
 }
 
 /**
- * Whether a building works: built and not under occupation. Only then do cities raise the
- * troop ceiling, stations pay trains, ports trade, factories run trains, research centres
- * research, silos launch, SAMs fire and airfields fly.
+ * Whether a building works: built, not under occupation and not being demolished. Only then
+ * do cities raise the troop ceiling, stations pay trains, ports trade, factories run trains,
+ * research centres research, silos launch, SAMs fire and airfields fly.
  */
 export function inService(b: Building): boolean {
-  return b.buildLeft === 0 && b.occupiedLeft === 0;
+  return b.buildLeft === 0 && b.occupiedLeft === 0 && b.demolishLeft === 0;
 }
 
 const CELL = 32;

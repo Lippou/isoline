@@ -6,11 +6,18 @@ import { isWellFormed } from '../net/commands';
 import { handleSpawnCommand } from './spawn';
 import { attackSlotFree, cancelAttack, hasFrontier, launchAttack } from '../rules/combat';
 import { IS_LAND } from '../map/terrain';
-import { B, BUILDING_COUNT, N } from './constants';
-import { demolishBuilding, placeBuilding, planBuild, upgradeBuilding } from '../buildings/buildings';
-import { buildWarship, launchBoat, orderShips, retreatTransport } from '../units/ships';
-import { launchNukes, nuclearHalt } from '../units/nukes';
-import { bomberTarget, launchAircraft } from '../units/air';
+import { B, BUILDING_COUNT, MAX_ATTACKS_PER_PLAYER, N } from './constants';
+import type { Refusal } from './state';
+import {
+  cancelDemolition,
+  demolishBuilding,
+  placeBuilding,
+  planBuild,
+  upgradeBuilding,
+} from '../buildings/buildings';
+import { buildWarship, launchBoat, orderShips, retreatTransport, warshipError } from '../units/ships';
+import { launchNukes, nuclearHalt, nukeError } from '../units/nukes';
+import { bomberAim, launchAircraft, planAircraft } from '../units/air';
 import {
   answerAlliance,
   betray,
@@ -20,11 +27,15 @@ import {
   setEmbargo,
   setEmbargoAll,
 } from '../rules/diplomacy';
-import { castVote, useGeneral } from '../rules/features';
+import { castVote, generalError, useGeneral } from '../rules/features';
 import { continueAfterVictory } from '../rules/victory';
-import { setResearch, techKey } from '../rules/tech';
+import { airLock, nukeLock, setResearch, techKey } from '../rules/tech';
 import { capitalCooldown, moveCapital } from '../rules/capital';
 import type { A } from './constants';
+
+const REFUSALS = new Set<string>(['phase', 'self', 'team', 'gone', 'immune', 'summit', 'ceasefire', 'ally']);
+/** Whether an order's error code is one of Game.attackRefusal's (worded by Game.refuse). */
+export const isRefusal = (code: string): code is Refusal => REFUSALS.has(code);
 
 export function applyCommand(game: Game, pid: number, c: Command): void {
   if (!isWellFormed(c)) return;
@@ -55,8 +66,14 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       if (!IS_LAND[game.map.terrain[c.tile]!] || game.isDead(c.tile)) return;
       const target = game.owner[c.tile]!;
       if (target === p.id) return;
-      if (!game.attackAllowed(p.id, target, true) || !attackSlotFree(game, p.id, target)) {
-        game.notify(p.id, 'error.cannotAttack', 'warn');
+      // Refused: the real reason (1.16) — a truce and its time left, an immunity, a teammate.
+      const why = game.attackRefusal(p.id, target, true);
+      if (why) {
+        game.refuse(p.id, 'attack', why);
+        return;
+      }
+      if (!attackSlotFree(game, p.id, target)) {
+        game.notify(p.id, 'error.attackSlots', 'warn', { n: MAX_ATTACKS_PER_PLAYER });
         return;
       }
       if (!hasFrontier(game, p, target, c.tile)) {
@@ -75,7 +92,9 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       // Betrayal and refused requests happen in launchBoat, only once a transport sails.
       if (!inMap(c.tile)) return;
       const res = launchBoat(game, p, c.tile, c.ratio);
-      if (res !== 'ok') game.notify(p.id, `error.boat.${res}`, 'warn');
+      if (res === 'ok') return;
+      if (isRefusal(res)) game.refuse(p.id, 'boat', res);
+      else game.notify(p.id, `error.boat.${res}`, 'warn');
       return;
     }
 
@@ -119,13 +138,19 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
 
     case 'demolish': {
       const b = game.buildings.get(c.id);
-      if (b) demolishBuilding(game, p, b);
+      if (!b) return;
+      if (c.cancel) cancelDemolition(game, p, b);
+      else demolishBuilding(game, p, b);
       return;
     }
 
-    case 'warship':
-      if (inMap(c.tile) && !buildWarship(game, p, c.tile)) game.notify(p.id, 'error.warship', 'warn');
+    case 'warship': {
+      if (!inMap(c.tile)) return;
+      const res = warshipError(game, p, c.tile);
+      if (res !== 'ok') game.notify(p.id, `error.warshipWhy.${res}`, 'warn');
+      else buildWarship(game, p, c.tile);
       return;
+    }
 
     case 'shipMove':
       if (inMap(c.tile)) orderShips(game, p, c.ids, c.tile);
@@ -144,7 +169,15 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       // The Council's ban and the peace summit stop every silo, the AI's included.
       const halt = nuclearHalt(game);
       if (halt) {
-        game.notify(p.id, `error.nukeHalt.${halt}`, 'warn');
+        const f = game.features;
+        const until = halt === 'nukeBan' ? f.nukeBanUntil : (f.event?.until ?? game.tick);
+        game.notify(p.id, `error.nukeHalt.${halt}`, 'warn', { left: Math.max(0, until - game.tick) });
+        return;
+      }
+      const why = nukeError(game, p, c.kind as N);
+      if (why !== 'ok') {
+        const lock = why === 'locked' ? { tech: techKey(nukeLock(game, p, c.kind as N)) } : undefined;
+        game.notify(p.id, `error.nukeWhy.${why}`, 'warn', lock);
         return;
       }
       // Betraying allies under the blast is decided by launchNukes, once a missile flies.
@@ -155,10 +188,21 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
 
     case 'air': {
       if (!inMap(c.tile) || c.kind < 0 || c.kind > 2) return;
-      const o = c.kind === 1 ? (bomberTarget(game, p, c.tile)?.owner ?? game.owner[c.tile]!) : 0;
-      if (!launchAircraft(game, p, c.kind as A, c.tile)) game.notify(p.id, 'error.air', 'warn');
+      const aim = c.kind === 1 ? bomberAim(game, p, c.tile) : null;
+      const o = c.kind === 1 ? (aim ? (aim.ship ?? aim.building).owner : game.owner[c.tile]!) : 0;
+      // Refused: the real reason (1.16), the truce and its time left before the gold.
+      const plan = planAircraft(game, p, c.kind as A, c.tile);
+      if (plan.error !== 'ok') {
+        if (isRefusal(plan.error)) game.refuse(p.id, c.kind === 1 ? 'bomber' : 'plane', plan.error);
+        else {
+          const lock = plan.error === 'locked' ? { tech: techKey(airLock(game, p)) } : undefined;
+          game.notify(p.id, `error.airWhy.${plan.error}`, 'warn', lock);
+        }
+        return;
+      }
+      launchAircraft(game, p, c.kind as A, c.tile);
       // Bombing an ally betrays it — once the bomber has taken off.
-      else if (c.kind === 1 && o > 0 && p.allies.has(o)) betray(game, p, game.players[o]!);
+      if (c.kind === 1 && o > 0 && p.allies.has(o)) betray(game, p, game.players[o]!);
       return;
     }
 
@@ -203,9 +247,17 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
     case 'research':
       setResearch(p, c.tech, c.op);
       return;
-    case 'general':
-      if (inMap(c.tile) && !useGeneral(game, p, c.tile)) game.notify(p.id, 'error.general', 'warn');
+    case 'general': {
+      if (!inMap(c.tile)) return;
+      const why = generalError(game, p, c.tile);
+      if (why === 'ok') useGeneral(game, p, c.tile);
+      else if (isRefusal(why)) game.refuse(p.id, 'sabotage', why);
+      else
+        game.notify(p.id, `error.generalWhy.${why}`, 'warn', {
+          s: Math.ceil(Math.max(0, p.generalReadyTick - game.tick) / 10),
+        });
       return;
+    }
     case 'vote':
       castVote(game, p, c.option);
       return;

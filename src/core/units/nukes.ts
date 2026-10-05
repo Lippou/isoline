@@ -82,6 +82,24 @@ export function maxLaunchable(game: Game, p: Player, kind: N): number {
   return Math.max(0, Math.min(MAX_NUKE_BATCH, tubes, Math.floor(p.gold / Math.max(1, cost))));
 }
 
+/**
+ * Why p cannot launch a bomb of `kind` right now ('ok' when it can): the real reason (1.16),
+ * the halt (Council's ban, peace summit) apart (nuclearHalt).
+ */
+export function nukeError(
+  game: Game,
+  p: Player,
+  kind: N,
+): 'ok' | 'disabled' | 'locked' | 'noSilo' | 'reloading' | 'gold' {
+  if (!game.config.allowNukes || game.phase !== 'playing') return 'disabled';
+  if (nukeLock(game, p, kind) >= 0) return 'locked';
+  const silos = readySilos(game, p);
+  if (silos.length === 0) return 'noSilo';
+  if (!silos.some((s) => s.tubes.some((t) => t === 0))) return 'reloading';
+  if (p.gold < nukeCost(game, p, kind)) return 'gold';
+  return 'ok';
+}
+
 // ------------------------------------------------------------------ paths
 
 const paths = new WeakMap<Unit, Trajectory>();

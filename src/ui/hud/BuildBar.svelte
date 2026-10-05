@@ -13,7 +13,8 @@
   import { hudSize } from '../stores/hudBox.svelte';
   import { folds, setFold } from '../stores/folds.svelte';
   import FoldButton from './FoldButton.svelte';
-  import { haltIcon, haltShort, haltTip, nukeHalt } from './nukeHalt';
+  import { haltIcon, haltShort, haltTip, nukeHalt, truceShort, truceText } from './nukeHalt';
+  import { truceOf } from '../game/truce';
 
   let { ctl }: { ctl: GameController } = $props();
   const cfg = currentSession()!.config;
@@ -60,6 +61,8 @@
   }
   /** The World Council's nuclear ban or a peace summit: the bombs print in magenta while it lasts. */
   const halt = $derived(nukeHalt(hud.world, hud.tick));
+  /** A truce (peace summit, Council's ceasefire): bombers and fighters spare every country meanwhile. */
+  const truce = $derived(truceOf(hud.world, hud.tick));
   const active = (k: string, kind: number) =>
     hud.tool.k === k && 'kind' in hud.tool && hud.tool.kind === kind;
 
@@ -306,7 +309,9 @@
     {/if}
     {#if air.length}
       <div class="group">
-        <div class="gtitle">{t('hud.groupAir')}</div>
+        <div class="gtitle" class:spot={!!truce} data-testid="air-group-title">
+          {t('hud.groupAir')}{#if truce}<span class="mono">{`· ${truceShort(truce)}`}</span>{/if}
+        </div>
         <div class="tools">
           {#each air as a (a.kind)}
             {@const lock = lockOf('airfield')}
@@ -334,6 +339,7 @@
                     L.buildingCount[B.Airfield] === 0 ? t('hud.needsAirfield') : '',
                   ].filter(Boolean),
                   requires(lock),
+                  truce && a.kind !== 2 ? truceText(truce, a.kind === 1 ? 'bomber' : 'fighter') : '',
                 )}
               {/if}
             </div>

@@ -4,7 +4,7 @@
 // - reconnaissance gives intelligence on a zone (cheaper attacks, sharper bombing, hidden numbers);
 // - airfields keep one free interceptor on alert per level, scrambled at detected intruders;
 // - radars extend that detection (and warn the player: src/engine/radarWatch.ts).
-import type { Game } from '../game/state';
+import type { Game, Refusal } from '../game/state';
 import type { Player } from '../game/player';
 import {
   A,
@@ -17,6 +17,9 @@ import {
   BOMBER_LEVELS_SPOTTED,
   BOMBER_RADIUS,
   BOMBER_RANGE,
+  BOMBER_SHIP_DAMAGE,
+  BOMBER_SHIP_RADIUS,
+  BOMBER_SHIP_SNAP,
   BOMBER_SNAP,
   BUILDING_KEYS,
   FIGHTER_CONTACT,
@@ -35,8 +38,9 @@ import {
   radarRange,
   sec,
 } from '../game/constants';
-import { U, makeUnit, type Unit } from './unit';
-import { addUnit, unitById } from './ships';
+import { U, UNIT_KEYS, makeUnit, type Unit } from './unit';
+import { addUnit, killUnit, unitById } from './ships';
+import { IS_LAND } from '../map/terrain';
 import { inService, type Building } from '../buildings/building';
 import { damageBuilding } from '../buildings/buildings';
 import { destroyRailsInRadius } from './trains';
@@ -121,31 +125,130 @@ export function bomberTarget(game: Game, p: Player, tile: number): Building | nu
   return best;
 }
 
-export function launchAircraft(game: Game, p: Player, kind: A, tile: number): boolean {
-  if (!game.config.features.air || game.phase !== 'playing') return false;
-  if (airLock(game, p) >= 0) return false; // tech tree: Aerospace (even from a captured airfield)
-  const cost = AIR_COST[kind];
-  if (p.gold < cost) return false;
+/**
+ * Why a plane of `kind` sent by p at `tile` would not take off ('ok' when it would), in the
+ * order the player should hear it (1.16: the real reason, never a catch-all): the rules of
+ * the game and research first, then the target (nothing hostile, a teammate, a truce or an
+ * immunity), then the airfields (none, all full, too far), and the gold last.
+ */
+export type AirError =
+  'ok' | 'disabled' | 'locked' | 'noAirfield' | 'full' | 'range' | 'noTarget' | 'gold' | Refusal;
+
+export interface AirPlan {
+  error: AirError;
+  /** Aim point (a bomber's: its building or ship), the building or ship aimed at (-1: none), the airfield. */
+  tx: number;
+  ty: number;
+  target: number;
+  ship: number;
+  field: Building | null;
+  d: number;
+}
+
+export function planAircraft(game: Game, p: Player, kind: A, tile: number): AirPlan {
   const w = game.map.width;
-  let tx = (tile % w) + 0.5;
-  let ty = ((tile / w) | 0) + 0.5;
-  let target = -1;
+  const plan: AirPlan = {
+    error: 'ok',
+    tx: (tile % w) + 0.5,
+    ty: ((tile / w) | 0) + 0.5,
+    target: -1,
+    ship: -1,
+    field: null,
+    d: Infinity,
+  };
+  const fail = (error: AirError): AirPlan => ((plan.error = error), plan);
+  if (!game.config.features.air) return fail('disabled');
+  if (game.phase !== 'playing') return fail('phase');
+  if (airLock(game, p) >= 0) return fail('locked'); // tech tree: Aerospace (even from a captured airfield)
   if (kind === A.Bomber) {
-    // A bomber goes for a hostile structure near the aim point, or a hostile tile (rails).
-    // Bombing an ally betrays it (the command breaks the pact); a teammate, never.
-    const b = bomberTarget(game, p, tile);
-    const victim = b ? b.owner : game.owner[tile]!;
-    if (victim <= 0 || game.sameTeam(victim, p.id) || !game.attackAllowed(p.id, victim, true)) return false;
-    if (b) {
-      tx = b.x + 0.5;
-      ty = b.y + 0.5;
-      target = b.id;
+    // A bomber goes for a hostile ship at sea, a hostile structure near the aim point, or a
+    // hostile tile (rails). Bombing an ally betrays it (the command breaks the pact); a
+    // teammate, never.
+    const aim = bomberAim(game, p, tile);
+    const victim = aim ? (aim.ship ?? aim.building).owner : game.owner[tile]!;
+    if (victim <= 0) return fail('noTarget');
+    const why = victim === p.id ? 'noTarget' : game.attackRefusal(p.id, victim, true);
+    if (why) return fail(why);
+    if (aim?.ship) {
+      plan.tx = aim.ship.x;
+      plan.ty = aim.ship.y;
+      plan.ship = aim.ship.id;
+    } else if (aim?.building) {
+      plan.tx = aim.building.x + 0.5;
+      plan.ty = aim.building.y + 0.5;
+      plan.target = aim.building.id;
     }
   }
-  const pick = airfieldFor(game, p, tx, ty);
-  if (!pick || pick.d > REACH[kind]!) return false;
-  const field = pick.field;
-  p.gold -= cost;
+  let any = false;
+  for (const b of game.buildings.values())
+    if (b.owner === p.id && b.type === B.Airfield && inService(b)) any = true;
+  if (!any) return fail('noAirfield');
+  const pick = airfieldFor(game, p, plan.tx, plan.ty);
+  if (!pick) return fail('full');
+  plan.field = pick.field;
+  plan.d = pick.d;
+  if (pick.d > REACH[kind]!) return fail('range');
+  if (p.gold < AIR_COST[kind]) return fail('gold');
+  return plan;
+}
+
+/** Sends a plane (planAircraft says why not when it returns false). */
+/** Ships a bomber can sink or damage. */
+export const isShip = (type: number): boolean =>
+  type === U.Warship || type === U.Transport || type === U.Merchant;
+
+/**
+ * The ship a bomber of p aimed at `tile` would go for: the hostile ship (warship, transport,
+ * trade ship) nearest the aim point within BOMBER_SHIP_SNAP — neither p's nor a teammate's
+ * (an ally's betrays it). Null when there is none.
+ */
+export function bomberShip(game: Game, p: Player, tile: number): Unit | null {
+  const w = game.map.width;
+  const x = (tile % w) + 0.5;
+  const y = ((tile / w) | 0) + 0.5;
+  let best: Unit | null = null;
+  let bestD = BOMBER_SHIP_SNAP * BOMBER_SHIP_SNAP;
+  for (const v of game.units) {
+    if (!v.alive || !isShip(v.type) || v.owner <= 0 || game.sameTeam(v.owner, p.id)) continue;
+    const d = (v.x - x) ** 2 + (v.y - y) ** 2;
+    if (d < bestD || (d === bestD && best && v.id < best.id)) {
+      bestD = d;
+      best = v;
+    }
+  }
+  return best;
+}
+
+/**
+ * What a bomber of p aimed at `tile` goes for: a ship when aimed at sea (or with no building
+ * near, or nearer than the building: a ship on a river), else the nearest hostile building;
+ * null for neither.
+ */
+export function bomberAim(
+  game: Game,
+  p: Player,
+  tile: number,
+): { ship: Unit; building: null } | { ship: null; building: Building } | null {
+  const ship = bomberShip(game, p, tile);
+  const b = bomberTarget(game, p, tile);
+  const sea = !IS_LAND[game.map.terrain[tile]!];
+  // A ship on a river (land tiles) is taken when it lies nearer the aim than the building.
+  const w = game.map.width;
+  const [x, y] = [(tile % w) + 0.5, ((tile / w) | 0) + 0.5];
+  const nearer =
+    !!ship && !!b && (ship.x - x) ** 2 + (ship.y - y) ** 2 <= (b.x + 0.5 - x) ** 2 + (b.y + 0.5 - y) ** 2;
+  if (ship && (sea || !b || nearer)) return { ship, building: null };
+  if (b) return { ship: null, building: b };
+  return null;
+}
+
+export function launchAircraft(game: Game, p: Player, kind: A, tile: number): boolean {
+  const plan = planAircraft(game, p, kind, tile);
+  if (plan.error !== 'ok') return false;
+  const w = game.map.width;
+  const { tx, ty, target } = plan;
+  const field = plan.field!;
+  p.gold -= AIR_COST[kind];
   const u = makeUnit(game.nextId(), TYPE_OF[kind]!, p.id, field.x + 0.5, field.y + 0.5);
   u.hp = u.maxHp = AIR_HP[kind];
   u.speed = AIR_SPEED[kind];
@@ -156,9 +259,11 @@ export function launchAircraft(game: Game, p: Player, kind: A, tile: number): bo
   u.ty = ty;
   u.t0 = game.tick;
   u.target = target;
+  // A bomber after a ship follows it (its id in `patrol`, unused by planes otherwise).
+  u.patrol = plan.ship;
   u.dest = kind === A.Bomber ? Math.floor(ty) * w + Math.floor(tx) : -1;
   // Flight time at storm speed (×0.75) plus a margin: the plane never lingers forever.
-  const leg = Math.ceil(pick.d / (AIR_SPEED[kind] * 0.75)) + sec(10);
+  const leg = Math.ceil(plan.d / (AIR_SPEED[kind] * 0.75)) + sec(10);
   u.t1 =
     game.tick +
     (kind === A.Fighter ? leg + FIGHTER_PATROL_TICKS + leg : kind === A.Recon ? leg + RECON_TICKS : 2 * leg);
@@ -203,8 +308,63 @@ export function spotted(game: Game, owner: number, x: number, y: number): boolea
   return false;
 }
 
+/**
+ * A drop at sea: every hostile ship within BOMBER_SHIP_RADIUS takes BOMBER_SHIP_DAMAGE (twice
+ * that when spotted); those that reach 0 hp sink (the sinking of ships.ts). The ship hunted
+ * decides the victim; others are hit only if they could be attacked (no friend, no truce).
+ */
+function bombShips(game: Game, u: Unit): void {
+  const p = game.players[u.owner]!;
+  const hunted = u.patrol >= 0 ? unitById(game, u.patrol) : undefined;
+  const victim = hunted?.alive ? hunted.owner : 0;
+  const damage = BOMBER_SHIP_DAMAGE * (spotted(game, u.owner, u.tx, u.ty) ? 2 : 1);
+  let sunk = 0;
+  let hit = 0;
+  let type = -1;
+  let owner = victim;
+  for (const v of game.units) {
+    if (!v.alive || !isShip(v.type) || (v.x - u.tx) ** 2 + (v.y - u.ty) ** 2 > BOMBER_SHIP_RADIUS ** 2)
+      continue;
+    if (game.friendly(v.owner, u.owner) && v.owner !== victim) continue;
+    if (!game.attackAllowed(u.owner, v.owner, true)) continue;
+    const q = game.players[v.owner];
+    if (!q) continue;
+    v.hp -= damage;
+    hit++;
+    if (type < 0 || v === hunted) [type, owner] = [v.type, v.owner];
+    openHostilities(game, p, q);
+    game.ai.raidedBy.set(v.owner, [u.owner, game.tick]);
+    const params = { by: u.owner, player: v.owner, ship: UNIT_KEYS[v.type]! };
+    if (v.hp <= 0) {
+      sunk++;
+      killUnit(game, v, u.owner);
+      game.notify(v.owner, 'notify.raidShipSunk', 'danger', params);
+      game.notify(u.owner, 'notify.raidHitShipSunk', 'good', params);
+    } else {
+      game.notify(v.owner, 'notify.raidShip', 'danger', params);
+      game.notify(u.owner, 'notify.raidHitShip', 'good', params);
+    }
+  }
+  game.emit({ k: 'explosion', x: u.tx, y: u.ty, kind: 11, radius: BOMBER_SHIP_RADIUS, owner: u.owner });
+  game.emit({
+    k: 'airStrike',
+    x: u.tx,
+    y: u.ty,
+    owner: u.owner,
+    victim: hit > 0 ? owner : 0,
+    type: -1,
+    levels: 0,
+    destroyed: sunk > 0,
+    ship: type,
+  });
+}
+
 /** The bomber's drop: its building loses one level (two when spotted), rails and trains around are cut. */
 function bomb(game: Game, u: Unit): void {
+  if (u.patrol >= 0) {
+    bombShips(game, u);
+    return;
+  }
   const p = game.players[u.owner]!;
   let b = u.target >= 0 ? game.buildings.get(u.target) : undefined;
   // The target fell into friendly hands (or was razed): whatever hostile stands there instead.
@@ -404,6 +564,11 @@ export function updateAir(game: Game): void {
     }
     const speed = u.speed * airSpeedAt(game, u.x, u.y);
     if (u.type === U.Bomber) {
+      // After a ship: follow it while it sails (the drop falls where it was last seen).
+      if (u.kind === AIR_OUTBOUND && u.patrol >= 0) {
+        const ship = unitById(game, u.patrol);
+        if (ship?.alive) [u.tx, u.ty] = [ship.x, ship.y];
+      }
       if (game.tick >= u.t1) u.alive = false;
       else if (u.kind === AIR_OUTBOUND && flyTo(u, u.tx, u.ty, speed)) {
         bomb(game, u);

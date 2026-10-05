@@ -204,6 +204,8 @@ export function restoreSnapshot(map: GameMap, snap: Snapshot): Game {
     b.upgradeTotal ??= 0;
     b.occupiedLeft ??= 0; // saves from before captured buildings were occupied (1.12.0)
     b.occupiedTotal ??= 0;
+    b.demolishLeft ??= 0; // saves from before timed demolitions (1.16.0)
+    b.demolishTotal ??= 0;
     game.buildings.set(b.id, b);
     game.grid.add(b);
     game.buildingAt[b.tile] = b.id;

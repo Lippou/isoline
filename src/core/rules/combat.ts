@@ -42,6 +42,7 @@ import { HARSH, IS_LAND, MAG, SPEED } from '../map/terrain';
 import { hash2 } from '../rng';
 import { addGold } from '../game/economy';
 import { capitalSpeedMult } from './capital';
+import { guerrilla } from './revolution';
 
 export class Attack {
   readonly id: number;
@@ -176,7 +177,8 @@ export interface TileOutcome {
  * OpenFront's attackLogic for attack `a` taking `tile`, with `borderSize` tiles on its
  * front this tick. mag and tile cost come from the terrain, ×5 / ×3 near an enemy
  * defence post, ×(5 − 2 × fallout share) on fallout; mag ×0.75 inside the attacker's
- * reconnaissance zone (Isoline's aviation).
+ * reconnaissance zone (Isoline's aviation); both × the guerrilla's on a revolution's land
+ * (rules/revolution.ts).
  * - Wilderness: loss mag / 5 (tribes mag / 10); fraction clamp(2,000 × cost / troops, 5, 100) / (2 × border),
  *   the bounds × cost / 16.5 on glaciers and high peaks.
  * - Player: loss mag × clamp(r, 0.6, 2) × (0.463 × bonus(A, 0.7) × bonus(D, 0.3) + 0.0039 × D troops per tile),
@@ -193,6 +195,12 @@ export function attackLogic(game: Game, a: Attack, tile: number, borderSize: num
   if (T) {
     mag *= game.defenseMagMult(tile, a.target) * game.reconLossMult(a.attacker, tile);
     cost *= game.defenseSpeedMult(tile, a.target);
+    // Revolutions (1.16): guerrilla in every street, barricades right after the outbreak.
+    if (T.revolution) {
+      const g = guerrilla(game, T, a.attacker);
+      mag *= g.mag;
+      cost *= g.speed;
+    }
   }
   const fo = falloutMult(game, tile);
   mag *= fo;
@@ -618,7 +626,8 @@ function advance(game: Game, a: Attack, p: Player, T: Player | null): void {
     }
     game.setOwner(tile, a.attacker);
     a.conquered++;
-    if (T && T.alive && T.tiles < ANNEX_TILES) annex(game, p, T);
+    // Revolutionaries hold out to the last street: never annexed in one go.
+    if (T && T.alive && T.tiles < ANNEX_TILES && !T.revolution) annex(game, p, T);
   }
   if (loot >= 1) {
     const w = map.width;

@@ -38,6 +38,7 @@ import { thinkNavy } from './navy';
 import { AI_RAID_MEMORY, raider, thinkAir } from './airpower';
 import { skyThreat, tryNuke, warWish, type ArsenalMem, type WarState, type Wish } from './arsenal';
 import { thinkGeneral } from './generals';
+import { barricadesUp, guerrilla, nextSpread } from '../rules/revolution';
 
 /** A nation's memory (part of the AI state, hence of saves; the air force's and the arsenal's included). */
 interface Mem extends ArsenalMem {
@@ -398,7 +399,11 @@ function thinkRebels(game: Game, p: Player, m: Mem, nb: Map<number, Neighbor>): 
 
 /**
  * The revolution risen in p's land, when p touches it and is not attacking it yet, with the
- * share of p's army that should take it back (1.6 × the rebels, a fifth of p's at least).
+ * share of p's army that should take it back. Retaking it is costly (rules/revolution.ts:
+ * guerrilla, barricades): p estimates the toll — the rebels' army plus what every tile of
+ * guerrilla costs — and commits that much (a fifth of its army at least, three fifths at
+ * most), or waits: behind the barricades, or while the toll is beyond its means (unless the
+ * revolt is about to spread and p can still pay most of it).
  */
 function revoltTarget(
   game: Game,
@@ -412,10 +417,26 @@ function revoltTarget(
     const q = game.players[n.id]!;
     if (!q.revolution || q.rebelOf !== p.id) continue;
     if (hasAttack(game, p, q.id) || !game.attackAllowed(p.id, q.id, true)) return null;
-    const ratio = Math.min(0.5, Math.max(0.2, (q.troops * 1.6 + 2000) / Math.max(1, p.troops)));
-    return { n, ratio };
+    if (barricadesUp(game, q)) return null;
+    const need = revoltToll(game, p, q);
+    const spread = nextSpread(game, q);
+    const urgent = spread.holds && spread.in >= 0 && spread.in < 200;
+    if (need > p.troops * (urgent ? 0.8 : 0.6)) return null;
+    return { n, ratio: Math.min(0.6, Math.max(0.2, need / Math.max(1, p.troops))) };
   }
   return null;
+}
+
+/**
+ * Troops p should commit to crush the revolution `q`: the rebels' army and, for every tile
+ * they hold, the guerrilla's toll (combat.ts attackLogic on average ground at the most
+ * favourable ratio), with a margin.
+ */
+export function revoltToll(game: Game, p: Player, q: Player): number {
+  const g = guerrilla(game, q, p.id);
+  const density = q.troops / Math.max(1, q.tiles);
+  const perTile = 90 * 0.6 * (0.463 + 0.0039 * density) * g.mag;
+  return 1.3 * (q.troops + q.tiles * perTile) + 2000;
 }
 
 // ----------------------------------------------------------------- nations
@@ -699,7 +720,9 @@ function defend(
   const enemy = game.players[worst];
   if (!enemy || !nb.has(worst) || !game.attackAllowed(p.id, worst, true)) return cost;
   const contact = nb.get(worst)!.tile;
-  if (p.troops > worstTroops * 0.8 && !hasAttack(game, p, worst)) {
+  // A push of our own revolution is no reason to charge its barricades (revoltTarget decides).
+  const ours = enemy.revolution && enemy.rebelOf === p.id;
+  if (p.troops > worstTroops * 0.8 && !hasAttack(game, p, worst) && !ours) {
     applyCommand(game, p.id, { t: 'attack', tile: contact, ratio: counterRatio(p, enemy, worstTroops) });
     m.lastAttack = game.tick;
   }
@@ -981,6 +1004,8 @@ function pickTarget(
     if (n.id === 0) continue;
     const q = game.players[n.id]!;
     if (!game.attackAllowed(p.id, q.id, true)) continue;
+    // Our own revolution is put down when it is worth it (revoltTarget), never as a war target.
+    if (q.revolution && q.rebelOf === p.id) continue;
     // A coalition member fights the runaway (coalitionAttack), not its partners: tribes only.
     if (coalition > 0 && q.kind !== 'tribe') continue;
     const allied = p.allies.has(q.id);
@@ -994,7 +1019,9 @@ function pickTarget(
     const took = m.took?.get(q.id);
     const avenge =
       took !== undefined && game.tick - took < AI_RETAKE_MEMORY && TACTICS[game.config.difficulty].counter;
-    if (strength < factor * AI_STRENGTH_MARGIN * (avenge ? 0.8 : 1) && q.kind !== 'tribe') continue;
+    // A revolution is no easy tribe (guerrilla, rules/revolution.ts): fought like a country.
+    const easy = q.kind === 'tribe' && !q.revolution;
+    if (strength < factor * AI_STRENGTH_MARGIN * (avenge ? 0.8 : 1) && !easy) continue;
     let score = strength * n.contact;
     if (avenge) score *= 2;
     // Overextended: a country fighting on several fronts has its army spread thin (1.12).
@@ -1002,7 +1029,7 @@ function pickTarget(
     if (fronts >= 2 && diff.aggression >= 1) score *= 1 + 0.25 * Math.min(4, fronts - 1);
     // The runaway, for the nations outside the coalition.
     if (q.id === runaway) score *= 2;
-    if (q.kind === 'tribe') score *= 2.5;
+    if (easy) score *= 2.5;
     if (q.kind === 'human') score *= 0.9 + 0.3 * diff.aggression;
     score *= 1 + (m.grudge.get(q.id) ?? 0) * 0.05;
     if (q.isTraitor(game.tick)) score *= 1.5;
@@ -1281,6 +1308,8 @@ function tryBoat(game: Game, p: Player, m: Mem, _t: Traits, idle = false): numbe
     const o = game.owner[tile]!;
     if (o === p.id || (o > 0 && (game.friendly(o, p.id) || !game.attackAllowed(p.id, o, true)))) continue;
     if (o > 0 && game.players[o]!.troops > p.troops * 0.7) continue;
+    // Never into a revolution's guerrilla by sea (our own is revoltTarget's business).
+    if (o > 0 && game.players[o]!.revolution) continue;
     // A shore in sight can lie thousands of tiles away by water (around a spiral, up a
     // long river): such a landing kept a third of the army at sea for over ten minutes.
     const plan = planBoat(game, p, tile);
@@ -1292,7 +1321,7 @@ function tryBoat(game: Game, p: Player, m: Mem, _t: Traits, idle = false): numbe
   if (idle) {
     let best: Player | null = null;
     for (const q of game.alivePlayers()) {
-      if (q.id === p.id || q.coast.length === 0 || q.troops > p.troops * 0.9) continue;
+      if (q.id === p.id || q.coast.length === 0 || q.troops > p.troops * 0.9 || q.revolution) continue;
       if (game.friendly(p.id, q.id) || !game.attackAllowed(p.id, q.id, true)) continue;
       if (!best || q.troops < best.troops) best = q;
     }

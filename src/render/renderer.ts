@@ -170,8 +170,10 @@ export interface AirPreview {
   ok: boolean;
   /** Fighter patrol / reconnaissance zone radius (0: none). */
   zone: number;
-  /** Bomber: a building is in its sights (`destroy`: nothing would be left of it). */
+  /** Bomber: a building or a ship is in its sights (`destroy`: nothing would be left of it). */
   target: { destroy: boolean } | null;
+  /** Bomber at sea: the radius its bombs hit ships within (0: a strike on land). */
+  blast: number;
   /** Fraction of the route where a loaded hostile SAM would down the bomber (-1: none). */
   samF: number;
   /** SAMs or interceptors wait for it. */
@@ -873,7 +875,24 @@ export class GameRenderer {
         prog.circle(0, 0, 20).stroke({ width: 3, color: 0xffffff, alpha: 0.5 + 0.4 * pulse });
         prog.circle(0, 0, 25).stroke({ width: 2, color: 0xffffff, alpha: 0.25 * pulse });
       } else if (target) this.drawTargetBrackets(prog);
-      if (b.occupied > 0 && b.progress >= 1) {
+      if (b.demolish > 0) {
+        // Being demolished (1.16): a ring of short ink-and-paper ticks (a shape, not a tint)
+        // empties as the countdown runs, and the badge is struck through like a cancelled
+        // line — out of service meanwhile (icon greyed).
+        const left = b.demolish / Math.max(1, b.demolishTotal);
+        const ticks = 20;
+        const step = (Math.PI * 2) / ticks;
+        const end = -Math.PI / 2 + Math.PI * 2 * left;
+        prog.circle(0, 0, 17.5).stroke({ width: 5, color: 0x0b0e12, alpha: 0.45 });
+        for (let k = 0; k < ticks; k++) {
+          const a0 = -Math.PI / 2 + k * step;
+          const a1 = a0 + step * 0.4;
+          prog.moveTo(Math.cos(a0) * 17.5, Math.sin(a0) * 17.5).arc(0, 0, 17.5, a0, a1);
+          prog.stroke({ width: 3.5, color: UI.parchment, alpha: a0 < end ? 1 : 0.2 });
+        }
+        prog.moveTo(-12, 12).lineTo(12, -12).stroke({ width: 5, color: 0x0b0e12, alpha: 0.8, cap: 'round' });
+        prog.moveTo(-12, 12).lineTo(12, -12).stroke({ width: 2.5, color: UI.parchment, cap: 'round' });
+      } else if (b.occupied > 0 && b.progress >= 1) {
         // Occupied after a capture (GAME_DESIGN.md §6.4): a red ring empties as the
         // occupation ends; the icon stays greyed until then (out of service). The ring is
         // broken into links (a chain), so it never reads as the solid upgrade ring by colour alone.
@@ -1558,6 +1577,8 @@ export class GameRenderer {
             .stroke({ width: lw(wd), color: c, cap: 'round' });
       }
     }
+    // At sea: the bombs' reach around the ship followed (a dashed ring, other ships inside it are hit).
+    if (p.blast > 0) this.dashedCircle(g, p.tx, p.ty, p.blast, col, 0.9, 1.6, 6, 5, t * 10, null);
     if (p.zone > 0) {
       g.circle(p.tx, p.ty, p.zone).fill({ color: col, alpha: 0.06 });
       this.dashedCircle(g, p.tx, p.ty, p.zone, col, 0.85, 1.8, 10, 6, t * 12, null);

@@ -10,6 +10,7 @@ import {
   CITY_COST_CAP,
   DEFENSE_POST_COST_CAP,
   DEFENSE_POST_COST_STEP,
+  DEMOLISH_MIN_TICKS,
   DEMOLISH_REFUND,
   LAB_COST_BASE,
   LAB_COST_CAP,
@@ -341,6 +342,8 @@ export function placeBuilding(game: Game, p: Player, type: B, tile: number, free
     upgradeTotal: 0,
     occupiedLeft: 0,
     occupiedTotal: 0,
+    demolishLeft: 0,
+    demolishTotal: 0,
   };
   game.buildings.set(b.id, b);
   game.grid.add(b);
@@ -382,6 +385,7 @@ function labNotice(game: Game, b: Building): void {
  */
 export function upgradeBuilding(game: Game, p: Player, b: Building): boolean {
   if (b.owner !== p.id || b.buildLeft > 0 || b.upgradeLeft > 0 || b.level >= MAX_LEVEL[b.type]) return false;
+  if (b.demolishLeft > 0) return false;
   if (buildingLock(game, p, b.type) >= 0) return false; // captured before researching it
   const cost = upgradeCost(game, p, b);
   if (p.gold < cost) return false;
@@ -410,11 +414,43 @@ function completeUpgrade(game: Game, b: Building): void {
   game.emit({ k: 'built', owner: b.owner, kind: b.type, tile: b.tile });
 }
 
+/** How long demolishing a `type` takes p: its construction time, DEMOLISH_MIN_TICKS at least. */
+export function demolishTicks(game: Game, p: Player, type: B): number {
+  return Math.max(DEMOLISH_MIN_TICKS, buildTicks(game, p, type));
+}
+
+/**
+ * Orders p's building down (1.16: timed, like a construction). It goes out of service at
+ * once, its construction or upgrade halted, and comes down after demolishTicks; then
+ * DEMOLISH_REFUND of the gold invested comes back (finishDemolition). False when it is not
+ * p's or already being demolished.
+ */
 export function demolishBuilding(game: Game, p: Player, b: Building): boolean {
-  if (b.owner !== p.id) return false;
-  p.gold += b.invested * DEMOLISH_REFUND;
-  removeBuilding(game, b, true);
+  if (b.owner !== p.id || !b.alive || b.demolishLeft > 0) return false;
+  b.demolishTotal = demolishTicks(game, p, b.type);
+  b.demolishLeft = b.demolishTotal;
+  game.buildingsDirty = true;
+  game.buildingsVersion++;
   return true;
+}
+
+/** Calls off a demolition under way: the building is back in service, nothing lost. */
+export function cancelDemolition(game: Game, p: Player, b: Building): boolean {
+  if (b.owner !== p.id || b.demolishLeft === 0) return false;
+  b.demolishLeft = 0;
+  b.demolishTotal = 0;
+  game.buildingsDirty = true;
+  game.buildingsVersion++;
+  return true;
+}
+
+/** The demolition is over: the refund, then the building goes. */
+function finishDemolition(game: Game, b: Building): void {
+  const p = game.players[b.owner];
+  const refund = b.invested * DEMOLISH_REFUND;
+  if (p && p.alive) p.gold += refund;
+  game.emit({ k: 'demolished', owner: b.owner, kind: b.type, tile: b.tile, refund: Math.round(refund) });
+  removeBuilding(game, b, true);
 }
 
 /**
@@ -509,10 +545,15 @@ export function removeBuilding(game: Game, b: Building, _voluntary: boolean): vo
 
 export function updateBuildings(game: Game): void {
   for (const b of game.buildings.values()) {
-    // Occupation counts down alongside a construction or an upgrade.
+    // Occupation counts down alongside a construction, an upgrade or a demolition.
     if (b.occupiedLeft > 0 && --b.occupiedLeft === 0) {
       game.buildingsDirty = true;
       game.buildingsVersion++;
+    }
+    // Being demolished: nothing else moves (construction and upgrade halted).
+    if (b.demolishLeft > 0) {
+      if (--b.demolishLeft === 0) finishDemolition(game, b);
+      continue;
     }
     if (b.buildLeft > 0) {
       b.buildLeft--;

@@ -51,7 +51,9 @@ export type ToWorker =
   /** QA (?automation, solo only): a revolution breaks out in `player`'s land at once. */
   | { type: 'qa'; action: 'revolution'; player: number }
   /** QA (?automation, solo only): `player` keeps only its `keep` tiles nearest its centre. */
-  | { type: 'qa'; action: 'shrink'; player: number; keep: number };
+  | { type: 'qa'; action: 'shrink'; player: number; keep: number }
+  /** QA (?automation, solo only): a peace summit opens at once for `secs` seconds (its forced truce). */
+  | { type: 'qa'; action: 'summit'; secs: number };
 
 export type Query =
   | { q: 'tile'; tile: number }
@@ -112,6 +114,13 @@ export interface PlayerView {
   rebelOf: number;
   /** A revolution: ticks before its land rejoins `rebelOf` (absent otherwise). */
   revoltFor?: number;
+  /** A revolution: ticks left behind its barricades (0: down; rules/revolution.ts guerrilla). */
+  revoltBarricades?: number;
+  /** A revolution: ticks before it may spread (-1: no more spreads), and whether it holds enough land to. */
+  revoltSpreadIn?: number;
+  revoltHolds?: boolean;
+  /** A revolution: all the land it has raised (outbreak and spreads). */
+  revoltLand?: number;
 }
 
 export interface LocalView {
@@ -288,6 +297,9 @@ export interface BuildingView {
   /** Occupied after a capture (GAME_DESIGN.md §6.4): ticks left (0 = none), out of `occupiedTotal`. */
   occupied: number;
   occupiedTotal: number;
+  /** Being demolished (1.16): ticks left before it comes down (0 = none), out of `demolishTotal`. */
+  demolish: number;
+  demolishTotal: number;
   tubesReady: number;
   cooldown: number;
 }

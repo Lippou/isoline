@@ -7,6 +7,7 @@ import {
   GOLD_PER_TICK,
   MAX_GOLD,
   TICKS_PER_SECOND,
+  REVOLUTION_LEVY_CAP,
   TRIBE_REGEN_MULT,
   TRIBE_TROOPS_DIVISOR,
   TROOPS_BASE,
@@ -33,12 +34,16 @@ export function completedCityLevels(game: Game, p: Player): number {
 
 /**
  * Troop ceiling: 2 × (usefulTiles^0.6 × 800 + 25,000) + 60,000 per completed
- * city level; a third of that for tribes, × the difficulty for nations.
+ * city level; a third of that for tribes (revolutionaries: at least REVOLUTION_LEVY_CAP times
+ * their troops per tile at the outbreak), × the difficulty for nations.
  */
 export function maxTroops(game: Game, p: Player, cityLevels = completedCityLevels(game, p)): number {
   const land = Math.pow(Math.max(0, p.usefulTiles), TROOPS_TILE_EXP) * TROOPS_TILE_K;
   let max = 2 * (land + TROOPS_BASE) + TROOPS_PER_CITY_LEVEL * cityLevels;
   if (p.kind === 'tribe') max /= TRIBE_TROOPS_DIVISOR;
+  // Revolutionaries levy the region's people (rules/revolution.ts, 1.16): up to twice their
+  // troops per tile at the outbreak, on the land they hold.
+  if (p.revolution) max = Math.max(max, REVOLUTION_LEVY_CAP * p.revoltDensity * p.usefulTiles);
   else if (p.kind === 'nation') max *= game.difficulty().troops;
   if (p.kind !== 'tribe' && game.config.features.tech) max *= techTroopCap(p); // Conscription
   return max;
@@ -52,7 +57,7 @@ export function maxTroops(game: Game, p: Player, cityLevels = completedCityLevel
 export function troopRegen(game: Game, p: Player, max: number): number {
   const troops = Math.max(0, p.troops);
   let add = (TROOP_REGEN_BASE + Math.pow(troops, TROOP_REGEN_EXP) / TROOP_REGEN_DIV) * (1 - troops / max);
-  if (p.kind === 'tribe') add *= TRIBE_REGEN_MULT;
+  if (p.kind === 'tribe' && !p.revolution) add *= TRIBE_REGEN_MULT;
   else if (p.kind === 'nation') add *= game.difficulty().regen;
   if (add > 0) {
     if (game.config.features.resources) add *= 1 + resourceBonus(game, p).growth;

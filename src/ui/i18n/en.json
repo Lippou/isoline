@@ -370,7 +370,7 @@
     "boat": "Land troops",
     "build": "Build",
     "upgrade": "Upgrade",
-    "demolish": "Demolish (25%)",
+    "demolish": "Demolish",
     "nukes": "Nuclear",
     "warshipHere": "Warship",
     "moveShips": "Move ({n})",
@@ -410,7 +410,10 @@
     "capitalFront": "too close to a border",
     "capitalFallout": "irradiated",
     "teammate": "teammate",
-    "teamGiftDesc": "Gold or troops, received at once"
+    "teamGiftDesc": "Gold or troops, received at once",
+    "demolishDesc": "Out of service during the demolition, down when the countdown ends: {pct}% of the gold invested back.",
+    "demolishCancel": "Cancel demolition",
+    "demolishCancelDesc": "The building is back in service at once, nothing lost."
   },
   "confirm": {
     "betrayTitle": "Betray your ally?",
@@ -1031,7 +1034,7 @@
     },
     "revolution": {
       "name": "Revolutions",
-      "desc": "On by default. A country far ahead now and then sees a distant region rise up: rebels without gold, to retake or to wait out."
+      "desc": "On by default. A country far ahead now and then sees a distant region rise up: rebels without gold, dug in (guerrilla, barricades), costly to retake or left to run out of steam."
     }
   },
   "general": {
@@ -1145,7 +1148,7 @@
     },
     "bomber": {
       "name": "Bomber",
-      "desc": "Hits the enemy building nearest the target (range 300): −1 level, destroyed at level 1; silos and SAMs lose their loaded missiles. Two levels under your reconnaissance. Shot down by SAMs and fighters.",
+      "desc": "Hits the enemy building nearest the target (range 300): −1 level, destroyed at level 1; silos and SAMs lose their loaded missiles. At sea it follows the ship aimed at: 600 damage to every enemy ship within 3 tiles (transports and trade ships sunk). Doubled under your reconnaissance. Shot down by SAMs and fighters.",
       "short": "Bomber"
     },
     "recon": {
@@ -1346,7 +1349,12 @@
     "revolutionOver": "The revolt runs out of steam: {tribe} fall back in line, {tiles} tiles return to you.",
     "revolutionCrushed": "Revolution crushed: {tribe} hold no land any more.",
     "revolutionSeized": "{by} seize the last land of {tribe}.",
-    "revolutionBurnt": "The revolutionaries burn the {building} before fleeing: nothing to take."
+    "revolutionBurnt": "The revolutionaries burn the {building} before fleeing: nothing to take.",
+    "raidShip": "Air raid by {by} — {ship} hit.",
+    "raidShipSunk": "Air raid by {by} — {ship} sunk!",
+    "raidHitShip": "Raid on {player} — {ship} hit.",
+    "raidHitShipSunk": "Raid on {player} — {ship} sunk.",
+    "revolutionSpread": "The revolt spreads: {tiles} more tiles join {tribe}."
   },
   "error": {
     "nukeSelfMirv": "A MIRV cannot target your own country: its warheads would fall all over your land.",
@@ -1355,8 +1363,8 @@
     "warship": "Cannot arm a warship: a port on this sea is required, or not enough gold.",
     "nuke": "No missile available (silo, gold or reload).",
     "nukeHalt": {
-      "nukeBan": "The World Council bans nuclear weapons: no launch possible.",
-      "peaceSummit": "Peace summit: no nuclear launch while the truce lasts."
+      "nukeBan": "The World Council bans nuclear weapons: no launch for another {left}.",
+      "peaceSummit": "Peace summit: no nuclear launch for another {left} (a truce between all countries)."
     },
     "air": "No free airfield in range, invalid target or not enough gold.",
     "general": "Ability unavailable.",
@@ -1388,7 +1396,45 @@
       "front": "Too close to a border: the capital must stand more than 5 tiles from any foreign land (allies excepted).",
       "cooldown": "Capital moved recently: it can move again in {s} s."
     },
-    "pactsFrozen": "The last minute before midnight: no alliance can be signed any more."
+    "pactsFrozen": "The last minute before midnight: no alliance can be signed any more.",
+    "refused": {
+      "phase": "Not now: the match is not under way.",
+      "self": "This is your own land.",
+      "team": "You cannot target a teammate.",
+      "gone": "This country is gone.",
+      "immune": "Protected target: this country is still under its starting immunity.",
+      "summit": "Peace summit: {act} for another {left} (a truce between all countries).",
+      "ceasefire": "World Council ceasefire: {act} for another {left}.",
+      "ally": "An ally: break the alliance first."
+    },
+    "attackSlots": "{n} attacks already under way: wait for one to end.",
+    "warshipWhy": {
+      "disabled": "Warships are disabled in this match.",
+      "noPort": "No port in service: build one to arm warships.",
+      "range": "Too far: none of your ports on this sea covers that point.",
+      "gold": "Not enough gold to arm a warship."
+    },
+    "nukeWhy": {
+      "disabled": "Nuclear weapons are disabled in this match.",
+      "locked": "Research needed: {tech}.",
+      "noSilo": "No silo in service: build one.",
+      "reloading": "Silos reloading: no tube ready.",
+      "gold": "Not enough gold for this missile."
+    },
+    "airWhy": {
+      "disabled": "Air power is disabled in this match.",
+      "locked": "Research needed: {tech}.",
+      "noAirfield": "No airfield in service: build one.",
+      "full": "Airfields full: wait for a plane to land.",
+      "range": "Out of your airfields' range.",
+      "noTarget": "No enemy target here (a building, a ship or another country's land).",
+      "gold": "Not enough gold for this plane."
+    },
+    "generalWhy": {
+      "disabled": "Generals are disabled in this match.",
+      "cooldown": "Your general is resting: ready again in {s} s.",
+      "noTarget": "No enemy train or trade ship within 40 tiles."
+    }
   },
   "keys": {
     "attackHover": "Land attack (hovered target)",
@@ -1972,7 +2018,13 @@
     "occupiedTip": "Captured and looted: out of service until then (no troops, trade or research).",
     "revolution": "Revolution",
     "revolt": "Risen against {player} · {time}",
-    "revoltTip": "No gold, no trade. Their land falls back in line when the countdown ends; their buildings burn if another country takes them."
+    "revoltTip": "No gold, no trade. Their land falls back in line when the countdown ends; their buildings burn if another country takes them.",
+    "barricades": "Barricades · {clock}: losses ×{mag} (×{home} for the former country), ×{speed} slower advance",
+    "guerrilla": "Guerrilla: losses ×{mag} (×{home} for the former country), ×{speed} slower advance",
+    "revoltSpread": "Spreads in {clock}: holds {held}% of its land",
+    "revoltContained": "Contained: holds {held}% of its land (under {bar}%), no longer spreads",
+    "demolishing": "Demolition · {clock}",
+    "demolishTip": "Out of service until it comes down; {pct}% of the gold invested back at the end. Can be called off (right click)."
   },
   "weather": {
     "stormNear": "A storm is forming near you: ships {pct}% slower.",
@@ -2220,7 +2272,8 @@
       "zoneClosing": "The zone closes in ({n}/{steps})",
       "zoneFinal": "The last zone",
       "revolution": "{tribe} rise up",
-      "revolutionOther": "Revolution in {player}"
+      "revolutionOther": "Revolution in {player}",
+      "revolutionSpread": "The revolt gains ground"
     },
     "deck": {
       "betrayal": "The alliance is shattered: {traitor} bears the traitor's mark, and {victim} cuts all trade with {traitor} for 5 minutes.",
@@ -2241,8 +2294,9 @@
       "zoneAnnounced": "It closes in {secs} s; land outside the dashed circle will be lost.",
       "zoneClosing": "Land outside the dashed circle becomes uninhabitable.",
       "zoneFinal": "In {secs} s, the largest country inside wins.",
-      "revolution": "{tiles} tiles of your country defect with part of the garrison. Nothing to loot: taking them back pays no gold. Left alone, the revolt runs out of steam in {min} minutes.",
-      "revolutionOther": "{tribe} rise up over {tiles} tiles. A country too far ahead invites revolts."
+      "revolution": "{tiles} tiles of your country defect with part of the garrison. Nothing to loot, and retaking them is costly: guerrilla in every street (your attacks lose ×{home} troops there and advance ×{speed} slower), doubled behind barricades for the first {bar} seconds. Left standing, the revolt spreads after {spread} s; unless put down, it runs out of steam in {min} minutes.",
+      "revolutionOther": "{tribe} rise up over {tiles} tiles. A country too far ahead invites revolts.",
+      "revolutionSpread": "{tiles} more tiles side with {tribe}. As long as the revolutionaries hold half their land ({hold}%), the revolt spreads every minute."
     },
     "flash": {
       "title": "News flash",
@@ -2517,7 +2571,7 @@
   "air": {
     "role": {
       "fighter": "60 s patrol: shoots down aircraft and invading transports within 30 tiles.",
-      "bomber": "Hits the building nearest the sights: −1 level (destroyed at level 1).",
+      "bomber": "Hits the building nearest the sights (−1 level, destroyed at level 1) or, at sea, a ship: transports and trade ships sunk, warships −60%.",
       "recon": "40-tile zone for 40 s: −25% losses for your attacks, doubled strikes, intelligence on hover."
     },
     "flying": "{n}/{max} in flight",
@@ -2528,7 +2582,8 @@
       "full": "Airfields full: wait for a plane to land",
       "range": "Out of your airfields' range",
       "noTarget": "No enemy target here",
-      "teammate": "You cannot target a teammate"
+      "teammate": "You cannot target a teammate",
+      "immune": "Protected target: starting immunity"
     },
     "hitLevel": "{player}'s {building}: lvl {from} → {to}",
     "hitDestroy": "{player}'s {building}: in ruins",
@@ -2536,7 +2591,10 @@
     "railsOnly": "No building: rails and trains only",
     "sam": "{n} SAM missile(s) on the route: one bomber downed per missile",
     "interceptors": "{n} enemy airfield(s) on alert over the target",
-    "clear": "Clear route: no known defences"
+    "clear": "Clear route: no known defences",
+    "shipSink": "{player}'s {ship}: sunk",
+    "shipHit": "{player}'s {ship}: hull {from}% → {to}%",
+    "shipOthers": "+{n} more ship(s) in the blast"
   },
   "doom": {
     "why": {
@@ -2611,12 +2669,31 @@
     "kickerMine": "Revolution at home",
     "titleMine": "Your country rises up!",
     "titleOther": "Revolution in {player}",
-    "deckMine": "{tribe} hold {tiles} tiles with part of your garrison. Take them back (nothing to loot) or wait: the revolt runs out of steam in {time}.",
+    "deckMine": "{tribe} hold {tiles} tiles with part of your garrison. Retaking them is costly (guerrilla, barricades, nothing to loot); otherwise the revolt runs out of steam in {time}, but it spreads while it holds half its land.",
     "deckOther": "{tribe} hold {tiles} tiles. A country that pulls too far ahead invites revolts.",
     "ends": "The revolt runs out of steam in",
     "show": "Show",
     "showTip": "Centre the map on the uprising",
     "lineMine": "At home",
     "tiles": "{tiles} tiles"
+  },
+  "refusedAct": {
+    "attack": "no attacks",
+    "boat": "no landings",
+    "bomber": "no bombing",
+    "plane": "no hostile flights",
+    "fighter": "your fighters will hold their fire",
+    "sabotage": "no sabotage"
+  },
+  "truce": {
+    "summit": "Peace summit: {act} for another {clock}",
+    "ceasefire": "Council ceasefire: {act} for another {clock}",
+    "summitShort": "Summit · {clock}",
+    "ceasefireShort": "Ceasefire · {clock}"
+  },
+  "shipName": {
+    "warship": "Warship",
+    "transport": "Transport",
+    "merchant": "Trade ship"
   }
 }
