@@ -46,6 +46,8 @@ export function hashGame(game: Game): number {
     h = mix(mix(h, p.capital + 1), p.disorgUntil + 1);
     h = mix(mix(h, p.researching + 1), q(p.researchPoints));
     for (let k = 0; k < p.tech.length; k++) h = mix(h, p.tech[k]!);
+    // Revolutions (rules/revolution.ts): the rebels' clock, the countries' cooldown.
+    h = mix(mix(mix(h, p.revolution ? 1 : 0), p.revoltUntil + 1), p.revoltReadyTick);
     for (const [a, e] of p.allies) h = mix(mix(h, a), e);
   }
   for (const a of game.attacks) h = mix(mix(mix(h, a.id), q(a.troops)), a.frontierSize);

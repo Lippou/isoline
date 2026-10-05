@@ -485,6 +485,42 @@ export const LOYALTY_SECESSION_THRESHOLD = 60;
 export const LOYALTY_CHECK_TICKS = sec(15);
 export const LOYALTY_STABILISE_RANGE = 25;
 
+// ------------------------------------------------------------ revolutions
+// Isoline's own world rule (1.14, GAME_DESIGN.md §6.5; OpenFront has none): a country far
+// ahead of everyone else now and then sees a distant region rise up. The rebels are a tribe
+// without gold: putting them down pays nothing, it only costs time and troops.
+/** Ticks between two draws (counted from the start of the match). */
+export const REVOLUTION_CHECK_TICKS = sec(10);
+/** No revolution before this point of the match. */
+export const REVOLUTION_GRACE = min(5);
+/** The leader must hold this share of the useful land… */
+export const REVOLUTION_MIN_SHARE = 0.2;
+/** …and this many times the land of the largest country outside its team. */
+export const REVOLUTION_MIN_LEAD = 1.6;
+/** Chance per draw: base at the bar, up to base + extra at full pressure (see revolution.ts). */
+export const REVOLUTION_CHANCE_BASE = 0.03;
+export const REVOLUTION_CHANCE_EXTRA = 0.1;
+/** Between two revolutions of the same country, counted from the outbreak. */
+export const REVOLUTION_COOLDOWN = min(6);
+/** A revolution not put down by then runs out of steam: its land rejoins its country. */
+export const REVOLUTION_TICKS = min(4);
+/** Share of the country's land that rises up (a coherent region), with its bounds in tiles. */
+export const REVOLUTION_LAND = 0.06;
+export const REVOLUTION_MIN_TILES = 120;
+export const REVOLUTION_MAX_TILES = 25_000;
+/** No revolution within this many tiles of the capital. */
+export const REVOLUTION_CAPITAL_SAFE = 40;
+/** The region's garrison (country's troops per tile × its tiles) defects to the rebels… */
+export const REVOLUTION_TROOPS = 1;
+/** …never more than this share of the country's army… */
+export const REVOLUTION_TROOPS_MAX = 0.25;
+/** …and the locals join them: the rebels start with the garrison × this. */
+export const REVOLUTION_LEVY = 1.5;
+/** Chance per think (4–7 s) that the rebels push into their former country's land. */
+export const REVOLUTION_PUSH_CHANCE = 0.25;
+/** Colour index of the rebels' ink (render/colors.ts): tribes use -1. */
+export const REBEL_COLOR = -2;
+
 // --------------------------------------------------------------- capital
 // Isoline's own (OpenFront has no capital): every human and nation governs from its
 // spawn tile; losing that tile (land attack, landing, annexation, nuke) costs a moment

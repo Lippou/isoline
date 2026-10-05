@@ -68,6 +68,7 @@ export interface IconSet {
 
 /** Status badges above a country's name, in display order (left to right). */
 export const STATUS_ICONS = [
+  'revolt',
   'crown',
   'traitor',
   'inactive',
@@ -82,6 +83,7 @@ export type StatusIcon = (typeof STATUS_ICONS)[number];
 
 /** Glyph and colour of each status badge. */
 export const STATUS_STYLE: Record<StatusIcon, { icon: IconName; color: string }> = {
+  revolt: { icon: 'revolt', color: '#f3e7cf' },
   crown: { icon: 'crown', color: '#f5c542' },
   traitor: { icon: 'brokenShield', color: '#f6c343' },
   inactive: { icon: 'inactive', color: '#8ab8ff' },

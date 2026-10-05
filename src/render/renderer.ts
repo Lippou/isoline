@@ -411,14 +411,17 @@ export class GameRenderer {
       else if (local?.threats?.some((x) => x.id === p.id)) rel.set(p.id, 4);
       else if (local?.noTrade.includes(p.id)) rel.set(p.id, 3);
     }
+    // Revolutions are hatched in ink (a pattern, not only a colour: GAME_DESIGN.md §6.5).
+    const hatched = new Set(s.playerList.filter((p) => p.revoltFor !== undefined).map((p) => p.id));
     const key =
       `${this.settings.vision}|${s.playerList.map((p) => `${p.id}:${p.color}`).join(',')}|` +
-      [...rel].map(([id, r]) => `${id}:${r}`).join(',');
+      [...rel].map(([id, r]) => `${id}:${r}`).join(',') +
+      `|${[...hatched].join(',')}`;
     if (key === this.paletteKey) return;
     this.paletteKey = key;
     const m = new Map<number, [number, number, number]>();
     for (const p of s.playerList) m.set(p.id, inkRgb(p.color, this.settings.vision));
-    this.map.setPalette(m, rel);
+    this.map.setPalette(m, rel, hatched);
   }
 
   inkOf(id: number): number {
@@ -1521,6 +1524,8 @@ export class GameRenderer {
       // Teammates read like allies (green name) without the alliance badge and timer.
       const friend = p.id !== s.viewer && this.relation(p.id) === 'friend';
       const atWar = !!local?.wars.includes(p.id);
+      // A revolution: the raised fist leads its badges (hatched land, GAME_DESIGN.md §6.5).
+      if (p.revoltFor !== undefined) status.push('revolt');
       if (p.id === leader) status.push('crown');
       if (p.traitor && (p.traitorFor > 150 || blink)) status.push('traitor');
       if (p.inactive) status.push('inactive');

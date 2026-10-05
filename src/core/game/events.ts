@@ -79,6 +79,20 @@ export type GameEvent =
   | { k: 'council'; phase: 'open' | 'result'; option: number; options: number[] }
   | { k: 'eliminated'; player: number; by: number; cause: EliminationCause }
   | { k: 'secession'; from: number; tribe: number; tile: number }
+  /**
+   * Revolutions (rules/revolution.ts): `tribe` rose up in `from`'s land around `tile`
+   * (phase 'start', `tiles` taken), or its revolution ended ('over': the land rejoined
+   * `from`; 'crushed': `by` took its last tile).
+   */
+  | {
+      k: 'revolution';
+      phase: 'start' | 'over' | 'crushed';
+      from: number;
+      tribe: number;
+      tile: number;
+      tiles: number;
+      by: number;
+    }
   | { k: 'general'; player: number; ability: string; tile: number }
   | { k: 'trainPay'; x: number; y: number; owner: number; amount: number }
   | { k: 'tradePay'; x: number; y: number; owner: number; amount: number }

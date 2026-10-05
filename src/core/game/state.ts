@@ -42,6 +42,7 @@ import { updateFeatures, type FeatureState, createFeatureState } from '../rules/
 import { updateAI, type AIState, createAIState } from '../npc/ai';
 import { techMagMultiplier, techSpeedMultiplier } from '../rules/tech';
 import { capitalTileTaken, updateCapitals } from '../rules/capital';
+import { revolutionCrushed, updateRevolutions } from '../rules/revolution';
 
 export type Phase = 'spawn' | 'playing' | 'ended';
 
@@ -258,6 +259,15 @@ export class Game {
     }
     const po = this.players[prev];
     const pn = this.players[newOwner]!;
+    // Revolutions (rules/revolution.ts): the rebels burn what anyone but their former country
+    // takes from them (no prize for putting a revolution down), and what comes home is intact.
+    if (po?.revolution && po.rebelOf !== newOwner && this.phase === 'playing') {
+      if (pn.kind === 'human')
+        this.notify(newOwner, 'notify.revolutionBurnt', 'info', { building: BUILDING_KEYS[b.type] }, b.tile);
+      removeBuilding(this, b, false);
+      return;
+    }
+    if (po?.revolution && po.rebelOf === newOwner) b.occupiedLeft = b.occupiedTotal = 0;
     if (po) {
       po.buildingCount[b.type]--;
       if (b.type === B.City) po.cityLevels -= paidLevels(b);
@@ -413,6 +423,7 @@ export class Game {
     p.allies.clear();
     p.allyRequests.clear();
     const cause = this.eliminationCause(p, by, tile);
+    if (p.revolution) revolutionCrushed(this, p, by, tile);
     this.emit({ k: 'eliminated', player: p.id, by, cause });
     if (p.kind !== 'tribe') this.notify(-1, 'event.eliminated', 'info', { player: p.id, by, cause });
   }
@@ -539,6 +550,7 @@ export class Game {
       if (this.config.features.air) updateAir(this);
       updateDiplomacy(this);
       updateFeatures(this);
+      updateRevolutions(this);
       updateAI(this);
       updateCapitals(this);
       updateVictory(this);

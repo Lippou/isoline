@@ -47,7 +47,9 @@ export type ToWorker =
   | { type: 'setViewer'; viewer: number; fogEnabled: boolean }
   | { type: 'layers'; loyalty: boolean }
   | { type: 'snapshot'; id: number }
-  | { type: 'query'; id: number; q: Query };
+  | { type: 'query'; id: number; q: Query }
+  /** QA (?automation, solo only): a revolution breaks out in `player`'s land at once. */
+  | { type: 'qa'; action: 'revolution'; player: number };
 
 export type Query =
   | { q: 'tile'; tile: number }
@@ -104,6 +106,10 @@ export interface PlayerView {
   capital: number;
   /** Ticks left of the disorganisation after losing its capital (0: none). */
   disorgFor: number;
+  /** Rebels risen against this country (0: none; a revolution or a secession, rules/revolution.ts). */
+  rebelOf: number;
+  /** A revolution: ticks before its land rejoins `rebelOf` (absent otherwise). */
+  revoltFor?: number;
 }
 
 export interface LocalView {

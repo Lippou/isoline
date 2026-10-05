@@ -1027,6 +1027,10 @@
     "council": {
       "name": "Conseil mondial",
       "desc": "Toutes les 10 minutes, un vote pondéré par la population."
+    },
+    "revolution": {
+      "name": "Révolutions",
+      "desc": "Activé par défaut. Un pays très en avance voit parfois une région lointaine se soulever : des rebelles sans or, à reprendre ou à laisser s'essouffler."
     }
   },
   "general": {
@@ -1275,7 +1279,8 @@
     "doomPush": "L'horloge de l'apocalypse avance de {secs} s : {why}.",
     "doomPushBy": "L'horloge de l'apocalypse avance de {secs} s : {why} ({by}).",
     "doomPull": "L'horloge de l'apocalypse recule de {secs} s : {why}.",
-    "midnight": "Minuit : l'horloge de l'apocalypse a sonné."
+    "midnight": "Minuit : l'horloge de l'apocalypse a sonné.",
+    "revolution": "{tribe} se soulèvent chez {player} ({tiles} cases)."
   },
   "alert": {
     "nuke": "Missile nucléaire lancé par {by} — impact dans {eta} s !",
@@ -1331,7 +1336,12 @@
     },
     "buildingTaken": "Vous prenez à {player} : {building}, sous occupation pendant {s} s.",
     "buildingLooted": "Vous prenez à {player} : {building}, pillage du niveau {from} au niveau {level}, sous occupation pendant {s} s.",
-    "buildingLost": "{by} s'est emparé d'un de vos bâtiments : {building}."
+    "buildingLost": "{by} s'est emparé d'un de vos bâtiments : {building}.",
+    "revolution": "{tribe} se soulèvent dans votre pays ({tiles} cases).",
+    "revolutionOver": "La révolte s'essouffle : {tribe} rentrent dans le rang, {tiles} cases vous reviennent.",
+    "revolutionCrushed": "Révolution écrasée : {tribe} ne tiennent plus aucune case.",
+    "revolutionSeized": "{by} s'empare des dernières terres de {tribe}.",
+    "revolutionBurnt": "Les révolutionnaires incendient {building} avant de fuir : rien à prendre."
   },
   "error": {
     "nukeSelfMirv": "Un MIRV ne peut pas viser votre propre pays : ses ogives tomberaient sur tout votre territoire.",
@@ -1945,7 +1955,10 @@
     "teammate": "Votre coéquipier",
     "harshTerrain": "Lent à conquérir · on n'y construit rien",
     "occupied": "Sous occupation · {s} s",
-    "occupiedTip": "Pris et pillé : hors service jusque-là (ni troupes, ni commerce, ni recherche)."
+    "occupiedTip": "Pris et pillé : hors service jusque-là (ni troupes, ni commerce, ni recherche).",
+    "revolution": "Révolution",
+    "revolt": "Soulevés contre {player} · {time}",
+    "revoltTip": "Ni or ni commerce. Leurs terres rentrent dans le rang à la fin du compte à rebours ; leurs bâtiments brûlent si un autre pays les prend."
   },
   "weather": {
     "stormNear": "Un orage se forme près de chez vous : navires ralentis de {pct} %.",
@@ -2191,7 +2204,9 @@
       "midnight": "Minuit a sonné",
       "zoneAnnounced": "Zone {n}/{steps} : le prochain cercle est connu",
       "zoneClosing": "La zone se referme ({n}/{steps})",
-      "zoneFinal": "La dernière zone"
+      "zoneFinal": "La dernière zone",
+      "revolution": "{tribe} se soulèvent",
+      "revolutionOther": "Révolution chez {player}"
     },
     "deck": {
       "betrayal": "L'alliance vole en éclats : {traitor} porte la marque du traître, et {victim} rompt tout commerce avec {traitor} pendant 5 minutes.",
@@ -2211,7 +2226,9 @@
       "midnight": "L'horloge de l'apocalypse arrête la partie : le plus grand pays l'emporte.",
       "zoneAnnounced": "Elle se referme dans {secs} s ; les terres hors du cercle en tirets seront perdues.",
       "zoneClosing": "Les terres hors du cercle en tirets deviennent inhabitables.",
-      "zoneFinal": "Dans {secs} s, le plus grand pays à l'intérieur l'emporte."
+      "zoneFinal": "Dans {secs} s, le plus grand pays à l'intérieur l'emporte.",
+      "revolution": "{tiles} cases de votre pays font défection avec une partie de la garnison. Rien à piller : les reprendre ne rapporte pas d'or. Sans répression, la révolte s'essouffle en {min} minutes.",
+      "revolutionOther": "{tribe} se soulèvent sur {tiles} cases. Un pays qui prend trop d'avance s'expose aux révoltes."
     },
     "flash": {
       "title": "Flash info",

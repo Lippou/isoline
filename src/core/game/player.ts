@@ -66,6 +66,18 @@ export class Player {
   surrendered = false;
   /** A rebel tribe: the country whose region seceded to form it (0: none, rules/features.ts). */
   rebelOf = 0;
+  /**
+   * A revolution (rules/revolution.ts): rebels risen against `rebelOf` because it led the map
+   * by far. No gold, no trade, no alliance; their land rejoins `rebelOf` at `revoltUntil`.
+   */
+  revolution = false;
+  revoltUntil = -1;
+  /** Land and cities the revolution took at its outbreak. */
+  revoltTiles = 0;
+  /** A country: no new revolution before this tick (REVOLUTION_COOLDOWN). */
+  revoltReadyTick = 0;
+  /** A country: revolutions it has suffered. */
+  revolutions = 0;
 
   troops = 0;
   /** Always 0: troops are the whole population (field kept for older code paths and saves). */

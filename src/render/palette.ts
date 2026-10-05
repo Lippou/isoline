@@ -176,3 +176,8 @@ export const CVD_PALETTES: Readonly<Record<'protanopia' | 'deuteranopia' | 'trit
 
 /** Neutral ink used for tribes (bots) in every palette. */
 export const TRIBE_COLOR = '#B9B2A2';
+/**
+ * Ink of revolutions (colour index -2, rules/revolution.ts): a dark oxblood, hatched with
+ * paper-white lines on the map so that it reads by its pattern as much as by its colour.
+ */
+export const REBEL_INK = '#6E2A2A';

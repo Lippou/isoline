@@ -272,6 +272,8 @@ export class GameController {
           const level = id === 'boom' ? 'good' : 'warn';
           hud.log = [...hud.log, { tick: hud.tick, text: t(key), level, key, params: {} }];
         },
+        /** QA: a revolution breaks out at once in `player`'s land (default: ours; solo only). */
+        revolution: (player = this.session.viewer) => this.session.sim.qaRevolution(player),
         /** QA: show the dispatch of a fall while the game goes on (LAN only in play). */
         fallNotice: (by = 0) => (hud.fallen = { tick: hud.tick, by, cause: 'conquered' }),
         /** QA: end the game as a campaign mission would. */
@@ -581,6 +583,23 @@ export class GameController {
     const cue = edgesToward(sx, sy, cam.viewW, cam.viewH);
     if (cue.onScreen && at) this.renderer.markFront(at[0], at[1], UI.signal);
     hud.invasion = { n: (hud.invasion?.n ?? 0) + 1, ex: cue.ex, ey: cue.ey, strength, edges: cue.edges };
+  }
+
+  /**
+   * A revolution breaks out in our land (rules/revolution.ts): the screen edge facing it
+   * flashes like an invasion, the region is marked on the map, a horn sounds. The story is
+   * in the journal (notify.revolution).
+   */
+  private revolt(tile: number): void {
+    if (hud.photo || hud.end || tile < 0) return;
+    const w = this.session.state.width;
+    const [x, y] = [(tile % w) + 0.5, ((tile / w) | 0) + 0.5];
+    const cam = this.renderer.camera;
+    const [sx, sy] = cam.worldToScreen(x, y);
+    const cue = edgesToward(sx, sy, cam.viewW, cam.viewH);
+    this.renderer.markFront(x, y, UI.signal);
+    hud.invasion = { n: (hud.invasion?.n ?? 0) + 1, ex: cue.ex, ey: cue.ey, strength: 1, edges: cue.edges };
+    audio.sfx('warHorn', 0.6);
   }
 
   /** Country lit up on the map while the pointer rests on a panel about it (−1: none). */
@@ -1114,6 +1133,8 @@ export class GameController {
       case 'notify': {
         if (e.to !== -1 && e.to !== me) return;
         if (this.capitals.skip(e, me)) return;
+        // A revolution in our own land: our journal has its own story (notify.revolution).
+        if (e.key === 'event.revolution' && e.params?.player === me) return;
         const text = this.fmt(e);
         const params = { ...e.params };
         if (e.key === 'event.eliminated' && typeof params.player === 'number')
@@ -1300,6 +1321,9 @@ export class GameController {
       case 'capitalLost':
       case 'capitalMoved':
         this.capitals.event(e, me);
+        break;
+      case 'revolution':
+        if (e.phase === 'start' && e.from === me) this.revolt(e.tile);
         break;
       case 'gameOver':
         break;

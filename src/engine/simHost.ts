@@ -73,6 +73,11 @@ export class SimHost {
     this.send({ type: 'layers', loyalty });
   }
 
+  /** QA (?automation, solo only): a revolution breaks out in `player`'s land at once. */
+  qaRevolution(player: number): void {
+    this.send({ type: 'qa', action: 'revolution', player });
+  }
+
   setViewer(viewer: number, fogEnabled: boolean): void {
     this.send({ type: 'setViewer', viewer, fogEnabled });
   }

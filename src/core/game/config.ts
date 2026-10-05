@@ -28,6 +28,11 @@ export interface FeatureToggles {
   tech: boolean;
   resources: boolean;
   loyalty: boolean;
+  /**
+   * Revolutions against a country far ahead (rules/revolution.ts, 1.14). Absent from the
+   * configs of older saves and replays: off there, so that they replay as they were played.
+   */
+  revolution: boolean;
   events: boolean;
   generals: boolean;
   air: boolean;
@@ -77,6 +82,7 @@ export function defaultFeatures(): FeatureToggles {
     tech: true,
     resources: true,
     loyalty: false,
+    revolution: true,
     events: true,
     generals: true,
     air: true,

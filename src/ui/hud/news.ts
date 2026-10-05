@@ -68,6 +68,9 @@ const WEIGHT: Record<string, number> = {
   'notify.capitalTaken': 75,
   'notify.secession': 70,
   'notify.secessionRegion': 70,
+  // Revolutions (GAME_DESIGN.md §6.5): ours leads the minute, another country's makes a headline.
+  'notify.revolution': 72,
+  'event.revolution': 58,
   'event.capitalFell': 65,
   'event.capitalRazed': 65,
   'council.sanctions': 55,
@@ -141,6 +144,21 @@ function headline(key: string, p: Record<string, string | number>, name: Name): 
         t('news.head.secessionRegion', { tribe: name(num(p.tribe)) }),
         t('news.deck.secessionRegion', { tiles: num(p.tiles) }),
         [], // tribes fly no flag
+      ];
+    case 'notify.revolution':
+      return [
+        t('news.head.revolution', { tribe: name(num(p.tribe)) }),
+        t('news.deck.revolution', { tiles: num(p.tiles).toLocaleString(i18n.lang), min: num(p.min) }),
+        [], // rebels fly no flag
+      ];
+    case 'event.revolution':
+      return [
+        t('news.head.revolutionOther', { player: name(num(p.player)) }),
+        t('news.deck.revolutionOther', {
+          tribe: name(num(p.tribe)),
+          tiles: num(p.tiles).toLocaleString(i18n.lang),
+        }),
+        [num(p.player)],
       ];
     // Capitals (rules/capital.ts): ours lost or razed, one we took, one falling elsewhere.
     case 'notify.capitalLost':

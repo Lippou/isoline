@@ -30,6 +30,7 @@ import {
   Gift,
   Globe,
   Handshake,
+  HandFist,
   Info,
   Key,
   Landmark,
@@ -259,6 +260,8 @@ export const ICONS = {
   inactive: Moon,
   brokenShield: BrokenShield,
   noTrade: NoTrade,
+  /** Revolutions (rules/revolution.ts): the raised fist, on the map and in the hover card. */
+  revolt: HandFist,
   // missile launch
   arcUp: ArcUp,
   arcDown: ArcDown,

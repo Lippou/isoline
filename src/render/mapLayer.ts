@@ -321,7 +321,15 @@ export class MapLayer {
    * (0 neutral, 1 ally / teammate, 2 at war, 3 no trade, 4 threatening our border),
    * which tints its borders.
    */
-  setPalette(colors: Map<number, [number, number, number]>, relations?: Map<number, number>): void {
+  /**
+   * Ink per owner id. Alpha = 255 − 50 × relation (0–4, borders) − 20 for the hatched owners
+   * (revolutions, drawn with ink hatching): the shader reads both back from it.
+   */
+  setPalette(
+    colors: Map<number, [number, number, number]>,
+    relations?: Map<number, number>,
+    hatched?: ReadonlySet<number>,
+  ): void {
     this.paletteData.fill(0);
     for (const [id, [r, g, b]] of colors) {
       if (id < 0 || id >= 65536) continue;
@@ -329,7 +337,7 @@ export class MapLayer {
       this.paletteData[k] = r;
       this.paletteData[k + 1] = g;
       this.paletteData[k + 2] = b;
-      this.paletteData[k + 3] = 255 - 50 * (relations?.get(id) ?? 0);
+      this.paletteData[k + 3] = 255 - 50 * (relations?.get(id) ?? 0) - (hatched?.has(id) ? 20 : 0);
     }
     this.paletteSrc.update();
   }
