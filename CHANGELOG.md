@@ -2,6 +2,22 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [Unreleased]
+### Ajouté
+- **De vraies voies ferrées, qui se construisent** (« pour les rails, j'aimerais un vrai visuel de rails et les rails qui se construisent ») :
+  - **Une voie à tous les zooms**, lisible sans les couleurs (par sa forme) : de loin, le **symbole des cartes** « chemin de fer », filet d'encre bordé de papier à tirets noirs et blancs alternés, plus fin et plus pâle sur la vue d'ensemble ; à mi-zoom, **deux rails fins sur une échelle de traverses** et un ballast discret ; de près, **rails d'acier avec leur reflet sur des traverses en bois** à l'écartement réel, sur un lit de ballast gris à peine teinté de l'encre du propriétaire. Le tracé est lissé (plus d'escalier) et les voies se rejoignent en éventail aux gares et aux usines.
+  - **Les trains roulent sur la voie dessinée** : la simulation envoie le rail et l'avancement de chaque train, la locomotive et ses wagons suivent exactement la courbe des rails.
+  - **Chantier** : une nouvelle voie se pose sous vos yeux, de l'usine vers la gare, en 2 à 5 s selon sa longueur : le ballast d'abord, puis les traverses, puis les rails ; à la tête de voie, une équipe (trois ouvriers, casque laiton de près) et un nuage de poussière (densité des particules respectée). Purement visuel : la simulation pose la ligne d'un coup, comme OpenFront ; un train qui s'engage sur une voie pas finie pousse le chantier devant lui, il ne roule jamais sur la terre nue. Les voies déjà là au chargement d'une partie ou d'une sauvegarde apparaissent directement.
+  - **Voies arrachées** : une voie perdue (territoire pris, gare détruite, bombardement) ne disparaît plus d'un coup : rails cassés par morceaux, traverses de travers, ballast qui s'efface en 1,7 s.
+  - Mouvements réduits : simple fondu (0,8 s) à la pose comme à l'arrachage.
+  - Le halo des voies fréquentées (vue des routes commerciales) suit le nouveau tracé et reste près du ballast de près.
+- QA (`?automation`) : `__iso.rails()` liste les voies (id, propriétaire, longueur, extrémités), `__iso.railReplay(id, 'build' | 'tear')` rejoue la pose ou l'arrachage d'une voie (dessin seul), `__iso.railFx()` compte les voies en chantier et arrachées.
+### Performances
+- Voies regroupées par blocs de 64 × 64 tuiles en trois couches (ballast, traverses, rails), redessinées seulement quand leurs voies changent ou que le zoom franchit un palier (en plusieurs images si besoin), et masquées hors de l'écran ; seules les voies en chantier ou arrachées sont redessinées à chaque image. Monde, 100 nations, ~250 voies : 100 à 240 i/s sans limite selon le zoom (même ordre qu'avant, charge machine variable).
+### Vérifié
+- Tests `rail-layer` (tracé lissé qui garde les gares, pose et arrachage, fondu en mouvements réduits, train sur la voie, train qui pousse le chantier).
+- Captures Electron (Monde, 100 nations, ~250 voies) à 8 zooms, séquences de pose et d'arrachage à 4 zooms, deux voies posées par la simulation, mouvements réduits.
+
 ## [1.15.0] — Défenses resserrées, révolutions visibles, naufrages, cartes peuplées
 ### Ajouté
 - `scripts/pacing.ts` : missiles interceptés, tirs sur une cible couverte par un SAM ennemi et part des niveaux de villes des nations sous un de leurs SAM (`| launches … intercepted … at-SAM … | city levels under SAM …`).

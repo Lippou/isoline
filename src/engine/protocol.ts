@@ -31,9 +31,9 @@ export const enum UF {
   Tx = 10,
   Ty = 11,
   T0 = 12,
-  T1 = 13,
+  T1 = 13, // trains: progress along the rail (tiles)
   Troops = 14, // transports: troops · trains: direction · missiles: arc (-1 up, 1 down, 0 straight)
-  Dest = 15, // missiles: target tile (-1 otherwise)
+  Dest = 15, // missiles: target tile · trains: rail id (-1 otherwise)
 }
 
 export type MapSource =

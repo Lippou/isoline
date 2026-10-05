@@ -9,6 +9,7 @@ import type { ClientState } from '../engine/clientState';
 import type { RailTrafficView, RailView, TradeRouteView } from '../engine/protocol';
 import { ROUTE_CUT_TICKS } from '../engine/tradeRoutes';
 import { UI } from './colors';
+import { railCurve } from './railLayer';
 
 /** Brand magenta: danger and war (BRAND.md §4). */
 const CUT_COLOR = 0xe0456f;
@@ -193,13 +194,8 @@ export class TradeRouteLayer {
     if (!p) {
       const r = this.railById.get(id);
       if (!r || r.tiles.length < 2) return null;
-      const w = s.width;
-      const out: number[] = [];
-      for (let k = 0; k < r.tiles.length; k += 3)
-        out.push((r.tiles[k]! % w) + 0.5, ((r.tiles[k]! / w) | 0) + 0.5);
-      const last = r.tiles[r.tiles.length - 1]!;
-      out.push((last % w) + 0.5, ((last / w) | 0) + 0.5);
-      p = shape(Float32Array.from(out));
+      // The very line the track is drawn on (railLayer.ts), so the glow sits under it.
+      p = shape(railCurve(r.tiles, s.width));
       this.railPts.set(id, p);
     }
     return p;
@@ -226,7 +222,8 @@ export class TradeRouteLayer {
       const k = Math.sqrt(Math.min(1, rt.trips / ref));
       polyline(g, pts, null);
       g.stroke({
-        width: 0.7 + 0.9 * k,
+        // Close up, a halo just around the ballast (railLayer.ts), not a wide band.
+        width: Math.min(0.7 + 0.9 * k, 0.62 + (4 + 8 * k) / z),
         color: owner === s.viewer ? UI.brass : this.ctx.ink(owner),
         alpha: 0.16 + 0.4 * k,
         cap: 'round',

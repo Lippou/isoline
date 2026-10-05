@@ -330,14 +330,15 @@ function packUnits(g: Game): number {
     unitBuf[o + 10] = u.tx;
     unitBuf[o + 11] = u.ty;
     unitBuf[o + 12] = u.t0;
-    unitBuf[o + 13] = u.t1;
+    // Trains: their progress along the rail and the rail (the renderer draws them on the track).
+    unitBuf[o + 13] = u.type === U.Train ? u.troops : u.t1;
     unitBuf[o + 14] =
       u.type === U.Transport
         ? u.troops
         : u.type === U.Train || u.type === U.Nuke || u.type === U.Interceptor
           ? u.dir
           : 0;
-    unitBuf[o + 15] = u.type === U.Nuke ? u.dest : -1;
+    unitBuf[o + 15] = u.type === U.Nuke ? u.dest : u.type === U.Train ? u.rail : -1;
     n++;
   }
   return n;

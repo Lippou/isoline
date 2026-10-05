@@ -29,6 +29,7 @@ import { MissileFx } from './missileFx';
 import { ShipLayer } from './ships';
 import { WeatherLayer } from './weatherLayer';
 import { TradeRouteLayer } from './tradeRoutes';
+import { RailLayer } from './railLayer';
 import { CapitalLayer } from './capitals';
 import { DefenceZoneLayer, type ZoneGroup } from './defenceZones';
 import { FlagTextures } from './flagTextures';
@@ -263,7 +264,8 @@ export class GameRenderer {
   private map!: MapLayer;
   private world = new Container();
   private screen = new Container();
-  private rails = new Graphics();
+  /** Railways: track by zoom, built and torn up before our eyes (railLayer.ts). */
+  private railLayer!: RailLayer;
   private deposits = new Container();
   private buildings = new Container();
   private lights = new Container();
@@ -301,7 +303,6 @@ export class GameRenderer {
   /** Building badges placed by the last declutter pass, and the view it was computed for. */
   private badgeShown = new Set<number>();
   private badgeKey = '';
-  private railsVersion = -1;
   private buildingsVersion = -1;
   private fogVersion = -1;
   private loyaltyVersion = -1;
@@ -391,12 +392,19 @@ export class GameRenderer {
       ink: (id) => this.inkOf(id),
       seen: (owner, x, y) => this.revealed(owner, x, y),
     });
+    this.railLayer = new RailLayer(this.state, {
+      ink: (id) => this.inkOf(id),
+      seen: (owner, x, y) => this.revealed(owner, x, y),
+      particles: () => this.settings.particles,
+      reducedMotion: () => this.settings.reducedMotion,
+      inkKey: () => this.settings.vision,
+    });
     this.lights.blendMode = 'add';
     this.trails.blendMode = 'add';
     this.world.addChild(
       this.map.mesh,
       this.routes.railGlow,
-      this.rails,
+      this.railLayer.container,
       this.routes.lanes,
       this.routes.cuts,
       this.nukeFx.ground,
@@ -445,7 +453,7 @@ export class GameRenderer {
     this.paletteKey = '';
     this.fogVersion = -1;
     this.loyaltyVersion = -1;
-    this.railsVersion = -1;
+    this.railLayer.reset();
     this.buildingsVersion = -1;
     this.routes.invalidate();
   }
@@ -593,8 +601,7 @@ export class GameRenderer {
     this.deposits.visible = this.overlay.resourcesView || z > 2.5;
     for (const d of this.deposits.children)
       d.scale.set(Math.min(0.34, (18 / 64 / z) * (this.overlay.resourcesView ? 1.2 : 1)));
-    this.rails.visible = z > 0.9;
-    if (s.railsVersion !== this.railsVersion) this.drawRails();
+    this.railLayer.update(z, this.camera.bounds(), dt);
     this.routes.update(z, tickF, this.overlay.tradeRoutes, this.camera.bounds());
     if (s.buildingsVersion !== this.buildingsVersion) this.syncBuildings();
     this.updateBuildings(night, t);
@@ -615,39 +622,6 @@ export class GameRenderer {
       const color = lerpColor(0xfffdf8, 0xffb878, cool * 1.4);
       this.flash.rect(0, 0, cam.viewW, cam.viewH).fill({ color, alpha: this.flashAlpha });
       this.flashAlpha *= Math.exp(-dt * (this.settings.reducedMotion ? 1.8 : 3.4));
-    }
-  }
-
-  // ---------------------------------------------------------------- rails
-  private drawRails(): void {
-    this.railsVersion = this.state.railsVersion;
-    const g = this.rails;
-    g.clear();
-    const w = this.state.width;
-    for (const r of this.state.rails) {
-      if (r.tiles.length < 2) continue;
-      // Smooth: Chaikin-like decimation (every 3rd tile) + quadratic curves.
-      const pts: [number, number][] = [];
-      for (let k = 0; k < r.tiles.length; k += 3)
-        pts.push([(r.tiles[k]! % w) + 0.5, ((r.tiles[k]! / w) | 0) + 0.5]);
-      const last = r.tiles[r.tiles.length - 1]!;
-      pts.push([(last % w) + 0.5, ((last / w) | 0) + 0.5]);
-      g.moveTo(pts[0]![0], pts[0]![1]);
-      for (let k = 1; k < pts.length - 1; k++) {
-        const mx = (pts[k]![0] + pts[k + 1]![0]) / 2;
-        const my = (pts[k]![1] + pts[k + 1]![1]) / 2;
-        g.quadraticCurveTo(pts[k]![0], pts[k]![1], mx, my);
-      }
-      g.lineTo(pts[pts.length - 1]![0], pts[pts.length - 1]![1]);
-      g.stroke({ width: 0.55, color: 0x1a1612, alpha: 0.85 });
-      g.moveTo(pts[0]![0], pts[0]![1]);
-      for (let k = 1; k < pts.length - 1; k++) {
-        const mx = (pts[k]![0] + pts[k + 1]![0]) / 2;
-        const my = (pts[k]![1] + pts[k + 1]![1]) / 2;
-        g.quadraticCurveTo(pts[k]![0], pts[k]![1], mx, my);
-      }
-      g.lineTo(pts[pts.length - 1]![0], pts[pts.length - 1]![1]);
-      g.stroke({ width: 0.22, color: this.inkOf(r.owner), alpha: 0.95 });
     }
   }
 
@@ -977,6 +951,9 @@ export class GameRenderer {
         continue;
       }
       if (type === U.Train) {
+        // On the drawn track (its rail and progress ride in the slots 15 and 13).
+        const on = this.railLayer.trainAt(id, buf[o + 15]!, buf[o + 13]!, s.tick, alpha);
+        if (on) [x, y] = on;
         this.updateTrain(id, owner, x, y, z, inView);
         continue;
       }
@@ -2346,6 +2323,16 @@ export class GameRenderer {
     this.nukeFx.clear();
     this.flashAlpha = 0;
     this.shake = 0;
+  }
+
+  /** QA: lay rail `id` again or tear up a copy of it, render only (railLayer.ts). */
+  qaRail(id: number, kind: 'build' | 'tear' = 'build'): boolean {
+    return this.railLayer.qaReplay(id, kind);
+  }
+
+  /** QA: rails being laid and torn up on the map. */
+  get railFx(): { building: number; tearing: number } {
+    return this.railLayer.animating;
   }
 
   /** QA: ships in view sunk now, render only (ships.ts); returns how many. */

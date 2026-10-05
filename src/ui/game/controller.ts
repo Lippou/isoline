@@ -310,6 +310,22 @@ export class GameController {
         focus: (id: number) => this.focusPlayer(id),
         /** QA: ships sunk on screen, render only (`id`s of the unit buffer; none: every ship in view). */
         sinkFx: (ids?: number[]) => this.renderer.qaSink(ids),
+        /** QA: the railways (id, owner, tiles, ends) and the ones being laid / torn up now. */
+        rails: () => {
+          const st = this.session.state;
+          const w = st.width;
+          const xy = (t: number) => [t % w, (t / w) | 0];
+          return st.rails.map((r) => ({
+            id: r.id,
+            owner: r.owner,
+            n: r.tiles.length,
+            a: xy(r.tiles[0]!),
+            b: xy(r.tiles[r.tiles.length - 1]!),
+          }));
+        },
+        railFx: () => this.renderer.railFx,
+        /** QA: rail `id` laid again before our eyes, or a copy of it torn up (render only). */
+        railReplay: (id: number, kind: 'build' | 'tear' = 'build') => this.renderer.qaRail(id, kind),
         /** QA: ships sinking on screen. */
         wrecks: () => this.renderer.wreckCount,
         /** QA: show the dispatch of a fall while the game goes on (LAN only in play). */
