@@ -2,7 +2,7 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
-## [Unreleased]
+## [1.14.0] — Révolutions, missiles, zones de défense, daltonisme
 ### Ajouté
 - **Révolutions** (« un joueur qui prend trop de territoire, quelquefois, une faction se rebelle… une tribu, mais sans or. Une révolution ») : une règle du monde, la même pour vous et pour les nations, activée par défaut (option « Révolutions » de la création de partie). Le pays qui tient au moins 20 % des terres et au moins 1,6 fois celles du suivant voit de temps en temps une région lointaine se soulever : 6 % de son territoire, de préférence des conquêtes, jamais près de la capitale. Tirage toutes les 10 s après 5 min de jeu, de 3 % à 13 % selon l'avance, 6 min au moins entre deux révolutions d'un même pays. Les révolutionnaires (« Révolutionnaires de Pologne ») emportent la garnison de la région, et la population les rejoint ; ils n'ont **ni or ni revenu, ne commercent pas, ne signent aucune alliance** et repoussent un peu leur ancien pays. **Les reprendre ne rapporte pas d'or** : leurs bâtiments, hors service pendant la révolte, reviennent intacts à leur pays et brûlent si un autre les prend. Sans répression, la révolte s'essouffle au bout de 4 min et la région rentre dans le rang. Les nations répriment d'abord une révolution chez elles (GAME_DESIGN.md §6.5).
 - À l'écran : région **hachurée** de blanc sur une encre lie-de-vin (lisible sans les couleurs) et **poing levé** sur l'étiquette ; ligne « Soulevés contre … · 3:55 » dans la carte de survol ; une du journal chez la victime (avec le clignotement du bord d'écran tourné vers la région et un cor), « Révolution chez … » pour les autres, brèves de fin. Traductions française et anglaise.
