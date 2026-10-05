@@ -18,12 +18,13 @@ import {
   NUKE_TARGETABLE_RANGE,
   RECON_RADIUS,
 } from '../core/game/constants';
-import { Trajectory } from '../core/units/trajectory';
+import { ARC_UP, Trajectory, flightTicks, mirvSplitPoint } from '../core/units/trajectory';
 import type { GameEvent } from '../core/game/events';
 import { dayPhase } from '../core/rules/features';
 import { liveRing } from '../core/rules/victory';
 import { ParticleSystem } from './particles';
 import { NukeFx, lerpColor } from './nukeFx';
+import { MissileFx } from './missileFx';
 import { ShipLayer } from './ships';
 import { WeatherLayer } from './weatherLayer';
 import { TradeRouteLayer } from './tradeRoutes';
@@ -38,6 +39,27 @@ import {
   majorBuilding,
 } from './badgeSize';
 import { flagAspect } from './flags';
+
+/** QA: a visual-only missile (ticks on the QA clock). */
+interface QaFlight {
+  id: number;
+  type: number;
+  owner: number;
+  kind: number;
+  sx: number;
+  sy: number;
+  tx: number;
+  ty: number;
+  t0: number;
+  t1: number;
+  arc: number;
+  dest: number;
+  /** MIRV carrier: warheads released at the end, spread (tiles) around the target. */
+  warheads: number;
+  spread: number;
+  /** Blast drawn at impact (nukeFx, render only). */
+  blast: boolean;
+}
 
 export interface RenderSettings {
   quality: 'performance' | 'balanced' | 'high';
@@ -233,6 +255,11 @@ export class GameRenderer {
   private icons!: IconSet;
   private particles!: ParticleSystem;
   private nukeFx!: NukeFx;
+  /** Missiles in flight and at launch (render only: missileFx.ts). */
+  private missileFx = new MissileFx();
+  /** QA: visual-only missiles (no simulation), on their own clock. */
+  private qaFlights: QaFlight[] = [];
+  private qaNextId = -1;
   private ships!: ShipLayer;
   private weather!: WeatherLayer;
   private routes!: TradeRouteLayer;
@@ -318,6 +345,7 @@ export class GameRenderer {
     this.map = new MapLayer(this.state, this.app.renderer);
     this.particles = new ParticleSystem(this.icons, 2600);
     this.nukeFx = new NukeFx();
+    await this.missileFx.init();
     this.ships = new ShipLayer(this.icons, this.particles, {
       inkOf: (id) => this.inkOf(id),
       particles: () => this.settings.particles,
@@ -342,10 +370,12 @@ export class GameRenderer {
       this.deposits,
       this.lights,
       this.buildings,
+      this.missileFx.ground,
       this.units,
       this.trails,
       this.particles.container,
       this.nukeFx.air,
+      this.missileFx.air,
       this.weather.container,
       this.overlayG,
       this.labels,
@@ -806,6 +836,15 @@ export class GameRenderer {
     const missilesSeen = new Set<number>();
     const [vx0, vy0, vx1, vy1] = this.camera.bounds();
     this.ships.begin(this.frame, z, dt);
+    this.missileFx.begin({
+      zoom: z,
+      bounds: [vx0, vy0, vx1, vy1],
+      t,
+      dt,
+      particles: this.settings.particles,
+      reducedMotion: this.settings.reducedMotion,
+      uiScale: this.settings.uiScale,
+    });
     for (let k = 0; k < s.unitCount; k++) {
       const o = k * UNIT_STRIDE;
       const id = buf[o]!;
@@ -922,7 +961,9 @@ export class GameRenderer {
         this.unitSprites.delete(id);
       }
     }
+    this.updateQaFlights(missilesSeen, t);
     for (const id of this.missilePaths.keys()) if (!missilesSeen.has(id)) this.missilePaths.delete(id);
+    this.missileFx.end();
     this.ships.end();
   }
 
@@ -1023,52 +1064,73 @@ export class GameRenderer {
     }
   }
 
-  /** Missiles along their real (simulated) arc, luminous trails, and impact telegraphs. */
+  /** Missiles along their real (simulated) arc (missileFx.ts), and impact telegraphs. */
   private drawMissile(buf: Float32Array, o: number, tickF: number, t: number): void {
-    const id = buf[o]!;
-    const type = buf[o + 1]!;
-    const owner = buf[o + 2]!;
-    const kind = buf[o + 6]!;
-    const sx = buf[o + 8]!;
-    const sy = buf[o + 9]!;
-    const tx = buf[o + 10]!;
-    const ty = buf[o + 11]!;
-    const t0 = buf[o + 12]!;
-    const t1 = buf[o + 13]!;
-    const arc = buf[o + 14]!;
-    const dest = buf[o + 15]!;
+    this.flight(
+      buf[o]!,
+      buf[o + 1]!,
+      buf[o + 2]!,
+      buf[o + 6]!,
+      buf[o + 8]!,
+      buf[o + 9]!,
+      buf[o + 10]!,
+      buf[o + 11]!,
+      buf[o + 12]!,
+      buf[o + 13]!,
+      buf[o + 14]!,
+      buf[o + 15]!,
+      tickF,
+      t,
+    );
+  }
+
+  private flight(
+    id: number,
+    type: number,
+    owner: number,
+    kind: number,
+    sx: number,
+    sy: number,
+    tx: number,
+    ty: number,
+    t0: number,
+    t1: number,
+    arc: number,
+    dest: number,
+    tickF: number,
+    t: number,
+  ): void {
     let path = this.missilePaths.get(id);
     if (!path) {
       path = new Trajectory(sx, sy, tx, ty, arc, this.state.height);
       this.missilePaths.set(id, path);
     }
-    if (type === U.Nuke && dest >= 0) {
+    if (type === U.Nuke && dest >= 0 && id >= 0) {
       const atMe = this.state.viewer > 0 && this.state.owner[dest] === this.state.viewer;
       this.nukesInFlight.set(owner, (this.nukesInFlight.get(owner) ?? false) || atMe);
     }
-    const f = Math.max(0, Math.min(1, (tickF - t0) / Math.max(1, t1 - t0)));
-    const color =
-      type === U.Interceptor ? UI.aurora : kind === N.Hydrogen || kind === N.Mirv ? UI.signal : 0xffb070;
+    const w = this.state.width;
+    const gx = dest >= 0 ? (dest % w) + 0.5 : tx;
+    const gy = dest >= 0 ? ((dest / w) | 0) + 0.5 : ty;
+    this.missileFx.missile(
+      id,
+      type,
+      kind,
+      path,
+      sx,
+      sy,
+      tx,
+      ty,
+      t0,
+      t1,
+      arc,
+      gx,
+      gy,
+      tickF,
+      this.inkOf(owner),
+    );
     const g = this.trails;
     const z = this.camera.zoom;
-    const steps = 24;
-    const from = Math.max(0, f - 0.35);
-    const [p0x, p0y] = path.at(from);
-    g.moveTo(p0x, p0y);
-    for (let k = 1; k <= steps; k++) {
-      const [px, py] = path.at(from + ((f - from) * k) / steps);
-      g.lineTo(px, py);
-    }
-    g.stroke({ width: Math.max(0.3, 2.2 / z), color, alpha: 0.75 });
-    const [hx, hy] = path.at(f);
-    // Out of every SAM's reach in the middle of a long flight: drawn fainter.
-    const r2 = NUKE_TARGETABLE_RANGE * NUKE_TARGETABLE_RANGE;
-    const reachable =
-      type === U.Interceptor ||
-      (hx - sx) ** 2 + (hy - sy) ** 2 <= r2 ||
-      (hx - tx) ** 2 + (hy - ty) ** 2 <= r2;
-    g.circle(hx, hy, Math.max(0.5, 3.5 / z)).fill({ color: 0xffffff, alpha: reachable ? 1 : 0.6 });
-    g.circle(hx, hy, Math.max(1.2, 9 / z)).fill({ color, alpha: reachable ? 0.25 : 0.12 });
     if (type === U.Interceptor || kind === N.Mirv) return;
     // Telegraph: destruction disc and dashed fallout ring, coloured by who launched it.
     const rel = REL_COLOR[this.relation(owner)];
@@ -1905,6 +1967,126 @@ export class GameRenderer {
   /** QA: a nuclear blast drawn at (x, y) without the simulation (no damage, no sound). */
   qaNuke(kind: number, x: number, y: number): void {
     this.explosion(x, y, kind, NUKE_RADIUS[kind === N.Hydrogen ? 1 : kind === N.MirvWarhead ? 3 : 0]);
+  }
+
+  /**
+   * QA: a missile drawn without the simulation (no damage, no sound), from (sx, sy) to (tx, ty):
+   * kind 0 A, 1 H, 2 MIRV (`warheads` released over `spread` tiles), 4 an interceptor.
+   * `rate`: QA ticks a second (10: the game's pace; lower for slow motion). Returns the flight time (s).
+   */
+  qaMissile(
+    kind: number,
+    sx: number,
+    sy: number,
+    tx: number,
+    ty: number,
+    opts: {
+      up?: boolean;
+      owner?: number;
+      delay?: number;
+      warheads?: number;
+      spread?: number;
+      blast?: boolean;
+      rate?: number;
+    } = {},
+  ): number {
+    if (opts.rate !== undefined) this.qaRate = opts.rate;
+    const now = this.qaTick();
+    const w = this.state.width;
+    const owner = opts.owner ?? this.state.viewer;
+    const interceptor = kind === 4;
+    const mirv = kind === N.Mirv;
+    const [ex, ey] = mirv ? mirvSplitPoint(sx, tx, ty) : [tx, ty];
+    const arc = mirv || interceptor || opts.up !== false ? ARC_UP : 1;
+    const path = new Trajectory(sx, sy, ex, ey, interceptor ? 0 : arc, this.state.height);
+    const ticks = interceptor
+      ? Math.max(3, Math.ceil(path.length / 12))
+      : mirv
+        ? Math.max(10, Math.round(14 + Math.max(0, path.length / 15 - 14) * 0.15))
+        : flightTicks(path, 10, 10);
+    const t0 = now + (opts.delay ?? 0);
+    this.qaFlights.push({
+      id: this.qaNextId--,
+      type: interceptor ? U.Interceptor : U.Nuke,
+      owner,
+      kind: interceptor ? 0 : kind,
+      sx,
+      sy,
+      tx: ex,
+      ty: ey,
+      t0,
+      t1: t0 + ticks,
+      arc: interceptor ? 0 : arc,
+      dest: Math.floor(ty) * w + Math.floor(tx),
+      warheads: mirv ? (opts.warheads ?? 60) : 0,
+      spread: opts.spread ?? 150,
+      blast: !!opts.blast,
+    });
+    return ticks / this.qaRate;
+  }
+
+  /** QA: visual-only missiles wiped. */
+  qaClearMissiles(): void {
+    this.qaFlights = [];
+    this.missileFx.clear();
+  }
+
+  /** QA: missiles drawn and smoke puffs in use. */
+  get missileFxCount(): { missiles: number; puffs: number } {
+    return { missiles: this.missileFx.count, puffs: this.missileFx.puffCount };
+  }
+
+  private qaStart = -1;
+  private qaRate = 10;
+  private qaTick(): number {
+    const now = performance.now();
+    if (this.qaStart < 0) this.qaStart = now;
+    return ((now - this.qaStart) / 1000) * this.qaRate;
+  }
+
+  private updateQaFlights(seen: Set<number>, t: number): void {
+    if (this.qaFlights.length === 0) return;
+    const tick = this.qaTick();
+    const w = this.state.width;
+    const keep: QaFlight[] = [];
+    const born: QaFlight[] = [];
+    for (const q of this.qaFlights) {
+      if (tick >= q.t1) {
+        if (q.warheads > 0) {
+          // The carrier separates: warheads over the target, like the simulation's splitMirv.
+          const gx = (q.dest % w) + 0.5;
+          const gy = ((q.dest / w) | 0) + 0.5;
+          for (let k = 0; k < q.warheads; k++) {
+            const a = Math.random() * Math.PI * 2;
+            const d = k === 0 ? 0 : Math.sqrt(Math.random()) * q.spread;
+            const hx = Math.max(1, Math.min(w - 2, gx + Math.cos(a) * d));
+            const hy = Math.max(1, Math.min(this.state.height - 2, gy + Math.sin(a) * d));
+            const path = new Trajectory(q.tx, q.ty, hx, hy, ARC_UP, this.state.height);
+            const t0 = q.t1 + Math.floor(Math.random() * 16);
+            born.push({
+              ...q,
+              id: this.qaNextId--,
+              kind: N.MirvWarhead,
+              sx: q.tx,
+              sy: q.ty,
+              tx: hx,
+              ty: hy,
+              t0,
+              t1: t0 + flightTicks(path, 22, 4),
+              arc: ARC_UP,
+              dest: Math.floor(hy) * w + Math.floor(hx),
+              warheads: 0,
+            });
+          }
+        } else if (q.blast && q.type === U.Nuke)
+          this.explosion(q.tx, q.ty, q.kind, NUKE_RADIUS[q.kind as N] || 12);
+        continue;
+      }
+      keep.push(q);
+      seen.add(q.id);
+      this.flight(q.id, q.type, q.owner, q.kind, q.sx, q.sy, q.tx, q.ty, q.t0, q.t1, q.arc, q.dest, tick, t);
+    }
+    this.qaFlights = [...keep, ...born];
   }
 
   /** QA: every nuclear blast and scorch mark wiped (and the screen flash). */

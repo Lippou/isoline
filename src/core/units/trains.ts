@@ -448,6 +448,7 @@ export function sabotageNear(game: Game, by: number, tile: number): boolean {
   let bestD = 40 * 40;
   for (const u of game.units) {
     if (!u.alive || (u.type !== U.Train && u.type !== U.Merchant) || game.friendly(u.owner, by)) continue;
+    if (game.inTruce(u.owner, by)) continue; // a peace summit or the Council's ceasefire
     const d = (u.x - x) ** 2 + (u.y - y) ** 2;
     if (d < bestD) {
       bestD = d;

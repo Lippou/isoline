@@ -20,6 +20,7 @@ import {
   hostileSams,
   launchSilo,
   maxLaunchable,
+  nuclearHalt,
   nukeCost,
   samMissilesReady,
   samRangeOf,
@@ -237,6 +238,9 @@ function levelsUnder(game: Game, enemy: number, x: number, y: number, kind: N): 
 /** A nation's nuclear think (silos owned). Returns its work cost. */
 export function tryNuke(game: Game, p: Player, m: ArsenalMem, ctx: NukeContext): number {
   if (p.buildingCount[B.Silo] === 0) return 0;
+  // The Council's ban or a peace summit: nothing to aim (a strike waiting for its
+  // reconnaissance keeps waiting, and no gold is put aside for a launch refused anyway).
+  if (nuclearHalt(game)) return 10;
   const diff = game.difficulty();
   const tac = TACTICS[game.config.difficulty];
   // A strike waiting for its reconnaissance: once the zone is spotted (or the wait is over).

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { hud, openPanel } from '../stores/game.svelte';
-  import { t, short, clock } from '../i18n/i18n.svelte';
+  import { t, short } from '../i18n/i18n.svelte';
   import { settings, keyLabel } from '../stores/settings.svelte';
   import Icon from '../icons/Icon.svelte';
   import { BUILDING_ICONS, type IconName } from '../icons/icons';
@@ -13,6 +13,7 @@
   import { hudSize } from '../stores/hudBox.svelte';
   import { folds, setFold } from '../stores/folds.svelte';
   import FoldButton from './FoldButton.svelte';
+  import { haltIcon, haltShort, haltTip, nukeHalt } from './nukeHalt';
 
   let { ctl }: { ctl: GameController } = $props();
   const cfg = currentSession()!.config;
@@ -57,8 +58,8 @@
     hud.tool =
       hud.tool.k === 'nuke' && hud.tool.kind === kind ? { k: 'none' } : { k: 'nuke', kind, count: 1 };
   }
-  /** The World Council's nuclear ban: the bombs print in magenta while it lasts (time left, 0: none). */
-  const banLeft = $derived(Math.max(0, (hud.world?.nukeBanUntil ?? 0) - hud.tick));
+  /** The World Council's nuclear ban or a peace summit: the bombs print in magenta while it lasts. */
+  const halt = $derived(nukeHalt(hud.world, hud.tick));
   const active = (k: string, kind: number) =>
     hud.tool.k === k && 'kind' in hud.tool && hud.tool.kind === kind;
 
@@ -161,7 +162,9 @@
     <span class="name">{label}</span>
     <span class="cost mono">{cost}</span>
     {#if key}<kbd>{key}</kbd>{/if}
-    {#if banned}<span class="banmark" aria-hidden="true"><Icon name="embargo" size={11} /></span>{/if}
+    {#if banned}<span class="banmark" aria-hidden="true"
+        ><Icon name={halt ? haltIcon(halt) : 'embargo'} size={11} /></span
+      >{/if}
   </button>
 {/snippet}
 
@@ -260,10 +263,8 @@
     {/if}
     {#if nukes.length}
       <div class="group">
-        <div class="gtitle" class:spot={banLeft > 0}>
-          {t('hud.groupNukes')}{#if banLeft > 0}<span class="mono"
-              >{`· ${t('ban.short', { clock: clock(banLeft) })}`}</span
-            >{/if}
+        <div class="gtitle" class:spot={!!halt} data-testid="nuke-group-title">
+          {t('hud.groupNukes')}{#if halt}<span class="mono">{`· ${haltShort(halt)}`}</span>{/if}
         </div>
         <div class="tools">
           {#each nukes as n (n.kind)}
@@ -280,7 +281,7 @@
                 true,
                 () => (lock >= 0 ? openTech(lock) : pickNuke(n.kind)),
                 `nuke-${n.key}`,
-                banLeft > 0,
+                !!halt,
               )}
               {#if lock >= 0}<span class="lock" aria-hidden="true"><Icon name="lock" size={11} /></span>{/if}
               {#if active('nuke', n.kind) && hud.tool.k === 'nuke'}<span class="count mono"
@@ -295,7 +296,7 @@
                     t('hud.readyN', { n: L.maxLaunch[n.kind] ?? 0 }),
                   ],
                   requires(lock),
-                  banLeft > 0 ? t('ban.tip', { clock: clock(banLeft) }) : '',
+                  halt ? haltTip(halt) : '',
                 )}
               {/if}
             </div>

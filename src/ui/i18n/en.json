@@ -1189,6 +1189,7 @@
     "noSilo": "No silo: build one first",
     "reloading": "Silos reloading",
     "banned": "The World Council has banned nuclear weapons",
+    "summit": "Peace summit: no launch",
     "gold": "Not enough gold",
     "mirvClear": "The carrier cannot be intercepted",
     "intercepted": "A SAM will intercept this missile: flip the arc ({key}) or aim elsewhere",
@@ -1212,7 +1213,10 @@
     "kicker": "Nuclear ban",
     "left": "{clock} left",
     "tip": "The World Council bans nuclear weapons: no launch for another {clock}.",
-    "short": "Banned · {clock}"
+    "short": "Banned · {clock}",
+    "summitKicker": "Peace summit",
+    "summitTip": "Peace summit: a forced truce between all countries, no nuclear launch for another {clock}.",
+    "summitShort": "Summit · {clock}"
   },
   "nuke": {
     "incoming": "Incoming missile",
@@ -1238,7 +1242,7 @@
     "pandemic": "Pandemic: troop growth is halved for 2 minutes.",
     "boom": "Trade boom: merchant ships and trains pay double for 2 minutes!",
     "solarStorm": "Solar storm: radars are blind for 90 seconds.",
-    "peaceSummit": "Peace summit: a forced 60-second truce between all countries.",
+    "peaceSummit": "Peace summit: a forced 60-second truce between all countries, nuclear silos included.",
     "crisis.short": "Crisis",
     "pandemic.short": "Pandemic",
     "boom.short": "Trade boom",
@@ -1253,12 +1257,12 @@
     "pandemic.desc": "Troop growth is halved for 2 minutes. Every army lost 3% of its troops when the outbreak began.",
     "boom.desc": "Merchant ships and trains pay double for 2 minutes: a good time to trade.",
     "solarStorm.desc": "Radars are blind for 90 seconds: no early warning, no interceptor guidance, and the fog falls back over what they revealed.",
-    "peaceSummit.desc": "A forced 60-second truce: no country can attack another. Tribes can still be attacked.",
+    "peaceSummit.desc": "A forced 60-second truce: no country can attack another (no troops, boats, planes or sabotage) and nobody launches a nuclear weapon. Tribes can still be attacked on the ground.",
     "crisis.fx": "Income −25%",
     "pandemic.fx": "Troop growth −50%",
     "boom.fx": "Trade and trains ×2",
     "solarStorm.fx": "Radars offline",
-    "peaceSummit.fx": "No attacks between countries"
+    "peaceSummit.fx": "No attacks between countries, no nuclear launch"
   },
   "event": {
     "gameStart": "The game begins! Immunity protects players for 60 s.",
@@ -1339,6 +1343,10 @@
     "noFrontier": "No shared border: to reach it, send a boat (B key or right click → Land troops).",
     "warship": "Cannot arm a warship: a port on this sea is required, or not enough gold.",
     "nuke": "No missile available (silo, gold or reload).",
+    "nukeHalt": {
+      "nukeBan": "The World Council bans nuclear weapons: no launch possible.",
+      "peaceSummit": "Peace summit: no nuclear launch while the truce lasts."
+    },
     "air": "No free airfield in range, invalid target or not enough gold.",
     "general": "Ability unavailable.",
     "simulation": "Simulation error — see the log.",
