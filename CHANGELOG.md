@@ -2,7 +2,7 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
-## [Unreleased]
+## [1.16.0] — Éditeur de cartes, rails, 16 événements, révoltes coriaces
 ### Ajouté
 - **De vraies voies ferrées, qui se construisent** (« pour les rails, j'aimerais un vrai visuel de rails et les rails qui se construisent ») :
   - **Une voie à tous les zooms**, lisible sans les couleurs (par sa forme) : de loin, le **symbole des cartes** « chemin de fer », filet d'encre bordé de papier à tirets noirs et blancs alternés, plus fin et plus pâle sur la vue d'ensemble ; à mi-zoom, **deux rails fins sur une échelle de traverses** et un ballast discret ; de près, **rails d'acier avec leur reflet sur des traverses en bois** à l'écartement réel, sur un lit de ballast gris à peine teinté de l'encre du propriétaire. Le tracé est lissé (plus d'escalier) et les voies se rejoignent en éventail aux gares et aux usines.
