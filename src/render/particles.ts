@@ -141,58 +141,38 @@ export class ParticleSystem {
     p.s.tint = tint;
   }
 
-  /** Stylised mushroom cloud: rising column + cap, glowing core, lingering dust. */
-  mushroom(x: number, y: number, radius: number, big: boolean, density: number): void {
-    const glow = this.take('glow');
-    if (glow) {
-      glow.s.position.set(x, y);
-      glow.vx = glow.vy = 0;
-      glow.life = 0;
-      glow.max = big ? 2.6 : 1.6;
-      glow.size0 = radius * 1.6;
-      glow.size1 = radius * 2.6;
-      glow.alpha0 = 1;
-      glow.gravity = 0;
-      glow.drag = 0;
-      glow.worldSize = true;
-      glow.s.tint = 0xffc070;
-    }
-    const n = Math.round((big ? 70 : 34) * density);
-    for (let k = 0; k < n; k++) {
-      const col = k < n * 0.45;
-      const a = Math.random() * Math.PI * 2;
-      const r = Math.random() * radius * (col ? 0.18 : 0.6);
-      const px = x + Math.cos(a) * r;
-      const py = y + Math.sin(a) * r * 0.5;
-      const rise = (col ? 0.5 + Math.random() : 0.9 + Math.random() * 0.4) * radius * 0.55;
-      const spread = col ? 0 : (Math.random() - 0.5) * radius * 0.5;
-      this.emit(
-        px,
-        py,
-        spread,
-        -rise,
-        col ? 0x9a8f88 : 0xc9b8a8,
-        2.8 + Math.random() * 1.5,
-        radius * (col ? 0.12 : 0.2),
-        'smoke',
-        radius * (col ? 0.3 : 0.55),
-      );
-    }
-    for (let k = 0; k < Math.round(40 * density); k++) {
-      const a = Math.random() * Math.PI * 2;
-      const r = radius * (0.8 + Math.random() * 0.8);
-      this.emit(
-        x + Math.cos(a) * r,
-        y + Math.sin(a) * r,
-        0,
-        -0.3,
-        0xb8e04a,
-        3 + Math.random() * 2,
-        radius * 0.06,
-        'spark',
-        radius * 0.02,
-      );
-    }
+  /**
+   * Thrown particle (debris, embers): launched with (vx, vy) tiles/s, pulled down the screen by
+   * `gravity` (tiles/s²) and slowed by `drag`; it fades out over its life.
+   */
+  ballistic(
+    x: number,
+    y: number,
+    vx: number,
+    vy: number,
+    gravity: number,
+    drag: number,
+    tint: number,
+    life: number,
+    size: number,
+    endSize: number,
+    kind: Kind = 'spark',
+  ): void {
+    const p = this.take(kind);
+    if (!p) return;
+    p.s.position.set(x, y);
+    p.vx = vx;
+    p.vy = vy;
+    p.life = 0;
+    p.max = life;
+    p.size0 = size;
+    p.size1 = endSize;
+    p.alpha0 = kind === 'dot' ? 0.85 : 1;
+    p.gravity = gravity;
+    p.drag = drag;
+    p.worldSize = true;
+    p.s.tint = tint;
+    p.s.alpha = p.alpha0;
   }
 
   update(dt: number, zoom: number): void {

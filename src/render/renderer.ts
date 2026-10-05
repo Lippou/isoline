@@ -23,6 +23,7 @@ import type { GameEvent } from '../core/game/events';
 import { dayPhase } from '../core/rules/features';
 import { liveRing } from '../core/rules/victory';
 import { ParticleSystem } from './particles';
+import { NukeFx, lerpColor } from './nukeFx';
 import { ShipLayer } from './ships';
 import { WeatherLayer } from './weatherLayer';
 import { TradeRouteLayer } from './tradeRoutes';
@@ -231,6 +232,7 @@ export class GameRenderer {
   private flash = new Graphics();
   private icons!: IconSet;
   private particles!: ParticleSystem;
+  private nukeFx!: NukeFx;
   private ships!: ShipLayer;
   private weather!: WeatherLayer;
   private routes!: TradeRouteLayer;
@@ -255,6 +257,10 @@ export class GameRenderer {
   private paletteKey = '';
   private frame = 0;
   private flashAlpha = 0;
+  /** Peak of the current screen flash (its colour cools from white to amber as it fades). */
+  private flashPeak = 0;
+  /** Last MIRV warhead flash (the salvo's flashes are throttled, and never strobe in reduced motion). */
+  private lastWarheadFlash = 0;
   private shake = 0;
   private startTime = performance.now();
   private pings: { x: number; y: number; t: number; color: number; kind: number }[] = [];
@@ -311,6 +317,7 @@ export class GameRenderer {
     this.icons = await buildIcons(this.app.renderer);
     this.map = new MapLayer(this.state, this.app.renderer);
     this.particles = new ParticleSystem(this.icons, 2600);
+    this.nukeFx = new NukeFx();
     this.ships = new ShipLayer(this.icons, this.particles, {
       inkOf: (id) => this.inkOf(id),
       particles: () => this.settings.particles,
@@ -331,12 +338,14 @@ export class GameRenderer {
       this.rails,
       this.routes.lanes,
       this.routes.cuts,
+      this.nukeFx.ground,
       this.deposits,
       this.lights,
       this.buildings,
       this.units,
       this.trails,
       this.particles.container,
+      this.nukeFx.air,
       this.weather.container,
       this.overlayG,
       this.labels,
@@ -525,6 +534,7 @@ export class GameRenderer {
     this.capitals.update(z);
     this.updateUnits(alpha, tickF, dt, t);
     this.particles.update(dt, z);
+    this.nukeFx.update(dt, cam.bounds());
     this.drawOverlay(t);
     this.updateLabels(z);
     this.updateFronts(z);
@@ -532,8 +542,11 @@ export class GameRenderer {
     // Screen flash (nukes).
     this.flash.clear();
     if (this.flashAlpha > 0.01) {
-      this.flash.rect(0, 0, cam.viewW, cam.viewH).fill({ color: 0xfff6e0, alpha: this.flashAlpha });
-      this.flashAlpha *= Math.exp(-dt * 3.2);
+      // White-out at the peak, cooling to a warm amber veil as it fades.
+      const cool = 1 - this.flashAlpha / Math.max(0.01, this.flashPeak);
+      const color = lerpColor(0xfffdf8, 0xffb878, cool * 1.4);
+      this.flash.rect(0, 0, cam.viewW, cam.viewH).fill({ color, alpha: this.flashAlpha });
+      this.flashAlpha *= Math.exp(-dt * (this.settings.reducedMotion ? 1.8 : 3.4));
     }
   }
 
@@ -1855,18 +1868,55 @@ export class GameRenderer {
       this.particles.burst(x, y, Math.round(10 * P), 0x6d6a70, 1.2, 'smoke');
       return;
     }
-    // Nuclear: flash, shock wave, fireball, mushroom column, fallout dust.
-    const big = kind === N.Hydrogen;
-    const [sx, sy] = this.camera.worldToScreen(x, y);
-    const onScreen = sx > -200 && sy > -200 && sx < this.camera.viewW + 200 && sy < this.camera.viewH + 200;
-    if (onScreen && !this.settings.reducedMotion) {
-      this.flashAlpha = Math.max(this.flashAlpha, big ? 0.55 : 0.28);
-      this.shake = Math.max(this.shake, big ? 18 : 8);
+    // Nuclear: core flash and bloom, shock wave, fireball, mushroom cloud, debris, scorch
+    // (nukeFx.ts). Render only: the blast itself is the simulation's.
+    const cam = this.camera;
+    const rm = this.settings.reducedMotion;
+    const [x0, y0, x1, y1] = cam.bounds();
+    const m = radius * 3 + 60 / cam.zoom;
+    const visible = x > x0 - m && x < x1 + m && y > y0 - m && y < y1 + m * 2.5;
+    this.nukeFx.spawn(x, y, kind, visible, P, rm, this.particles);
+    if (!visible) return;
+    let peak = kind === N.Hydrogen ? 0.72 : 0.38;
+    if (kind === N.MirvWarhead) {
+      // A salvo: each warhead adds a little light (a flicker over the target), throttled;
+      // with reduced motion a single gentle flash, never a strobe.
+      const now = performance.now();
+      if (rm) {
+        if (now - this.lastWarheadFlash < 1500) return;
+        this.lastWarheadFlash = now;
+        peak = 0.12;
+      } else {
+        if (now - this.lastWarheadFlash < 70) return;
+        this.lastWarheadFlash = now;
+        peak = Math.min(0.42, this.flashAlpha + 0.07);
+      }
+      this.shake = Math.max(this.shake, Math.min(12, this.shake + 2.5), 5);
+    } else {
+      if (rm) peak *= 0.35;
+      this.shake = Math.max(this.shake, kind === N.Hydrogen ? 22 : 10);
     }
-    this.particles.ring(x, y, radius * 2.2, 0xfff1d0, big ? 1.6 : 1.0);
-    this.particles.ring(x, y, radius * 1.3, 0xffb070, big ? 1.2 : 0.8);
-    this.particles.burst(x, y, Math.round((big ? 120 : 50) * P), 0xffd38a, radius * 0.35, 'spark');
-    this.particles.mushroom(x, y, radius, big, P);
+    if (peak >= this.flashAlpha) {
+      this.flashAlpha = peak;
+      this.flashPeak = peak;
+    }
+  }
+
+  /** QA: a nuclear blast drawn at (x, y) without the simulation (no damage, no sound). */
+  qaNuke(kind: number, x: number, y: number): void {
+    this.explosion(x, y, kind, NUKE_RADIUS[kind === N.Hydrogen ? 1 : kind === N.MirvWarhead ? 3 : 0]);
+  }
+
+  /** QA: every nuclear blast and scorch mark wiped (and the screen flash). */
+  qaClearNukes(): void {
+    this.nukeFx.clear();
+    this.flashAlpha = 0;
+    this.shake = 0;
+  }
+
+  /** QA: blasts still unfolding. */
+  get nukeFxCount(): number {
+    return this.nukeFx.count;
   }
 
   /** Marks a front on the map for a moment (tile coordinates): a wave of troops sent at us. */

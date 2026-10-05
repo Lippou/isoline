@@ -1,6 +1,6 @@
 // Glue between a Session, the renderer, the HUD store, audio and persistence.
 import { Session, loadMapSource } from '../../engine/session';
-import { GameRenderer } from '../../render/renderer';
+import { GameRenderer, type RenderSettings } from '../../render/renderer';
 import { InputController, BUILD_KEYS, NUKE_KEYS, guardBetrayal } from './input';
 import { hud, resetHud, toast, subtitle, reportFall, showPact, openPanel } from '../stores/game.svelte';
 import { note } from '../stores/note.svelte';
@@ -240,6 +240,28 @@ export class GameController {
             ...hud.nukeAlerts,
             { id: -hud.nukeAlerts.length - 1, by, kind, impact: hud.tick + secs * 10, tx, ty, sx, sy },
           ];
+        },
+        /**
+         * QA: a nuclear blast drawn at the world point (x, y), render only (no simulation, no
+         * damage, no sound). `count` > 1: a MIRV-like salvo of that many blasts scattered over
+         * `spread` tiles and `secs` seconds. `clear` wipes the blasts and scorch marks first.
+         */
+        nukeFx: (kind: number, x: number, y: number, count = 1, spread = 0, secs = 0, clear = false) => {
+          if (clear) this.renderer.qaClearNukes();
+          for (let k = 0; k < count; k++) {
+            const a = Math.random() * Math.PI * 2;
+            const d = Math.sqrt(Math.random()) * spread;
+            const at = () => this.renderer.qaNuke(kind, x + Math.cos(a) * d, y + Math.sin(a) * d);
+            if (k === 0 || secs <= 0) at();
+            else setTimeout(at, Math.random() * secs * 1000);
+          }
+        },
+        /** QA: nuclear blasts still unfolding, and the frame rate. */
+        fx: () => ({ blasts: this.renderer.nukeFxCount, fps: this.renderer.fps }),
+        /** QA: map render settings for this game only (reduced motion, particle density…). */
+        renderSettings: (patch: Partial<RenderSettings>) => {
+          Object.assign(this.renderer.settings, patch);
+          this.renderer.applySettings();
         },
         /** QA: the nuclear alerts forgotten (the missiles stay where they are). */
         clearNukeAlerts: () => (hud.nukeAlerts = []),
