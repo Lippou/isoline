@@ -1285,7 +1285,7 @@
     "doomPushBy": "L'horloge de l'apocalypse avance de {secs} s : {why} ({by}).",
     "doomPull": "L'horloge de l'apocalypse recule de {secs} s : {why}.",
     "midnight": "Minuit : l'horloge de l'apocalypse a sonné.",
-    "revolution": "{tribe} se soulèvent chez {player} ({tiles} cases)."
+    "revolution": "{tribe} se soulèvent contre {player} ({tiles} cases)."
   },
   "alert": {
     "nuke": "Missile nucléaire lancé par {by} — impact dans {eta} s !",
@@ -1852,7 +1852,9 @@
     "pact": "Plume sur parchemin : pacte signé",
     "refused": "Coup de tampon : alliance refusée",
     "capitalLost": "Cor de guerre : votre capitale est tombée",
-    "capitalTaken": "Lame tirée : capitale prise"
+    "capitalTaken": "Lame tirée : capitale prise",
+    "revolution": "Clameur de foule et tambours : votre pays se soulève",
+    "revolutionOther": "Clameur de foule : révolution — {player}"
   },
   "signal": {
     "attack": "Attaquer ici",
@@ -2218,7 +2220,7 @@
       "zoneClosing": "La zone se referme ({n}/{steps})",
       "zoneFinal": "La dernière zone",
       "revolution": "{tribe} se soulèvent",
-      "revolutionOther": "Révolution chez {player}"
+      "revolutionOther": "Révolution — {player}"
     },
     "deck": {
       "betrayal": "L'alliance vole en éclats : {traitor} porte la marque du traître, et {victim} rompt tout commerce avec {traitor} pendant 5 minutes.",
@@ -2603,5 +2605,18 @@
   "inbox": {
     "tip": "Journal : {n} nouvelle(s) non lue(s)",
     "tipDanger": "Journal : {n} nouvelle(s) non lue(s), dont des alertes"
+  },
+  "revolt": {
+    "kicker": "Révolution",
+    "kickerMine": "Révolution chez vous",
+    "titleMine": "Votre pays se soulève !",
+    "titleOther": "Révolution — {player}",
+    "deckMine": "{tribe} tiennent {tiles} cases avec une partie de votre garnison. Reprenez-les (rien à piller) ou attendez : la révolte s'essouffle dans {time}.",
+    "deckOther": "{tribe} tiennent {tiles} cases. Un pays qui prend trop d'avance s'expose aux révoltes.",
+    "ends": "La révolte s'essouffle dans",
+    "show": "Voir",
+    "showTip": "Centrer la carte sur la révolte",
+    "lineMine": "Chez vous",
+    "tiles": "{tiles} cases"
   }
 }

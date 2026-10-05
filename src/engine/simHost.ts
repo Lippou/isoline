@@ -78,6 +78,11 @@ export class SimHost {
     this.send({ type: 'qa', action: 'revolution', player });
   }
 
+  /** QA (?automation, solo only): `player` keeps only its `keep` tiles nearest its centre. */
+  qaShrink(player: number, keep: number): void {
+    this.send({ type: 'qa', action: 'shrink', player, keep });
+  }
+
   setViewer(viewer: number, fogEnabled: boolean): void {
     this.send({ type: 'setViewer', viewer, fogEnabled });
   }

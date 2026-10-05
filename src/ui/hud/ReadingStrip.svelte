@@ -45,6 +45,14 @@
     restoreColumns();
     if (piece) layout.pin(piece);
   }
+  /** Revolutions under way (RevoltCard.svelte): ours first, with its countdown. */
+  const revolt = $derived.by(() => {
+    const list = hud.players.filter((p) => p.revoltFor !== undefined && p.alive && p.tiles > 0);
+    if (!list.length) return null;
+    const mine = list.find((p) => p.rebelOf === hud.viewer);
+    const lead = mine ?? list.reduce((a, b) => ((a.revoltFor ?? 0) <= (b.revoltFor ?? 0) ? a : b));
+    return { n: list.length, mine: !!mine, left: lead.revoltFor ?? 0 };
+  });
   /** The journal's unread news (when it is not the window being read). */
   const unread = $derived(hud.panels.log ? null : unreadOf(hud.log, hud.journalSeen));
 </script>
@@ -112,6 +120,18 @@
     {#each hud.subtitles.slice(-1) as s (s.id)}
       <span class="caption" aria-hidden="true">{s.text}</span>
     {/each}
+    {#if revolt}
+      <button
+        class="zchip revolt"
+        class:mine={revolt.mine}
+        onclick={() => back('revolts')}
+        data-testid="reading-revolt"
+        ><Icon name="revolt" size={13} /><b>{revolt.mine ? t('revolt.kickerMine') : t('revolt.kicker')}</b
+        >{#if revolt.n > 1}<span class="mono">×{revolt.n}</span>{/if}<span class="mono"
+          >{clock(revolt.left)}</span
+        ></button
+      >
+    {/if}
     {#if council}
       <button class="zchip" onclick={() => back('council')} data-testid="reading-council"
         ><Icon name="council" size={13} /><b>{t('zone.council')}</b><span class="mono"
@@ -153,6 +173,15 @@
 </header>
 
 <style>
+  .zchip.revolt {
+    border-left-color: #6e2a2a;
+  }
+  .zchip.revolt :global(svg) {
+    color: #6e2a2a;
+  }
+  .zchip.revolt.mine {
+    border-color: #6e2a2a;
+  }
   /* The running head of the reading mode: a band of paper across the top of the screen. */
   .rstrip {
     position: absolute;

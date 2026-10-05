@@ -48,6 +48,7 @@ import { UI } from '../../render/colors';
 import type { MissionResult } from './missionResult';
 import { WORLD_EVENT_TICKS, type WorldEventId } from '../../core/rules/features';
 import { emulateScreen } from '../stores/viewport.svelte';
+import { focusView } from './focus';
 import type { WinId } from '../stores/windows.svelte';
 
 const PLAYER_PARAMS = new Set(['player', 'by', 'from', 'with', 'traitor', 'victim', 'target', 'tribe']);
@@ -303,6 +304,14 @@ export class GameController {
         },
         /** QA: a revolution breaks out at once in `player`'s land (default: ours; solo only). */
         revolution: (player = this.session.viewer) => this.session.sim.qaRevolution(player),
+        /** QA: `player` keeps only its `keep` tiles nearest its centre (a one-tile country…). */
+        shrink: (player: number, keep = 1) => this.session.sim.qaShrink(player, keep),
+        /** QA: the camera finds a country, as a click on its name in the leaderboard does. */
+        focus: (id: number) => this.focusPlayer(id),
+        /** QA: ships sunk on screen, render only (`id`s of the unit buffer; none: every ship in view). */
+        sinkFx: (ids?: number[]) => this.renderer.qaSink(ids),
+        /** QA: ships sinking on screen. */
+        wrecks: () => this.renderer.wreckCount,
         /** QA: show the dispatch of a fall while the game goes on (LAN only in play). */
         fallNotice: (by = 0) => (hud.fallen = { tick: hud.tick, by, cause: 'conquered' }),
         /** QA: end the game as a campaign mission would. */
@@ -621,32 +630,57 @@ export class GameController {
   }
 
   /**
-   * A revolution breaks out in our land (rules/revolution.ts): the screen edge facing it
-   * flashes like an invasion, the region is marked on the map, a horn sounds. The story is
-   * in the journal (notify.revolution).
+   * A revolution breaks out (rules/revolution.ts, GAME_DESIGN.md §6.5), heard and seen by
+   * every player: a crowd in uproar (and, in our own land, the rebels' drum roll), a
+   * shockwave over the region on the map and a blip on the minimap (renderer, Minimap), the
+   * revolution's dispatch in the news column with its countdown (RevoltCard). In our land
+   * the screen edge facing it also flashes like an invasion. The story is in the journal.
    */
-  private revolt(tile: number): void {
-    if (hud.photo || hud.end || tile < 0) return;
+  private revolt(e: Extract<GameEvent, { k: 'revolution' }>, me: number): void {
+    if (e.phase !== 'start' || hud.end) return;
+    const mine = e.from === me;
+    const quiet = this.session.kind === 'replay' && hud.speed > 2;
+    if (!quiet) {
+      audio.sfx('crowd', mine ? 1 : 0.5);
+      if (mine) audio.sfx('drums', 0.75);
+      if (settings.access.subtitles)
+        subtitle(
+          t(mine ? 'subtitle.revolution' : 'subtitle.revolutionOther', {
+            player: this.session.state.name(e.from, i18n.lang),
+          }),
+        );
+    }
+    if (!mine || hud.photo || e.tile < 0) return;
     const w = this.session.state.width;
-    const [x, y] = [(tile % w) + 0.5, ((tile / w) | 0) + 0.5];
+    const [x, y] = [(e.tile % w) + 0.5, ((e.tile / w) | 0) + 0.5];
     const cam = this.renderer.camera;
     const [sx, sy] = cam.worldToScreen(x, y);
     const cue = edgesToward(sx, sy, cam.viewW, cam.viewH);
     this.renderer.markFront(x, y, UI.signal);
     hud.invasion = { n: (hud.invasion?.n ?? 0) + 1, ex: cue.ex, ey: cue.ey, strength: 1, edges: cue.edges };
-    audio.sfx('warHorn', 0.6);
   }
 
   /** Country lit up on the map while the pointer rests on a panel about it (−1: none). */
   spotlight = -1;
 
-  /** Centres the camera on a country, zoomed so that it fills the view (tiny ones included). */
+  /** A country looked for: lit up on the map a moment after the click (see frame). */
+  private found: { id: number; until: number } | null = null;
+
+  /**
+   * Centres the camera on a country, zoomed so that it can be seen (focus.ts: a country of
+   * one tile is measured on the map, not by its label), and marks it: a reticle closes in
+   * on its land and its name shows over it, however small (renderer.locate).
+   */
   focusPlayer(id: number): void {
-    const p = this.session.state.players.get(id);
-    // A country without an anchor yet (label [0, 0, 0]) would send the camera to the map's corner.
-    if (!p || p.tiles === 0 || p.label[2] <= 0) return;
-    const fit = 400 / Math.max(10, p.label[2] * 4);
-    this.renderer.camera.goTo(p.label[0], p.label[1], Math.max(1.2, Math.min(6, fit)));
+    const st = this.session.state;
+    const p = st.players.get(id);
+    if (!p || p.tiles === 0) return;
+    const cam = this.renderer.camera;
+    const f = focusView(st.owner, st.width, id, p.label, p.tiles, cam.viewW, cam.viewH);
+    if (!f) return;
+    cam.goTo(f.x, f.y, f.zoom);
+    this.renderer.locate(id, f.box);
+    this.found = { id, until: performance.now() + 3600 };
   }
 
   // ------------------------------------------------------------ photo mode
@@ -956,6 +990,8 @@ export class GameController {
     }
     ov.highlightPlayer =
       hud.hover && hud.hover.owner > 0 && this.renderer.camera.zoom < 6 && !hud.photo ? hud.hover.owner : -1;
+    if (this.found && performance.now() < this.found.until && !hud.photo) ov.highlightPlayer = this.found.id;
+    else this.found = null;
     if (this.spotlight > 0) ov.highlightPlayer = this.spotlight;
     // A MIRV's warheads fall all over the target country: show which one.
     if (launch && tool.k === 'nuke' && tool.kind === N.Mirv && launch.victim > 0)
@@ -1257,7 +1293,11 @@ export class GameController {
           audio.sfx('intercept', 0.55);
         break;
       case 'shipSunk':
-        if (e.owner === me || e.by === me || this.onScreen(e.x, e.y)) audio.sfx('sunk', 0.6);
+        // A muffled blast, then the splash of the hull going under (renderer: ships.ts).
+        if (e.owner === me || e.by === me || this.onScreen(e.x, e.y)) {
+          audio.sfx('blast', 0.45);
+          setTimeout(() => !this.disposed && audio.sfx('sunk', 0.55), 420);
+        }
         break;
       case 'built':
         if (e.owner === me) audio.sfx('build', 0.6);
@@ -1370,7 +1410,7 @@ export class GameController {
         this.capitals.event(e, me);
         break;
       case 'revolution':
-        if (e.phase === 'start' && e.from === me) this.revolt(e.tile);
+        this.revolt(e, me);
         break;
       case 'gameOver':
         break;

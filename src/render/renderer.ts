@@ -127,6 +127,15 @@ export interface Overlay {
 
 /** How long a front stays marked after a wave (ms). */
 const FRONT_MARK_MS = 2600;
+/** A country looked for (focusPlayer): the reticle closing in on it, then pulsing (ms). */
+const LOCATE_MS = 3600;
+/** A revolution's outbreak: the shockwave over its region (ms); then a slow pulse while it lasts. */
+const REVOLT_BURST_MS = 7000;
+const REVOLT_PULSE_MS = 2600;
+/** The rebels' oxblood (palette.ts REBEL_INK), a shade brighter to read over their own land. */
+const REVOLT_INK = 0x9a3530;
+const PAPER = 0xf6f1e4;
+const INK_DARK = 0x0b1824;
 
 /** No storm nor fog bank (the shader's weather cells, all empty). */
 const NO_WEATHER = new Float32Array(32).fill(-1);
@@ -309,6 +318,11 @@ export class GameRenderer {
   /** Fronts marked for a moment: a wave sent at us (red: an invasion in view, brass: a riposte). */
   private frontMarks: { x: number; y: number; t: number; color: number; hostile: boolean }[] = [];
   private pacts: { ax: number; ay: number; bx: number; by: number; t: number }[] = [];
+  /** The country just looked for (focusPlayer) and the box of its land. */
+  private located: { id: number; box: [number, number, number, number]; t: number } | null = null;
+  /** Revolutions breaking out (their shockwave), and where each one rose (until its label is known). */
+  private revoltBursts: { tribe: number; x: number; y: number; t: number; mine: boolean }[] = [];
+  private revoltSeeds = new Map<number, [number, number]>();
   private emojis: { x: number; y: number; t: number; text: Container }[] = [];
   private popups: { x: number; y: number; t: number; text: BitmapText }[] = [];
   private frontSparks: number[] = [];
@@ -368,6 +382,8 @@ export class GameRenderer {
       particles: () => this.settings.particles,
       uiScale: () => this.settings.uiScale,
       formatTroops: formatShort,
+      reducedMotion: () => this.settings.reducedMotion,
+      alive: (id) => this.state.players.get(id)?.alive ?? false,
     });
     this.units.addChild(this.ships.container);
     this.weather = new WeatherLayer(this.state, this.icons);
@@ -1711,6 +1727,8 @@ export class GameRenderer {
         });
       }
     }
+    this.drawRevolts(g, now, z);
+    this.drawLocator(g, now, z);
     // Alliance pacts: a green arc drawn from one capital to the other, then fading.
     this.pacts = this.pacts.filter((p) => now - p.t < 4500);
     for (const p of this.pacts) {
@@ -1764,10 +1782,21 @@ export class GameRenderer {
         leader = p.id;
       }
     const blink = Math.floor(performance.now() / 250) % 2 === 0;
+    const loc = this.located;
     for (const p of s.playerList) {
       if (!p.alive || p.tiles === 0) continue;
-      const [lx, ly, size] = p.label;
-      const px = size * z;
+      let [lx, ly] = p.label;
+      const size = p.label[2];
+      let px = size * z;
+      // The country just looked for: named however small, just over its reticle.
+      const found = loc?.id === p.id && px < 40;
+      if (found) {
+        const [x0, y0, x1, y1] = loc.box;
+        const r = Math.max(Math.hypot(x1 - x0, y1 - y0) / 2 + 5 / z, 16 / z);
+        px = 44;
+        lx = (x0 + x1) / 2;
+        ly = (y0 + y1) / 2 - r - 22 / z;
+      }
       const status: StatusIcon[] = [];
       const ally = local?.allies.find((a) => a.id === p.id);
       // Teammates read like allies (green name, a team badge) without the alliance timer.
@@ -1787,7 +1816,7 @@ export class GameRenderer {
       const nuke = this.nukesInFlight.get(p.id);
       if (nuke !== undefined) status.push(nuke ? 'nukeMe' : 'nuke');
       // Countries we deal with stay labelled a little further out.
-      const minPx = atWar || friend || nuke ? 11 : 18;
+      const minPx = found ? 0 : atWar || friend || nuke ? 11 : 18;
       if (px < minPx || !this.revealed(p.id, lx, ly)) continue;
       seen.add(p.id);
       let l = this.labelPool.get(p.id);
@@ -2038,6 +2067,10 @@ export class GameRenderer {
       switch (e.k) {
         case 'explosion':
           this.explosion(e.x, e.y, e.kind, e.radius);
+          // A nuclear blast sinks every ship within its fallout (nukes.ts detonate): they go
+          // down (ships.ts) as they vanish.
+          if (e.kind <= 3)
+            this.ships.doom(e.x, e.y, Math.max(e.radius, NUKE_FALLOUT_RADIUS[e.kind as N] || 0));
           break;
         case 'intercept':
           this.particles.burst(e.x, e.y, Math.round(30 * P), UI.aurora, 3, 'spark');
@@ -2059,8 +2092,8 @@ export class GameRenderer {
           if (this.revealed(e.owner, e.x, e.y)) this.particles.ring(e.x, e.y, 4, this.inkOf(e.owner), 0.5);
           break;
         case 'shipSunk':
-          this.particles.burst(e.x, e.y, Math.round(18 * P), 0xffb070, 1.4, 'spark');
-          this.particles.burst(e.x, e.y, Math.round(8 * P), 0x8090a0, 0.8, 'smoke');
+          // The ship explodes and goes under as it leaves the unit buffer (ships.ts).
+          this.ships.doom(e.x, e.y, 0);
           break;
         case 'built': {
           const x = (e.tile % this.state.width) + 0.5;
@@ -2122,6 +2155,21 @@ export class GameRenderer {
           break;
         case 'capture':
           this.particles.ring(e.x + 0.5, e.y + 0.5, 6, this.inkOf(e.by), 0.6);
+          break;
+        case 'revolution':
+          // The outbreak's shockwave (drawRevolts), where the region rose.
+          if (e.phase === 'start' && e.tile >= 0) {
+            const x = (e.tile % this.state.width) + 0.5;
+            const y = ((e.tile / this.state.width) | 0) + 0.5;
+            this.revoltSeeds.set(e.tribe, [x, y]);
+            this.revoltBursts.push({
+              tribe: e.tribe,
+              x,
+              y,
+              t: performance.now(),
+              mine: e.from === this.state.viewer,
+            });
+          }
           break;
       }
     }
@@ -2300,6 +2348,16 @@ export class GameRenderer {
     this.shake = 0;
   }
 
+  /** QA: ships in view sunk now, render only (ships.ts); returns how many. */
+  qaSink(ids?: number[]): number {
+    return this.ships.qaSink(ids);
+  }
+
+  /** QA: ships going under. */
+  get wreckCount(): number {
+    return this.ships.wreckCount;
+  }
+
   /** QA: blasts still unfolding. */
   get nukeFxCount(): number {
     return this.nukeFx.count;
@@ -2312,6 +2370,139 @@ export class GameRenderer {
       ...this.frontMarks.filter((f) => Math.hypot(f.x - x, f.y - y) > 3),
       { x, y, t: performance.now(), color, hostile },
     ];
+  }
+
+  /**
+   * A country looked for (a click on its name): a reticle closes in on the box of its land
+   * and pulses a few times, at a size read on screen whatever the zoom (a country of one
+   * tile included); its name is shown over it meanwhile (updateLabels).
+   */
+  locate(id: number, box: [number, number, number, number]): void {
+    this.located = { id, box, t: performance.now() };
+  }
+
+  private drawLocator(g: Graphics, now: number, z: number): void {
+    const L = this.located;
+    if (!L) return;
+    const age = (now - L.t) / LOCATE_MS;
+    if (age >= 1 || this.overlay.photo) {
+      this.located = null;
+      return;
+    }
+    const lw = (px: number) => Math.max(0.05, px / z);
+    const [x0, y0, x1, y1] = L.box;
+    const cx = (x0 + x1) / 2;
+    const cy = (y0 + y1) / 2;
+    const r = Math.max(Math.hypot(x1 - x0, y1 - y0) / 2 + 5 / z, 16 / z);
+    const rm = this.settings.reducedMotion;
+    // Closing in over the first 0.8 s (at once with reduced motion), fading at the end.
+    const close = rm ? 1 : Math.min(1, age / 0.22);
+    const rr = r * (1 + (1 - close) ** 3 * 5);
+    const fade = age < 0.82 ? 1 : 1 - (age - 0.82) / 0.18;
+    g.circle(cx, cy, rr).stroke({ width: lw(5), color: INK_DARK, alpha: 0.5 * fade });
+    g.circle(cx, cy, rr).stroke({ width: lw(2.4), color: PAPER, alpha: 0.95 * fade });
+    // A reticle: four ticks pointing in at the land (a shape, not a colour).
+    for (let q = 0; q < 4; q++) {
+      const a = (q * Math.PI) / 2;
+      const [ux, uy] = [Math.cos(a), Math.sin(a)];
+      const a0 = rr + 3 / z;
+      const a1 = rr + 13 / z;
+      g.moveTo(cx + ux * a0, cy + uy * a0)
+        .lineTo(cx + ux * a1, cy + uy * a1)
+        .stroke({ width: lw(5), color: INK_DARK, alpha: 0.5 * fade, cap: 'round' });
+      g.moveTo(cx + ux * a0, cy + uy * a0)
+        .lineTo(cx + ux * a1, cy + uy * a1)
+        .stroke({ width: lw(2.4), color: PAPER, alpha: 0.95 * fade, cap: 'round' });
+    }
+    // Then two brass ripples a second (none with reduced motion).
+    if (!rm && close >= 1)
+      for (let k = 0; k < 2; k++) {
+        const u = ((age - 0.22) * 3 + k * 0.5) % 1;
+        g.circle(cx, cy, rr * (1 + u * 1.3)).stroke({
+          width: lw(2),
+          color: UI.brass,
+          alpha: (1 - u) * 0.75 * fade,
+        });
+      }
+  }
+
+  /**
+   * Revolutions on the map, for every player (GAME_DESIGN.md §6.5): at the outbreak a
+   * shockwave of rings bursting out of the region, screen-sized so that it shows at any
+   * zoom; then, while the revolution lasts, a toothed ring round the region (a cog of
+   * spikes: a shape, not only the oxblood) that sends out a slow ripple. Reduced motion:
+   * the rings stand still.
+   */
+  private drawRevolts(g: Graphics, now: number, z: number): void {
+    if (this.overlay.photo) return;
+    const lw = (px: number) => Math.max(0.05, px / z);
+    const rm = this.settings.reducedMotion;
+    this.revoltBursts = this.revoltBursts.filter((b) => now - b.t < REVOLT_BURST_MS);
+    const live = new Set<number>();
+    for (const p of this.state.playerList) {
+      if (p.revoltFor === undefined || !p.alive || p.tiles === 0) continue;
+      live.add(p.id);
+      const seed = this.revoltSeeds.get(p.id);
+      const [x, y] = p.label[2] > 0 ? [p.label[0], p.label[1]] : (seed ?? [-1, -1]);
+      if (x < 0) continue;
+      const R = Math.max(Math.sqrt(p.tiles / Math.PI), 13 / z);
+      const burst = this.revoltBursts.find((b) => b.tribe === p.id);
+      const strong = burst ? 1 - (now - burst.t) / REVOLT_BURST_MS : 0;
+      // The toothed ring: twelve spikes pointing out (the raised fist's badge rides the label).
+      const teeth = 12;
+      const spin = rm ? 0 : now / 9000;
+      const t0 = R + 2 / z;
+      const t1 = R + (7 + 5 * strong) / z;
+      g.circle(x, y, R).stroke({ width: lw(4.5), color: INK_DARK, alpha: 0.45 });
+      g.circle(x, y, R).stroke({ width: lw(2.2 + strong * 1.2), color: REVOLT_INK, alpha: 0.95 });
+      for (let k = 0; k < teeth; k++) {
+        const a = spin + (k / teeth) * Math.PI * 2;
+        const [ux, uy] = [Math.cos(a), Math.sin(a)];
+        g.moveTo(x + ux * t0, y + uy * t0)
+          .lineTo(x + ux * t1, y + uy * t1)
+          .stroke({ width: lw(3.6), color: INK_DARK, alpha: 0.4, cap: 'round' });
+        g.moveTo(x + ux * t0, y + uy * t0)
+          .lineTo(x + ux * t1, y + uy * t1)
+          .stroke({ width: lw(1.8), color: PAPER, alpha: 0.95, cap: 'round' });
+      }
+      if (rm) {
+        if (strong > 0)
+          g.circle(x, y, R + 16 / z).stroke({ width: lw(2.5), color: REVOLT_INK, alpha: strong });
+        continue;
+      }
+      // The slow ripple while it lasts.
+      const u = (now / REVOLT_PULSE_MS + p.id * 0.37) % 1;
+      g.circle(x, y, t1 + u * Math.max(R * 0.6, 34 / z)).stroke({
+        width: lw(2),
+        color: REVOLT_INK,
+        alpha: (1 - u) * 0.7,
+      });
+      // The outbreak: the region flares, and three shock rings race out far beyond it.
+      if (burst) {
+        const age = (now - burst.t) / 1000;
+        if (age < 1.2) g.circle(x, y, R).fill({ color: REVOLT_INK, alpha: 0.45 * (1 - age / 1.2) });
+        const reach = R + (burst.mine ? 240 : 170) / z;
+        for (let k = 0; k < 3; k++) {
+          const v = (age * 0.7 + k / 3) % 1;
+          // (Each ring starts only once the one before has left.)
+          if (age * 0.7 < k / 3) continue;
+          const r = R + v * (reach - R);
+          const a = (1 - v) * strong;
+          g.circle(burst.x, burst.y, r).stroke({
+            width: lw(6 * (1 - v) + 3),
+            color: INK_DARK,
+            alpha: 0.3 * a,
+          });
+          g.circle(burst.x, burst.y, r).stroke({
+            width: lw(4 * (1 - v) + 1.6),
+            color: k === 1 ? PAPER : REVOLT_INK,
+            alpha: 0.95 * a,
+          });
+        }
+      }
+    }
+    for (const id of this.revoltSeeds.keys())
+      if (!live.has(id) && !this.revoltBursts.some((b) => b.tribe === id)) this.revoltSeeds.delete(id);
   }
 
   /** An alliance was signed between the capitals at (ax, ay) and (bx, by). */

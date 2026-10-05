@@ -38,6 +38,68 @@ const SHOOTER_RANGE = 6;
 const TAU = Math.PI * 2;
 const wrap = (a: number) => a - TAU * Math.round(a / TAU);
 
+/**
+ * A ship sunk (shells, a fighter, a nuke, its country gone): a small explosion (flash,
+ * sparks, smoke, debris), then the hull lists onto its side, settles and darkens into the
+ * water among bubbles and a spreading oil slick (SINK_TIME s). Ships that leave the map in
+ * any other way (landing, arrival, a recalled transport) just go.
+ */
+const SINK_TIME = 3.6;
+/** With reduced motion: no list nor drift, a short fade. */
+const SINK_TIME_STILL = 1.2;
+/** Ships going under at once at most: the others only explode (a whole fleet nuked). */
+const MAX_WRECKS = 40;
+/** How long a sinking reported by the simulation waits for its ship to leave the buffer (s). */
+const DOOM_TIME = 2;
+/** Sea water: what a hull darkens to as it goes under. */
+const SEA = 0x2c4756;
+
+/** A ship going under: its own sprites, kept after it left the unit buffer. */
+interface Wreck {
+  root: Container;
+  type: number;
+  x: number;
+  y: number;
+  heading: number;
+  /** The side it lists to (±1). */
+  roll: number;
+  t: number;
+  dur: number;
+  bubbleT: number;
+  smokeT: number;
+  oil: boolean;
+}
+
+/** A sinking reported by the simulation: where, within how many tiles. */
+export interface Doom {
+  x: number;
+  y: number;
+  r: number;
+}
+
+/**
+ * Did a ship last drawn at (x, y) leave the unit buffer sunk? Yes under a reported sinking
+ * (a ship hit, a nuclear blast's fallout; a tile and a half of slack for the frame's
+ * interpolation), or when its country is gone (an abandoned fleet sinks); no otherwise (it
+ * landed its troops, reached its port, was recalled).
+ */
+export function sunkAt(dooms: readonly Doom[], x: number, y: number, ownerAlive: boolean): boolean {
+  if (!ownerAlive) return true;
+  for (const d of dooms) {
+    const r = d.r + 2.5;
+    if ((x - d.x) ** 2 + (y - d.y) ** 2 <= r * r) return true;
+  }
+  return false;
+}
+
+/** `k` in 0..1 eased in and out. */
+const smooth = (k: number) => k * k * (3 - 2 * k);
+/** Colour `a` blended towards `b` by `k`. */
+function mixColor(a: number, b: number, k: number): number {
+  const ch = (s: number) => Math.round(((a >> s) & 255) * (1 - k) + ((b >> s) & 255) * k);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+
 /** A ship's sprites, made the first time it is on screen. */
 interface ShipGfx {
   /** Rotated to the heading: wake, owner mark, hull, turrets. */
@@ -90,6 +152,9 @@ export interface ShipDeps {
   particles(): number;
   uiScale(): number;
   formatTroops(v: number): string;
+  reducedMotion(): boolean;
+  /** Is this country still in the game (an abandoned fleet sinks)? */
+  alive(id: number): boolean;
 }
 
 export class ShipLayer {
@@ -104,6 +169,13 @@ export class ShipLayer {
   private frame = 0;
   private z = 1;
   private dt = 0;
+  /** Seconds since the layer was made (the dooms' clock). */
+  private clock = 0;
+  private wrecks: Wreck[] = [];
+  /** QA: ships sunk on screen while the simulation still has them (qaSink): not drawn again. */
+  private qaGone = new Set<number>();
+  /** Sinkings reported by the simulation (shipSunk, a nuclear blast), until their ship goes. */
+  private dooms: { x: number; y: number; r: number; t: number }[] = [];
 
   constructor(
     private readonly icons: IconSet,
@@ -123,7 +195,35 @@ export class ShipLayer {
     this.frame = frame;
     this.z = z;
     this.dt = Math.min(0.1, dt);
+    this.clock += this.dt;
     this.fx.clear();
+  }
+
+  /** Ships going under now. */
+  get wreckCount(): number {
+    return this.wrecks.length;
+  }
+
+  /**
+   * The simulation sank something at (x, y) within `r` tiles (a ship hit, a nuclear blast):
+   * a ship of ours that leaves the buffer there goes under instead of just vanishing.
+   */
+  doom(x: number, y: number, r: number): void {
+    this.dooms.push({ x, y, r, t: this.clock });
+  }
+
+  /** QA: sinks these ships now, render only (none given: every ship in view). */
+  qaSink(ids?: number[]): number {
+    let n = 0;
+    for (const [id, v] of this.views) {
+      if (ids ? !ids.includes(id) : !v.gfx?.root.visible) continue;
+      if (!v.gfx?.root.visible) continue;
+      this.views.delete(id);
+      this.qaGone.add(id);
+      this.sink(v);
+      n++;
+    }
+    return n;
   }
 
   /**
@@ -219,6 +319,7 @@ export class ShipLayer {
     visible: boolean,
     selected: boolean,
   ): void {
+    if (this.qaGone.size && this.qaGone.has(id)) return;
     const v = this.views.get(id) ?? this.create(id, type, owner, x, y);
     v.seen = this.frame;
     v.owner = owner;
@@ -510,6 +611,207 @@ export class ShipLayer {
     g.circle(x, y, Math.max(0.14, 1.3 / z)).fill({ color: 0xfff4d6, alpha: 1 });
   }
 
+  /** Did this ship leave the buffer sunk (a doom over it, or its country gone)? */
+  private doomed(v: ShipView): boolean {
+    return sunkAt(this.dooms, v.x, v.y, this.deps.alive(v.owner));
+  }
+
+  /** The explosion, then the hull kept to go under (updateWrecks). */
+  private sink(v: ShipView): void {
+    const g = v.gfx;
+    v.extras?.destroy({ children: true });
+    v.extras = null;
+    if (!g) return;
+    const z = this.z;
+    const tiles = shipPx(v.type, z, this.deps.uiScale()) / z;
+    this.explode(v.x, v.y, tiles);
+    if (this.wrecks.length >= MAX_WRECKS) {
+      g.root.destroy({ children: true });
+      return;
+    }
+    g.wake.visible = false;
+    for (const f of g.flashes) f.visible = false;
+    const still = this.deps.reducedMotion();
+    this.wrecks.push({
+      root: g.root,
+      type: v.type,
+      x: v.x,
+      y: v.y,
+      heading: v.heading,
+      roll: Math.random() < 0.5 ? -1 : 1,
+      t: 0,
+      dur: still ? SINK_TIME_STILL : SINK_TIME,
+      bubbleT: 0.15,
+      smokeT: 0,
+      oil: false,
+    });
+  }
+
+  /**
+   * A small explosion over a hull `tiles` long: a hot flash and ring, sparks thrown out,
+   * a puff of dark smoke, bits of wreckage. Sized on the hull (read at any zoom); with
+   * reduced motion no flash, fewer sparks.
+   */
+  private explode(x: number, y: number, tiles: number): void {
+    const P = this.deps.particles();
+    if (P <= 0) return;
+    const still = this.deps.reducedMotion();
+    const pt = this.particles;
+    if (!still) {
+      pt.emit(x, y, 0, 0, 0xffe4b0, 0.34, tiles * 0.42, 'glow', tiles * 0.9);
+      pt.ring(x, y, tiles * 0.3, 0xffd9a0, 0.45);
+      // A fireball: a few hot puffs rolling off the hull.
+      for (let k = 0; k < 3; k++) {
+        const a = Math.random() * TAU;
+        pt.emit(
+          x + Math.cos(a) * tiles * 0.12,
+          y + Math.sin(a) * tiles * 0.12,
+          Math.cos(a) * tiles * 0.25,
+          Math.sin(a) * tiles * 0.25 - tiles * 0.15,
+          k ? 0xff7a2e : 0xffb347,
+          0.55 + Math.random() * 0.25,
+          tiles * 0.2,
+          'glow',
+          tiles * 0.08,
+        );
+      }
+    }
+    const sparks = Math.round((still ? 4 : 10) * P);
+    for (let k = 0; k < sparks; k++) {
+      const a = Math.random() * TAU;
+      const sp = tiles * (0.8 + Math.random() * 1.6);
+      pt.ballistic(
+        x,
+        y,
+        Math.cos(a) * sp,
+        Math.sin(a) * sp - tiles * 0.5,
+        tiles * 1.4,
+        1.8,
+        k % 3 === 0 ? 0xfff0c8 : 0xffa14a,
+        0.45 + Math.random() * 0.4,
+        tiles * (0.05 + Math.random() * 0.04),
+        tiles * 0.015,
+      );
+    }
+    for (let k = 0; k < Math.round(4 * P); k++) {
+      const a = Math.random() * TAU;
+      pt.emit(
+        x + Math.cos(a) * tiles * 0.15,
+        y + Math.sin(a) * tiles * 0.15,
+        Math.cos(a) * tiles * 0.12,
+        Math.sin(a) * tiles * 0.12 - tiles * 0.1,
+        k === 0 ? 0x5a5650 : 0x34383c,
+        1.8 + Math.random() * 0.8,
+        tiles * 0.2,
+        'smoke',
+        tiles * 0.62,
+      );
+    }
+    // Wreckage: dark bits thrown out that drift and fade on the water.
+    for (let k = 0; k < Math.round(6 * P); k++) {
+      const a = Math.random() * TAU;
+      const sp = tiles * (0.25 + Math.random() * 0.5);
+      pt.ballistic(
+        x,
+        y,
+        Math.cos(a) * sp,
+        Math.sin(a) * sp,
+        0,
+        1.6,
+        k % 2 ? 0x4a3b2c : 0x2f3236,
+        2.4 + Math.random() * 1.2,
+        tiles * (0.035 + Math.random() * 0.03),
+        tiles * 0.03,
+        'dot',
+      );
+    }
+  }
+
+  /** Wrecks going under: list, settle, darken and fade; bubbles, oil, the fire's smoke. */
+  private updateWrecks(): void {
+    if (this.wrecks.length === 0) return;
+    const dt = this.dt;
+    const z = this.z;
+    const P = this.deps.particles();
+    const still = this.deps.reducedMotion();
+    const keep: Wreck[] = [];
+    for (const w of this.wrecks) {
+      w.t += dt;
+      const k = Math.min(1, w.t / w.dur);
+      if (k >= 1) {
+        w.root.destroy({ children: true });
+        continue;
+      }
+      keep.push(w);
+      const tex = this.textures(w.type);
+      const len = tex.bow - tex.stern;
+      const tiles = shipPx(w.type, z, this.deps.uiScale()) / z;
+      const unit = tiles / len;
+      const e = smooth(k);
+      const cos = Math.cos(w.heading);
+      const sin = Math.sin(w.heading);
+      // Rolling onto its side (the beam narrows), the bow dipping (the hull shortens), a
+      // last slew and a little way still on; darkening under the water, then gone.
+      const roll = still ? 0 : e;
+      w.root.scale.set(unit * (1 - 0.22 * roll), unit * (1 - 0.6 * roll));
+      w.root.rotation = w.heading + w.roll * 0.3 * roll;
+      const drift = still ? 0 : tiles * 0.18 * (1 - (1 - k) * (1 - k));
+      w.root.position.set(w.x + cos * drift, w.y + sin * drift);
+      w.root.tint = mixColor(0xffffff, SEA, Math.min(1, k * 1.3));
+      w.root.alpha = k < 0.3 ? 1 : 1 - smooth((k - 0.3) / 0.7);
+      if (P <= 0 || still) continue;
+      const cx = w.root.x;
+      const cy = w.root.y;
+      // The slick spreads from where it went down (two dark sheens).
+      if (!w.oil && k > 0.08) {
+        w.oil = true;
+        for (let j = 0; j < 2; j++)
+          this.particles.emit(
+            cx + (j - 0.5) * cos * tiles * 0.3,
+            cy + (j - 0.5) * sin * tiles * 0.3,
+            0,
+            0,
+            j ? 0x1b2026 : 0x26303a,
+            w.dur * 1.25,
+            tiles * 0.22,
+            'smoke',
+            tiles * (0.7 + j * 0.2),
+          );
+      }
+      // Bubbles: pale rings popping along the hull.
+      w.bubbleT -= dt;
+      if (w.bubbleT <= 0 && k > 0.12) {
+        w.bubbleT = 0.1 + Math.random() * 0.1;
+        const along = (Math.random() - 0.5) * tiles * 0.7;
+        const side = (Math.random() - 0.5) * tiles * 0.25;
+        this.particles.ring(
+          cx + cos * along - sin * side,
+          cy + sin * along + cos * side,
+          tiles * 0.05,
+          0xdff2fa,
+          0.55,
+        );
+      }
+      // The fire's smoke, while the deck is still above the water.
+      w.smokeT -= dt;
+      if (w.smokeT <= 0 && k < 0.45) {
+        w.smokeT = 0.18;
+        this.particles.emit(
+          cx,
+          cy,
+          tiles * 0.05,
+          -tiles * 0.18,
+          0x2b2f33,
+          1.6,
+          tiles * 0.13,
+          'smoke',
+          tiles * 0.42,
+        );
+      }
+    }
+    this.wrecks = keep;
+  }
+
   /** The warship of `owner` nearest to a new shell, which must have just fired it. */
   private shooterOf(owner: number, x: number, y: number): number {
     let best = -1;
@@ -541,15 +843,23 @@ export class ShipLayer {
     return best;
   }
 
-  /** Drop what was not seen this frame; a shell that vanished has struck: spark and splash. */
+  /**
+   * Drop what was not seen this frame (a ship sunk goes under: sink); a shell that vanished
+   * has struck: spark and splash.
+   */
   end(): void {
+    this.dooms = this.dooms.filter((d) => this.clock - d.t < DOOM_TIME);
     for (const [id, v] of this.views) {
       if (v.seen !== this.frame) {
-        v.gfx?.root.destroy({ children: true });
-        v.extras?.destroy({ children: true });
         this.views.delete(id);
+        if (v.gfx?.root.visible && this.doomed(v)) this.sink(v);
+        else {
+          v.gfx?.root.destroy({ children: true });
+          v.extras?.destroy({ children: true });
+        }
       }
     }
+    this.updateWrecks();
     for (const [id, s] of this.shells) {
       if (s.seen === this.frame) continue;
       this.shells.delete(id);

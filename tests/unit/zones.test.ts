@@ -227,6 +227,24 @@ describe('a column short of room', () => {
     expect(columnHeight(ps, tight)).toBeLessThanOrEqual(300);
   });
 
+  it('a revolution under way keeps its line longer than the news, and its chip at worst', () => {
+    const ps = pieces(['nukeAlerts', 'revolts', 'breaking', 'flash'], {
+      nukeAlerts: { full: 110 },
+      revolts: { full: 200, compact: 70 },
+      breaking: { full: 170, compact: 40 },
+      flash: { full: 330, compact: 40 },
+    });
+    const lv = allocate(ps, 460);
+    expect(lv.revolts).toBe('full');
+    expect(lv.flash).not.toBe('full');
+    const tight = allocate(ps, 200);
+    expect(tight.nukeAlerts).toBe('full');
+    expect(tight.revolts).not.toBe('full');
+    expect(columnHeight(ps, tight)).toBeLessThanOrEqual(200);
+    // Never dropped: at worst the chip (its fist and countdown).
+    expect(PIECES.revolts.levels).toContain('chip');
+  });
+
   it('unfolds a piece the player asked for, the others giving way', () => {
     const ps = pieces(left, H);
     ps.find((p) => p.id === 'alliances')!.pinned = true;

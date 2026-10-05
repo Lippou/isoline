@@ -82,6 +82,8 @@ Enregistrements réels publiés sur Freesound sous **Creative Commons 0** (domai
 | `confirm` | « traditional stamp.wav » | I.fekry | CC0 1.0 | https://freesound.org/people/I.fekry/sounds/470710/ |
 | `error` | « door_knock.wav » | wjtaylor | CC0 1.0 | https://freesound.org/people/wjtaylor/sounds/268500/ |
 | `paper` | « rustling paper.wav » | keweldog | CC0 1.0 | https://freesound.org/people/keweldog/sounds/181774/ |
+| `crowd` | « CRWDBatl_Crowd Commotion, Battle, Riot » | ShangusBurger | CC0 1.0 | https://freesound.org/people/ShangusBurger/sounds/764265/ |
+| `drums` | « Military Snaredrum » | aUREa | CC0 1.0 | https://freesound.org/people/aUREa/sounds/475246/ |
 
 ## Voix du conseiller (campagne et didacticiel)
 

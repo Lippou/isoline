@@ -32,6 +32,7 @@
   import BreakingNews from '../hud/BreakingNews.svelte';
   import EventCard from '../hud/EventCard.svelte';
   import CapitalCard from '../hud/CapitalCard.svelte';
+  import RevoltCard from '../hud/RevoltCard.svelte';
   import Perf from '../hud/Perf.svelte';
   import PhotoBar from '../hud/PhotoBar.svelte';
   import InvasionFlash from '../hud/InvasionFlash.svelte';
@@ -141,12 +142,13 @@
       <ReadingStrip {ctl} />
     {:else}
       <!-- The news column, beside the dock: nuclear alerts, the council vote, the lost-capital
-           dispatch, the news (special edition, flash) and alliances. Short of height, the
+           dispatch, revolutions under way, the news (special edition, flash) and alliances. Short of height, the
            least important go on one line, then become chips (zones.ts). -->
       <div class="tl">
         <Requests {ctl} />
         <NukeAlerts {ctl} />
         <CapitalCard {ctl} />
+        <RevoltCard {ctl} />
         <BreakingNews {ctl} />
         <EventCard {ctl} />
         {#if !hud.spectating}<Alliances {ctl} />{/if}

@@ -212,6 +212,39 @@
         ctx.setLineDash([]);
       }
     }
+    // Revolutions under way: a toothed oxblood ring over the region and a slow blip (no
+    // blip with reduced motion), ruled in paper so they read on any ink.
+    const still = settings.access.reducedMotion;
+    const now = performance.now();
+    for (const p of st.playerList) {
+      if (p.revoltFor === undefined || !p.alive || p.tiles === 0 || p.label[2] <= 0) continue;
+      const x = p.label[0] * sx;
+      const y = p.label[1] * sy;
+      const r = Math.max(4, Math.sqrt(p.tiles / Math.PI) * sx);
+      ctx.lineWidth = 3.2;
+      ctx.strokeStyle = 'rgba(246,241,228,0.9)';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = '#8c2f2a';
+      ctx.stroke();
+      ctx.beginPath();
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        ctx.moveTo(x + Math.cos(a) * (r + 1), y + Math.sin(a) * (r + 1));
+        ctx.lineTo(x + Math.cos(a) * (r + 3.5), y + Math.sin(a) * (r + 3.5));
+      }
+      ctx.stroke();
+      if (!still) {
+        const u = (now / 1600 + p.id * 0.37) % 1;
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = `rgba(140,47,42,${(1 - u) * 0.9})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r + 3 + u * 12, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
     // The view: a paper-white frame, ruled in ink so it reads on sea and land alike.
     const [x0, y0, x1, y1] = ctl.renderer.camera.bounds();
     ctx.lineWidth = 3;
