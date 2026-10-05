@@ -1152,15 +1152,20 @@ export class GameRenderer {
     const g = this.trails;
     const z = this.camera.zoom;
     if (type === U.Interceptor || kind === N.Mirv) return;
-    // Telegraph: destruction disc and dashed fallout ring, coloured by who launched it.
-    const rel = REL_COLOR[this.relation(owner)];
+    // Telegraph: destruction disc and dashed fallout ring, coloured by who launched it; a
+    // hostile one is also barbed outwards like a hostile SAM ring (not colour alone).
+    const relation = this.relation(owner);
+    const rel = REL_COLOR[relation];
     const r = NUKE_RADIUS[kind as N] || 12;
     const rf = NUKE_FALLOUT_RADIUS[kind as N] || 18;
     const pulse = 0.85 + 0.1 * Math.sin(t * 3);
     g.circle(tx, ty, r)
       .fill({ color: rel, alpha: 0.12 })
       .stroke({ width: Math.max(0.3, 1.6 / z), color: rel, alpha: pulse });
-    if (kind === N.MirvWarhead)
+    if (relation === 'foe') {
+      const [dash, gap, tick] = SAM_LINE.foe;
+      this.dashedCircle(g, tx, ty, rf, rel, pulse * 0.8, 1.6, dash, gap, t * 20, null, tick);
+    } else if (kind === N.MirvWarhead)
       g.circle(tx, ty, rf).stroke({ width: Math.max(0.2, 1 / z), color: rel, alpha: 0.4 });
     else this.dashedCircle(g, tx, ty, rf, rel, pulse * 0.8, 1.6, 12, 6, t * 20, null);
   }
