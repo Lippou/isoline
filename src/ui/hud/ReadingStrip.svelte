@@ -75,7 +75,9 @@
     {#if hud.phase === 'playing' && hud.world?.ring}
       {@const r = hud.world.ring}
       <span class="fig" data-tip={t('hud.zone.tip')} data-testid="reading-mode"
-        ><Icon name="target" size={14} /><b class="mono" class:spot={r.endAt < 0 && hud.tick >= r.closeAt}
+        ><Icon name={r.endAt < 0 && hud.tick >= r.closeAt ? 'warning' : 'target'} size={14} /><b
+          class="mono"
+          class:spot={r.endAt < 0 && hud.tick >= r.closeAt}
           >{clock(
             r.endAt >= 0
               ? r.endAt - hud.tick
@@ -88,7 +90,9 @@
     {:else if hud.phase === 'playing' && hud.world?.doom}
       {@const left = Math.max(0, Math.ceil((DOOM_MIDNIGHT * DOOM_UNIT - hud.world.doom.units) / DOOM_UNIT))}
       <span class="fig" data-tip={t('hud.doom.tip')} data-testid="reading-mode"
-        ><Icon name="time" size={14} /><b class="mono" class:spot={hud.world.doom.stage >= 3}
+        ><Icon name={hud.world.doom.stage >= 3 ? 'warning' : 'time'} size={14} /><b
+          class="mono"
+          class:spot={hud.world.doom.stage >= 3}
           >{t('hud.doom.toMidnight', {
             left: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`,
           })}</b
@@ -137,7 +141,9 @@
         onclick={() => openPanel('log')}
         title={t(unread.danger ? 'inbox.tipDanger' : 'inbox.tip', { n: unread.n })}
         data-testid="reading-journal"
-        ><Icon name="log" size={13} /><b>{t('panel.log')}</b><span class="mono">{unread.n}</span></button
+        ><Icon name={unread.danger ? 'siren' : 'log'} size={13} /><b>{t('panel.log')}</b><span class="mono"
+          >{unread.danger ? '! ' : ''}{unread.n}</span
+        ></button
       >
     {/if}
   </div>

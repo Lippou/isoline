@@ -5,7 +5,8 @@
   // lies beyond the edge; a front already in view only lights its nearest edge softly (the
   // map marks the front itself). A riposte of a country we attack shows no edge at all
   // (game/invasion.ts). Reduced motion: one slow pulse, no blinking. In reading mode (a big
-  // window open) it flashes over the window.
+  // window open) it flashes over the window. A chevron at the peak points out through the
+  // edge towards the attack: the direction reads without the magenta.
   import { hud } from '../stores/game.svelte';
   import { layout } from '../stores/layout.svelte';
   import { settings } from '../stores/settings.svelte';
@@ -39,7 +40,8 @@
             style:--a={inv.edges[side]}
             style:--at="{along(side, inv.ex, inv.ey) * 100}%"
             data-edge={side}
-          ></i>
+            ><svg class="chev" viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14 12 3l10 11" /></svg></i
+          >
         {/if}
       {/each}
     </div>
@@ -108,6 +110,38 @@
     background:
       radial-gradient(100% 60% at 100% var(--at), rgb(var(--c) / calc(0.55 * var(--k))), transparent 75%),
       linear-gradient(to left, rgb(var(--c) / calc(0.4 * var(--k))), transparent);
+  }
+  /* Where the attack lies, by shape too (colour blindness): a chevron at the glow's peak,
+     pointing out through the edge towards the attack. */
+  .chev {
+    position: absolute;
+    width: 30px;
+    height: 20px;
+    fill: none;
+    stroke: #fffaf0;
+    stroke-width: 3.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 1.5px rgb(23 42 60 / 0.9)) drop-shadow(0 1px 2px rgb(23 42 60 / 0.6));
+  }
+  .top .chev {
+    top: 10px;
+    left: calc(var(--at) - 15px);
+  }
+  .bottom .chev {
+    bottom: 10px;
+    left: calc(var(--at) - 15px);
+    transform: rotate(180deg);
+  }
+  .left .chev {
+    left: 5px;
+    top: calc(var(--at) - 10px);
+    transform: rotate(-90deg);
+  }
+  .right .chev {
+    right: 5px;
+    top: calc(var(--at) - 10px);
+    transform: rotate(90deg);
   }
   @keyframes blink {
     0% {

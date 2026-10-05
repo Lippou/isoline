@@ -6,6 +6,7 @@
   import { flagUrl } from '../../render/flags';
   import Icon from '../icons/Icon.svelte';
   import PressPhoto from './PressPhoto.svelte';
+  import { LEVEL_ICON } from './levels';
   import WindowMax from './WindowMax.svelte';
   import type { GameController } from '../game/controller';
   import { inPaper, minuteLabel, storyOf, type Story } from './news';
@@ -105,7 +106,11 @@
               </span>
             {/if}
             <div class="copy">
-              <h4>{s.title}</h4>
+              <h4>
+                {#if LEVEL_ICON[s.entry.level]}<span class="sign"
+                    ><Icon name={LEVEL_ICON[s.entry.level]!} size={lead ? 18 : 14} /></span
+                  >{/if}{s.title}
+              </h4>
               {#if s.deck}<p class="deck">{s.deck}</p>{/if}
               {#if s.photo}<PressPhoto id={s.photo} size={lead ? 'full' : 'banner'} />{/if}
               <p class="meta">
@@ -124,7 +129,11 @@
             {#if pg.heads.length}<p class="kicker">{t('news.inBrief')}</p>{/if}
             {#each pg.briefs as s (s.entry)}
               <p class="brief {s.entry.level}" class:fresh={s.entry.tick > seenAtOpen}>
-                <time>{when(s.entry)}</time>
+                <time
+                  >{#if LEVEL_ICON[s.entry.level]}<span class="sign"
+                      ><Icon name={LEVEL_ICON[s.entry.level]!} size={11} /></span
+                    >{/if}{when(s.entry)}</time
+                >
                 {s.title}
                 {#if s.entry.tile !== undefined}
                   <button class="go icon" onclick={() => go(s.entry)} aria-label={t('news.goTo')}
@@ -328,6 +337,18 @@
   }
   .story.danger h4 {
     color: var(--np-spot);
+  }
+  /* The level's sign (check, warning, siren): the news reads without its colour. */
+  .sign {
+    display: inline-flex;
+    vertical-align: -0.1em;
+    margin-right: 0.3em;
+  }
+  .story.good .sign {
+    color: var(--np-good);
+  }
+  .story.warn .sign {
+    color: var(--np-warn);
   }
   .deck {
     margin: 4px 0 0;

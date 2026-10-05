@@ -2,6 +2,23 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [Unreleased]
+### Modifié
+- **Jamais la couleur seule** (« je suis moi-même daltonien… tu as eu le bon réflexe de mettre avec des formes. Vérifie que tout soit bien à ce niveau ») : audit de tout le jeu en simulant deutéranopie, protanopie et tritanopie ; chaque état montré en couleur porte maintenant aussi une forme, dans toutes les palettes (règle et vocabulaire dans BRAND.md §4.3).
+  - **Placement refusé** : le fantôme de construction est barré d'un × et cerclé en pointillé, l'anneau de portée devient pointillé (il n'était que rouge) ; même × sur le choix d'une capitale impossible et sur le réticule d'un avion qui ne peut pas partir.
+  - **Anneaux de SAM** : les vôtres en trait plein, ceux des alliés en tirets longs, les hostiles en tirets courts barbelés vers l'extérieur ; la légende du panneau de tir dessine les mêmes traits. Zones de reconnaissance ennemies barbelées, bombardier qui vise votre bâtiment marqué d'une croix de visée.
+  - **Frontières** : en guerre, le trait est haché ; sous embargo, troué tous les trois pas ; entre alliés, double trait à cœur pâle (en plus des teintes rouge et verte).
+  - **Insignes** : un coéquipier a son insigne « groupe » au-dessus du nom (seul le vert du nom le signalait) ; un missile dirigé contre vous s'affiche dans un losange (même pictogramme qu'un missile quelconque, qui ne différait que par le rouge).
+  - **Fronts** : la pastille de troupes d'une attaque contre vous est un cartouche à angles droits avec un losange (la vôtre reste ronde) ; l'anneau d'une vague contre vous porte quatre chevrons rentrants ; l'éclair de bord d'écran d'une invasion montre un chevron pointé vers l'attaque.
+  - **Bâtiment occupé** : anneau en maillons (l'amélioration en cours garde un anneau plein).
+  - **Vues terrain et loyauté** : hachures d'autant plus serrées que le terrain coûte cher ou que la terre est instable. **Mini-carte** : votre territoire est cerné de papier, les retombées sont pointillées.
+  - **Interface** : Journal avec ✓, ⚠ ou sirène devant chaque nouvelle et « ! » sur le compteur quand une alerte attend ; notes du curseur avec le même signe ; chances d'alliance ▲ / ▼ ; alliance à renouveler avec le pictogramme de renouvellement et un filet pointillé ; horloge de l'apocalypse tardive signalée par ⚠ ; prérequis acquis cochés dans la planche technologique, liens acquis pleins et les autres pointillés ; courbes des statistiques en trait plein, tirets ou pointillés (repris dans la légende) ; votre ligne en tirets et vos terres hachurées dans l'Édition finale ; part ferroviaire du commerce en traverses ; filet de papier entre les parts de la barre de territoire ; étoiles de campagne gagnées pleines.
+### Ajouté
+- Règle « Accessibilité daltonisme » dans BRAND.md (§4.3) : jamais la couleur seule, avec le vocabulaire de formes commun à la carte et à l'interface. Note des réglages d'accessibilité mise à jour.
+- Test `colorblind` : chaque relation a son trait, chaque niveau de nouvelle son signe, les coéquipiers leur insigne. Le crochet de test `patch` atteint aussi la carte (relations des frontières).
+### Vérifié
+- Captures simulées en deutéranopie, protanopie et tritanopie (matrices de Machado, avant / après) : placement refusé, anneaux de SAM, frontières en guerre et alliées, fronts, éclair d'invasion, Journal, statistiques, Édition finale. 398 tests.
+
 ## [1.13.0] — Explosions nucléaires ; des nations qui se servent de tout
 ### Modifié
 - **Explosions nucléaires spectaculaires** (« pour les nukes je veux une plus belle explosion badass. Pas plus forte mais juste niveau visuel ») : une séquence en couches, à l'échelle de la carte (proportionnée à tous les zooms). Éclair blanc aveuglant et halo, voile d'écran qui refroidit du blanc à l'ambre ; onde de choc (front fin et lumineux, anneau de poussière, anneau de condensation) ; boule de feu qui passe du blanc au jaune, à l'orange puis au rouge sombre en montant dans un **champignon** (pied, chapeau qui roule sur lui-même, éclairé par-dessous, qui noircit en fumée et dérive au vent) ; étincelles, braises et débris projetés puis retombant ; **trace de brûlure** au sol qui s'efface en 25 s environ (dessin seul : les couleurs des pays ne changent pas). La bombe H est nettement plus grande et plus lente ; les ogives d'un MIRV sont plus légères (lumière atténuée, petits champignons, budget de sprites) pour qu'une salve reste fluide tout en recouvrant la cible. Rien ne change dans la simulation : rayon, dégâts, durées et empreinte d'état identiques.

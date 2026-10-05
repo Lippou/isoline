@@ -327,7 +327,12 @@
   }
   .seg {
     height: 100%;
+    box-sizing: border-box;
     transition: width 0.6s ease;
+  }
+  /* A hairline of paper between shares: neighbours of close inks never merge. */
+  .seg + .seg {
+    border-left: 1px solid var(--np-paper);
   }
   .seg.me {
     box-shadow:

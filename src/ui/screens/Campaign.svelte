@@ -431,8 +431,12 @@
     gap: 1px;
     color: var(--np-rule-2);
   }
+  /* Earned stars are filled, the others outlined (not only brass against grey). */
   .got {
     color: var(--brass);
+  }
+  .got :global(svg) {
+    fill: currentColor;
   }
   .lock {
     display: inline-flex;

@@ -136,6 +136,32 @@ raconte l'histoire). Le survol ne déplace jamais la mise en page.
 - **Carte de jeu claire** : ombrage du relief adouci, mers plus claires, cycle jour/nuit réduit à un
   crépuscule léger.
 
+### 4.3 Accessibilité daltonisme
+
+**Règle : jamais la couleur seule.** Tout état montré par une couleur porte aussi une forme, un
+pictogramme, un motif, un style de trait, une position ou un mot. Les palettes daltoniennes
+(Réglages → Accessibilité) écartent les encres des joueurs, mais les formes doivent suffire dans
+**toutes** les palettes, y compris la palette normale. Vérifier en simulant deutéranopie,
+protanopie et tritanopie (`.cache/qa/cvd.mjs`) avant de livrer un visuel.
+
+Vocabulaire commun (carte et interface) :
+
+| Sens | Forme |
+| --- | --- |
+| Refusé, impossible, intercepté | **×** (fantôme de construction, capitale, réticule d'avion, trajectoire) et anneau **pointillé** |
+| Dirigé contre nous | **losange** (insigne « missile vers nous », pastille de front ennemie) et **chevrons** rentrants |
+| Relation (anneaux de SAM, reconnaissance) | à nous : trait **plein** ; allié ou coéquipier : **tirets longs** ; hostile : **tirets courts barbelés** |
+| Frontières | guerre : trait **haché** ; embargo : un **trou** tous les trois pas ; alliance : **double trait** (cœur pâle) |
+| Coéquipier | insigne **groupe** au-dessus du nom (l'alliance a sa poignée de main) |
+| Occupé après une prise | anneau en **maillons** (l'amélioration a un anneau plein) |
+| Niveau d'une nouvelle | ✓ bonne, ⚠ vigilance, sirène alarme ; badge du Journal précédé de « ! » |
+| Probabilités, tendances | ▲ / ▼, signes + / − |
+| Séries d'un graphique | plein, tirets, pointillés (repris dans la légende) ; libellé au bout de la ligne |
+| Vues d'analyse (terrain, loyauté) | **hachures** d'autant plus serrées que le terrain est cher ou la terre instable |
+
+Pas de motif à l'intérieur des territoires dans la palette normale (le joueur le refuse) : les
+motifs vivent sur les traits, les anneaux, les insignes et les vues d'analyse qu'on ouvre exprès.
+
 ## 4 bis. Palette 1.1 (historique)
 
 Version 1.1 : l'interface passe à une palette sobre d'« état-major ». Les noms historiques des jetons

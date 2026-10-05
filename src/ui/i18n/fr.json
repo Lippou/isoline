@@ -1464,7 +1464,7 @@
     "highContrast": "Contraste élevé",
     "reducedMotion": "Réduire les animations",
     "subtitles": "Sous-titres des alertes sonores",
-    "accessNote": "Les modes daltoniens utilisent des palettes optimisées et des hachures par joueur.",
+    "accessNote": "Les modes daltoniens utilisent des palettes optimisées et des hachures par joueur. Dans tous les modes, aucune information ne passe par la couleur seule : relations, portées, refus et alertes ont aussi leur forme.",
     "language": "Langue",
     "subtitle": "Les modifications sont appliquées immédiatement et enregistrées automatiquement.",
     "voiceOn": "Narration vocale dans la campagne",

@@ -158,7 +158,9 @@
             {#each n.requires as q (q)}
               {@const qn = NODES[q]!}
               <span class="tk-req b-{branchName(qn)}" class:ok={m.researched(q)} title={tierName(qn)}
-                ><Icon name={BRANCH_ICON[branchName(qn)]!} size={11} />{ROMAN[qn.tier - 1]}</span
+                ><Icon name={m.researched(q) ? 'check' : BRANCH_ICON[branchName(qn)]!} size={11} />{ROMAN[
+                  qn.tier - 1
+                ]}</span
               >
             {/each}
             <span class="tk-state">
@@ -388,8 +390,14 @@
     stroke: var(--np-rule-2);
     stroke-width: 1.4;
   }
+  /* Researched links: a heavier rule, not only green (the rest stays a fine dotted rule). */
+  .links .chain {
+    stroke-dasharray: 2 2.5;
+  }
   .links .chain.done {
     stroke: color-mix(in srgb, var(--np-good) 65%, transparent);
+    stroke-width: 2.2;
+    stroke-dasharray: none;
   }
   .links .chain.hot {
     stroke: var(--np-ink);
@@ -407,6 +415,10 @@
   .links .req.ok,
   .links .tip.ok {
     stroke: var(--np-good);
+  }
+  /* A requirement met is drawn solid, one still to research stays dashed. */
+  .links .req.ok {
+    stroke-dasharray: none;
   }
   .links .endline {
     stroke: var(--np-rule-2);

@@ -84,7 +84,7 @@
               class:danger={unread.danger}
               data-testid="journal-unread"
               title={t(unread.danger ? 'inbox.tipDanger' : 'inbox.tip', { n: unread.n })}
-              >{unread.n > 99 ? '99+' : unread.n}</i
+              >{unread.danger ? '! ' : ''}{unread.n > 99 ? '99+' : unread.n}</i
             >{/if}
           {#if tb.id === 'tech' && techIdle}<i class="dot research" data-testid="tech-idle-dot"></i>{/if}
         </button>
@@ -223,8 +223,12 @@
     font-variant-numeric: tabular-nums;
     pointer-events: none;
   }
+  /* Alarming news unread: a "!" before the count and a doubled rule (not only magenta). */
   .count.danger {
     background: var(--np-spot);
+    box-shadow:
+      0 0 0 1.5px var(--np-paper),
+      0 0 0 2.5px var(--np-spot);
   }
   .rail button.front .count {
     box-shadow: 0 0 0 1.5px var(--np-ink);

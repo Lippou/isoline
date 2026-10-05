@@ -87,6 +87,17 @@
     const me = st.players.get(st.viewer);
     const friends = new Set<number>([st.viewer, ...(me?.allies ?? [])]);
     if (me && me.team > 0) for (const p of st.playerList) if (p.team === me.team) friends.add(p.id);
+    const ownerAtPx = (x: number, y: number) =>
+      x < 0 || y < 0 || x >= W || y >= H
+        ? 0
+        : st.owner[
+            Math.floor(((y + 0.5) / H) * st.height) * st.width + Math.floor(((x + 0.5) / W) * st.width)
+          ]!;
+    const ownEdge = (x: number, y: number) =>
+      ownerAtPx(x - 1, y) !== st.viewer ||
+      ownerAtPx(x + 1, y) !== st.viewer ||
+      ownerAtPx(x, y - 1) !== st.viewer ||
+      ownerAtPx(x, y + 1) !== st.viewer;
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const sx = Math.floor(((x + 0.5) / W) * st.width);
@@ -115,11 +126,23 @@
             g = Math.min(255, g + 70);
             b = Math.min(255, b + 40);
           }
+          // Our own land is ruled round in paper: found at a glance, whatever the inks.
+          if (o === st.viewer && ownEdge(x, y)) {
+            r = 246;
+            g = 241;
+            b = 228;
+          }
         }
         if (st.fallout[i]! > 0) {
           r = r * 0.5 + 180 * 0.5;
           g = g * 0.5 + 220 * 0.5;
           b = b * 0.5 + 60 * 0.5;
+          // Stippled, not only tinted (colour blindness).
+          if ((x + 2 * y) % 4 === 0) {
+            r *= 0.45;
+            g *= 0.45;
+            b *= 0.45;
+          }
         }
         // Battle royale: land the zone has left (dark, with a hint of red).
         if (st.flags[i]! & 1) {

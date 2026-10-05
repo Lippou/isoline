@@ -5,6 +5,8 @@
   // takes no clicks: nothing jitters under the hand.
   import { notes } from '../stores/note.svelte';
   import { layout } from '../stores/layout.svelte';
+  import Icon from '../icons/Icon.svelte';
+  import { LEVEL_ICON } from './levels';
 
   const n = $derived(notes.current);
   let w = $state(0);
@@ -38,7 +40,8 @@
       bind:offsetWidth={w}
       bind:offsetHeight={h}
     >
-      {n.text}
+      {#if LEVEL_ICON[n.level]}<span class="sign"><Icon name={LEVEL_ICON[n.level]!} size={13} /></span
+        >{/if}{n.text}
     </div>
   {/key}
 {/if}
@@ -63,8 +66,23 @@
   .cnote.ready {
     animation: note-in 0.12s ease-out both;
   }
+  /* The level's sign before the text (never colour alone). */
+  .sign {
+    display: inline-flex;
+    vertical-align: -2px;
+    margin-right: 5px;
+  }
   .cnote.warn {
     border-left-color: var(--np-warn);
+  }
+  .cnote.warn .sign {
+    color: var(--np-warn);
+  }
+  .cnote.danger .sign {
+    color: var(--np-spot);
+  }
+  .cnote.good .sign {
+    color: var(--np-good);
   }
   .cnote.danger {
     border-left-color: var(--np-spot);

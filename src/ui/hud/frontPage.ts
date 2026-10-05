@@ -760,6 +760,8 @@ export interface ChartSeries {
   values: number[];
   /** Printed in its ink and labelled (the winner, the reader); the others are faint. */
   strong: boolean;
+  /** The reader's line when it is not the winner's: dashed, so the two part without their inks. */
+  dashed?: boolean;
 }
 
 // ------------------------------------------------------------------- maps

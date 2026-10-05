@@ -77,10 +77,12 @@
   const strong = $derived(
     new Set(ed.roster.flatMap((r, i) => (entityOf(ed, r) === winE || r.id === ed.viewer ? [i] : []))),
   );
+  /** The reader's roster index (their land hatched on the maps); -1 for a spectator. */
+  const readerIndex = $derived(ed.roster.findIndex((r) => r.id === ed.viewer));
   const youLabel = (id: number) => t('front.maps.you', { name: name(id) });
   const legend = $derived.by(() => {
     void i18n.lang;
-    const out: { label: string; color: [number, number, number] }[] = [];
+    const out: { label: string; color: [number, number, number]; hatched?: boolean }[] = [];
     const win = ed.roster.findIndex((r) => entityOf(ed, r) === winE);
     if (win >= 0)
       out.push({
@@ -89,8 +91,11 @@
       });
     const me = ed.roster.findIndex((r) => r.id === ed.viewer);
     if (me >= 0 && entityOf(ed, ed.roster[me]!) !== winE)
-      out.push({ label: youLabel(ed.viewer), color: colors[me]! });
-    else if (me >= 0 && out[0]) out[0].label = youLabel(ed.viewer);
+      out.push({ label: youLabel(ed.viewer), color: colors[me]!, hatched: true });
+    else if (me >= 0 && out[0]) {
+      out[0].label = youLabel(ed.viewer);
+      out[0].hatched = true;
+    }
     return out;
   });
 
@@ -107,6 +112,7 @@
           color: inkHex(first.color, settings.access.vision),
           values: entitySeries(ed, e),
           strong: e === winE || e === viewerE,
+          dashed: e === viewerE && e !== winE,
         };
       });
     }
@@ -123,6 +129,7 @@
       color: inkHex(r.color, settings.access.vision),
       values: shareSeries(ed, r.id),
       strong: r.id === ed.winner || r.id === ed.viewer,
+      dashed: r.id === ed.viewer && r.id !== ed.winner,
     }));
   });
   const threshold = ed.threshold > 0 && ed.threshold <= 100 ? ed.threshold / 100 : null;
@@ -240,6 +247,7 @@
           {colors}
           {strong}
           {legend}
+          reader={readerIndex}
           {active}
           onwatch={canWatch ? (tick) => watch(tick + 80) : null}
         />
