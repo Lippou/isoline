@@ -73,6 +73,7 @@ export const STATUS_ICONS = [
   'traitor',
   'inactive',
   'ally',
+  'team',
   'request',
   'war',
   'noTrade',
@@ -88,6 +89,7 @@ export const STATUS_STYLE: Record<StatusIcon, { icon: IconName; color: string }>
   traitor: { icon: 'brokenShield', color: '#f6c343' },
   inactive: { icon: 'inactive', color: '#8ab8ff' },
   ally: { icon: 'alliance', color: '#5be08a' },
+  team: { icon: 'users', color: '#5be08a' },
   request: { icon: 'mail', color: '#f3f1ea' },
   war: { icon: 'sword', color: '#ff6b6b' },
   noTrade: { icon: 'noTrade', color: '#f3f1ea' },
@@ -99,10 +101,16 @@ function statusSvg(k: StatusIcon): string {
   const { icon, color } = STATUS_STYLE[k];
   // The embargo badge keeps a white dollar under a red bar.
   const slash = k === 'noTrade' ? `<path d="m3 3 18 18" stroke="#ff5c5c" stroke-width="2.6"/>` : '';
+  // Never colour alone (BRAND.md, colour blindness): a missile aimed at us is the same glyph
+  // as any missile in flight, so its badge is a diamond instead of a disc.
+  const back =
+    k === 'nukeMe'
+      ? `<path d="M32 2 62 32 32 62 2 32Z" fill="#10141a" fill-opacity="0.92" stroke="${color}" stroke-width="3.5" stroke-linejoin="round"/>`
+      : `<circle cx="32" cy="32" r="28" fill="#10141a" fill-opacity="0.92" stroke="${color}" stroke-width="3.5"/>`;
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">` +
-    `<circle cx="32" cy="32" r="28" fill="#10141a" fill-opacity="0.92" stroke="${color}" stroke-width="3.5"/>` +
-    `<g transform="translate(15 15) scale(1.4167)" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${iconMarkup(icon)}${slash}</g>` +
+    back +
+    `<g transform="${k === 'nukeMe' ? 'translate(18 18) scale(1.1667)' : 'translate(15 15) scale(1.4167)'}" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${iconMarkup(icon)}${slash}</g>` +
     `</svg>`
   );
 }

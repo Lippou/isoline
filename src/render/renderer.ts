@@ -42,6 +42,7 @@ import {
   majorBuilding,
 } from './badgeSize';
 import { flagAspect } from './flags';
+import { REL_COLOR, SAM_LINE } from './relations';
 
 /** QA: a visual-only missile (ticks on the QA clock). */
 interface QaFlight {
@@ -84,8 +85,11 @@ export interface Overlay {
    * tile (`from`) when the spot is elsewhere.
    */
   ghost: { kind: number; tile: number; ok: boolean; from?: number } | null;
-  /** Radii of action; `strong`: the one of a building being placed (bolder). */
-  ranges: { x: number; y: number; r: number; color: number; strong?: boolean }[];
+  /**
+   * Radii of action; `strong`: the one of a building being placed (bolder); `invalid`: it
+   * cannot go there (dashed, not only red).
+   */
+  ranges: { x: number; y: number; r: number; color: number; strong?: boolean; invalid?: boolean }[];
   boatPath: number[] | null;
   /** Missile launch preview: path from the silo that would fire, predicted interception, blast. */
   nukePreview: NukePreview | null;
@@ -159,9 +163,6 @@ export interface AirPreview {
   /** SAMs or interceptors wait for it. */
   danger: boolean;
 }
-
-/** Map colours of a relation: own, ally or teammate, everyone else. */
-export const REL_COLOR = { own: 0x4ade80, friend: 0xfacc15, foe: 0xef4444 } as const;
 
 interface UnitSprite {
   /** Container rotated/scaled as a whole: [hull, owner mark] (trains: articulated pieces). */
@@ -298,7 +299,7 @@ export class GameRenderer {
   private startTime = performance.now();
   private pings: { x: number; y: number; t: number; color: number; kind: number }[] = [];
   /** Fronts marked for a moment: a wave sent at us (red: an invasion in view, brass: a riposte). */
-  private frontMarks: { x: number; y: number; t: number; color: number }[] = [];
+  private frontMarks: { x: number; y: number; t: number; color: number; hostile: boolean }[] = [];
   private pacts: { ax: number; ay: number; bx: number; by: number; t: number }[] = [];
   private emojis: { x: number; y: number; t: number; text: Container }[] = [];
   private popups: { x: number; y: number; t: number; text: BitmapText }[] = [];
@@ -811,15 +812,22 @@ export class GameRenderer {
       }
       if (b.occupied > 0 && b.progress >= 1) {
         // Occupied after a capture (GAME_DESIGN.md §6.4): a red ring empties as the
-        // occupation ends; the icon stays greyed until then (out of service).
+        // occupation ends; the icon stays greyed until then (out of service). The ring is
+        // broken into links (a chain), so it never reads as the solid upgrade ring by colour alone.
         const left = b.occupied / Math.max(1, b.occupiedTotal);
         prog.circle(0, 0, 17.5).stroke({ width: 5, color: UI.slate, alpha: 0.55 });
-        prog.circle(0, 0, 17.5).stroke({ width: 3, color: UI.signal, alpha: 0.25 });
-        // moveTo: the arc must not start with a stroke from the centre.
-        prog
-          .moveTo(0, -17.5)
-          .arc(0, 0, 17.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * left)
-          .stroke({ width: 3, color: UI.signal });
+        const links = 12;
+        const step = (Math.PI * 2) / links;
+        const end = -Math.PI / 2 + Math.PI * 2 * left;
+        for (let k = 0; k < links; k++) {
+          const a0 = -Math.PI / 2 + k * step;
+          const a1 = a0 + step * 0.62;
+          // moveTo: an arc must not start with a stroke from the centre.
+          prog.moveTo(Math.cos(a0) * 17.5, Math.sin(a0) * 17.5).arc(0, 0, 17.5, a0, a1);
+          if (a0 < end) {
+            prog.stroke({ width: 3, color: UI.signal, alpha: a1 <= end ? 1 : 0.6 });
+          } else prog.stroke({ width: 3, color: UI.signal, alpha: 0.25 });
+        }
       } else if (!b.ready && b.progress < 1) {
         prog
           .arc(0, 0, 17.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * b.progress)
@@ -1173,6 +1181,8 @@ export class GameRenderer {
     gap: number,
     phase: number,
     skip: readonly { x: number; y: number; r: number }[] | null,
+    /** Outward barbs (screen px) at the start of each dash: the hostile mark, readable without colour. */
+    tickPx = 0,
   ): void {
     const z = this.camera.zoom;
     const circ = Math.PI * 2 * r * z;
@@ -1183,7 +1193,7 @@ export class GameRenderer {
       const a0 = (k / n) * Math.PI * 2;
       const a1 = ((k + 1) / n) * Math.PI * 2;
       const s = ((k + 0.5) / n) * circ + phase;
-      let on = ((s % period) + period) % period < dash;
+      let on = gap <= 0 || ((s % period) + period) % period < dash;
       if (on && skip) {
         const am = (a0 + a1) / 2;
         const mx = cx + Math.cos(am) * r;
@@ -1196,7 +1206,11 @@ export class GameRenderer {
         }
       }
       if (on) {
-        if (!open) g.moveTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
+        if (!open && tickPx > 0) {
+          const tr = r + tickPx / z;
+          g.moveTo(cx + Math.cos(a0) * tr, cy + Math.sin(a0) * tr);
+          g.lineTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
+        } else if (!open) g.moveTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
         g.lineTo(cx + Math.cos(a1) * r, cy + Math.sin(a1) * r);
         open = true;
       } else open = false;
@@ -1234,7 +1248,24 @@ export class GameRenderer {
     this.zones.update(z, this.camera.bounds(), Math.max(0, Math.min(1, (z - 0.3) / 0.4)));
   }
 
-  /** Every known SAM's reach: own green, allies yellow, the others red (merged outlines). */
+  /** An × (refused, intercepted…): a dark under-stroke then the colour, so it reads on any ground. */
+  drawCross(g: Graphics, x: number, y: number, d: number, under: number, width: number, color: number): void {
+    for (const [w, c] of [
+      [under, 0x0b0e12],
+      [width, color],
+    ] as const)
+      g.moveTo(x - d, y - d)
+        .lineTo(x + d, y + d)
+        .moveTo(x + d, y - d)
+        .lineTo(x - d, y + d)
+        .stroke({ width: w, color: c, cap: 'round' });
+  }
+
+  /**
+   * Every known SAM's reach: own green, allies yellow, the others red (merged outlines). The
+   * relation is also in the line itself, for colour-blind eyes (NukePanel's legend draws the
+   * same): own a solid rule, allies long dashes, hostile short dashes barbed outwards.
+   */
   private drawSamCoverage(g: Graphics, t: number): void {
     const groups: Record<string, { x: number; y: number; r: number }[]> = { own: [], friend: [], foe: [] };
     for (const b of this.state.buildings) {
@@ -1249,7 +1280,9 @@ export class GameRenderer {
       const list = groups[rel]!;
       const color = REL_COLOR[rel];
       for (const c of list) g.circle(c.x, c.y, c.r).fill({ color, alpha: rel === 'foe' ? 0.07 : 0.05 });
-      for (const c of list) this.dashedCircle(g, c.x, c.y, c.r, color, 0.85, 2.2, 12, 6, t * 14, list);
+      const [dash, gap, tick] = SAM_LINE[rel];
+      for (const c of list)
+        this.dashedCircle(g, c.x, c.y, c.r, color, 0.85, 2.2, dash, gap, t * 14, list, tick);
     }
   }
 
@@ -1375,9 +1408,34 @@ export class GameRenderer {
           alpha: 0.5 * (1 - pulse) + 0.15,
         });
         g.circle(tx, ty, r).stroke({ width: lw(2), color: col, alpha: 0.85 });
+        // A bomber coming for our building: a crosshair, not only a red ring.
+        if (!mine)
+          for (const [dx, dy] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+          ] as const)
+            g.moveTo(tx + dx * r * 0.45, ty + dy * r * 0.45)
+              .lineTo(tx + dx * r * 1.6, ty + dy * r * 1.6)
+              .stroke({ width: lw(2), color: col, alpha: 0.85 });
       } else if (buf[o + 6] === 1) {
-        // Orbiting reconnaissance: its zone.
-        this.dashedCircle(g, tx, ty, RECON_RADIUS, col, mine ? 0.55 : 0.7, 1.4, 10, 7, t * 10, null);
+        // Orbiting reconnaissance: its zone (a hostile one barbed, as hostile SAM rings).
+        const [dash, gap, tick] = mine ? [10, 7, 0] : SAM_LINE.foe;
+        this.dashedCircle(
+          g,
+          tx,
+          ty,
+          RECON_RADIUS,
+          col,
+          mine ? 0.55 : 0.7,
+          1.4,
+          dash,
+          gap,
+          t * 10,
+          null,
+          tick,
+        );
       }
     }
   }
@@ -1449,6 +1507,8 @@ export class GameRenderer {
       g.moveTo(p.tx + dx * r * 0.5, p.ty + dy * r * 0.5)
         .lineTo(p.tx + dx * r * 1.5, p.ty + dy * r * 1.5)
         .stroke({ width: lw(2), color: ret });
+    // Order refused, or a bomber with nothing in its sights: the reticle is crossed out.
+    if (!p.ok || (p.kind === 1 && !p.target)) this.drawCross(g, p.tx, p.ty, r * 0.6, lw(4.5), lw(2.2), ret);
   }
 
   // -------------------------------------------------------------- overlay
@@ -1464,10 +1524,17 @@ export class GameRenderer {
       const y = (ov.hoverTile / w) | 0;
       g.rect(x, y, 1, 1).stroke({ width: lw(1.5), color: 0xffffff, alpha: 0.7 });
     }
-    for (const r of ov.ranges)
+    for (const r of ov.ranges) {
+      // Refused spot: a broken (dashed) ring with a faint fill, never just a red one.
+      if (r.invalid) {
+        g.circle(r.x, r.y, r.r).fill({ color: r.color, alpha: 0.05 });
+        this.dashedCircle(g, r.x, r.y, r.r, r.color, 0.95, 2.5, 7, 7, 0, null);
+        continue;
+      }
       g.circle(r.x, r.y, r.r)
         .fill({ color: r.color, alpha: r.strong ? 0.12 : 0.06 })
         .stroke({ width: lw(r.strong ? 2.5 : 1.5), color: r.color, alpha: r.strong ? 0.95 : 0.6 });
+    }
     if (ov.capitalGhost) this.capitals.drawGhost(g, ov.capitalGhost, z);
     if (ov.ghost) {
       const x = (ov.ghost.tile % w) + 0.5;
@@ -1489,9 +1556,16 @@ export class GameRenderer {
         }
         g.circle(fx, fy, lw(3)).stroke({ width: lw(1.5), color, alpha: 0.8 });
       }
-      g.circle(x, y, rad)
-        .fill({ color, alpha: 0.25 })
-        .stroke({ width: lw(2), color });
+      if (ov.ghost.ok)
+        g.circle(x, y, rad)
+          .fill({ color, alpha: 0.25 })
+          .stroke({ width: lw(2), color });
+      else {
+        // Refused: a dashed ring crossed out (shape, not only the red), ruled in dark for contrast.
+        g.circle(x, y, rad).fill({ color, alpha: 0.18 });
+        this.dashedCircle(g, x, y, rad, color, 1, 2, 4, 3, 0, null);
+        this.drawCross(g, x, y, rad * 0.62, lw(4.5), lw(2.5), color);
+      }
     }
     if (ov.boatPath && ov.boatPath.length > 1) {
       const p = ov.boatPath;
@@ -1554,6 +1628,26 @@ export class GameRenderer {
       g.circle(f.x, f.y, r0).stroke({ width: lw(4.5), color: 0x0b1824, alpha: 0.35 * fade });
       g.circle(f.x, f.y, r0).stroke({ width: lw(2.5), color: f.color, alpha: 0.95 * fade });
       g.circle(f.x, f.y, lw(2.6)).fill({ color: f.color, alpha: 0.95 * fade });
+      if (f.hostile)
+        for (let q = 0; q < 4; q++) {
+          // Four chevrons pointing in at the front, just outside the ring.
+          const a = Math.PI / 4 + (q * Math.PI) / 2;
+          const [ux, uy] = [Math.cos(a), Math.sin(a)];
+          const tip = r0 * 1.3;
+          const base = r0 * 2.25;
+          const half = r0 * 0.55;
+          const pts = [
+            f.x + ux * tip,
+            f.y + uy * tip,
+            f.x + ux * base - uy * half,
+            f.y + uy * base + ux * half,
+            f.x + ux * base + uy * half,
+            f.y + uy * base - ux * half,
+          ];
+          g.poly(pts)
+            .fill({ color: f.color, alpha: 0.95 * fade })
+            .stroke({ width: lw(1.2), color: 0x0b1824, alpha: 0.5 * fade });
+        }
       for (let k = 0; k < 2; k++) {
         const u = (a * 2 + k * 0.5) % 1;
         g.circle(f.x, f.y, r0 * (1 + u * 2.6)).stroke({
@@ -1622,7 +1716,7 @@ export class GameRenderer {
       const px = size * z;
       const status: StatusIcon[] = [];
       const ally = local?.allies.find((a) => a.id === p.id);
-      // Teammates read like allies (green name) without the alliance badge and timer.
+      // Teammates read like allies (green name, a team badge) without the alliance timer.
       const friend = p.id !== s.viewer && this.relation(p.id) === 'friend';
       const atWar = !!local?.wars.includes(p.id);
       // A revolution: the raised fist leads its badges (hatched land, GAME_DESIGN.md §6.5).
@@ -1631,6 +1725,8 @@ export class GameRenderer {
       if (p.traitor && (p.traitorFor > 150 || blink)) status.push('traitor');
       if (p.inactive) status.push('inactive');
       if (ally && (ally.expiresIn > 300 || blink)) status.push('ally');
+      // Teammates: their own badge (the green name alone would be colour only).
+      else if (friend && !ally) status.push('team');
       if (local?.allyRequests.includes(p.id)) status.push('request');
       if (atWar) status.push('war');
       if (local?.noTrade.includes(p.id)) status.push('noTrade');
@@ -1766,12 +1862,22 @@ export class GameRenderer {
           best.txt.text = text;
           const edge = mine ? this.inkOf(s.viewer) : REL_COLOR.foe;
           const wpx = best.txt.width + 34;
-          best.bg
-            .clear()
-            .roundRect(-15, -13, wpx, 26, 13)
-            .fill({ color: 0x0b1824, alpha: 0.94 })
-            .stroke({ width: 2.5, color: edge });
-          best.bg.circle(0, 0, 9).fill({ color: edge, alpha: mine ? 0.9 : 1 });
+          best.bg.clear();
+          // Ours: a round pill and disc. Coming at us: a square-cut tag and a diamond (the
+          // map's "aimed at us" shape, as the missile badge), so it reads without the red.
+          if (mine) {
+            best.bg
+              .roundRect(-15, -13, wpx, 26, 13)
+              .fill({ color: 0x0b1824, alpha: 0.94 })
+              .stroke({ width: 2.5, color: edge });
+            best.bg.circle(0, 0, 9).fill({ color: edge, alpha: 0.9 });
+          } else {
+            best.bg
+              .rect(-15, -13, wpx, 26)
+              .fill({ color: 0x0b1824, alpha: 0.94 })
+              .stroke({ width: 2.5, color: edge });
+            best.bg.poly([0, -11, 11, 0, 0, 11, -11, 0]).fill({ color: edge });
+          }
         }
       }
     }
@@ -2146,10 +2252,11 @@ export class GameRenderer {
   }
 
   /** Marks a front on the map for a moment (tile coordinates): a wave of troops sent at us. */
-  markFront(x: number, y: number, color: number): void {
+  /** `hostile`: a wave coming at us (chevrons closing on the ring, not only its colour). */
+  markFront(x: number, y: number, color: number, hostile = false): void {
     this.frontMarks = [
       ...this.frontMarks.filter((f) => Math.hypot(f.x - x, f.y - y) > 3),
-      { x, y, t: performance.now(), color },
+      { x, y, t: performance.now(), color, hostile },
     ];
   }
 

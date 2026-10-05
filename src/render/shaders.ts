@@ -255,6 +255,19 @@ vec3 heat(float t) {
   return vec3(0.70, 0.10, 0.38);               // high peaks: the dearest land
 }
 
+// Terrain view, for colour-blind eyes: the dearer the ground, the denser its hatching
+// (none on plains and deserts, sparse on forests and hills, dense on mountains, tight on
+// glaciers and peaks, cross-hatched walls). sp: map position in screen pixels.
+float costHatch(float t, vec2 sp) {
+  float lvl = t < 2.5 ? 0.0 : (t > 3.5 && t < 4.5) || (t > 6.5 && t < 7.5) ? 0.0
+    : t < 5.5 || (t > 7.5 && t < 9.5) ? 1.0 : t < 6.5 ? 2.0 : t < 10.5 ? 4.0 : 3.0;
+  if (lvl < 0.5) return 0.0;
+  float gap = lvl < 1.5 ? 12.0 : lvl < 2.5 ? 7.0 : 4.5;
+  float a = step(fract((sp.x + sp.y) / gap), 1.2 / gap);
+  float b = lvl > 3.5 ? step(fract((sp.x - sp.y) / 5.0), 1.2 / 5.0) : 0.0;
+  return max(a, b);
+}
+
 void main() {
   vec2 tp = vUV * uSize;
   ivec2 ti = ivec2(floor(tp));
@@ -310,7 +323,10 @@ void main() {
   col = mix(sea, ground, landA);
   water = landA < 0.5;
 
-  if (uTerrainView > 0.5) col = mix(col, heat(tId), 0.55);
+  if (uTerrainView > 0.5) {
+    col = mix(col, heat(tId), 0.55);
+    col = mix(col, col * 0.45, costHatch(tId, tp * pxPerTile) * 0.8);
+  }
 
   // ---------------------------------------------------------------- territory
   vec3 atlas = col; // terrain only: what the fog of war still shows
@@ -455,15 +471,29 @@ void main() {
       float relO = (own > 0.5 && other > 0.5) ? floor((1.0 - inkOf(other).a) * 255.0 / 50.0 + 0.5) : 0.0;
       float threat = ((rel > 3.5 && other == uViewer) || (own == uViewer && relO > 3.5)) ? 1.0 : 0.0;
       ink = mix(ink, vec3(0.98, 0.68, 0.20), threat * (0.68 + 0.2 * sin(uTime * 1.6)));
-      float width = (uContrast > 0.5 ? 2.4 : 2.0) + 0.6 * threat;
+      // Never colour alone (colour blindness): the relation is also in the stroke itself.
+      // War: the line is broken into ink dashes; embargo: a dark gap every third step;
+      // alliance: a double rule (a pale core). Cells are on the map at screen size, so the
+      // pattern holds whatever the border's direction and does not crawl when panning.
+      float war = (rel > 1.5 && rel < 2.5) ? 1.0 : 0.0;
+      float embargo = (rel > 2.5 && rel < 3.5) ? 1.0 : 0.0;
+      float allied = (rel > 0.5 && rel < 1.5) ? 1.0 : 0.0;
+      vec2 cellP = floor(tp * pxPerTile / 5.0);
+      float cellN = cellP.x + cellP.y;
+      float gapW = war * step(0.5, mod(cellN, 2.0));
+      float gapE = embargo * step(2.0, mod(cellN, 3.0));
+      float width = (uContrast > 0.5 ? 2.4 : 2.0) + 0.6 * threat + 0.5 * war;
       float line = 1.0 - smoothstep(width - 0.6, width + 0.4, dpx);
       float edge = (1.0 - smoothstep(width + 0.3, width + 1.4, dpx)) * (1.0 - line);
       float inner = exp(-dpx / 6.0) * 0.18; // colour deepens towards the frontier
-      if (pxPerTile < 1.5) { line = 0.9; edge = 0.0; inner = 0.0; }
+      float core = allied * (1.0 - smoothstep(0.35, 0.95, dpx));
+      if (pxPerTile < 1.5) { line = 0.9; edge = 0.0; inner = 0.0; core = 0.0; }
       float wild = (own < 0.5 || other < 0.5) ? 0.7 : 1.0;
       if (own > 0.5) col = mix(col, ink, inner);
       col = mix(col, col * 0.35, edge * 0.6 * wild);
-      col = mix(col, ink * 1.1 + 0.04, line * wild);
+      vec3 stroke = mix(ink * 1.1 + 0.04, vec3(0.06, 0.07, 0.09), max(gapW, gapE) * 0.85);
+      stroke = mix(stroke, vec3(0.97, 0.95, 0.9), core * 0.7);
+      col = mix(col, stroke, line * wild);
     }
   }
 
@@ -601,8 +631,14 @@ void main() {
   if (uLoyaltyView > 0.5) {
     float lv = texture(uFog, vUV).g;
     if (lv > 0.002) {
-      vec3 heatL = mix(vec3(0.95, 0.25, 0.25), vec3(0.35, 0.9, 0.5), smoothstep(0.15, 0.85, lv));
+      float loyal = smoothstep(0.15, 0.85, lv);
+      vec3 heatL = mix(vec3(0.95, 0.25, 0.25), vec3(0.35, 0.9, 0.5), loyal);
       col = mix(col, heatL, 0.55);
+      // Not by colour alone: restless land is hatched, the more restless the denser.
+      vec2 spL = tp * pxPerTile;
+      float gapL = mix(4.5, 11.0, loyal);
+      float hatchL = step(fract((spL.x - spL.y) / gapL), 1.3 / gapL) * (1.0 - smoothstep(0.55, 0.8, lv));
+      col = mix(col, col * 0.4, hatchL * 0.75);
     } else {
       col *= 0.55;
     }

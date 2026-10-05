@@ -13,6 +13,12 @@
     span?: [string, string] | null;
   } = $props();
   const W = 340;
+  /**
+   * Each series also has its own line (solid, dashed, dotted), drawn the same in the key:
+   * the curves part without their colours (BRAND.md, colour blindness).
+   */
+  const DASH = ['', '7 4', '1.5 3.5'];
+  const dashOf = (k: number) => DASH[k % DASH.length]!;
   // One shared scale for every series (comparable curves).
   const sharedMax = $derived(Math.max(1, ...series.flatMap((x) => x.values)));
   function path(values: number[]): string {
@@ -39,8 +45,8 @@
         <line x1="0" x2={W} y1={height * g} y2={height * g} class="grid" />
       {/each}
       <line x1="0" x2={W} y1={height - 6} y2={height - 6} class="axis" />
-      {#each series as s (s.label)}
-        <path d={path(s.values)} style:stroke={s.color} />
+      {#each series as s, k (s.label)}
+        <path d={path(s.values)} style:stroke={s.color} stroke-dasharray={dashOf(k) || undefined} />
       {/each}
     </svg>
     <span class="top">{short(sharedMax)}</span>
@@ -49,9 +55,18 @@
     <p class="span"><span>{span[0]}</span><span>{span[1]}</span></p>
   {/if}
   <figcaption>
-    {#each series as s (s.label)}
+    {#each series as s, k (s.label)}
       <span
-        ><i style:background={s.color}></i>{s.label}
+        ><svg class="key" viewBox="0 0 18 4" aria-hidden="true"
+          ><line
+            x1="0"
+            x2="18"
+            y1="2"
+            y2="2"
+            style:stroke={s.color}
+            stroke-dasharray={dashOf(k) || undefined}
+          /></svg
+        >{s.label}
         <b>{short(s.values[s.values.length - 1] ?? 0)}</b>
         <small>max {short(Math.max(0, ...s.values))}</small></span
       >
@@ -120,11 +135,15 @@
     align-items: baseline;
     gap: 5px;
   }
-  /* The key: a stroke of the curve's ink. */
-  i {
+  /* The key: a stroke of the curve's ink, in its line. */
+  .key {
     align-self: center;
-    width: 14px;
-    height: 2px;
+    width: 18px;
+    height: 4px;
+    overflow: visible;
+  }
+  .key line {
+    stroke-width: 2;
   }
   b {
     font-weight: 600;

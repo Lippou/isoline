@@ -1485,7 +1485,7 @@
     "highContrast": "High contrast",
     "reducedMotion": "Reduce motion",
     "subtitles": "Subtitles for audio alerts",
-    "accessNote": "Colour-blind modes use optimised palettes plus per-player hatch patterns.",
+    "accessNote": "Colour-blind modes use optimised palettes plus per-player hatch patterns. In every mode, nothing is told by colour alone: relations, ranges, refusals and alerts also have their own shape.",
     "language": "Language",
     "subtitle": "Changes apply immediately and are saved automatically.",
     "voiceOn": "Voice narration in the campaign",

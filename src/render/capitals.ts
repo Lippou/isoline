@@ -202,6 +202,19 @@ export class CapitalLayer {
     g.poly(starPoints(x, y, s, s * 0.46))
       .fill({ color: 0xf4efe2, alpha: 0.95 })
       .stroke({ width: lw(3), color, join: 'round' });
+    // Refused: the star is crossed out (not only red: colour-blind players read the ×).
+    if (!ghost.ok) {
+      const d = s * 1.05;
+      for (const [w, c] of [
+        [lw(5), 0x0b0e12],
+        [lw(2.6), color],
+      ] as const)
+        g.moveTo(x - d, y - d)
+          .lineTo(x + d, y + d)
+          .moveTo(x + d, y - d)
+          .lineTo(x - d, y + d)
+          .stroke({ width: w, color: c, cap: 'round' });
+    }
   }
 
   destroy(): void {

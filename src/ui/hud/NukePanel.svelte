@@ -149,9 +149,23 @@
     </div>
 
     <footer>
-      <span class="key"><i class="dot own"></i>{t('launch.legendOwn')}</span>
-      <span class="key"><i class="dot friend"></i>{t('launch.legendAlly')}</span>
-      <span class="key"><i class="dot foe"></i>{t('launch.legendEnemy')}</span>
+      <!-- The map's SAM rings, line for line (render/renderer.ts SAM_LINE): solid, long dashes, barbed. -->
+      <span class="key"
+        ><svg class="ring own" viewBox="0 0 22 12" aria-hidden="true"><path d="M2 9a9 7 0 0 1 18 0" /></svg
+        >{t('launch.legendOwn')}</span
+      >
+      <span class="key"
+        ><svg class="ring friend" viewBox="0 0 22 12" aria-hidden="true"
+          ><path d="M2 9a9 7 0 0 1 18 0" stroke-dasharray="6 3" /></svg
+        >{t('launch.legendAlly')}</span
+      >
+      <span class="key"
+        ><svg class="ring foe" viewBox="0 0 22 12" aria-hidden="true"
+          ><path d="M2 9a9 7 0 0 1 18 0" stroke-dasharray="2.6 2.6" /><path
+            d="M3.2 5.6 1.6 4.6M7 2.9 6.2 1.2M11 2 11 .2M15 2.9 15.8 1.2M18.8 5.6 20.4 4.6"
+          /></svg
+        >{t('launch.legendEnemy')}</span
+      >
       <span class="key dots">{t('launch.legendDots')}</span>
       <span class="help">{t('launch.hint')}</span>
     </footer>
@@ -261,12 +275,14 @@
     align-items: center;
     gap: 0.35em;
   }
-  /* The map's own marks for the blast preview (render/overlay). */
-  .dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    border: 2px dashed currentColor;
+  /* The map's own marks for the SAM rings (render/renderer.ts): colour and line style. */
+  .ring {
+    width: 22px;
+    height: 12px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: butt;
   }
   .own {
     color: #2f9e5b;

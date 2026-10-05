@@ -333,8 +333,9 @@
   .ways .sea {
     background: var(--np-sea);
   }
+  /* Rail: broken like sleepers, sea solid, so the two shares part without their colours. */
   .ways .rail {
-    background: var(--np-gold);
+    background: repeating-linear-gradient(90deg, var(--np-gold) 0 5px, transparent 5px 7px);
   }
   .boom {
     display: inline-flex;

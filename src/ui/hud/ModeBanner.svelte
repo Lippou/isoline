@@ -7,6 +7,7 @@
   import { hud } from '../stores/game.svelte';
   import { t, clock } from '../i18n/i18n.svelte';
   import { audio } from '../../audio/audio';
+  import Icon from '../icons/Icon.svelte';
   import {
     DOOM_MIDNIGHT,
     DOOM_STAGES,
@@ -140,7 +141,8 @@
     <div class="body">
       <div class="head">
         <b class="title"
-          >{leftSecs > 0 ? t('hud.doom.toMidnight', { left: leftText }) : t('doom.midnight.name')}</b
+          >{#if stage >= 3}<span class="alarm" aria-hidden="true"><Icon name="warning" size={13} /></span
+            >{/if}{leftSecs > 0 ? t('hud.doom.toMidnight', { left: leftText }) : t('doom.midnight.name')}</b
         >
         {#if push}
           <span class="push mono" class:down={!push.up} data-testid="doom-push">{push.text}</span>
@@ -241,6 +243,16 @@
   .banner.late,
   .banner.closing {
     border-top-color: var(--np-spot);
+  }
+  /* Late in the night: a warning sign and a heavier rule, not only the magenta. */
+  .banner.late {
+    border-top-width: 4px;
+  }
+  .alarm {
+    display: inline-flex;
+    vertical-align: -2px;
+    margin-right: 4px;
+    color: var(--np-spot);
   }
   .dial {
     width: 36px;

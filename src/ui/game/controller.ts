@@ -607,7 +607,7 @@ export class GameController {
     const cam = this.renderer.camera;
     const [sx, sy] = at ? cam.worldToScreen(at[0], at[1]) : [null, null];
     const cue = edgesToward(sx, sy, cam.viewW, cam.viewH);
-    if (cue.onScreen && at) this.renderer.markFront(at[0], at[1], UI.signal);
+    if (cue.onScreen && at) this.renderer.markFront(at[0], at[1], UI.signal, true);
     hud.invasion = { n: (hud.invasion?.n ?? 0) + 1, ex: cue.ex, ey: cue.ey, strength, edges: cue.edges };
   }
 
@@ -727,6 +727,9 @@ export class GameController {
     if (st.world) hud.world = this.qaEvent ? { ...st.world, event: this.qaEvent } : st.world;
     if (this.qaPatch) {
       if (hud.local && this.qaPatch.local) hud.local = { ...hud.local, ...this.qaPatch.local };
+      // The map reads the same view (relations on the borders, labels): patched alike.
+      if (st.local && this.qaPatch.local)
+        st.local = { ...st.local, ...this.qaPatch.local } as typeof st.local;
       if (hud.world && this.qaPatch.world) hud.world = { ...hud.world, ...this.qaPatch.world };
     }
     hud.players = st.playerList;
@@ -919,6 +922,7 @@ export class GameController {
           r,
           color: ov.ghost?.ok === false ? UI.signal : colorOf(tool.kind),
           strong: true,
+          invalid: ov.ghost?.ok === false,
         });
     }
     // Reach of our own buildings of the filtered types (SAMs: the coverage view above).

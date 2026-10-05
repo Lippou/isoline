@@ -12,6 +12,7 @@
     colors,
     strong,
     legend,
+    reader = -1,
     active = -1,
     onwatch = null,
   }: {
@@ -20,8 +21,13 @@
     colors: [number, number, number][];
     /** Roster indices printed in full colour. */
     strong: Set<number>;
-    /** Legend of the full-colour inks (the winner, the reader). */
-    legend: { label: string; color: [number, number, number] }[];
+    /** Legend of the full-colour inks (the winner, the reader; `hatched`: the reader's). */
+    legend: { label: string; color: [number, number, number]; hatched?: boolean }[];
+    /**
+     * Roster index of the reader: their land is hatched and ruled in ink, so it parts from
+     * the winner's without the inks (colour blindness). -1: none.
+     */
+    reader?: number;
     /** Tick under the chart's cursor: the nearest map is marked. */
     active?: number;
     /** Watch the replay from a map's moment (null: no replay). */
@@ -101,6 +107,10 @@
           const c = land ? pal[d[i]!]! : WATER;
           for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++) put(x * S + dx, y * S + dy, c);
           if (!land) continue;
+          // The reader's land: diagonal ink hatching, one cell in four.
+          if (reader >= 0 && d[i] === reader + 1 && (x + y) % 4 === 0)
+            for (let dy = 0; dy < S; dy++)
+              for (let dx = 0; dx < S; dx++) put(x * S + dx, y * S + dy, mix(c, INK, 0.55));
           // Thin ink lines: coasts (land against sea) and borders (two owners, one of them a country).
           const edge = (j: number) =>
             !ed.land[j] ? 0.42 : d[j] !== d[i] && (d[i] !== 0 || d[j] !== 0) ? 0.3 : 0;
@@ -152,7 +162,13 @@
 </div>
 <ul class="legend">
   {#each legend as l (l.label)}
-    <li><i style:background={css(mix(l.color, PAPER, 0.06))}></i>{l.label}</li>
+    <li>
+      <i
+        style:background={l.hatched
+          ? `repeating-linear-gradient(-45deg, ${css(mix(l.color, INK, 0.55))} 0 1.5px, ${css(mix(l.color, PAPER, 0.06))} 1.5px 5px)`
+          : css(mix(l.color, PAPER, 0.06))}
+      ></i>{l.label}
+    </li>
   {/each}
   {#if othersSwatch}<li><i style:background={othersSwatch}></i>{t('front.maps.others')}</li>{/if}
   <li><i style:background={css(mix(TRIBE, PAPER, 0.42))}></i>{t('front.maps.tribes')}</li>

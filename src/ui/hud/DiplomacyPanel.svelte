@@ -122,7 +122,9 @@
           class="np-tag good ally"
           class:renew={r.ally.expiresIn <= ALLIANCE_RENEW_WINDOW}
           data-tip={t('diplo.allianceTimer')}
-          ><Icon name="alliance" size={12} />{t('diplo.allied')} · {clock(r.ally.expiresIn)}<i
+          ><Icon name={r.ally.expiresIn <= ALLIANCE_RENEW_WINDOW ? 'renew' : 'alliance'} size={12} />{t(
+            'diplo.allied',
+          )} · {clock(r.ally.expiresIn)}<i
             class="drain"
             style="width:{Math.max(0, Math.min(100, (r.ally.expiresIn / ALLIANCE_TICKS) * 100))}%"
           ></i></span
@@ -236,7 +238,12 @@
             class:bad={r.op.accept < 0.1}
             class:good={r.op.accept >= 0.5}
             data-tip={t('opinion.acceptTip')}
-            data-testid="diplo-odds">{t('opinion.accept', { pct: pct(r.op.accept) })}</span
+            data-testid="diplo-odds"
+            >{#if r.op.accept >= 0.5}<span class="cue" aria-hidden="true">▲</span
+              >{:else if r.op.accept < 0.1}<span class="cue" aria-hidden="true">▼</span>{/if}{t(
+              'opinion.accept',
+              { pct: pct(r.op.accept) },
+            )}</span
           >{/if}
       {/if}
     </div>
@@ -404,9 +411,11 @@
     position: relative;
     overflow: hidden;
   }
+  /* Time to renew: the renew glyph and a dashed rule, not only the amber. */
   .ally.renew {
     color: var(--np-warn);
     border-color: color-mix(in srgb, var(--np-warn) 45%, transparent);
+    border-style: dashed;
   }
   .drain {
     position: absolute;
@@ -513,6 +522,11 @@
   }
   .odds.bad {
     color: var(--np-spot);
+  }
+  /* Likely ▲ / unlikely ▼: the odds read without their colour. */
+  .odds .cue {
+    margin-right: 0.25em;
+    font-size: 0.85em;
   }
   .more {
     margin: 6px 0 0 38px;

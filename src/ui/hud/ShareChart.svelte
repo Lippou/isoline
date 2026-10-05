@@ -197,10 +197,24 @@
         <path class="faint" d={path(s.values)} />
       {/each}
       {#each strong as s (s.key)}
-        <path class="strong" d={path(s.values)} stroke={s.color} />
+        <path
+          class="strong"
+          d={path(s.values)}
+          stroke={s.color}
+          stroke-dasharray={s.dashed ? '7 4' : undefined}
+        />
       {/each}
       {#each ends as e (e.s.key)}
-        <circle cx={L + plotW} cy={y(e.s.values.at(-1) ?? 0)} r="3" fill={e.s.color} class="dot" />
+        {@const ey = y(e.s.values.at(-1) ?? 0)}
+        <circle cx={L + plotW} cy={ey} r="3" fill={e.s.color} class="dot" />
+        <!-- A label pushed off its line keeps a leader to its dot (never matched by colour alone). -->
+        {#if Math.abs(e.y - ey) > 3}<line
+            class="leader"
+            x1={L + plotW + 3}
+            y1={ey}
+            x2={L + plotW + 7}
+            y2={e.y}
+          />{/if}
         <text class="end" x={L + plotW + 8} y={e.y + 4}>{e.s.label}</text>
       {/each}
       {#each markers as m (m.n)}
@@ -320,6 +334,10 @@
   .dot {
     stroke: var(--np-paper);
     stroke-width: 2;
+  }
+  .leader {
+    stroke: var(--np-ink-3);
+    stroke-width: 1;
   }
   .end {
     font-size: 11.5px;
