@@ -118,12 +118,17 @@ export interface IsoMapFile {
 }
 
 export function exportIsoMap(map: GameMap): string {
+  return exportIsoMapData(map.meta, map.terrain, map.elevation);
+}
+
+/** The .isomap text of raw map data (the editor: no topology to build just to save). */
+export function exportIsoMapData(meta: MapMeta, terrain: Uint8Array, elevation: Uint8Array): string {
   const file: IsoMapFile = {
     format: 'isoline-map',
     version: ISOMAP_VERSION,
-    meta: map.meta,
-    terrain: toBase64(encodeTerrainPng(map.terrain, map.width, map.height)),
-    elevation: toBase64(encodeGreyPng(map.elevation, map.width, map.height)),
+    meta,
+    terrain: toBase64(encodeTerrainPng(terrain, meta.width, meta.height)),
+    elevation: toBase64(encodeGreyPng(elevation, meta.width, meta.height)),
   };
   return JSON.stringify(file);
 }

@@ -33,6 +33,8 @@ export interface LaunchRequest {
   lanUrl?: string;
   /** Replays: start at this tick (fast-forward), the camera on (x, y). */
   replayAt?: { tick: number; x?: number; y?: number; takeover?: boolean };
+  /** Where leaving the game goes instead of the title page (a play-test from the editor). */
+  returnTo?: Screen;
 }
 
 export const app = $state({
@@ -68,6 +70,8 @@ export function setSession(s: Session | null): void {
 }
 
 export function go(screen: Screen): void {
+  // A game launched from the editor (a play-test) hands back to the editor, not the title.
+  if (screen === 'title' && app.screen === 'game' && app.launch?.returnTo) screen = app.launch.returnTo;
   app.previous = app.screen;
   app.screen = screen;
 }
