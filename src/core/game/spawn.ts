@@ -5,6 +5,7 @@ import type { Player } from './player';
 import { PERSONALITIES } from './player';
 import { SPAWN_IMMUNITY_TICKS, SPAWN_RADIUS, START_GOLD, START_TROOPS } from './constants';
 import { HABITABLE, IS_LAND } from '../map/terrain';
+import { pickNations } from '../map/nationPick';
 import { inventTribeName } from '../names';
 import { hashString } from '../rng';
 import { GENERALS } from './config';
@@ -36,8 +37,12 @@ export function setupPlayers(game: Game): void {
     p.gold = START_GOLD.human + (cfg.startGold ?? 0);
   }
 
-  // Nations from the map (most important first), placed immediately.
-  const nationSpecs = cfg.mode === 'tribes' ? [] : game.map.meta.nations.slice(0, cfg.nations);
+  // Nations from the map, placed immediately: all of them, or a pick that covers the map
+  // (map/nationPick.ts; the lobby shows the same pick).
+  const nationSpecs =
+    cfg.mode === 'tribes'
+      ? []
+      : pickNations(game.map.meta.nations, cfg.nations, cfg.seed, game.map.width, game.map.height);
   let teamRR = 0;
   for (const spec of nationSpecs) {
     const tile = game.map.idx(spec.x, spec.y);

@@ -10,6 +10,8 @@ import { synthesize, generateDeposits, generateSpawnPoints } from '../../src/cor
 import { flowParents, markEnclosedLakes } from '../../src/core/map/generator';
 import { connectRivers } from '../../src/core/map/rivers';
 import { HABITABLE, T } from '../../src/core/map/terrain';
+import { settleNations } from '../../src/core/map/nationPick';
+import { minIslandTiles, removeSmallIslandsTerrain } from '../../src/core/map/islands';
 import type {
   DepositSpec,
   LocalizedName,
@@ -348,6 +350,13 @@ export function buildWorld(def: WorldDef): { meta: MapMeta; terrain: Uint8Array;
         elevation[y * w + x] = e0[sy * w + sx]!;
       }
   }
+  // Specks under the island floor become the water around them (core/map/islands.ts);
+  // a symmetric board stays symmetric (mirrored islands have mirrored sizes).
+  const isl = removeSmallIslandsTerrain(terrain, elevation, w, h, minIslandTiles(w, h));
+  if (isl.removed)
+    console.log(
+      `  ${def.id}: ${isl.removed} islands < ${minIslandTiles(w, h)} tiles removed (${isl.removedTiles} tiles)`,
+    );
   markEnclosedLakes(terrain, w, h);
   // Navigable rivers (as the real maps): fragments close to the sea are joined to it.
   // Symmetric boards are left alone (a carved channel would break the symmetry).
@@ -410,5 +419,6 @@ export function buildWorld(def: WorldDef): { meta: MapMeta; terrain: Uint8Array;
     author: 'Isoline (procedural)',
     version: 1,
   };
+  settleNations(meta, terrain);
   return { meta, terrain, elevation };
 }

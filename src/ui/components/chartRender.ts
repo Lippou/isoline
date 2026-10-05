@@ -212,9 +212,12 @@ export interface MapNation {
   x: number;
   y: number;
   name: { fr: string; en: string };
+  /** Importance and room (map/nationPick.ts: which nations a game with fewer places). */
+  weight: number;
+  room?: number;
 }
 const metaCache = new Map<string, Promise<MapNation[]>>();
-/** Nations of a shipped map, in file order (the game keeps the first N: core/game/spawn.ts). */
+/** Nations of a shipped map, in file order (a game with fewer picks them: core/map/nationPick.ts). */
 export function nationsOfMap(id: string): Promise<MapNation[]> {
   let p = metaCache.get(id);
   if (!p) {

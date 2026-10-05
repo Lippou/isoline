@@ -199,10 +199,13 @@ describe('nations at sea', () => {
 });
 
 describe('nations against a snowballing human', () => {
-  /** Black Sea, impossible: a scripted attacker whose troops grow 1.5× as fast (a runaway in two minutes). */
+  /**
+   * Black Sea, impossible, all 15 nations (independent of the lobby's pick, map/nationPick.ts):
+   * a scripted attacker whose troops grow 1.5× as fast (a runaway in two minutes).
+   */
   function snowball(): { g: Game; bot: ReturnType<typeof createBot> } {
     const g = makeGame('black-sea', {
-      nations: 12,
+      nations: 15,
       tribes: 20,
       difficulty: 'impossible',
       spawnSeconds: 30,

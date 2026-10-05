@@ -2,6 +2,7 @@
 // leader's share of useful land every 5 minutes and when (if) the game ends, then what
 // the nations did with aviation and radars (built, flown, struck, shot down).
 // Usage: npx tsx scripts/pacing.ts [mapId,mapId…] [difficulty] [maxMinutes] [mode] [seed,seed…] [income|builder]
+// Nations: the map's default lobby count (NATIONS=n to override), with 40 tribes.
 // With the doomsday or battle royale mode, the mode's happenings are counted too
 // (milestones and clock pushes; zone closings and land lost to the zone).
 // `income` adds, every 5 minutes, the gold earned over the last minute by the leader and
@@ -63,7 +64,12 @@ function main(): void {
   for (const id of maps) {
     const map = load(id);
     for (const seed of seeds) {
-      const nations = Math.min(30, map.meta.nations.length);
+      // The map's default lobby count (1.15: one per ~9 000 land tiles, e.g. 173 on the Giant
+      // World); NATIONS=30 for the former fixed 30.
+      const nations = Math.min(
+        Number(process.env.NATIONS ?? map.meta.defaultNations ?? 30),
+        map.meta.nations.length,
+      );
       const g = new Game(map, {
         ...defaultConfig(seed),
         mapId: id,

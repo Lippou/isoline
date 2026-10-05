@@ -6,6 +6,8 @@ import { inventNationName } from '../names';
 import { GameMap, type MapMeta, type NationSpawn } from './gamemap';
 import { generateDeposits, generateSpawnPoints, synthesize } from './synth';
 import { IS_LAND, T } from './terrain';
+import { minIslandTiles, removeSmallIslands } from './islands';
+import { settleNations } from './nationPick';
 
 export interface GenParams {
   seed: number;
@@ -115,6 +117,9 @@ export function generateMapData(p: GenParams): { meta: MapMeta; terrain: Uint8Ar
     }
   }
 
+  // Specks under the island floor become sea or lake (islands.ts, as the shipped maps).
+  removeSmallIslands(land, w, h, minIslandTiles(w, h), lake ? { lake } : {});
+
   // Mountains from ridged noise; rivers by steepest descent.
   const mountains = new Uint8Array(n);
   const mFreq = 6 / Math.max(w, h);
@@ -170,6 +175,7 @@ export function generateMapData(p: GenParams): { meta: MapMeta; terrain: Uint8Ar
     spawnPoints: generateSpawnPoints(w, h, out.terrain, seed),
     deposits: generateDeposits(w, h, out.terrain, seed),
   };
+  settleNations(meta, out.terrain);
   return { meta, terrain: out.terrain, elevation: out.elevation };
 }
 
@@ -397,5 +403,6 @@ export function generateLabyrinth(
     spawnPoints: generateSpawnPoints(w, h, terrain, seed, 200),
     deposits: generateDeposits(w, h, terrain, seed, 1.4),
   };
+  settleNations(meta, terrain);
   return { meta, terrain, elevation };
 }

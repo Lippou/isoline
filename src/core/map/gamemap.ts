@@ -23,8 +23,10 @@ export interface NationSpawn {
   flagSeed: number;
   /** ISO 3166-1 alpha-2 code (lower case) for real countries: real flag and map colour. */
   iso?: string;
-  /** Importance (population / area); the lobby keeps the N most important. */
+  /** Importance (population / area): ranks the list, and counts a little in the lobby's pick. */
   weight: number;
+  /** Land tiles closer to this nation than to any other (map build): the pick covers the map (nationPick.ts). */
+  room?: number;
 }
 
 export interface DepositSpec {
@@ -40,6 +42,8 @@ export interface MapMeta {
   width: number;
   height: number;
   nations: NationSpawn[];
+  /** Nations of a default lobby game on this map (defaultNationCount); absent: min(30, list). */
+  defaultNations?: number;
   spawnPoints: [number, number][];
   deposits: DepositSpec[];
   /** Optional geographic extent (for documentation / day-night longitude). */

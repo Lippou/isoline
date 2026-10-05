@@ -23,6 +23,7 @@
   import { myFlag } from '../stores/profile.svelte';
   import { flagUrl } from '../../render/flags';
   import { hashString } from '../../core/rng';
+  import { pickNations } from '../../core/map/nationPick';
   import type { PlayerFlag } from '../../core/data/flagSpec';
 
   interface MapEntry {
@@ -32,6 +33,8 @@
     width: number;
     height: number;
     nations: number;
+    /** Nations of a default game (shipped maps: one per ~9 000 land tiles, map/nationPick.ts). */
+    defaultNations?: number;
     /** One-line flavour description (shipped maps). */
     desc?: { fr: string; en: string };
     custom?: string;
@@ -126,6 +129,10 @@
     customs = out;
     const current = [...maps, ...customs].find((m) => m.id === cfg.mapId);
     category = cfg.procedural ? 'procedural' : (current?.category ?? 'continents');
+    if (isHost && current && !cfg.procedural && app.lobby.nationsAuto) {
+      cfg.nations = defaultNations(current);
+      push();
+    }
     if (client) {
       client.onLobby = (l) => {
         lobby = l;
@@ -148,11 +155,18 @@
     }
   });
 
+  /** A map's default nation count (custom maps: up to 30, the former default for every map). */
+  function defaultNations(m: MapEntry): number {
+    return Math.min(m.nations, m.defaultNations ?? 30);
+  }
+
   function pickMap(m: MapEntry): void {
     cfg.mapId = m.id;
     delete cfg.procedural;
     randomMap = false;
-    cfg.nations = Math.min(cfg.nations, Math.max(0, m.nations));
+    // Choosing a map brings its own default (a full world on the Giant World).
+    cfg.nations = defaultNations(m);
+    app.lobby.nationsAuto = true;
     push();
     audio.ui('click');
   }
@@ -168,7 +182,9 @@
   function drawMap(): void {
     const pool = maps.length > 1 ? maps.filter((m) => m.id !== cfg.mapId) : maps;
     const m = pool[Math.floor(Math.random() * pool.length)];
-    if (m) cfg.mapId = m.id;
+    if (!m) return;
+    cfg.mapId = m.id;
+    cfg.nations = app.lobby.nationsAuto ? defaultNations(m) : Math.min(cfg.nations, m.nations);
   }
 
   function pickProcedural(): void {
@@ -214,7 +230,8 @@
           ? selected.name[i18n.lang] || selected.name.en
           : '—',
   );
-  // The selected map's nations, in file order: the game places the first cfg.nations of them.
+  // The selected map's nations; the game places all of them, or the pick of cfg.nations that
+  // covers the map (core/map/nationPick.ts, same seed): `shown` lists the picked ones first.
   let nations = $state<MapNation[]>([]);
   $effect(() => {
     const m = selected;
@@ -240,6 +257,12 @@
     };
   });
   const playing = $derived(cfg.mode === 'tribes' ? 0 : Math.min(cfg.nations, nations.length));
+  const shownNations = $derived.by(() => {
+    if (!selected || playing >= nations.length) return nations;
+    const picked = pickNations(nations, playing, cfg.seed, selected.width, selected.height);
+    const set = new Set(picked);
+    return [...picked, ...nations.filter((n) => !set.has(n))];
+  });
 
   // Flags: the picker saves the choice in the profile; in LAN it is also sent to the host.
   let pickingFlag = $state(false);
@@ -532,9 +555,12 @@
             ><span>{t('lobby.nations')} <b class="mono">{cfg.nations}</b></span><input
               type="range"
               min="0"
-              max={Math.min(100, selected?.nations ?? 100)}
+              max={selected?.nations ?? 100}
               bind:value={cfg.nations}
-              onchange={push}
+              onchange={() => {
+                app.lobby.nationsAuto = false;
+                push();
+              }}
               disabled={!isHost}
               data-testid="opt-nations"
               use:rangeFill={[cfg.nations, selected?.nations]}
@@ -722,7 +748,7 @@
                 mapH={selected.height}
                 width={960}
                 fit="contain"
-                {nations}
+                nations={shownNations}
                 active={playing}
               />
             {/if}
