@@ -21,6 +21,13 @@ import { generateMapData, generateLabyrinth, markEnclosedLakes } from '../../src
 import type { MapMeta, MapCategory, NationSpawn, LocalizedName } from '../../src/core/map/gamemap';
 import { HABITABLE, IS_LAND, IS_WATER, T, TERRAIN } from '../../src/core/map/terrain';
 import { connectRivers } from '../../src/core/map/rivers';
+import {
+  landComponents,
+  minIslandTiles,
+  removeSmallIslands,
+  type IslandReport,
+} from '../../src/core/map/islands';
+import { settleNations } from '../../src/core/map/nationPick';
 import { hashString } from '../../src/core/rng';
 import { REGIONS, DESCRIPTIONS, type ExtraNation, type ReliefLine } from './catalogue';
 import { FANTASY, buildFantasy } from './fantasy';
@@ -273,7 +280,7 @@ const REAL_MAPS: RealMapDef[] = [
     category: 'continents',
     proj: miller(2000, -180, 180, -62, 82),
     riverRank: 4,
-    maxNations: 100,
+    maxNations: 240,
   },
   {
     id: 'world-giant',
@@ -281,7 +288,7 @@ const REAL_MAPS: RealMapDef[] = [
     category: 'continents',
     proj: miller(3200, -180, 180, -62, 82),
     riverRank: 5,
-    maxNations: 100,
+    maxNations: 240,
   },
   {
     id: 'europe',
@@ -289,7 +296,7 @@ const REAL_MAPS: RealMapDef[] = [
     category: 'continents',
     proj: equirect(1500, -25, 45, 34, 71.5),
     riverRank: 7,
-    maxNations: 60,
+    maxNations: 70,
   },
   {
     id: 'north-america',
@@ -297,7 +304,7 @@ const REAL_MAPS: RealMapDef[] = [
     category: 'continents',
     proj: equirect(1600, -170, -50, 7, 75),
     riverRank: 6,
-    maxNations: 40,
+    maxNations: 50,
   },
   {
     id: 'south-america',
@@ -313,7 +320,7 @@ const REAL_MAPS: RealMapDef[] = [
     category: 'continents',
     proj: equirect(1350, -20, 55, -37, 39),
     riverRank: 7,
-    maxNations: 60,
+    maxNations: 80,
   },
   {
     id: 'asia',
@@ -321,7 +328,7 @@ const REAL_MAPS: RealMapDef[] = [
     category: 'continents',
     proj: equirect(1700, 25, 150, -12, 78),
     riverRank: 6,
-    maxNations: 60,
+    maxNations: 80,
   },
   {
     id: 'oceania',
@@ -329,7 +336,7 @@ const REAL_MAPS: RealMapDef[] = [
     category: 'continents',
     proj: equirect(1600, 105, 185, -50, 5),
     riverRank: 7,
-    maxNations: 30,
+    maxNations: 40,
   },
   {
     id: 'mediterranean',
@@ -365,8 +372,125 @@ const REAL_MAPS: RealMapDef[] = [
   })),
 ];
 
+/** Natural Earth entries that are no country to play (uninhabited, or a glacier). */
+const NOT_NATIONS = [
+  'Siachen Glacier',
+  'Antarctica',
+  'Fr. S. Antarctic Lands',
+  'Heard I. and McDonald Is.',
+  'Ashmore and Cartier Is.',
+  'Indian Ocean Ter.',
+  'Br. Indian Ocean Ter.',
+  'S. Geo. and the Is.',
+];
+
+/**
+ * Display names replacing Natural Earth's map abbreviations (« Dem. Rep. Congo ») and formal
+ * names (« République populaire de Chine »), by ISO code. The flag seed (personality, general)
+ * still hashes Natural Earth's NAME, so these nations keep their character.
+ */
+const NAME_FIX: Record<string, Partial<LocalizedName>> = {
+  cn: { fr: 'Chine' },
+  us: { en: 'United States' },
+  cd: { en: 'DR Congo', fr: 'RD Congo' },
+  cf: { en: 'Central African Republic', fr: 'Centrafrique' },
+  ss: { en: 'South Sudan' },
+  do: { en: 'Dominican Republic' },
+  ba: { en: 'Bosnia and Herzegovina' },
+  gq: { en: 'Equatorial Guinea' },
+  eh: { en: 'Western Sahara' },
+  sb: { en: 'Solomon Islands' },
+  fk: { en: 'Falkland Islands', fr: 'Îles Malouines' },
+  fm: { fr: 'Micronésie' },
+  vc: { en: 'Saint Vincent', fr: 'Saint-Vincent' },
+  ag: { en: 'Antigua and Barbuda' },
+  kn: { en: 'Saint Kitts and Nevis' },
+  st: { en: 'São Tomé and Príncipe', fr: 'São Tomé-et-Príncipe' },
+  sz: { en: 'Eswatini' },
+  vi: { en: 'US Virgin Islands', fr: 'Îles Vierges des États-Unis' },
+  vg: { en: 'British Virgin Islands', fr: 'Îles Vierges britanniques' },
+  ky: { en: 'Cayman Islands', fr: 'Îles Caïmans' },
+  tc: { en: 'Turks and Caicos', fr: 'Îles Turques-et-Caïques' },
+  fo: { en: 'Faroe Islands', fr: 'Îles Féroé' },
+  im: { fr: 'Île de Man' },
+  pm: { en: 'Saint Pierre and Miquelon' },
+  mh: { en: 'Marshall Islands' },
+  mp: { en: 'Northern Mariana Islands', fr: 'Îles Mariannes du Nord' },
+  pf: { en: 'French Polynesia' },
+  ck: { en: 'Cook Islands' },
+  wf: { en: 'Wallis and Futuna' },
+};
+
+/** Spawn anchors replacing Natural Earth's label point (lon, lat), by ISO code. */
+const LABEL_AT: Record<string, [number, number]> = {
+  gl: [-50.6, 66.9], // Greenland: the ice-free west coast (Kangerlussuaq), not the ice sheet
+};
+
+/**
+ * Large regions of the giant countries, so that a full world is not five blobs (OpenFront's
+ * Giant World also splits Russia, Canada, the United States, Brazil and Australia).
+ */
+const WORLD_REGIONS: ExtraNation[] = [
+  { fr: 'Sibérie', en: 'Siberia', lon: 92, lat: 61, weight: 3000 },
+  { fr: 'Iakoutie', en: 'Yakutia', lon: 128, lat: 64, weight: 1800 },
+  { fr: 'Extrême-Orient', en: 'Far East', lon: 136, lat: 50, weight: 2200 },
+  { fr: 'Oural', en: 'Urals', lon: 62, lat: 58, weight: 2600 },
+  { fr: 'Alaska', en: 'Alaska', lon: -151, lat: 63, weight: 1600 },
+  { fr: 'Québec', en: 'Quebec', lon: -72, lat: 51, weight: 3200 },
+  { fr: 'Ontario', en: 'Ontario', lon: -85, lat: 50, weight: 3500 },
+  { fr: 'Colombie-Britannique', en: 'British Columbia', lon: -124, lat: 55, weight: 2600 },
+  { fr: 'Nunavut', en: 'Nunavut', lon: -95, lat: 66, weight: 800 },
+  { fr: 'Texas', en: 'Texas', lon: -99, lat: 31.5, weight: 5500 },
+  { fr: 'Californie', en: 'California', lon: -120, lat: 37.5, weight: 6200 },
+  { fr: 'Floride', en: 'Florida', lon: -82, lat: 28.5, weight: 4700 },
+  { fr: 'Nouvelle-Angleterre', en: 'New England', lon: -72, lat: 43.5, weight: 4000 },
+  { fr: 'Amazonas', en: 'Amazonas', lon: -64, lat: -4, weight: 2400 },
+  { fr: 'Nordeste', en: 'Nordeste', lon: -40, lat: -7, weight: 7400 },
+  { fr: 'Patagonie', en: 'Patagonia', lon: -69, lat: -45, weight: 1500 },
+  { fr: 'Australie-Occidentale', en: 'Western Australia', lon: 121, lat: -26, weight: 2000 },
+  { fr: 'Queensland', en: 'Queensland', lon: 145, lat: -22, weight: 2600 },
+];
+const regions = (...en: string[]): ExtraNation[] => WORLD_REGIONS.filter((r) => en.includes(r.en));
+
 // Sub-national nations for maps where countries are too few or too big.
 const EXTRA_NATIONS: Record<string, ExtraNation[]> = {
+  world: WORLD_REGIONS,
+  'world-giant': WORLD_REGIONS,
+  'north-america': [
+    ...regions(
+      'Alaska',
+      'Quebec',
+      'Ontario',
+      'British Columbia',
+      'Nunavut',
+      'Texas',
+      'California',
+      'Florida',
+      'New England',
+    ),
+    { fr: 'Yukon', en: 'Yukon', lon: -135, lat: 63, weight: 700 },
+    { fr: 'Prairies', en: 'Prairies', lon: -108, lat: 53, weight: 2400 },
+    { fr: 'Labrador', en: 'Labrador', lon: -62, lat: 54, weight: 600 },
+    { fr: 'Midwest', en: 'Midwest', lon: -89, lat: 42, weight: 5200 },
+    { fr: 'Rocheuses', en: 'Rockies', lon: -108, lat: 42, weight: 3000 },
+    { fr: 'Cascadia', en: 'Cascadia', lon: -121, lat: 46, weight: 3200 },
+    { fr: 'Dixie', en: 'Dixie', lon: -87, lat: 33, weight: 4800 },
+    { fr: 'Yucatán', en: 'Yucatán', lon: -89, lat: 20, weight: 2000 },
+  ],
+  'south-america': [
+    ...regions('Amazonas', 'Nordeste', 'Patagonia'),
+    { fr: 'Mato Grosso', en: 'Mato Grosso', lon: -56, lat: -13, weight: 1900 },
+    { fr: 'Pampa', en: 'Pampas', lon: -62, lat: -36, weight: 3000 },
+  ],
+  oceania: [
+    { fr: 'Indonésie', en: 'Indonesia', lon: 110.5, lat: -7.3, iso: 'id', weight: 16800 },
+    ...regions('Western Australia', 'Queensland'),
+    { fr: 'Territoire du Nord', en: 'Northern Territory', lon: 133, lat: -19, weight: 900 },
+    { fr: 'Nouvelle-Galles du Sud', en: 'New South Wales', lon: 147, lat: -32, weight: 3200 },
+    { fr: 'Australie-Méridionale', en: 'South Australia', lon: 135, lat: -30, weight: 1700 },
+    { fr: 'Victoria', en: 'Victoria', lon: 144, lat: -37, weight: 3000 },
+  ],
+  asia: regions('Siberia', 'Yakutia', 'Far East', 'Urals'),
   'black-sea': [
     { fr: 'Crimée', en: 'Crimea', lon: 34.1, lat: 45.0 },
     { fr: 'Anatolie', en: 'Anatolia', lon: 33, lat: 39.8 },
@@ -448,32 +572,21 @@ function reliefField(
   return relief;
 }
 
-/** Size (tiles) of the passable landmass each tile belongs to (0 for water). */
-function landmassSizes(terrain: Uint8Array, w: number, h: number): Int32Array {
-  const n = w * h;
-  const comp = new Int32Array(n).fill(-1);
-  const out = new Int32Array(n);
-  const stack: number[] = [];
-  const members: number[] = [];
-  for (let s = 0; s < n; s++) {
-    if (comp[s] !== -1 || !HABITABLE[terrain[s]!]) continue;
-    members.length = 0;
-    comp[s] = s;
-    stack.push(s);
-    while (stack.length) {
-      const i = stack.pop()!;
-      members.push(i);
-      const x = i % w;
-      for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w]) {
-        if (j < 0 || j >= n || comp[j] !== -1 || !HABITABLE[terrain[j]!]) continue;
-        comp[j] = s;
-        stack.push(j);
-      }
-    }
-    for (const i of members) out[i] = members.length;
-  }
-  return out;
+/** Area of polygons once projected (tiles). */
+function projectedArea(proj: Projection, polys: Polygon[]): number {
+  let area = 0;
+  for (const poly of polys)
+    poly.forEach((ring, k) => {
+      let a = 0;
+      const pts = ring.map(([lon, lat]) => proj.project(proj.normLon(lon), lat));
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++)
+        a += (pts[j]![0] + pts[i]![0]) * (pts[j]![1] - pts[i]![1]);
+      area += (k === 0 ? 1 : -1) * Math.abs(a / 2);
+    });
+  return area;
 }
+
+const islandLog: ({ id: string; min: number } & IslandReport)[] = [];
 
 function buildReal(def: RealMapDef, data: Record<string, Feature[]>): void {
   const t0 = Date.now();
@@ -531,6 +644,98 @@ function buildReal(def: RealMapDef, data: Record<string, Feature[]>): void {
     if (!land[i]) masks.rivers[i] = 0;
   }
 
+  // Nations, chosen on the land mask (before synthesis) so that their islands can be kept.
+  const minIsland = minIslandTiles(w, h);
+  const raw = landComponents(land, w, h);
+  const snapMask = (x: number, y: number): [number, number] | null => {
+    const xi = Math.round(x),
+      yi = Math.round(y);
+    for (let r = 0; r < 25; r++) {
+      for (let dy = -r; dy <= r; dy++)
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const px = xi + dx,
+            py = yi + dy;
+          if (px < 2 || py < 2 || px >= w - 2 || py >= h - 2) continue;
+          if (land[py * w + px]) return [px, py];
+        }
+    }
+    return null;
+  };
+  const massOf = ([x, y]: [number, number]) => raw.sizes[raw.id[y * w + x]!] ?? 0;
+  const tooSmall = (s: [number, number]) => !!def.minLandmass && massOf(s) < def.minLandmass;
+  const nations: NationSpawn[] = [];
+  // Most populous first, so that when two label points fall together the bigger one stays.
+  const countries = [...data.countries!].sort(
+    (a, b) => Number(b.props.POP_EST ?? 0) - Number(a.props.POP_EST ?? 0),
+  );
+  for (const f of countries) {
+    const p = f.props;
+    const en = String(p.NAME ?? p.NAME_EN);
+    const iso = String(p.ISO_A2_EH ?? '-99');
+    if (NOT_NATIONS.includes(en)) continue;
+    const at = LABEL_AT[iso.toLowerCase()];
+    const lon = proj.normLon(at ? at[0] : Number(p.LABEL_X));
+    const lat = at ? at[1] : Number(p.LABEL_Y);
+    const [x, y] = proj.project(lon, lat);
+    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+    const s = snapMask(x, y);
+    if (!s || tooSmall(s)) continue;
+    // Countries that do not fit are no nation: micro-states (under 100 000 people) and small
+    // territories (under a million), unless their land reaches the island floor on this map
+    // (Greenland, the Falklands on the Giant World). Island states that stay keep their
+    // island, grown to the floor (Malta, Singapore, Barbados…).
+    const pop = Number(p.POP_EST ?? 0);
+    const sovereign =
+      ['Sovereign country', 'Sovereignty'].includes(String(p.TYPE)) || p.SOVEREIGNT === p.ADMIN;
+    if (pop < (sovereign ? 100_000 : 1_000_000) && projectedArea(proj, f.polys) < minIsland) continue;
+    const fr = String(p.NAME_FR ?? en);
+    if (nations.some((nn) => Math.hypot(nn.x - s[0], nn.y - s[1]) < 6)) continue;
+    if (def.exclude && (def.exclude.includes(iso.toLowerCase()) || def.exclude.includes(en))) continue;
+    const fix = NAME_FIX[iso.toLowerCase()];
+    nations.push({
+      name: { fr: fix?.fr ?? fr, en: fix?.en ?? en },
+      x: s[0],
+      y: s[1],
+      flagSeed: hashString(en + def.id),
+      weight: Math.round(Math.sqrt(pop) + 400),
+      ...(iso !== '-99' ? { iso: iso.toLowerCase() } : {}),
+    });
+  }
+  for (const e of def.extras ?? EXTRA_NATIONS[def.id] ?? []) {
+    if (e.iso && nations.some((nn) => nn.iso === e.iso)) continue;
+    const [x, y] = proj.project(proj.normLon(e.lon), e.lat);
+    const s = snapMask(x, y);
+    if (!s || tooSmall(s) || nations.some((nn) => Math.hypot(nn.x - s[0], nn.y - s[1]) < 10)) {
+      console.warn(`  ${def.id}: could not place ${e.en}`);
+      continue;
+    }
+    nations.push({
+      name: { fr: e.fr, en: e.en },
+      x: s[0],
+      y: s[1],
+      flagSeed: hashString(e.en + def.id),
+      weight: e.weight ?? 2500,
+      ...(e.iso ? { iso: e.iso } : {}),
+    });
+  }
+  nations.sort((a, b) => b.weight - a.weight);
+  nations.length = Math.min(nations.length, def.maxNations);
+
+  // Small islands (OpenFront's minIslandSize, scaled): specks become sea (or lake), the
+  // islands of the nations kept above are grown to the floor.
+  const islands = removeSmallIslands(land, w, h, minIsland, {
+    keep: nations.map((nn) => nn.y * w + nn.x),
+    noGrow: straits,
+    lake,
+  });
+  console.log(
+    `  ${def.id}: islands < ${minIsland} tiles: ${islands.removed} removed (${islands.removedTiles} tiles), ` +
+      `${islands.kept} nation islands grown (+${islands.grownTiles} tiles)`,
+  );
+  islandLog.push({ id: def.id, min: minIsland, ...islands });
+  for (let i = 0; i < n; i++) if (!land[i]) masks.rivers[i] = 0;
+
   const seed = hashString(def.id);
   const relief = def.relief || def.rugged ? reliefField(def, masks, seed) : undefined;
   const { terrain, elevation } = synthesize({
@@ -563,80 +768,50 @@ function buildReal(def: RealMapDef, data: Record<string, Feature[]>): void {
   const joined = connectRivers(terrain, w, h, riverGap);
   if (joined) console.log(`  ${def.id}: ${joined} river tiles carved to reach the sea`);
 
-  // Nations from Natural Earth country label points (+ curated regional extras).
-  const nations: NationSpawn[] = [];
-  const landmass = def.minLandmass ? landmassSizes(terrain, w, h) : null;
-  const tooSmall = ([x, y]: [number, number]) => !!landmass && landmass[y * w + x]! < def.minLandmass!;
-  const snap = (x: number, y: number): [number, number] | null => {
-    const xi = Math.round(x),
-      yi = Math.round(y);
-    for (let r = 0; r < 25; r++) {
-      for (let dy = -r; dy <= r; dy++)
+  // Spawns: the nearest habitable lowland tile on the nation's own landmass.
+  const comps = landComponents(land, w, h);
+  const placed: NationSpawn[] = [];
+  for (const nn of nations) {
+    const c = comps.id[nn.y * w + nn.x]!;
+    let spot: [number, number] | null = null;
+    let fallback: [number, number] | null = null;
+    // Lowland within 25 tiles (as before), else the nearest mountain; ice sheets search further.
+    for (let r = 0; r < 60 && !spot && !(r >= 25 && fallback); r++)
+      for (let dy = -r; dy <= r && !spot; dy++)
         for (let dx = -r; dx <= r; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-          const px = xi + dx,
-            py = yi + dy;
+          const px = nn.x + dx,
+            py = nn.y + dy;
           if (px < 2 || py < 2 || px >= w - 2 || py >= h - 2) continue;
-          const t = terrain[py * w + px]!;
-          if (HABITABLE[t] && t !== T.Mountain) return [px, py];
+          const i = py * w + px;
+          const t = terrain[i]!;
+          if (comps.id[i] !== c || !HABITABLE[t]) continue;
+          if (t !== T.Mountain) {
+            spot = [px, py];
+            break;
+          }
+          fallback ??= [px, py];
         }
-    }
-    return null;
-  };
-  for (const f of data.countries!) {
-    const p = f.props;
-    const lon = proj.normLon(Number(p.LABEL_X));
-    const lat = Number(p.LABEL_Y);
-    const [x, y] = proj.project(lon, lat);
-    if (x < 0 || y < 0 || x >= w || y >= h) continue;
-    const s = snap(x, y);
-    if (!s || tooSmall(s)) continue;
-    const pop = Number(p.POP_EST ?? 0);
-    const en = String(p.NAME ?? p.NAME_EN);
-    const fr = String(p.NAME_FR ?? en);
-    if (nations.some((nn) => Math.hypot(nn.x - s[0], nn.y - s[1]) < 6)) continue;
-    const iso = String(p.ISO_A2_EH ?? '-99');
-    if (def.exclude && (def.exclude.includes(iso.toLowerCase()) || def.exclude.includes(en))) continue;
-    // Key order (weight before iso) matches the shipped JSON byte for byte.
-    nations.push({
-      name: { fr, en },
-      x: s[0],
-      y: s[1],
-      flagSeed: hashString(en + def.id),
-      weight: Math.round(Math.sqrt(pop) + 400),
-      ...(iso !== '-99' ? { iso: iso.toLowerCase() } : {}),
-    });
-  }
-  for (const e of def.extras ?? EXTRA_NATIONS[def.id] ?? []) {
-    if (e.iso && nations.some((nn) => nn.iso === e.iso)) continue;
-    const [x, y] = proj.project(proj.normLon(e.lon), e.lat);
-    const s = snap(x, y);
-    if (!s || tooSmall(s) || nations.some((nn) => Math.hypot(nn.x - s[0], nn.y - s[1]) < 10)) {
-      if (def.extras) console.warn(`  ${def.id}: could not place ${e.en}`);
+    spot ??= fallback;
+    if (!spot || placed.some((o) => Math.hypot(o.x - spot[0], o.y - spot[1]) < 3)) {
+      console.warn(`  ${def.id}: no spawn for ${nn.name.en}`);
       continue;
     }
-    nations.push({
-      name: { fr: e.fr, en: e.en },
-      x: s[0],
-      y: s[1],
-      flagSeed: hashString(e.en + def.id),
-      weight: e.weight ?? 2500,
-      ...(e.iso ? { iso: e.iso } : {}),
-    });
+    placed.push({ ...nn, x: spot[0], y: spot[1] });
   }
-  nations.sort((a, b) => b.weight - a.weight);
   const meta: MapMeta = {
     id: def.id,
     name: def.name,
     category: def.category,
     width: w,
     height: h,
-    nations: nations.slice(0, def.maxNations),
+    nations: placed,
     spawnPoints: generateSpawnPoints(w, h, terrain, seed, 320),
     deposits: generateDeposits(w, h, terrain, seed),
     author: 'Isoline (Natural Earth data)',
     version: 1,
   };
+  settleNations(meta, terrain);
   writeMap(meta, terrain, elevation);
   console.log(
     `${def.id.padEnd(14)} ${w}×${h} (${(n / 1e6).toFixed(2)} M) nations=${meta.nations.length} ${Date.now() - t0} ms`,
@@ -837,6 +1012,7 @@ function writeIndex(): void {
         width: m.width,
         height: m.height,
         nations: m.nations.length,
+        defaultNations: m.defaultNations ?? Math.min(30, m.nations.length),
         ...(desc ? { desc } : {}),
       };
     });

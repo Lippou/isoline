@@ -6,6 +6,8 @@ import { Rng } from '../../src/core/rng';
 import { inventNationName } from '../../src/core/names';
 import { synthesize, generateDeposits, generateSpawnPoints } from '../../src/core/map/synth';
 import { flowParents, markEnclosedLakes } from '../../src/core/map/generator';
+import { settleNations } from '../../src/core/map/nationPick';
+import { minIslandTiles, removeSmallIslands } from '../../src/core/map/islands';
 import type { LocalizedName, MapMeta, NationSpawn } from '../../src/core/map/gamemap';
 
 interface ShapeCtx {
@@ -402,6 +404,12 @@ export function buildFantasy(def: FantasyDef): { meta: MapMeta; terrain: Uint8Ar
   const noiseC = new Noise2D(seed + 202);
   const { land, lake, ridgeBias, relief } = def.shape({ w, h, rng, noise, noiseB, noiseC });
   const pxKm = (9000 / Math.sqrt(n)) * 1.6; // same nominal scale as the procedural generator
+  // Specks under the island floor become sea or lake (core/map/islands.ts).
+  const isl = removeSmallIslands(land, w, h, minIslandTiles(w, h), lake ? { lake } : {});
+  if (isl.removed)
+    console.log(
+      `  ${def.id}: ${isl.removed} islands < ${minIslandTiles(w, h)} tiles removed (${isl.removedTiles} tiles)`,
+    );
 
   // Mountains: ridged noise (+ shape bias), top fraction of the land.
   const mFreq = 6 / Math.max(w, h);
@@ -478,5 +486,6 @@ export function buildFantasy(def: FantasyDef): { meta: MapMeta; terrain: Uint8Ar
     author: 'Isoline (procedural)',
     version: 1,
   };
+  settleNations(meta, out.terrain);
   return { meta, terrain: out.terrain, elevation: out.elevation };
 }

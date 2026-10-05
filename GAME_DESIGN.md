@@ -66,9 +66,9 @@ Chaque tuile a un type de terrain (13 types), une altitude (0–255) et un éven
 
 | Catégorie | Cartes | Taille (tuiles) |
 |---|---|---|
-| Continents | Monde (projection de Miller, 82°N–62°S) | 2000×1007 (2,01 M) |
-| | Monde géant | 3200×1612 (5,16 M) |
-| | Europe, Amérique du Nord, Amérique du Sud, Afrique, Asie, Océanie | 1,5 à 2,5 M |
+| Continents | Monde (projection de Miller, 82°N–62°S ; 207 nations, 43 par défaut) | 2000×1007 (2,01 M) |
+| | Monde géant (209 nations, 173 par défaut) | 3200×1612 (5,16 M) |
+| | Europe (50), Amérique du Nord (40), Amérique du Sud (27), Afrique (69), Asie (78), Océanie (18) | 1,5 à 2,5 M |
 | Régions | Méditerranée, Mer Noire | 1,42 M / 0,95 M |
 | | Îles Britanniques (26 nations), Scandinavie & Baltique (28), Balkans (31), Moyen-Orient (36) | 1,96 M / 2,14 M / 2,25 M / 2,23 M |
 | | Sous-continent indien (25), Japon & Corée (19), Asie du Sud-Est (31), Caraïbes (25) | 1,96 M / 1,85 M / 2,30 M / 2,01 M |
@@ -91,7 +91,7 @@ Chaque tuile a un type de terrain (13 types), une altitude (0–255) et un éven
 
 **Palettes de carte** (`palette` dans le JSON de la carte, `src/render/worldPalette.ts`) : visuelles seulement, les terrains gardent leurs règles. `mars` (sol rouille, dunes ocre, givre de CO₂, océan bleu-vert), `moon` (régolithe gris, remparts clairs, mers de basalte sombres), `titan` (plaines orangées, dunes brunes, Xanadu clair, mers de méthane presque noires), `pixel` (aplats de console, côtes nettes, eau par paliers). Le shader de la carte (`uWorld`) et la minicarte en tiennent compte ; les aperçus du lobby gardent le style carte marine commun.
 
-**Rythme** (`npx tsx scripts/pacing.ts <id> normal 90`, 30 nations au plus et 40 tribus, trois graines) : toutes les parties se terminent entre 28 et 55 minutes sur ces cartes.
+**Rythme** (`npx tsx scripts/pacing.ts <id> normal 90`, nombre de nations par défaut de la carte, §3.5, et 40 tribus) : toutes les parties se terminent entre 28 et 55 minutes sur ces cartes ; le Monde géant, à 173 nations, entre 46 et 55 minutes (45 à 47 à 30 nations avant la 1.15), le Monde, à 43, entre 45 et 50.
 
 Régénération : `npm run maps` (toutes les cartes), ou `npm run maps -- british-isles,ring` (identifiants, `real` ou `fictional`). La sortie est déterministe et les cartes existantes ressortent identiques à l'octet près. `index.json` porte aussi une courte description FR/EN (`desc`) de chaque carte.
 
@@ -103,11 +103,31 @@ Les **fleuves** sont tracés en 4-connexité (un pas à la fois, jamais en diago
 
 **Fichiers** (`assets/maps/`) : `<id>.png` (couleur = terrain), `<id>.elev.png` (altitude), `<id>.json` (nom FR/EN, taille, points de spawn, nations avec nom, position et graine de drapeau, gisements), `<id>.thumb.png` (miniature). Les cartes personnalisées sont des fichiers `.isomap` (JSON contenant les deux PNG en base64 et les métadonnées).
 
+### 3.4 Petites îles (1.15)
+
+Retour de test : « toutes les petites îles, elles sont chiantes à les récupérer. Il faudrait que pour qu'il y ait une île, il faille X nombre de tuiles minimum. » Le générateur de cartes d'OpenFront (`map-generator/map_generator.go`) supprime toute masse de terre de moins de **30 tuiles** (`minIslandSize`, 4-connexité) et la remplace par le type de ses voisins (`majorityNeighborType`). Isoline fait de même (`src/core/map/islands.ts`), avec un seuil un peu plus haut et proportionné à la carte : **40 tuiles** jusqu'à 1,5 M de tuiles (un peu moins qu'un disque de départ, 52), multiplié par (surface ÷ 1,5 M)^¼ au-delà (`minIslandTiles` : Monde 43, Monde géant 54, cartes régionales 40 à 45). Une racine carrée (74 sur le Monde géant) effaçait aussi la Corse, la Crète et la grande île d'Hawaï.
+
+- **Où** : sur le masque de terre, avant la synthèse du relief (cartes réelles, dessinées, générateur procédural : la côte, les hauts-fonds et les biomes se recalculent autour) ; sur le terrain fini pour les packs (`removeSmallIslandsTerrain`, murs compris comme barrière, comme les masses terrestres du jeu). La symétrie des plateaux d'arcade est préservée.
+- **Lacs** : on ne retire que de la terre ; aucun plan d'eau n'est modifié. Un îlot dans un lac devient du lac, pas de la mer.
+- **Nations** : l'île d'une nation de la carte est gardée et **agrandie** jusqu'au seuil (en cercle autour de son centre, jamais collée à une autre terre ni dans un détroit creusé) : Malte, Singapour, Maurice, la Barbade, les États du Pacifique.
+- **Mesures** (îlots retirés, tuiles) : Monde géant 3 538 (9 734, 0,6 % des terres ; 19 îles de nations agrandies), Monde 2 328 (5 572 ; 23), Asie 1 657, Amérique du Nord 1 235, Europe 1 169, Asie du Sud-Est 1 010, Océanie 891, Scandinavie 823, Caraïbes 763, Japon & Corée 458, Méditerranée 366, Amérique du Sud 326, Afrique 306, Moyen-Orient 256, Balkans 215, Inde 207, Îles Britanniques 73, Mer Noire 51 ; Archipel 78, Fjords 59, Olympe 25, Flibustiers 24. Masses de terre restantes : Monde géant 150 (3 688 avant), Monde 105 (2 433), Caraïbes 39 (802), Îles Britanniques 36 (109). Les îles de plus de 300 tuiles restent toutes.
+- Les **cartes de l'éditeur** ne sont pas filtrées : l'auteur garde ce qu'il a dessiné.
+
+### 3.5 Nations des grandes cartes (1.15)
+
+Retour de test : « dans les maps géantes, plus de nations… je vois jamais Algérie, Maroc… pour le Groenland, tu peux faire une nation Groenland. » Les nations des cartes réelles viennent des pays Natural Earth (point d'étiquette, population) et de régions placées à la main (`scripts/maps/build-maps.ts`).
+
+- **Listes** : Monde géant **209** nations (100 avant), Monde 207 (100) : presque tous les pays, plus de grandes régions des pays immenses, comme le Monde géant d'OpenFront (107 nations, dont Sibérie, Texas, Québec, Alaska, Groenland) : Sibérie, Iakoutie, Extrême-Orient, Oural, Alaska, Québec, Ontario, Colombie-Britannique, Nunavut, Texas, Californie, Floride, Nouvelle-Angleterre, Amazonas, Nordeste, Patagonie, Australie-Occidentale, Queensland. Continents : Asie 78, Afrique 69, Europe 50, Amérique du Nord 40 (avec ses États et provinces), Amérique du Sud 27, Océanie 18.
+- **Ce qui n'est pas une nation** : un État de moins de 100 000 habitants ou un territoire de moins d'un million, sauf si sa terre atteint le seuil des îles (Groenland, Malouines sur le Monde géant) ; les terres inhabitées (Antarctique, Terres australes…) et le glacier de Siachen. Le Groenland apparaît sur sa côte ouest (Kangerlussuaq), pas sur l'inlandsis. Noms français et anglais de Natural Earth, abréviations corrigées (« RD Congo », « Chine », « Îles Malouines »…).
+- **Nombre par défaut** (`defaultNations` dans le JSON et `index.json`, `defaultNationCount`) : une nation pour 9 000 tuiles de terre, 9 000 × √(1,5 M ÷ terres) sur les cartes de moins de 1,5 M de tuiles de terre, au moins 30, au plus la liste : 173 sur le Monde géant, 43 sur le Monde, la liste entière ailleurs. Mesuré : le Monde à 68 nations finissait en 49, 60 et 88 min ; à 43, en 45 à 50 min (graines 1234, 7, 99). Choisir une carte remet son nombre par défaut ; le curseur va jusqu'à la liste entière.
+- **Choix des nations** (`pickNations`, `src/core/map/nationPick.ts`) quand la partie en demande moins que la liste : avant, les N plus peuplées (à 30 sur le Monde, aucune en Océanie, une seule au Maghreb). Désormais un choix glouton qui couvre la carte : chaque nation vaut `place^0,3 × √poids × aléa (±15 %, graine de la partie) × proximité`, où la **place** est le nombre de tuiles de terre plus proches d'elle que de toute autre nation de la carte (calculé à la construction, `room` dans le JSON), et la proximité `min(1, distance à la nation choisie la plus proche ÷ écart moyen de N nations sur les terres)`. Un îlot isolé vaut peu (sa place est petite), le Groenland ou la Mongolie beaucoup ; les voisins d'une nation retenue attendent leur tour. Déterministe : même carte, même nombre, même graine, mêmes nations ; l'aperçu de la création de partie les montre (§4).
+- **Coût** (`scripts/ai-bench.ts`) : IA 0,37 ms par tick en moyenne à 173 nations et 60 tribus sur le Monde géant (p99 4,8 ms ; 0,19 ms à 100 nations), simulation entière 1,9 ms par tick : loin du budget de 100 ms d'un tick.
+
 ## 4. Apparition (spawn)
 
 - **La partie commence dès que tous les joueurs humains ont posé leur capitale.** Le minuteur (30 s par défaut, 15 à 90 s dans le lobby) ne sert qu'à borner l'attente : à son terme, les retardataires sont placés automatiquement.
 - Un clic revendique le **disque de départ d'OpenFront** : les tuiles dont la position relative au clic, décalée d'une demi-tuile, `(dx + ½, dy + ½)`, tient dans un rayon de 4, soit un disque de 8 × 8 de **52 tuiles** (terre libre de la même masse terrestre). **Nations et tribus** reçoivent le même disque (avant : rayon 8, ~200 tuiles, et rayon 5 pour les tribus). En réseau, tant qu'un autre joueur n'a pas choisi, on peut encore déplacer sa capitale.
-- Les joueurs qui n'ont pas choisi reçoivent un point de spawn aléatoire. Les nations sont placées **avant** les joueurs, à leur position prédéfinie. Les tribus occupent des points réservés, à au moins 14 tuiles de toute terre déjà prise.
+- Les joueurs qui n'ont pas choisi reçoivent un point de spawn aléatoire. Les nations sont placées **avant** les joueurs, à leur position prédéfinie : toutes celles de la carte, ou, si la partie en demande moins, celles du choix réparti de §3.5. Les tribus occupent des points réservés, à au moins 14 tuiles de toute terre déjà prise.
 - **Immunité** : 60 s pour les humains après le début. Personne ne peut les attaquer ; un bouclier s'affiche dans le HUD.
 - Troupes de départ : humain 12 500 ; nation 6 250 / 9 375 / 12 500 / 15 625 (Facile / Normal / Difficile / Impossible) ; tribu 5 000, soit **la moitié des valeurs d'OpenFront** (25 000 ; 12 500 à 31 250 ; 10 000, §5). Les tribus démarrent avec un trésor de 60 000 or.
 

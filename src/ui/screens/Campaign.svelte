@@ -9,6 +9,7 @@
   import PageHeader from '../PageHeader.svelte';
   import ChartMap from '../components/ChartMap.svelte';
   import { nationsOfMap, type MapNation } from '../components/chartRender';
+  import { pickNations } from '../../core/map/nationPick';
   import { contourFamily } from '../components/contours';
 
   const unlocked = (k: number) => k === 0 || (profile.campaign[MISSIONS[k - 1]!.id] ?? 0) > 0;
@@ -67,7 +68,9 @@
     y: Array.from({ length: Math.floor(H / 160) }, (_, k) => (k + 1) * (H / (Math.floor(H / 160) + 1))),
   });
 
-  // Mission maps: sizes (index) and nations (the mission config keeps the first N).
+  // Mission maps: sizes (index) and nations (a mission with fewer than the map lists places the
+  // pick that covers the map, core/map/nationPick.ts; its seed is drawn at launch, so the
+  // preview shows the pick of seed 1, nearly the same).
   let sizes = $state<Record<string, [number, number]>>({});
   let nations = $state<MapNation[]>([]);
   const missionNations = MISSIONS.map((mi) => {
@@ -82,6 +85,14 @@
       .then((r) => r.json() as Promise<{ id: string; width: number; height: number }[]>)
       .then((l) => (sizes = Object.fromEntries(l.map((x) => [x.id, [x.width, x.height]]))))
       .catch(() => {});
+  });
+  const active = $derived(Math.min(missionNations[at] ?? 0, nations.length));
+  const shown = $derived.by(() => {
+    const size = sizes[m.mapId];
+    if (!size || active >= nations.length) return nations;
+    const picked = pickNations(nations, active, 1, size[0], size[1]);
+    const set = new Set(picked);
+    return [...picked, ...nations.filter((n) => !set.has(n))];
   });
   $effect(() => {
     const id = m.mapId;
@@ -177,8 +188,8 @@
               mapH={sizes[m.mapId]![1]}
               width={900}
               fit="contain"
-              {nations}
-              active={Math.min(missionNations[at] ?? 0, nations.length)}
+              nations={shown}
+              {active}
             />
           {/if}
         </div>
