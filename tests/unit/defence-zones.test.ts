@@ -51,29 +51,47 @@ describe('defence zones on the map', () => {
     expect(insideOther(list, 0, -10, 0)).toBe(false);
   });
 
-  it('tells the kinds apart by pattern, not only by colour', () => {
+  it('tells our posts from the others by pattern, not only by colour', () => {
+    const own = ZONE_STYLE.own;
+    const other = ZONE_STYLE.other;
+    // Hatching the other way, and a dashed line against a solid one; both keep their ticks
+    // (a fortified line), ours evenly, theirs one per dash.
+    expect(own.hatch.dir).not.toBe(other.hatch.dir);
+    expect(own.ring.gap).toBe(0);
+    expect(other.ring.gap).toBeGreaterThan(0);
+    expect(other.ring.ticks.px).toBe(other.ring.dash + other.ring.gap);
     const sig = (k: keyof typeof ZONE_STYLE) => {
       const s = ZONE_STYLE[k];
-      return JSON.stringify([s.hatch?.dir ?? null, s.ring.gap > 0 ? s.ring.dash : 0, !!s.ring.ticks]);
+      return JSON.stringify([s.hatch.dir, s.ring.gap > 0 ? s.ring.dash : 0]);
     };
-    expect(new Set([sig('post'), sig('sam'), sig('radar')]).size).toBe(3);
+    expect(sig('own')).not.toBe(sig('other'));
+  });
+
+  it('draws defence posts only: no SAM nor radar style left', () => {
+    expect(Object.keys(ZONE_STYLE).sort()).toEqual(['other', 'own']);
   });
 });
 
 describe('defence zones: one pattern at a time', () => {
-  it("leaves the SAMs' hatching out of the posts' zones (no cross-hatching)", () => {
-    const sam = { x: 0, y: 0, r: 60 };
-    const post = { x: 20, y: 0, r: 30 };
-    const segs = hatchSegments([sam], 3, '\\', [post]);
+  it("leaves the others' hatching out of our zones (no cross-hatching)", () => {
+    const theirs = { x: 0, y: 0, r: 30 };
+    const ours = { x: 20, y: 0, r: 15 };
+    const segs = hatchSegments([theirs], 3, ZONE_STYLE.other.hatch.dir, [ours]);
     for (const [ax, ay, bx, by] of segs) {
-      // No segment's middle (nor any point well inside) lies in the post's zone.
+      // No segment's middle (nor any point well inside) lies in our zone.
       for (const f of [0.1, 0.5, 0.9]) {
         const x = ax! + (bx! - ax!) * f;
         const y = ay! + (by! - ay!) * f;
-        expect(Math.hypot(x - post.x, y - post.y)).toBeGreaterThanOrEqual(30 - 1e-6);
+        expect(Math.hypot(x - ours.x, y - ours.y)).toBeGreaterThanOrEqual(15 - 1e-6);
       }
     }
-    const full = total(hatchSegments([sam], 3, '\\'));
-    expect(full - total(segs)).toBeCloseTo((Math.PI * 900) / 3, -1);
+    // What is cut is the lens the two zones share (d = 20, r = 30 and 15).
+    const lens = (R: number, r: number, d: number) =>
+      r * r * Math.acos((d * d + r * r - R * R) / (2 * d * r)) +
+      R * R * Math.acos((d * d + R * R - r * r) / (2 * d * R)) -
+      0.5 * Math.sqrt((-d + r + R) * (d + r - R) * (d - r + R) * (d + r + R));
+    const fine = (except: { x: number; y: number; r: number }[]) =>
+      total(hatchSegments([theirs], 0.5, ZONE_STYLE.other.hatch.dir, except));
+    expect((fine([]) - fine([ours])) * 0.5).toBeCloseTo(lens(30, 15, 20), -1);
   });
 });

@@ -99,11 +99,11 @@ const SPEC: Record<Branch, readonly Spec[]> = {
   ],
   defense: [
     [1, ['economy.1'], ['sam']], //                 Surface-to-air missiles: SAM batteries
-    [2, ['economy.2'], ['radar']], //               Fire-control radar: radar towers, SAM range +10
+    [2, ['economy.2'], ['radar']], //               Fire-control radar: radar towers, SAM range +5
     [3, ['industry.2'], []], //                     Salvos: SAM +1 simultaneous target
-    [4, ['industry.3'], []], //                     Shield: SAM +1 target, range +15
+    [4, ['industry.3'], []], //                     Shield: SAM +1 target, range +7.5
     [5, ['nuclear.3'], []], //                      Fallout shelters: −30% troops lost to bombs
-    [6, ['industry.5'], []], //                     Missile shield: SAM +1 target, range +10
+    [6, ['industry.5'], []], //                     Missile shield: SAM +1 target, range +5
   ],
   nuclear: [
     [1, ['economy.1'], []], //                      Atomic physics: +10% research speed
@@ -550,18 +550,22 @@ export function techShelter(p: Player): number {
   return lv(p, DEF) >= 5 ? 0.7 : 1;
 }
 
+/**
+ * SAM research: extra targets and reach. The reach bonuses were halved with the SAMs' own
+ * reach in 1.15 (+10, +15, +10 and +1 a level before), so that research keeps its weight.
+ */
 export function techSam(p: Player): { range: number; targets: number } {
-  let range = reps(p, DEF); // Interception: +1 tile a level
+  let range = reps(p, DEF) * 0.5; // Interception: +0.5 tile a level
   let targets = 0;
-  if (lv(p, DEF) >= 2) range += 10;
+  if (lv(p, DEF) >= 2) range += 5;
   if (lv(p, DEF) >= 3) targets += 1;
   if (lv(p, DEF) >= 4) {
     targets += 1;
-    range += 15;
+    range += 7.5;
   }
   if (lv(p, DEF) >= 6) {
     targets += 1;
-    range += 10;
+    range += 5;
   }
   return { range, targets };
 }

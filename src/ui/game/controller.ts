@@ -13,7 +13,16 @@ import { t, i18n, clock, short } from '../i18n/i18n.svelte';
 import { mapsBase, bridge, writeJson } from '../bridge';
 import { app, setSession, go, confirmModal, type LaunchRequest } from '../stores/app.svelte';
 import type { GameEvent } from '../../core/game/events';
-import { portRange, A, B, N, RAIL_CONNECT_RANGE, FIGHTER_RANGE, radarRange } from '../../core/game/constants';
+import {
+  portRange,
+  A,
+  B,
+  N,
+  DEFENSE_POST_RANGE,
+  RAIL_CONNECT_RANGE,
+  FIGHTER_RANGE,
+  radarRange,
+} from '../../core/game/constants';
 import { launchInfo, type LaunchInfo } from './nukePreview';
 import { AIR_REACH, airAim, type AirAim } from './airPreview';
 import { audio } from '../../audio/audio';
@@ -863,6 +872,13 @@ export class GameController {
                 : null;
     // Aiming a bomber, every building stays lit: the enemy's are the targets.
     ov.buildingFilter = filter;
+    // Aiming a missile or a bomber (or about to, over the missile buttons): the enemy's
+    // buildings are the targets, never faded by the filter and marked (« les bâtiments des
+    // ennemis ont une opacité faible, alors qu'il faudrait justement bien les voir »).
+    ov.aimTargets =
+      tool.k === 'nuke' ||
+      (tool.k === 'air' && tool.kind === A.Bomber) ||
+      (bh !== null && bh.startsWith('n'));
     // SAM coverage while aiming a missile, or with silos / SAMs in the filter.
     ov.samCoverage =
       tool.k === 'nuke' ||
@@ -889,7 +905,7 @@ export class GameController {
       type === B.Sam
         ? this.session.state.samReach(owner, level)
         : type === B.DefensePost
-          ? 30
+          ? DEFENSE_POST_RANGE
           : type === B.Radar
             ? radarRange(level)
             : type === B.Port

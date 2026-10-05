@@ -23,6 +23,8 @@ import type { Player } from '../src/core/game/player';
 import { applyCommand } from '../src/core/game/commands';
 import { MAX_LEVEL, buildCost, checkPlacement, levelsOwned } from '../src/core/buildings/buildings';
 import { IS_LAND } from '../src/core/map/terrain';
+import { samRangeOf } from '../src/core/units/nukes';
+import { inService } from '../src/core/buildings/building';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const maps = (process.argv[2] ?? 'europe,black-sea,world').split(',');
@@ -83,6 +85,10 @@ function main(): void {
       const happenings: string[] = [];
       const pushes = new Map<string, number>();
       let nukes = 0;
+      let intercepted = 0;
+      // Launches at a target inside a hostile SAM's reach; nations' city levels under their own SAMs.
+      let atCovered = 0;
+      const cover: number[] = [];
       let land0 = 0;
       const air = airCounter();
       const tools = toolCounter();
@@ -108,7 +114,11 @@ function main(): void {
         }
         if (land0 === 0 && g.phase === 'playing') land0 = g.usefulLand;
         for (const e of g.events) {
-          if (e.k === 'nukeLaunch') nukes++;
+          if (e.k === 'nukeLaunch') {
+            nukes++;
+            if (samCovers(g, e.owner, e.tx, e.ty)) atCovered++;
+          }
+          if (e.k === 'intercept') intercepted++;
           if (e.k !== 'notify' || e.to !== -1) continue;
           if (e.key === 'event.doomStage') happenings.push(`S${e.params?.stage}@${minutes(g)}`);
           if (e.key === 'event.zoneClosing') happenings.push(`Z${e.params?.n}@${minutes(g)}`);
@@ -123,6 +133,7 @@ function main(): void {
           const shares = [...leaderShares(g).values()].sort((a, b) => b - a);
           const alive = [...g.alivePlayers()].filter((p) => p.kind === 'nation').length;
           marks.push(`${m / 600}min:${(shares[0]! * 100).toFixed(0)}%/${alive}n`);
+          cover.push(cityCover(g));
         }
       }
       const end =
@@ -133,7 +144,8 @@ function main(): void {
         const push = [...pushes].map(([k, v]) => `${k}+${v}s`).join(' ');
         extra = ` | clock ${d ? Math.round(d.units / DOOM_UNIT) : 0}s ${happenings.join(' ')} | pushes ${push} | launches ${nukes}`;
       } else if (mode === 'ffa') {
-        extra = ` | launches ${nukes}`;
+        const meanCover = cover.length ? cover.reduce((a, b) => a + b, 0) / cover.length : 0;
+        extra = ` | launches ${nukes} intercepted ${intercepted} at-SAM ${atCovered} | city levels under SAM ${(meanCover * 100).toFixed(0)}%`;
       } else if (mode === 'battleRoyale') {
         const lost = land0 > 0 ? Math.round((1 - g.usefulLand / land0) * 100) : 0;
         extra = ` | ${happenings.join(' ')} | land lost ${lost}% | launches ${nukes}`;
@@ -158,6 +170,40 @@ function main(): void {
         );
     }
   }
+}
+
+/** Whether a SAM hostile to `owner` covers (tx, ty). */
+function samCovers(g: Game, owner: number, tx: number, ty: number): boolean {
+  for (const b of g.buildings.values())
+    if (
+      b.type === B.Sam &&
+      inService(b) &&
+      !g.friendly(b.owner, owner) &&
+      Math.hypot(b.x + 0.5 - tx, b.y + 0.5 - ty) <= samRangeOf(g, b)
+    )
+      return true;
+  return false;
+}
+
+/** The share of the nations' city levels within reach of one of their own SAMs. */
+function cityCover(g: Game): number {
+  let all = 0;
+  let covered = 0;
+  for (const c of g.buildings.values()) {
+    if (c.type !== B.City || g.players[c.owner]?.kind !== 'nation') continue;
+    all += c.level;
+    for (const s of g.buildings.values())
+      if (
+        s.type === B.Sam &&
+        s.owner === c.owner &&
+        inService(s) &&
+        Math.hypot(s.x - c.x, s.y - c.y) <= samRangeOf(g, s)
+      ) {
+        covered += c.level;
+        break;
+      }
+  }
+  return all ? covered / all : 0;
 }
 
 /**

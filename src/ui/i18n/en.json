@@ -650,7 +650,7 @@
       },
       "2": {
         "name": "Fire-control radar",
-        "desc": "Unlocks radar towers; SAM range +10"
+        "desc": "Unlocks radar towers; SAM range +5"
       },
       "3": {
         "name": "Salvos",
@@ -658,7 +658,7 @@
       },
       "4": {
         "name": "Shield",
-        "desc": "SAM: +1 target, range +15"
+        "desc": "SAM: +1 target, range +7.5"
       },
       "5": {
         "name": "Fallout shelters",
@@ -666,12 +666,12 @@
       },
       "6": {
         "name": "Missile shield",
-        "desc": "SAM: +1 target, range +10"
+        "desc": "SAM: +1 target, range +5"
       },
       "title": "Defence",
       "r": {
         "name": "Interception",
-        "desc": "SAM: range +1 per level"
+        "desc": "SAM: range +0.5 per level"
       }
     },
     "nuclear": {
@@ -1100,7 +1100,7 @@
     },
     "defensePost": {
       "name": "Defence post",
-      "desc": "Within 30 tiles: attacker losses ×5, speed ×3. Destroyed when captured.",
+      "desc": "Within 15 tiles: attacker losses ×5, speed ×3. Destroyed when captured.",
       "short": "Defence"
     },
     "silo": {
@@ -1110,7 +1110,7 @@
     },
     "sam": {
       "name": "SAM battery",
-      "desc": "Intercepts bombs and warheads with trajectory prediction. Range 49 → 105 tiles by level.",
+      "desc": "Intercepts bombs and warheads with trajectory prediction. Range 24.5 → 52 tiles by level.",
       "short": "SAM"
     },
     "radar": {
@@ -1469,7 +1469,7 @@
     "muteUnfocused": "Lower volume when the window is inactive",
     "testSound": "Test sound",
     "confirmations": "Ask for confirmation (betrayals)",
-    "defenceZones": "Defence zones on the map",
+    "defenceZones": "Defence post zones on the map",
     "fontSize": "Text size",
     "wheel": "Wheel / trackpad",
     "wheel.zoom": "Mouse wheel: zoom",
@@ -1510,7 +1510,7 @@
       "muteUnfocused": "Lowers the sound when you switch to another window.",
       "playerName": "Shown on the map and in network lobbies.",
       "confirmations": "Asks for confirmation before you betray an ally.",
-      "defenceZones": "The reach of your defence posts (hatching and a ticked line), SAM batteries (reverse hatching, dashes) and radars (dots), always shown.",
+      "defenceZones": "The reach of every defence post in sight, always shaded on the map: yours hatched “/” under a solid ticked line, other countries' hatched “\\” under a dashed line. SAMs keep their coverage view while aiming.",
       "fontSize": "Size of the interface text.",
       "wheel": "Fit zooming to a mouse or a trackpad.",
       "highContrast": "Strengthens rules and secondary text.",
@@ -1577,7 +1577,7 @@
       "outro": "Your lines held. The attackers broke against your ramparts.",
       "brief": "Europe is a powder keg. Thirty nations fight over every valley, and the difficulty is set to hard. You will not win this war; the task is not to lose it. Hold out for twenty minutes without being wiped off the map.",
       "tip1": "Mountains, hills and forests cost the attacker more: lean on them.",
-      "tip2": "A defence post multiplies the attacker's losses by five within thirty tiles."
+      "tip2": "A defence post multiplies the attacker's losses by five within fifteen tiles."
     },
     "m3": {
       "title": "The Island",

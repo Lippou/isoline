@@ -84,10 +84,14 @@ export function skyThreat(game: Game, p: Player, war: WarState): 'nuke' | 'raid'
   return null;
 }
 
-/** SAM levels a threatened nation wants (OpenFront's ratio per city; one on normal, two from hard). */
+/**
+ * SAM levels a threatened nation wants: OpenFront's ratio per city, doubled since the SAMs'
+ * reach was halved (1.15: each covers a quarter of the area it did); two on normal, four
+ * from hard.
+ */
 export function samsWanted(game: Game, p: Player): number {
   const tac = TACTICS[game.config.difficulty];
-  return Math.max(1, Math.min(tac.bombs, Math.round(p.buildingCount[B.City]! * tac.samPerCity)));
+  return Math.max(1, Math.min(2 * tac.bombs, Math.round(p.buildingCount[B.City]! * tac.samPerCity * 2)));
 }
 
 /** Airfield levels a nation at war wants: one, two after a raid or for an aggressive one from hard. */

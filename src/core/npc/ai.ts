@@ -5,14 +5,21 @@ import type { Game } from '../game/state';
 import type { Difficulty } from '../game/config';
 import type { Player, Personality } from '../game/player';
 import { applyCommand } from '../game/commands';
-import { B, DEFENSE_POST_RANGE, RELATION_HOSTILE, REVOLUTION_PUSH_CHANCE } from '../game/constants';
+import {
+  B,
+  DEFENSE_POST_RANGE,
+  MIN_BUILDING_SPACING,
+  RELATION_HOSTILE,
+  REVOLUTION_PUSH_CHANCE,
+  samRange,
+} from '../game/constants';
 import { HABITABLE, IS_LAND } from '../map/terrain';
 import { MAX_LEVEL, buildCost, checkPlacement, levelsOwned } from '../buildings/buildings';
 import { planBoat } from '../units/ships';
 import { samRangeOf } from '../units/nukes';
 import { pathLength } from '../map/nav';
 import { castVote } from '../rules/features';
-import { NATION_RESEARCH, isResearched, lockFor, planGoal, techId } from '../rules/tech';
+import { NATION_RESEARCH, isResearched, lockFor, planGoal, techId, techSam } from '../rules/tech';
 import { maxTroops } from '../game/economy';
 import type { Building } from '../buildings/building';
 import { doomStage, doomSurvivalShare, outsideNextZone, shares } from '../rules/victory';
@@ -702,7 +709,7 @@ function defend(
     tac.runaway > 0 ? share >= 0.35 || worst === runaway : !(p.troops > worstTroops * 0.8) || share >= 1;
   if (fortify && game.tick - m.lastBuild > 30) {
     const want = Math.min(tac.posts, Math.max(1, Math.ceil(share / 0.4)));
-    if (postsNear(game, p, contact, 25) < want && buildPost(game, p, m, contact)) cost += 30;
+    if (postsNear(game, p, contact, DEFENSE_POST_RANGE) < want && buildPost(game, p, m, contact)) cost += 30;
   }
   // The capital near the front: a post beside it, then a safer seat (5-min cooldown).
   if (tac.counter && p.capital >= 0 && game.tick - (m.lastCapital ?? -AI_CAPITAL_CHECK) >= AI_CAPITAL_CHECK) {
@@ -822,7 +829,7 @@ function coalitionLanding(game: Game, p: Player, m: Mem, runaway: number): numbe
 
 /** Normal and up: defence posts along the border with the runaway (TACTICS.posts of them near the contact). */
 function fortifyAgainst(game: Game, p: Player, m: Mem, tac: Tactics, contact: number): number {
-  if (postsNear(game, p, contact, 30) >= tac.posts) return 0;
+  if (postsNear(game, p, contact, DEFENSE_POST_RANGE) >= tac.posts) return 0;
   return buildPost(game, p, m, contact) ? 60 : 0;
 }
 
@@ -1074,9 +1081,10 @@ function spotAround(
   y: number,
   rMin: number,
   rMax: number,
+  tries = 8,
 ): number {
   const w = game.map.width;
-  for (let k = 0; k < 8; k++) {
+  for (let k = 0; k < tries; k++) {
     const a = game.rng.next() * Math.PI * 2;
     const r = rMin + game.rng.next() * (rMax - rMin);
     const tx = Math.round(x + Math.cos(a) * r);
@@ -1117,15 +1125,23 @@ function militarySpot(game: Game, p: Player, kind: B, war: WarState, nb: Map<num
   if (kind === B.Sam) {
     const sams: Building[] = [];
     for (const b of game.buildings.values()) if (b.owner === p.id && b.type === B.Sam) sams.push(b);
-    let best: Building | null = null;
-    let bestValue = 0;
+    const bare: [Building, number][] = [];
     for (const b of game.buildings.values()) {
       if (b.owner !== p.id || (b.type !== B.City && b.type !== B.Silo && b.type !== B.Airfield)) continue;
       if (sams.some((s) => Math.hypot(s.x - b.x, s.y - b.y) < samRangeOf(game, s) * 0.7)) continue;
-      const value = b.type === B.City ? b.level : 4;
-      if (value > bestValue) [best, bestValue] = [b, value];
+      bare.push([b, b.type === B.City ? b.level : 4]);
     }
-    return best ? spotAround(game, p, kind, best.x, best.y, 15, 25) : -1;
+    // Since 1.15 a SAM reaches half as far (24.5 tiles at level 1): it stands as close to
+    // what it guards as the building spacing allows (15 tiles), within 70 % of its reach,
+    // and the next most valuable building is tried when there is no room around the first.
+    bare.sort((a, b) => b[1] - a[1] || a[0].id - b[0].id);
+    const tech = game.config.features.tech ? techSam(p).range : 0;
+    const rMax = Math.max(MIN_BUILDING_SPACING + 2, (samRange(1) + tech) * 0.7);
+    for (const [b] of bare.slice(0, 3)) {
+      const tile = spotAround(game, p, kind, b.x, b.y, MIN_BUILDING_SPACING, rMax, 16);
+      if (tile >= 0) return tile;
+    }
+    return -1;
   }
   return -1;
 }
@@ -1200,7 +1216,8 @@ function tryBuild(
   if (
     game.config.allowNukes &&
     (game.ai.nukedBy.has(p.id) || p.gold > 3_000_000 || (silosAgainst && p.gold > 1_000_000)) &&
-    levelsOwned(game, p, B.Sam) < 1 + cities / 5
+    // (One SAM level for 3 city levels; 5 before 1.15, when a SAM reached twice as far.)
+    levelsOwned(game, p, B.Sam) < 1 + cities / 3
   )
     scored.push([B.Sam, game.ai.nukedBy.has(p.id) ? 3 : silosAgainst ? 2 : 1.2]);
   // Air power (GAME_DESIGN.md §11): from normal the war chest buys the airfields (arsenal.ts);

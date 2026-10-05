@@ -18,7 +18,6 @@ import {
   NUKE_RADIUS,
   NUKE_TARGETABLE_RANGE,
   RECON_RADIUS,
-  radarRange,
 } from '../core/game/constants';
 import { ARC_UP, Trajectory, flightTicks, mirvSplitPoint } from '../core/units/trajectory';
 import type { GameEvent } from '../core/game/events';
@@ -31,7 +30,7 @@ import { ShipLayer } from './ships';
 import { WeatherLayer } from './weatherLayer';
 import { TradeRouteLayer } from './tradeRoutes';
 import { CapitalLayer } from './capitals';
-import { DefenceZoneLayer, type Circle, type ZoneKind } from './defenceZones';
+import { DefenceZoneLayer, type ZoneGroup } from './defenceZones';
 import { FlagTextures } from './flagTextures';
 import {
   DEFENSE_BADGE_ZOOM,
@@ -97,10 +96,16 @@ export interface Overlay {
   airPreview: AirPreview | null;
   /** Show every known SAM's coverage (own green, allies yellow, others red). */
   samCoverage: boolean;
-  /** Our defences' reach always drawn: posts, SAMs, radars (settings.game.defenceZones). */
+  /** Every known defence post's reach, always drawn (settings.game.defenceZones). */
   defenceZones: boolean;
   /** Build-bar filter: these building types light up, the others fade (null: no filter). */
   buildingFilter: number[] | null;
+  /**
+   * Aiming a missile or a bomber (or hovering the missile buttons): hostile buildings are the
+   * targets, drawn at full strength whatever the filter, marked with corner brackets, and
+   * shown at every zoom.
+   */
+  aimTargets: boolean;
   selection: Set<number>;
   dragRect: [number, number, number, number] | null;
   highlightPlayer: number;
@@ -271,6 +276,9 @@ export class GameRenderer {
   private routes!: TradeRouteLayer;
   private capitals!: CapitalLayer;
   private zones = new DefenceZoneLayer();
+  /** The buildings and fog the defence zones were last gathered from. */
+  private zonesBuildings = -1;
+  private zonesFog = -2;
   private unitSprites = new Map<number, UnitSprite>();
   private buildingSprites = new Map<number, Container>();
   private labelPool = new Map<number, MapLabel>();
@@ -317,6 +325,7 @@ export class GameRenderer {
     samCoverage: false,
     defenceZones: true,
     buildingFilter: null,
+    aimTargets: false,
     selection: new Set(),
     dragRect: null,
     highlightPlayer: -1,
@@ -687,6 +696,12 @@ export class GameRenderer {
     return !!filter && filter.includes(b.type) && (viewer <= 0 || b.owner === viewer);
   }
 
+  /** While aiming (overlay.aimTargets): a building we could strike, a hostile one. */
+  private aimedAt(b: BuildingView): boolean {
+    const viewer = this.state.viewer;
+    return this.overlay.aimTargets && viewer > 0 && b.owner !== viewer && this.relation(b.owner) === 'foe';
+  }
+
   /**
    * Map badges never pile up: each frame (when the view changed) the candidates in view are
    * ranked — the viewer's own first, then cities, silos, ports… — and a badge is drawn only
@@ -695,7 +710,7 @@ export class GameRenderer {
   private declutterBadges(z: number, size: number): void {
     const cam = this.camera;
     const filter = this.overlay.buildingFilter;
-    const key = `${z.toFixed(4)}|${cam.cx.toFixed(1)}|${cam.cy.toFixed(1)}|${this.buildingsVersion}|${filter?.join(',') ?? ''}|${size}|${this.fogVersion}`;
+    const key = `${z.toFixed(4)}|${cam.cx.toFixed(1)}|${cam.cy.toFixed(1)}|${this.buildingsVersion}|${filter?.join(',') ?? ''}|${size}|${this.fogVersion}|${this.overlay.aimTargets ? 1 : 0}`;
     if (key === this.badgeKey && this.frame % 30 !== 0) return;
     this.badgeKey = key;
     const viewer = this.state.viewer;
@@ -707,11 +722,16 @@ export class GameRenderer {
       if (b.x < x0 - m || b.x > x1 + m || b.y < y0 - m || b.y > y1 + m) continue;
       if (!this.revealed(b.owner, b.x, b.y)) continue;
       const picked = this.pickedByFilter(b);
-      if (!picked && z < MINOR_BADGE_ZOOM && !majorBuilding(b.type)) continue;
-      if (!picked && z < DEFENSE_BADGE_ZOOM && b.type === B.DefensePost) continue;
+      // Aiming: the targets come right after the filtered buildings, at every zoom.
+      const target = this.aimedAt(b);
+      const shown = picked || target;
+      if (!shown && z < MINOR_BADGE_ZOOM && !majorBuilding(b.type)) continue;
+      if (!shown && z < DEFENSE_BADGE_ZOOM && b.type === B.DefensePost) continue;
       cands.push({
         id: b.id,
-        pri: badgePriority(b.type, b.level, viewer > 0 && b.owner === viewer) + (picked ? 5000 : 0),
+        pri:
+          badgePriority(b.type, b.level, viewer > 0 && b.owner === viewer) +
+          (picked ? 5000 : target ? 4000 : 0),
         sx: (b.x + 0.5) * z,
         sy: (b.y + 0.5) * z,
       });
@@ -744,6 +764,30 @@ export class GameRenderer {
       if (pts) pts.push(k.sx, k.sy);
       else grid.set(g, [k.sx, k.sy]);
       this.badgeShown.add(k.id);
+    }
+  }
+
+  /**
+   * A target's corner brackets around its badge (badge units, radius 16): a shape, not a
+   * tint, so that it reads for colour-blind eyes; ink under paper, legible on any ground.
+   */
+  private drawTargetBrackets(g: Graphics): void {
+    const r = 21;
+    const arm = 7;
+    for (const [w, color, alpha] of [
+      [4.5, 0x0b0e12, 0.75],
+      [2, UI.parchment, 1],
+    ] as const) {
+      for (const [sx, sy] of [
+        [-1, -1],
+        [1, -1],
+        [1, 1],
+        [-1, 1],
+      ] as const)
+        g.moveTo(sx * r, sy * (r - arm))
+          .lineTo(sx * r, sy * r)
+          .lineTo(sx * (r - arm), sy * r);
+      g.stroke({ width: w, color, alpha, cap: 'square', join: 'miter' });
     }
   }
 
@@ -780,9 +824,12 @@ export class GameRenderer {
       const inView = b.x >= x0 - 2 && b.x <= x1 + 2 && b.y >= y0 - 2 && b.y <= y1 + 2;
       const filter = this.overlay.buildingFilter;
       const picked = this.pickedByFilter(b);
+      // Aiming a missile or a bomber, the enemy's buildings are what we aim at: never faded.
+      const target = this.aimedAt(b);
       c.visible = inView && this.badgeShown.has(b.id);
       // Filter: matching buildings stand out (bigger, pulsing halo), the others fade.
-      c.alpha = filter && !picked ? 0.18 : 1;
+      const faded = !!filter && !picked && !target;
+      c.alpha = faded ? 0.18 : 1;
       // City lights at night (additive glow) — kept even where the badge gave way to another.
       const light = (c as Container & { light?: Sprite }).light;
       if (light) {
@@ -798,7 +845,7 @@ export class GameRenderer {
           const flicker = 0.9 + 0.1 * Math.sin(t * 3 + b.id);
           light.scale.set((0.13 + 0.035 * Math.min(6, b.level)) * (b.type === B.City ? 1 : 0.6));
           light.tint = 0xffd38a;
-          light.alpha = night * 0.8 * flicker * (filter && !picked ? 0.18 : 1);
+          light.alpha = night * 0.8 * flicker * (faded ? 0.18 : 1);
         }
       }
       if (!c.visible) continue;
@@ -809,7 +856,7 @@ export class GameRenderer {
         const pulse = 0.55 + 0.45 * Math.sin(t * 5);
         prog.circle(0, 0, 20).stroke({ width: 3, color: 0xffffff, alpha: 0.5 + 0.4 * pulse });
         prog.circle(0, 0, 25).stroke({ width: 2, color: 0xffffff, alpha: 0.25 * pulse });
-      }
+      } else if (target) this.drawTargetBrackets(prog);
       if (b.occupied > 0 && b.progress >= 1) {
         // Occupied after a capture (GAME_DESIGN.md §6.4): a red ring empties as the
         // occupation ends; the icon stays greyed until then (out of service). The ring is
@@ -1224,30 +1271,32 @@ export class GameRenderer {
   }
 
   /**
-   * Our defences' reach, always drawn (defenceZones.ts): posts, SAM batteries (left to the
-   * coverage view while it shows) and radars in service. Faded away when zoomed far out.
+   * Every known defence post's reach, always drawn (defenceZones.ts): ours and every other
+   * country's in sight (fog of war), merged country by country. SAMs and radars have their
+   * own views (coverage while aiming, hover). Faded away when zoomed far out.
    */
   private updateDefenceZones(z: number): void {
     const s = this.state;
     const ov = this.overlay;
-    const on = ov.defenceZones && s.viewer > 0 && !ov.photo;
-    if (!on) {
+    if (!ov.defenceZones || ov.photo) {
       this.zones.update(z, this.camera.bounds(), 0);
       return;
     }
-    // (A technology widens the SAMs' reach: the bonus is part of what the circles depend on.)
-    const version = `${s.buildingsVersion}|${s.viewer}|${ov.samCoverage ? 1 : 0}|${s.players.get(s.viewer)?.samBonus ?? 0}`;
-    if (version !== this.zones.version) {
-      const zones: Record<ZoneKind, Circle[]> = { post: [], sam: [], radar: [] };
+    // Rebuilt when the posts in sight change (built, lost, revealed or hidden by the fog).
+    if (s.buildingsVersion !== this.zonesBuildings || this.fogVersion !== this.zonesFog) {
+      this.zonesBuildings = s.buildingsVersion;
+      this.zonesFog = this.fogVersion;
+      const byOwner = new Map<number, ZoneGroup>();
+      const ids: number[] = [];
       for (const b of s.buildings) {
-        if (b.owner !== s.viewer || !b.ready) continue;
-        const at = { x: b.x + 0.5, y: b.y + 0.5 };
-        if (b.type === B.DefensePost) zones.post.push({ ...at, r: DEFENSE_POST_RANGE });
-        else if (b.type === B.Sam && !ov.samCoverage)
-          zones.sam.push({ ...at, r: s.samReach(b.owner, b.level) });
-        else if (b.type === B.Radar) zones.radar.push({ ...at, r: radarRange(b.level) });
+        if (b.type !== B.DefensePost || !b.ready || !this.revealed(b.owner, b.x, b.y)) continue;
+        let gr = byOwner.get(b.owner);
+        if (!gr) byOwner.set(b.owner, (gr = { side: b.owner === s.viewer ? 'own' : 'other', circles: [] }));
+        gr.circles.push({ x: b.x + 0.5, y: b.y + 0.5, r: DEFENSE_POST_RANGE });
+        ids.push(b.id, b.owner);
       }
-      this.zones.setZones(zones, version);
+      const version = `${s.viewer}|${ids.join(',')}`;
+      if (version !== this.zones.version) this.zones.setZones([...byOwner.values()], version);
     }
     // (Far out, over the whole map, they fade: half-strength at 0.5 px per tile, gone at 0.3.)
     this.zones.update(z, this.camera.bounds(), Math.max(0, Math.min(1, (z - 0.3) / 0.4)));

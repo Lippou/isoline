@@ -124,7 +124,11 @@ export const WILD_REACH = 200;
 export const ATTACK_RELATION = { easy: -60, normal: -70, hard: -80, impossible: -100 } as const;
 
 // ----------------------------------------------------------- defence post
-export const DEFENSE_POST_RANGE = 30;
+/**
+ * A defence post's reach: 15 tiles (1.15, deliberate deviation): OpenFront's 30 halved at
+ * the player's request (« les défenses, on peut les diviser par deux »).
+ */
+export const DEFENSE_POST_RANGE = 15;
 export const DEFENSE_POST_MAG = 5;
 export const DEFENSE_POST_SPEED = 3;
 
@@ -410,10 +414,12 @@ export const SAM_COOLDOWN = 90;
 export const SAM_INTERCEPTOR_SPEED = 12;
 /**
  * SAM reach: OpenFront's 150 − 480 / (level + 5) scaled to Isoline's maps, drawn about
- * 0.7× as fine for the same geography (see WARSHIP_RANGE): 49 tiles at level 1, 71 at
- * level 5, 105 at most.
+ * 0.7× as fine for the same geography (see WARSHIP_RANGE), then halved at every level
+ * (1.15, deliberate deviation: « le champ de zone du SAM, on peut le diviser par deux.
+ * Déjà au niveau 1 »): 24.5 tiles at level 1, 35.7 at level 5, 52.5 at most. The
+ * research bonuses (techSam) are halved alike.
  */
-export const SAM_RANGE_SCALE = 0.7;
+export const SAM_RANGE_SCALE = 0.7 * 0.5;
 export const samRange = (level: number) => SAM_RANGE_SCALE * (150 - 480 / (level + 5));
 export const DECONTAMINATION_TICKS = min(10);
 /** A/H bombs: troops × ((tiles − lost) / tiles) ^ NUKE_TROOP_EXP for every player hit. */

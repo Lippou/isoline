@@ -650,7 +650,7 @@
       },
       "2": {
         "name": "Radars de tir",
-        "desc": "Débloque les tours radar ; portée des SAM +10"
+        "desc": "Débloque les tours radar ; portée des SAM +5"
       },
       "3": {
         "name": "Salves",
@@ -658,7 +658,7 @@
       },
       "4": {
         "name": "Bouclier",
-        "desc": "SAM : +1 cible, portée +15"
+        "desc": "SAM : +1 cible, portée +7,5"
       },
       "5": {
         "name": "Abris antiatomiques",
@@ -666,12 +666,12 @@
       },
       "6": {
         "name": "Bouclier antimissile",
-        "desc": "SAM : +1 cible, portée +10"
+        "desc": "SAM : +1 cible, portée +5"
       },
       "title": "Défense",
       "r": {
         "name": "Interception",
-        "desc": "SAM : portée +1 par niveau"
+        "desc": "SAM : portée +0,5 par niveau"
       }
     },
     "nuclear": {
@@ -1100,7 +1100,7 @@
     },
     "defensePost": {
       "name": "Poste de défense",
-      "desc": "Dans un rayon de 30 tuiles : pertes des assaillants ×5, vitesse ×3. Détruit si capturé.",
+      "desc": "Dans un rayon de 15 tuiles : pertes des assaillants ×5, vitesse ×3. Détruit si capturé.",
       "short": "Défense"
     },
     "silo": {
@@ -1110,7 +1110,7 @@
     },
     "sam": {
       "name": "Batterie SAM",
-      "desc": "Intercepte bombes et ogives par prédiction de trajectoire. Portée 49 → 105 tuiles selon le niveau.",
+      "desc": "Intercepte bombes et ogives par prédiction de trajectoire. Portée 24,5 → 52 tuiles selon le niveau.",
       "short": "SAM"
     },
     "radar": {
@@ -1469,7 +1469,7 @@
     "muteUnfocused": "Atténuer quand la fenêtre est inactive",
     "testSound": "Tester le son",
     "confirmations": "Demander confirmation (trahisons)",
-    "defenceZones": "Zones de défense sur la carte",
+    "defenceZones": "Zones des postes de défense sur la carte",
     "fontSize": "Taille du texte",
     "wheel": "Molette / pavé tactile",
     "wheel.zoom": "Molette : zoom",
@@ -1510,7 +1510,7 @@
       "muteUnfocused": "Baisse le son quand vous passez à une autre fenêtre.",
       "playerName": "Affiché sur la carte et dans les salons en réseau.",
       "confirmations": "Une confirmation est demandée avant de trahir un allié.",
-      "defenceZones": "La portée de vos postes de défense (hachures et ligne à crans), batteries SAM (hachures inverses, tirets) et radars (pointillés), toujours affichée.",
+      "defenceZones": "La portée des postes de défense de chaque pays en vue, toujours affichée en grisé : les vôtres hachurés « / » sous une ligne continue à crans, ceux des autres hachurés « \\ » sous une ligne en tirets. Les SAM gardent leur vue de couverture pendant la visée.",
       "fontSize": "Taille du texte de l'interface.",
       "wheel": "Adaptez le zoom à une souris ou à un pavé tactile.",
       "highContrast": "Renforce les filets et le texte secondaire.",
@@ -1577,7 +1577,7 @@
       "outro": "Vos lignes ont tenu. Les assaillants se sont brisés sur vos remparts.",
       "brief": "L'Europe est une poudrière. Trente nations s'y disputent chaque vallée, et la difficulté est réglée sur difficile. Vous ne gagnerez pas cette guerre ; il s'agit de ne pas la perdre. Tenez vingt minutes sans être rayé de la carte.",
       "tip1": "Les montagnes, les collines et les forêts coûtent plus cher à l'attaquant : appuyez-vous dessus.",
-      "tip2": "Un poste de défense multiplie par cinq les pertes de l'assaillant dans un rayon de trente tuiles."
+      "tip2": "Un poste de défense multiplie par cinq les pertes de l'assaillant dans un rayon de quinze tuiles."
     },
     "m3": {
       "title": "L'île",

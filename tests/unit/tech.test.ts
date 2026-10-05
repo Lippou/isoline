@@ -406,7 +406,8 @@ describe('tech tree: research', () => {
     expect(techNukes(p).cost).toBeCloseTo(0.8 * 0.75);
     expect(techNukes(p).reload).toBeCloseTo(1.25);
     grant(g, 'defense.6');
-    expect(techSam(p)).toEqual({ range: 35, targets: 3 });
+    // (Reach bonuses halved with the SAMs’ reach in 1.15: +5, +7.5, +5.)
+    expect(techSam(p)).toEqual({ range: 17.5, targets: 3 });
     const before = maxTroops(g, p);
     grant(g, 'military.5');
     expect(techTroopCap(p)).toBe(1.1);

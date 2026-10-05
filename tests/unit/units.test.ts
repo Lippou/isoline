@@ -607,11 +607,11 @@ describe('nuclear', () => {
     expect(g.usefulLand).toBeLessThan(g.map.landCount);
   });
 
-  it('SAM range grows with level: OpenFront’s 150 − 480/(level+5) at Isoline’s scale (×0.7)', () => {
-    expect(samRange(1)).toBeCloseTo(49, 9);
-    expect(samRange(5)).toBeCloseTo(71.4, 9);
-    expect(samRange(10)).toBeCloseTo(0.7 * (150 - 32), 9);
-    expect(samRange(1_000_000)).toBeLessThan(105);
+  it('SAM range grows with level: OpenFront’s 150 − 480/(level+5) at Isoline’s scale (×0.7), halved (1.15)', () => {
+    expect(samRange(1)).toBeCloseTo(24.5, 9);
+    expect(samRange(5)).toBeCloseTo(35.7, 9);
+    expect(samRange(10)).toBeCloseTo(0.35 * (150 - 32), 9);
+    expect(samRange(1_000_000)).toBeLessThan(52.5);
     // Missiles are only within reach this close to their silo or their target (OpenFront's 150, same scale).
     expect(NUKE_TARGETABLE_RANGE).toBe(105);
   });
