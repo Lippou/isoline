@@ -1852,7 +1852,9 @@
     "pact": "Plume sur parchemin : pacte signé",
     "refused": "Coup de tampon : alliance refusée",
     "capitalLost": "Cor de guerre : votre capitale est tombée",
-    "capitalTaken": "Lame tirée : capitale prise"
+    "capitalTaken": "Lame tirée : capitale prise",
+    "revolution": "Clameur de foule et tambours : votre pays se soulève",
+    "revolutionOther": "Clameur de foule : révolution chez {player}"
   },
   "signal": {
     "attack": "Attaquer ici",
@@ -2603,5 +2605,18 @@
   "inbox": {
     "tip": "Journal : {n} nouvelle(s) non lue(s)",
     "tipDanger": "Journal : {n} nouvelle(s) non lue(s), dont des alertes"
+  },
+  "revolt": {
+    "kicker": "Révolution",
+    "kickerMine": "Révolution chez vous",
+    "titleMine": "Votre pays se soulève !",
+    "titleOther": "Révolution chez {player}",
+    "deckMine": "{tribe} tiennent {tiles} cases avec une partie de votre garnison. Reprenez-les (rien à piller) ou attendez : la révolte s'essouffle dans {time}.",
+    "deckOther": "{tribe} tiennent {tiles} cases. Un pays qui prend trop d'avance s'expose aux révoltes.",
+    "ends": "La révolte s'essouffle dans",
+    "show": "Voir",
+    "showTip": "Centrer la carte sur la révolte",
+    "lineMine": "Chez vous",
+    "tiles": "{tiles} cases"
   }
 }

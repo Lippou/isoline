@@ -50,6 +50,8 @@ export const SFX = [
   { id: 'stamp', sound: 470710, len: 0.9, lufs: -19 }, // rubber stamp (an alliance offer stamped "refused")
   { id: 'rejected', sound: 715226, len: 1.7, lufs: -23 }, // short rejection tone under the stamp
   { id: 'tribeFall', sound: 486140, len: 1.8, lufs: -21 }, // single taiko hit (a tribe is wiped out)
+  { id: 'crowd', sound: 764265, len: 5, lufs: -19 }, // Crowd Commotion, Battle, Riot (a revolution rises)
+  { id: 'drums', sound: 475246, len: 4, lufs: -21 }, // Military Snaredrum (the rebels' drum roll)
 ];
 
 async function bySound(id) {

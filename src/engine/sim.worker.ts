@@ -164,6 +164,21 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
           if (p) startRevolution(game, p);
           sendUpdate(game, [...game.changedTiles], [], 0, true, [...game.events]);
         }
+        if (game && msg.action === 'shrink') {
+          const p = game.players[msg.player];
+          game.events.length = 0;
+          game.changedTiles.length = 0;
+          if (p) {
+            const w = game.map.width;
+            const [cx, cy] = p.centroid(w);
+            const own: number[] = [];
+            for (let t = 0; t < game.owner.length; t++) if (game.owner[t] === p.id) own.push(t);
+            const d = (t: number) => ((t % w) - cx) ** 2 + (((t / w) | 0) - cy) ** 2;
+            own.sort((a, b) => d(a) - d(b));
+            for (const t of own.slice(Math.max(1, msg.keep))) game.setOwner(t, 0);
+          }
+          sendUpdate(game, [...game.changedTiles], [], 0, true, [...game.events]);
+        }
         break;
     }
   } catch (e) {

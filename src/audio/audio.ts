@@ -33,6 +33,9 @@ export type Sfx =
   | 'defeat'
   | 'eliminated'
   | 'warHorn'
+  /** A revolution: a crowd in uproar, and the rebels' snare drum (for the country it hits). */
+  | 'crowd'
+  | 'drums'
   /** Radar early warning: synthesised (two soft sine blips), no recording. */
   | 'radar';
 
@@ -72,6 +75,8 @@ const FILE: Record<Sfx | UiSound, string | null> = {
   defeat: 'defeat',
   eliminated: 'eliminated',
   warHorn: 'warHorn',
+  crowd: 'crowd',
+  drums: 'drums',
   radar: null,
   click: 'click',
   hover: null,
@@ -108,6 +113,8 @@ const THROTTLE: Partial<Record<Sfx | UiSound, number>> = {
   launch: 150,
   explosionMirv: 250,
   radar: 2500,
+  crowd: 4000,
+  drums: 4000,
 };
 
 const PLAYLISTS: Record<Mood, string[]> = {

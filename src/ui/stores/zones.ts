@@ -246,8 +246,9 @@ export interface PieceDef {
  * The pieces of the columns and their priorities (higher stays whole longer):
  *
  * News column (left): nuclear alerts 100 (urgent) › lost capital 90 (never a chip: it
- * asks for a decision) › council ballot 80 › special edition 60 › news flash 40 ›
- * alliances in progress 30.
+ * asks for a decision) › council ballot 80 › revolutions under way 70 (1.15: their
+ * countdown stays on the chip) › special edition 60 › news flash 40 › alliances in
+ * progress 30.
  * Right column: alliance offers 100 (urgent) › nuclear launch panel 95 (urgent, while
  * aiming) › minimap 70 › leaderboard 50. (The dispatches tray is gone from 1.10.0: the
  * notifications go to the journal, whose dock button counts the unread ones.)
@@ -264,6 +265,14 @@ export const PIECES = {
     levels: ['full', 'compact', 'chip'],
     rowChip: true,
     guess: { full: 300, compact: 120 },
+  },
+  revolts: {
+    zone: 'left',
+    priority: 70,
+    levels: ['full', 'compact', 'chip'],
+    rowChip: true,
+    guess: { full: 190, compact: 40 },
+    fold: 'compact',
   },
   breaking: {
     zone: 'left',
@@ -327,6 +336,7 @@ export const FOLD_OF: Partial<Record<PieceId, FoldId>> = {
   leaderboard: 'leaderboard',
   flash: 'news',
   breaking: 'news',
+  revolts: 'news',
   alliances: 'alliances',
 };
 

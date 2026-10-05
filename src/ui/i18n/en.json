@@ -1852,7 +1852,9 @@
     "pact": "Pen on parchment: pact signed",
     "refused": "Stamp: alliance refused",
     "capitalLost": "War horn: your capital has fallen",
-    "capitalTaken": "Blade drawn: capital taken"
+    "capitalTaken": "Blade drawn: capital taken",
+    "revolution": "Crowd uproar and drums: your country rises up",
+    "revolutionOther": "Crowd uproar: revolution in {player}"
   },
   "signal": {
     "attack": "Attack here",
@@ -2603,5 +2605,18 @@
   "inbox": {
     "tip": "News: {n} unread item(s)",
     "tipDanger": "News: {n} unread item(s), alerts among them"
+  },
+  "revolt": {
+    "kicker": "Revolution",
+    "kickerMine": "Revolution at home",
+    "titleMine": "Your country rises up!",
+    "titleOther": "Revolution in {player}",
+    "deckMine": "{tribe} hold {tiles} tiles with part of your garrison. Take them back (nothing to loot) or wait: the revolt runs out of steam in {time}.",
+    "deckOther": "{tribe} hold {tiles} tiles. A country that pulls too far ahead invites revolts.",
+    "ends": "The revolt runs out of steam in",
+    "show": "Show",
+    "showTip": "Centre the map on the uprising",
+    "lineMine": "At home",
+    "tiles": "{tiles} tiles"
   }
 }

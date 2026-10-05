@@ -49,7 +49,9 @@ export type ToWorker =
   | { type: 'snapshot'; id: number }
   | { type: 'query'; id: number; q: Query }
   /** QA (?automation, solo only): a revolution breaks out in `player`'s land at once. */
-  | { type: 'qa'; action: 'revolution'; player: number };
+  | { type: 'qa'; action: 'revolution'; player: number }
+  /** QA (?automation, solo only): `player` keeps only its `keep` tiles nearest its centre. */
+  | { type: 'qa'; action: 'shrink'; player: number; keep: number };
 
 export type Query =
   | { q: 'tile'; tile: number }
