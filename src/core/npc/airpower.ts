@@ -15,6 +15,7 @@
 //   3 (impossible) + saturation raids (up to 4 bombers to empty a SAM), fighters even where
 //                  the free interceptors would rise, when several bombers come at once.
 // Planes in flight are listed once per tick for every nation (a derived cache, not state).
+import { ashBlocks } from '../rules/worldEvents';
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import type { Building } from '../buildings/building';
@@ -329,6 +330,8 @@ function strike(game: Game, p: Player, m: AirMem, ctx: AirContext): number {
       if (d < d0) [f0, d0] = [f, d];
     }
     if (!f0 || d0 > BOMBER_RANGE) continue;
+    // No raid through a volcanic ash cloud (world event): the flight would be refused.
+    if (ashBlocks(game, f0.x + 0.5, f0.y + 0.5, b.x + 0.5, b.y + 0.5)) continue;
     let score = buildingValue(b, frontTiles, nukes, w);
     // Defences on the way: every nation sees the SAMs guarding the target itself (one bomber
     // per loaded missile); the smart ones also those along the route and the interceptors.

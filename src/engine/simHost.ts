@@ -83,6 +83,11 @@ export class SimHost {
     this.send({ type: 'qa', action: 'shrink', player, keep });
   }
 
+  /** QA (?automation, solo only): world event `id` strikes at once, for real. */
+  qaWorldEvent(id: string): void {
+    this.send({ type: 'qa', action: 'worldEvent', id });
+  }
+
   setViewer(viewer: number, fogEnabled: boolean): void {
     this.send({ type: 'setViewer', viewer, fogEnabled });
   }

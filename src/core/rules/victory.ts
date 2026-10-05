@@ -282,6 +282,8 @@ function readPushes(game: Game, d: DoomState): void {
       case 'worldEvent':
         if (e.id === 'crisis') pushDoom(game, d, 'crisis', 0);
         else if (e.id === 'peaceSummit') pushDoom(game, d, 'peace', 0);
+        else if (e.id === 'armsRace') pushDoom(game, d, 'rearm', 0);
+        else if (e.id === 'worldGames') pushDoom(game, d, 'games', 0);
         break;
       case 'council':
         // The Council's nuclear ban (1) or ceasefire (2).

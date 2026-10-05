@@ -1,4 +1,5 @@
 // Building costs, placement rules, construction, upgrades and demolition.
+import { buildRate } from '../rules/worldEvents';
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import {
@@ -514,12 +515,17 @@ export function updateBuildings(game: Game): void {
       game.buildingsDirty = true;
       game.buildingsVersion++;
     }
+    // An arms race (world event) builds silos and SAM batteries faster.
+    const rate = buildRate(game, b.type);
     if (b.buildLeft > 0) {
-      b.buildLeft--;
+      b.buildLeft = Math.max(0, b.buildLeft - rate);
       if (b.buildLeft === 0) completeBuilding(game, b);
       continue;
     }
-    if (b.upgradeLeft > 0 && --b.upgradeLeft === 0) completeUpgrade(game, b);
+    if (b.upgradeLeft > 0) {
+      b.upgradeLeft = Math.max(0, b.upgradeLeft - rate);
+      if (b.upgradeLeft === 0) completeUpgrade(game, b);
+    }
     if (b.cooldown > 0) b.cooldown--;
     // Silo tubes reload; airfields rearm their alert interceptors (units/air.ts).
     if (b.type === B.Silo || b.type === B.Airfield) {

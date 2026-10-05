@@ -25,6 +25,15 @@ import { endOccupations } from '../buildings/buildings';
 import { inventTribeName } from '../names';
 import { IS_LAND } from '../map/terrain';
 import { shipSpeedAt, updateWeather, type WeatherCell } from './weather';
+import {
+  endWorldEvent,
+  pickWorldEvent,
+  researchMult,
+  startWorldEvent,
+  tickWorldEvent,
+  type WorldEventId,
+  type WorldEventState,
+} from './worldEvents';
 
 export type { WeatherCell } from './weather';
 
@@ -36,23 +45,18 @@ export interface Reveal {
   until: number;
 }
 
-export const WORLD_EVENTS = ['crisis', 'pandemic', 'boom', 'solarStorm', 'peaceSummit'] as const;
-export type WorldEventId = (typeof WORLD_EVENTS)[number];
-/** How long each world event lasts (the news shows when it began and what is left). */
-export const WORLD_EVENT_TICKS: Record<WorldEventId, number> = {
-  crisis: min(2),
-  pandemic: min(2),
-  boom: min(2),
-  solarStorm: sec(90),
-  peaceSummit: sec(60),
-};
+export { WORLD_EVENTS, WORLD_EVENT_TICKS, type WorldEventId } from './worldEvents';
 export const COUNCIL_OPTIONS = ['sanctions', 'nukeBan', 'ceasefire'] as const;
 
 export interface FeatureState {
   weather: WeatherCell[];
   nextWeatherTick: number;
   nextEventTick: number;
-  event: { id: WorldEventId; until: number } | null;
+  event: WorldEventState | null;
+  /** The last world event (the picker never repeats it at once), '' before the first. */
+  lastEvent: WorldEventId | '';
+  /** When each world event last began (ticks since the start): the picker prefers the oldest. */
+  eventSeen: Partial<Record<WorldEventId, number>>;
   incomeMult: number;
   growthMult: number;
   tradeMult: number;
@@ -76,6 +80,8 @@ export function createFeatureState(game: Game): FeatureState {
     nextWeatherTick: sec(40),
     nextEventTick: EVENT_MIN,
     event: null,
+    lastEvent: '',
+    eventSeen: {},
     incomeMult: 1,
     growthMult: 1,
     tradeMult: 1,
@@ -116,9 +122,10 @@ export function updateFeatures(game: Game): void {
   if (cfg.council) updateCouncil(game, rel);
   if (cfg.tech) {
     countLabLevels(game);
+    const rMult = researchMult(game); // a scientific breakthrough (world event)
     for (const p of game.alivePlayers()) {
       if (p.kind === 'tribe') continue;
-      const done = updateResearch(p);
+      const done = updateResearch(p, rMult);
       if (done < 0) continue;
       const n = NODES[done]!;
       if (n.repeat)
@@ -147,38 +154,11 @@ function countLabLevels(game: Game): void {
 // ----------------------------------------------------------- world events
 function updateWorldEvents(game: Game, rel: number): void {
   const f = game.features;
-  if (f.event && f.event.until <= game.tick) {
-    f.event = null;
-    f.incomeMult = 1;
-    f.growthMult = 1;
-    f.tradeMult = 1;
-  }
+  if (f.event && f.event.until <= game.tick) endWorldEvent(game);
+  if (f.event) tickWorldEvent(game);
   if (rel < f.nextEventTick) return;
-  const rng = game.rng;
-  const id = WORLD_EVENTS[rng.int(0, WORLD_EVENTS.length - 1)]!;
-  const until = game.tick + WORLD_EVENT_TICKS[id];
-  switch (id) {
-    case 'crisis':
-      f.incomeMult = 0.75;
-      break;
-    case 'pandemic':
-      f.growthMult = 0.5;
-      for (const p of game.alivePlayers()) p.troops *= 0.97;
-      break;
-    case 'boom':
-      f.tradeMult = 2;
-      break;
-    case 'solarStorm':
-      f.radarsOffUntil = until;
-      break;
-    case 'peaceSummit':
-      f.ceasefireUntil = Math.max(f.ceasefireUntil, until);
-      break;
-  }
-  f.event = { id, until };
-  f.nextEventTick = rel + rng.int(EVENT_MIN, EVENT_MAX);
-  game.emit({ k: 'worldEvent', id, until });
-  game.notify(-1, `worldEvent.${id}`, id === 'boom' ? 'good' : 'warn');
+  startWorldEvent(game, pickWorldEvent(game), rel);
+  f.nextEventTick = rel + game.rng.int(EVENT_MIN, EVENT_MAX);
 }
 
 // ---------------------------------------------------------------- loyalty

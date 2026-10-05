@@ -2,7 +2,7 @@
 // leader's share of useful land every 5 minutes and when (if) the game ends, then what
 // the nations did with aviation and radars (built, flown, struck, shot down).
 // Usage: npx tsx scripts/pacing.ts [mapId,mapId…] [difficulty] [maxMinutes] [mode] [seed,seed…] [income|builder]
-// Nations: the map's default lobby count (NATIONS=n to override), with 40 tribes.
+// Nations: the lobby's default count for the map and difficulty (NATIONS=n to override), with 40 tribes.
 // With the doomsday or battle royale mode, the mode's happenings are counted too
 // (milestones and clock pushes; zone closings and land lost to the zone).
 // `income` adds, every 5 minutes, the gold earned over the last minute by the leader and
@@ -26,6 +26,7 @@ import { MAX_LEVEL, buildCost, checkPlacement, levelsOwned } from '../src/core/b
 import { IS_LAND } from '../src/core/map/terrain';
 import { samRangeOf } from '../src/core/units/nukes';
 import { inService } from '../src/core/buildings/building';
+import { nationsForDifficulty } from '../src/core/map/nationPick';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const maps = (process.argv[2] ?? 'europe,black-sea,world').split(',');
@@ -64,12 +65,13 @@ function main(): void {
   for (const id of maps) {
     const map = load(id);
     for (const seed of seeds) {
-      // The map's default lobby count (1.15: one per ~9 000 land tiles, e.g. 173 on the Giant
-      // World); NATIONS=30 for the former fixed 30.
-      const nations = Math.min(
-        Number(process.env.NATIONS ?? map.meta.defaultNations ?? 30),
-        map.meta.nations.length,
-      );
+      // The lobby's default count at this difficulty (map/nationPick.ts: the map's default,
+      // one per ~9 000 land tiles, on Hard; ×0.6 Easy, ×0.85 Normal, ×1.2 Impossible);
+      // NATIONS=30 for a fixed count.
+      const listed = map.meta.nations.length;
+      const nations = process.env.NATIONS
+        ? Math.min(Number(process.env.NATIONS), listed)
+        : nationsForDifficulty(map.meta.defaultNations ?? 30, listed, difficulty);
       const g = new Game(map, {
         ...defaultConfig(seed),
         mapId: id,
@@ -157,7 +159,7 @@ function main(): void {
         extra = ` | ${happenings.join(' ')} | land lost ${lost}% | launches ${nukes}`;
       }
       console.log(
-        `${id.padEnd(14)} ${seed} ${difficulty} ${mode} ${end.padEnd(22)} ${marks.join(' ')}${extra}  (${((performance.now() - t0) / 1000).toFixed(0)} s)`,
+        `${id.padEnd(14)} ${seed} ${difficulty} ${mode} n${nations} ${end.padEnd(22)} ${marks.join(' ')}${extra}  (${((performance.now() - t0) / 1000).toFixed(0)} s)`,
       );
       console.log(`${''.padEnd(14)} air: ${air.report()}`);
       console.log(`${''.padEnd(14)} revolutions: ${revolts.report()}`);

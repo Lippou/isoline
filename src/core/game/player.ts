@@ -10,7 +10,7 @@ export type PlayerKind = 'human' | 'nation' | 'tribe';
  * our trade, a common enemy, and older feelings whose cause is no longer known.
  */
 export type RelationCause =
-  'attacked' | 'betrayed' | 'traitor' | 'gift' | 'ally' | 'trade' | 'enemy' | 'past';
+  'attacked' | 'betrayed' | 'traitor' | 'gift' | 'ally' | 'trade' | 'enemy' | 'past' | 'games';
 export type Personality = 'expansionist' | 'builder' | 'merchant' | 'diplomat' | 'isolationist' | 'warmonger';
 export const PERSONALITIES: readonly Personality[] = [
   'expansionist',

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { hud, openPanel } from '../stores/game.svelte';
-  import { t, short } from '../i18n/i18n.svelte';
+  import { t, short, clock } from '../i18n/i18n.svelte';
   import { settings, keyLabel } from '../stores/settings.svelte';
   import Icon from '../icons/Icon.svelte';
   import { BUILDING_ICONS, type IconName } from '../icons/icons';
@@ -14,6 +14,7 @@
   import { folds, setFold } from '../stores/folds.svelte';
   import FoldButton from './FoldButton.svelte';
   import { haltIcon, haltShort, haltTip, nukeHalt } from './nukeHalt';
+  import { eventIcon, portsBlock, type EventBlock } from './worldEvents';
 
   let { ctl }: { ctl: GameController } = $props();
   const cfg = currentSession()!.config;
@@ -60,6 +61,11 @@
   }
   /** The World Council's nuclear ban or a peace summit: the bombs print in magenta while it lasts. */
   const halt = $derived(nukeHalt(hud.world, hud.tick));
+  /** A hurricane (world event): no warship until the ports reopen. */
+  const portsShut = $derived(portsBlock(hud.world, hud.tick));
+  /** The tooltip of a button greyed by an event: "Hurricane: not possible for now (1:12 left)". */
+  const blockTip = (b: EventBlock): string =>
+    t('worldEventBlock.tip', { event: t(`worldEvent.${b.id}.short`), clock: clock(b.left) });
   const active = (k: string, kind: number) =>
     hud.tool.k === k && 'kind' in hud.tool && hud.tool.kind === kind;
 
@@ -145,6 +151,7 @@
   onclick: () => void,
   testid: string,
   banned: boolean = false,
+  banIcon: IconName | null = null,
 )}
   <button
     class="tool"
@@ -163,7 +170,7 @@
     <span class="cost mono">{cost}</span>
     {#if key}<kbd>{key}</kbd>{/if}
     {#if banned}<span class="banmark" aria-hidden="true"
-        ><Icon name={halt ? haltIcon(halt) : 'embargo'} size={11} /></span
+        ><Icon name={banIcon ?? (halt ? haltIcon(halt) : 'embargo')} size={11} /></span
       >{/if}
   </button>
 {/snippet}
@@ -237,7 +244,12 @@
     </div>
     {#if cfg.allowPorts}
       <div class="group">
-        <div class="gtitle">{t('hud.groupNavy')}</div>
+        <!-- A hurricane (world event) closes the ports: the warship is greyed, with the reason. -->
+        <div class="gtitle" class:spot={!!portsShut} data-testid="navy-group-title">
+          {t('hud.groupNavy')}{#if portsShut}<span class="mono"
+              >{`· ${t('worldEventBlock.ports')} ${clock(portsShut.left)}`}</span
+            >{/if}
+        </div>
         <div class="tools">
           <div class="slot">
             {@render tool(
@@ -251,11 +263,17 @@
               false,
               () => (hud.tool = hud.tool.k === 'warship' ? { k: 'none' } : { k: 'warship' }),
               'build-warship',
+              !!portsShut,
+              portsShut ? eventIcon(portsShut.id) : null,
             )}
             {#if hovered === 'ws'}
-              {@render tip(t('unit.warship.name'), t('unit.warship.desc'), [
-                t('hud.costN', { n: short(L.warshipCost) }),
-              ])}
+              {@render tip(
+                t('unit.warship.name'),
+                t('unit.warship.desc'),
+                [t('hud.costN', { n: short(L.warshipCost) })],
+                '',
+                portsShut ? blockTip(portsShut) : '',
+              )}
             {/if}
           </div>
         </div>

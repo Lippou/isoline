@@ -1,5 +1,6 @@
 // Naval units: transports (amphibious attacks, retreat), warships (targeting, veterancy,
 // repair retreats to port, patrol), merchant ships (trade income, piracy) and shells.
+import { attackCap, portsClosed } from '../rules/worldEvents';
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import {
@@ -203,7 +204,8 @@ export function launchBoat(game: Game, p: Player, tile: number, ratio: number): 
   let active = 0;
   for (const u of game.units) if (u.alive && u.type === U.Transport && u.owner === p.id) active++;
   if (active >= MAX_TRANSPORTS) return 'max';
-  const troops = p.troops * ratio;
+  // Mutinies (world event): a landing commits at most MUTINY_CAP of the army too.
+  const troops = p.troops * Math.min(ratio, attackCap(game));
   if (troops < TRANSPORT_MIN_TROOPS) return 'troops';
   const plan = planBoat(game, p, tile);
   if (plan.error !== 'ok') return plan.error;
@@ -347,7 +349,7 @@ function portsNear(game: Game, p: Player, tile: number): Building[] {
 }
 
 export function buildWarship(game: Game, p: Player, tile: number): boolean {
-  if (!game.config.allowPorts || game.phase !== 'playing') return false;
+  if (!game.config.allowPorts || game.phase !== 'playing' || portsClosed(game)) return false;
   const cost = warshipCost(game, p);
   if (p.gold < cost) return false;
   // The ship is laid down at the nearest own port whose radius of action covers the click.
@@ -876,7 +878,8 @@ function arriveMerchant(game: Game, m: Unit): void {
 export function updateShips(game: Game): void {
   let merchants = 0;
   for (const u of game.units) if (u.alive && u.type === U.Merchant) merchants++;
-  if (game.config.allowPorts) spawnMerchants(game, merchants);
+  // A hurricane (world event) closes the ports: no merchant sails meanwhile.
+  if (game.config.allowPorts && !portsClosed(game)) spawnMerchants(game, merchants);
   const w = game.map.width;
 
   for (const u of game.units) {

@@ -42,7 +42,8 @@ export const app = $state({
   previous: 'title' as Screen,
   /**
    * `randomMap`: the map is drawn among the shipped ones when the game starts.
-   * `nationsAuto`: the nation count follows each map's default until the player moves it.
+   * `nationsAuto`: the nation count follows each map's default at the chosen difficulty
+   * (map/nationPick.ts) until the player moves the slider.
    */
   lobby: {
     config: defaultConfig(Date.now() >>> 0),

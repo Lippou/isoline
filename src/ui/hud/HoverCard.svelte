@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { activeEvent } from './worldEvents';
   import { hud } from '../stores/game.svelte';
   import { t, i18n, short, clock } from '../i18n/i18n.svelte';
   import { ratioText } from '../game/capitalWatch';
@@ -15,6 +16,60 @@
   import OpinionMeter from './OpinionMeter.svelte';
   import { pct } from './opinion';
   import { isTeammate } from '../game/team';
+  import { unitHover, type UnitRelation, type UnitStatus } from '../game/unitHover';
+  import type { IconName } from '../icons/icons';
+
+  /** The relation is printed with an icon and a word, never by colour alone. */
+  const REL_ICON: Record<UnitRelation, IconName> = {
+    you: 'user',
+    teammate: 'users',
+    ally: 'alliance',
+    enemy: 'sword',
+    neutral: 'dot',
+  };
+  const TYPE_ICON: Record<string, IconName> = {
+    transport: 'transport',
+    warship: 'warship',
+    merchant: 'trade',
+    train: 'train',
+    fighter: 'airfield',
+    bomber: 'bomb',
+    recon: 'eye',
+  };
+  const STATUS_ICON: Record<UnitStatus, IconName> = {
+    turnedBack: 'undo',
+    patrolling: 'eye',
+    repairing: 'port',
+    docked: 'port',
+    pirated: 'warning',
+    returning: 'undo',
+    intercepting: 'target',
+    orbiting: 'eye',
+  };
+  /** The ship, plane or train under the pointer (refreshed every tick: troops, hull, course). */
+  const unit = $derived.by(() => {
+    const u = hud.hoverUnit;
+    void hud.tick;
+    if (!u || hud.radial) return null;
+    const s = currentSession()?.state;
+    if (!s) return null;
+    const d = unitHover(s, hud.local?.wars ?? [], u.id);
+    if (!d) return null;
+    const p = s.players.get(d.owner);
+    const over = d.status === 'patrolling' || d.status === 'orbiting';
+    return {
+      u,
+      d,
+      p,
+      name: s.name(d.owner, i18n.lang),
+      dest:
+        d.dest === null
+          ? ''
+          : d.dest > 0
+            ? t(over ? 'unitHover.over' : 'unitHover.to', { name: s.name(d.dest, i18n.lang) })
+            : t('unitHover.toWild'),
+    };
+  });
 
   /** Weather over the hovered tile (storms first) and what it does there. */
   const sky = $derived.by(() => {
@@ -35,6 +90,11 @@
         }
       : { icon: 'fogBank' as const, text: t('hover.fogBank', { pct: pct(FOG_SIGHT) }) };
   });
+  /** Whether (x, y) lies in the circle of an earthquake under way (its buildings are being repaired). */
+  function quakeHit(x: number, y: number): boolean {
+    const e = activeEvent(hud.world, hud.tick);
+    return !!e && e.id === 'earthquake' && (e.x - x - 0.5) ** 2 + (e.y - y - 0.5) ** 2 <= e.r * e.r;
+  }
   const info = $derived.by(() => {
     const h = hud.hover;
     if (!h || hud.radial) return null;
@@ -164,7 +224,51 @@
   });
 </script>
 
-{#if info && (info.h.owner > 0 || info.h.building || info.h.resource > 0 || info.h.fallout > 0 || info.terrain?.passable || sky)}
+{#if unit}
+  {@const d = unit.d}
+  <div
+    class="card panel unit"
+    data-testid="hover-unit"
+    style="left:{unit.u.sx + 18}px; top:{unit.u.sy + 18}px"
+  >
+    <div class="who">
+      {#if unit.p}<img src={flagUrl(unit.p, 24)} alt="" />{/if}
+      <div>
+        <b class:ally={d.relation === 'ally' || d.relation === 'teammate'} class:war={d.relation === 'enemy'}
+          >{unit.name}</b
+        >
+        {#if d.relation}<small class="rel {d.relation}" data-testid="hover-unit-relation"
+            ><Icon name={REL_ICON[d.relation]} size={12} />{t(`unitHover.rel.${d.relation}`)}</small
+          >{/if}
+      </div>
+    </div>
+    <div class="line kind">
+      <Icon name={TYPE_ICON[d.key] ?? 'warship'} size={13} /><b>{t(`unitHover.type.${d.key}`)}</b>
+      {#if d.veteran > 0}<small class="mono">{t('unitHover.veteran', { n: d.veteran })}</small>{/if}
+    </div>
+    {#if d.troops !== null}
+      <div class="line" data-testid="hover-unit-troops">
+        <Icon name="troops" size={13} />{t('unitHover.troops', { n: short(d.troops) })}
+      </div>
+    {/if}
+    {#if d.hp !== null}
+      <div class="line hull" class:bad={d.hp < 0.5} data-testid="hover-unit-hp">
+        <Icon name="immune" size={13} /><span class="mono"
+          >{t('unitHover.hull', { pct: Math.round(d.hp * 100) })}</span
+        >
+        <span class="meter" aria-hidden="true"><i style="width:{Math.round(d.hp * 100)}%"></i></span>
+      </div>
+    {/if}
+    {#if d.status}
+      <div class="line status">
+        <Icon name={STATUS_ICON[d.status]} size={13} />{t(`unitHover.status.${d.status}`)}
+      </div>
+    {/if}
+    {#if unit.dest}
+      <div class="line dest" data-testid="hover-unit-dest"><Icon name="next" size={13} />{unit.dest}</div>
+    {/if}
+  </div>
+{:else if info && (info.h.owner > 0 || info.h.building || info.h.resource > 0 || info.h.fallout > 0 || info.terrain?.passable || sky)}
   <div class="card panel" style="left:{info.h.sx + 18}px; top:{info.h.sy + 18}px">
     {#if info.p}
       <div class="who">
@@ -321,13 +425,15 @@
           >{/if}
       </div>
       {#if (info.h.building.occupied ?? 0) > 0}
-        <!-- Taken by conquest: looted, and out of service a while (GAME_DESIGN.md §6.4). -->
+        {@const secs = Math.ceil((info.h.building.occupied ?? 0) / 10)}
+        <!-- Taken by conquest: looted, and out of service a while (GAME_DESIGN.md §6.4); or
+             struck by an earthquake (world event), being repaired. -->
         <div class="line bad occupied" data-testid="hover-occupied">
-          <Icon name="time" size={13} /><span
-            >{t('hover.occupied', { s: Math.ceil((info.h.building.occupied ?? 0) / 10) })}<small
-              >{t('hover.occupiedTip')}</small
-            ></span
-          >
+          {#if quakeHit(info.h.x, info.h.y)}<Icon name="earthquake" size={13} /><span
+              >{t('worldEventBlock.occupiedQuake', { s: secs })}</span
+            >{:else}<Icon name="time" size={13} /><span
+              >{t('hover.occupied', { s: secs })}<small>{t('hover.occupiedTip')}</small></span
+            >{/if}
         </div>
       {/if}
     {/if}
@@ -578,6 +684,52 @@
   }
   .res {
     color: var(--np-sea);
+  }
+  /* A ship, plane or train: whose, what, and where to. */
+  .unit {
+    min-width: 160px;
+  }
+  .unit .rel {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-style: normal;
+    font-family: var(--text);
+    font-weight: 600;
+    font-size: 0.86em;
+  }
+  .unit .rel.ally,
+  .unit .rel.teammate {
+    color: var(--np-good);
+  }
+  .unit .rel.enemy {
+    color: var(--np-spot);
+  }
+  .unit .kind b {
+    font-weight: 600;
+  }
+  .unit .kind small {
+    color: var(--np-ink-3);
+  }
+  .unit .hull .meter {
+    flex: 1;
+    min-width: 40px;
+    height: 4px;
+    background: var(--np-paper-2);
+    box-shadow: inset 0 0 0 1px var(--np-rule);
+  }
+  .unit .hull .meter i {
+    display: block;
+    height: 100%;
+    background: currentColor;
+  }
+  .unit .status {
+    color: var(--np-ink-2);
+    font-style: italic;
+    font-family: var(--np-serif);
+  }
+  .unit .dest {
+    font-weight: 600;
   }
   .sky {
     align-items: flex-start;

@@ -22,6 +22,7 @@ import { resourceBonus } from '../rules/resources';
 import { techEconomy, techTroopCap } from '../rules/tech';
 import { capitalGoldMult, capitalGrowthMult } from '../rules/capital';
 import { doomIncomeMult } from '../rules/victory';
+import { oilMult } from '../rules/worldEvents';
 
 /** Sum of the levels of p's cities in service (under construction or occupation: nothing yet). */
 export function completedCityLevels(game: Game, p: Player): number {
@@ -101,7 +102,7 @@ export function updateEconomy(game: Game): void {
     const techMult = game.config.features.tech ? techEconomy(p) : 1;
     const base = Math.floor(GOLD_PER_TICK[p.kind] * mult * techMult);
     const res = game.config.features.resources
-      ? Math.floor((resourceBonus(game, p).gold / TICKS_PER_SECOND) * mult)
+      ? Math.floor((resourceBonus(game, p).gold / TICKS_PER_SECOND) * mult * oilMult(game))
       : 0;
     const perTick = base + res;
     p.income = perTick;

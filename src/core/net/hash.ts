@@ -1,6 +1,7 @@
 // State hash used to detect lockstep desyncs (every HASH_EVERY ticks) and to
 // verify determinism in tests (same seed + same commands = same hash).
 import type { Game } from '../game/state';
+import { WORLD_EVENTS } from '../rules/worldEvents';
 
 function mix(h: number, v: number): number {
   h ^= v;
@@ -55,6 +56,14 @@ export function hashGame(game: Game): number {
     h = mix(mix(mix(mix(mix(mix(h, b.id), b.owner), b.level), b.buildLeft), b.upgradeLeft), b.occupiedLeft);
   for (const u of game.units) h = mix(mix(mix(mix(h, u.id), u.owner), q(u.x)), q(u.y));
   h = mix(h, game.rails.length);
+  // World events (rules/worldEvents.ts): the one under way (and its zone), the picker's memory.
+  const f = game.features;
+  const ev = f.event;
+  h = mix(mix(h, ev ? WORLD_EVENTS.indexOf(ev.id) + 1 : 0), ev ? ev.until : -1);
+  if (ev) h = mix(mix(mix(h, q(ev.x ?? 0)), q(ev.y ?? 0)), ev.r ?? 0);
+  h = mix(mix(h, f.nextEventTick), f.lastEvent ? WORLD_EVENTS.indexOf(f.lastEvent) + 1 : 0);
+  for (const id of WORLD_EVENTS) h = mix(h, (f.eventSeen[id] ?? -1) + 1);
+  h = mix(mix(mix(h, q(f.incomeMult)), q(f.growthMult)), q(f.tradeMult));
   return h >>> 0;
 }
 

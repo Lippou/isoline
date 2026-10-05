@@ -98,6 +98,16 @@ import {
   Newspaper,
   TrendingDown,
   Biohazard,
+  Activity,
+  Tornado,
+  Snowflake,
+  Fuel,
+  Megaphone,
+  Hammer,
+  TrainTrack,
+  Lightbulb,
+  HardHat,
+  Medal,
   Sun,
   CloudLightning,
   CloudFog,
@@ -115,6 +125,14 @@ import {
 // Diplomatic status glyphs drawn for the map labels (Lucide shapes, modified).
 const SHIELD =
   'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z';
+/** A volcano: a cone with its crater and a plume of ash (the eruption, a world event). */
+const Volcano: IconNode = [
+  ['path', { d: 'M2 21 8.5 11h7L22 21Z' }],
+  ['path', { d: 'M10.5 14.5 12 13l1.5 1.5' }],
+  ['path', { d: 'M12 9V7' }],
+  ['path', { d: 'M9.5 7.5C8 7 7.5 5 9 4c.5-1.5 2.5-2 3.5-1 1.5-.5 3 .5 3 2 1.5.5 1.5 2.5 0 3' }],
+];
+
 const BrokenShield: IconNode = [
   ['path', { d: SHIELD }],
   ['path', { d: 'm12.3 2.6-1.8 5.2 3.2 3.2-2.6 4 1.1 6.6' }],
@@ -187,6 +205,17 @@ export const ICONS = {
   crisis: TrendingDown,
   pandemic: Biohazard,
   solarStorm: Sun,
+  earthquake: Activity,
+  volcano: Volcano,
+  hurricane: Tornado,
+  harshWinter: Snowflake,
+  oilShock: Fuel,
+  mutiny: Megaphone,
+  armsRace: Hammer,
+  railStrike: TrainTrack,
+  breakthrough: Lightbulb,
+  publicWorks: HardHat,
+  worldGames: Medal,
   // weather and trade lanes on the map
   storm: CloudLightning,
   fogBank: CloudFog,

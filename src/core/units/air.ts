@@ -4,6 +4,7 @@
 // - reconnaissance gives intelligence on a zone (cheaper attacks, sharper bombing, hidden numbers);
 // - airfields keep one free interceptor on alert per level, scrambled at detected intruders;
 // - radars extend that detection (and warn the player: src/engine/radarWatch.ts).
+import { ashBlocks } from '../rules/worldEvents';
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import {
@@ -145,6 +146,8 @@ export function launchAircraft(game: Game, p: Player, kind: A, tile: number): bo
   const pick = airfieldFor(game, p, tx, ty);
   if (!pick || pick.d > REACH[kind]!) return false;
   const field = pick.field;
+  // A volcanic ash cloud (world event): no flight from, to or across it.
+  if (ashBlocks(game, field.x + 0.5, field.y + 0.5, tx, ty)) return false;
   p.gold -= cost;
   const u = makeUnit(game.nextId(), TYPE_OF[kind]!, p.id, field.x + 0.5, field.y + 0.5);
   u.hp = u.maxHp = AIR_HP[kind];

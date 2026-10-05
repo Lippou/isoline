@@ -62,7 +62,7 @@ export interface IconSet {
   status: Record<StatusIcon, Texture>;
   /** White glyphs (tinted at runtime). */
   sword: Texture;
-  /** Weather cell markers, by kind: storm, fog bank. */
+  /** Weather cell markers, by kind: storm, fog bank; then the world events' zones: earthquake, ash cloud. */
   weather: Texture[];
 }
 
@@ -305,6 +305,8 @@ export async function buildIcons(renderer: Renderer): Promise<IconSet> {
     weather: [
       await svgTexture(weatherSvg('storm', '#c9d6e8'), 96, 96),
       await svgTexture(weatherSvg('fogBank', '#eef3f2'), 96, 96),
+      await svgTexture(weatherSvg('earthquake', '#e9b44c'), 96, 96),
+      await svgTexture(weatherSvg('volcano', '#e9b44c'), 96, 96),
     ],
     buildings,
     backdrop: await svgTexture(

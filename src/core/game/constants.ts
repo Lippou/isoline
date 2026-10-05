@@ -593,6 +593,9 @@ export const DOOM_PUSH = {
   crisis: 15,
   peace: -30,
   council: -20,
+  // 1.16's world events: an arms race brings midnight nearer, the World Games push it back.
+  rearm: 10,
+  games: -15,
 } as const;
 /** Arms race: bombs cost this much less. */
 export const DOOM_NUKE_DISCOUNT = 0.35;

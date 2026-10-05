@@ -952,7 +952,7 @@ export class GameRenderer {
       }
       if (type === U.Train) {
         // On the drawn track (its rail and progress ride in the slots 15 and 13).
-        const on = this.railLayer.trainAt(id, buf[o + 15]!, buf[o + 13]!, s.tick, alpha);
+        const on = this.railLayer.trainAt(id, buf[o + 16]!, buf[o + 13]!, s.tick, alpha);
         if (on) [x, y] = on;
         this.updateTrain(id, owner, x, y, z, inView);
         continue;
@@ -2504,6 +2504,34 @@ export class GameRenderer {
     const y = Math.floor(wy);
     if (x < 0 || y < 0 || x >= this.state.width || y >= this.state.height) return -1;
     return y * this.state.width + x;
+  }
+
+  /**
+   * The ship, plane or train drawn under the screen point (sx, sy), as drawn last frame (so
+   * never one hidden by the fog or a fog bank): the nearest within `px` screen pixels — a
+   * generous reach, ships are a few pixels long when zoomed out — or its own half length.
+   * −1: none.
+   */
+  unitAtScreen(sx: number, sy: number, px = 16): number {
+    const [wx, wy] = this.camera.screenToWorld(sx, sy);
+    const z = Math.max(0.05, this.camera.zoom);
+    const reach = (px * (this.settings.uiScale || 1)) / z;
+    const ship = this.ships.nearest(wx, wy, reach);
+    let best = ship ? ship.id : -1;
+    let bestD = ship ? ship.d : Infinity;
+    // (The sprites of units gone are dropped every frame: those left were drawn last frame.)
+    for (const [id, us] of this.unitSprites) {
+      if (!us.s.visible) continue;
+      // Trains: the locomotive leads the trail; planes: the sprite itself.
+      const x = us.trail ? us.trail[0]! : us.s.x;
+      const y = us.trail ? us.trail[1]! : us.s.y;
+      const d = Math.hypot(x - wx, y - wy);
+      if (d <= reach && d < bestD) {
+        best = id;
+        bestD = d;
+      }
+    }
+    return best;
   }
 
   unitsInRect(x0: number, y0: number, x1: number, y1: number, owner: number, type: U): number[] {
