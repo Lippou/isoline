@@ -18,10 +18,15 @@ artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 npmRebuild: false
 nodeGypRebuild: false
 buildDependenciesFromSource: false
+# macOS: keeps the hand-drawn icns beside the asset catalog compiled from Isoline.icon.
+afterPack: ./scripts/after-pack.mjs
 electronLanguages: [en, en-US, en-GB, fr, fr-FR]
 mac:
   category: public.app-category.strategy-games
-  icon: build-resources/icon.icns
+  # Icon Composer (macOS 26+): compiled by actool (Xcode 26+) into Contents/Resources/Assets.car
+  # + CFBundleIconName, read by the system's own surfaces (Game Mode, notifications); the
+  # icns for older macOS is put back by scripts/after-pack.cjs. (`npm run brand` makes both.)
+  icon: build-resources/Isoline.icon
   hardenedRuntime: true
   gatekeeperAssess: false
   # Developer ID (notarised by scripts/release.mjs through the keychain profile isoline-notary).

@@ -387,7 +387,8 @@ export class GameController {
     if (hud.photo) {
       if (action === 'escape' || action === 'photoMode') this.exitPhoto();
       else if (action === 'screenshot') void this.photoShot();
-      else if (action === 'pause' && this.canFreeze()) this.setFreeze(!photo.freeze);
+      else if ((action === 'pause' || action === 'pauseAlt') && this.canFreeze())
+        this.setFreeze(!photo.freeze);
       return;
     }
     if (action === 'photoMode') {
@@ -475,7 +476,12 @@ export class GameController {
         openPanel('chat');
         break;
       case 'pause':
+      case 'pauseAlt':
+        // The menu holds a solo game by itself (and lets it go when it closes).
+        if (hud.panels.menu) break;
         if (this.session.kind === 'solo' || this.session.kind === 'replay') this.togglePause();
+        // A game with others goes on: said beside the pointer, nothing else happens.
+        else note(t('hud.pauseMulti'), 'info');
         break;
       case 'speedUp':
       case 'speedDown':
@@ -747,6 +753,7 @@ export class GameController {
     ov.terrainView = hud.views.terrain;
     ov.resourcesView = hud.views.resources;
     ov.loyaltyView = hud.views.loyalty;
+    ov.defenceZones = settings.game.defenceZones;
     if (hud.photo) {
       ov.fogView = photo.fog || !this.canLiftFog();
       ov.tradeRoutes = photo.routes;

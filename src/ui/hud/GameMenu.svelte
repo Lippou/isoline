@@ -280,7 +280,12 @@
                   {#each keys as k (k)}
                     <div class="key">
                       <dt>{t(`keys.${k}`)}</dt>
-                      <dd><kbd class="np-key">{keyLabel(settings.keys[k] ?? '')}</kbd></dd>
+                      <dd>
+                        <kbd class="np-key">{keyLabel(settings.keys[k] ?? '')}</kbd
+                        ><!-- The pause has two keys (Space, and P as before). -->{#if k === 'pause' && settings.keys.pauseAlt}&nbsp;/&nbsp;<kbd
+                            class="np-key">{keyLabel(settings.keys.pauseAlt)}</kbd
+                          >{/if}
+                      </dd>
                     </div>
                   {/each}
                 </dl>

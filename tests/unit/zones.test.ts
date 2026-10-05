@@ -6,6 +6,7 @@ import {
   columnHeight,
   placeInStage,
   readingRect,
+  railPlacement,
   clampInto,
   findOverlaps,
   overlaps,
@@ -146,6 +147,37 @@ describe('zones', () => {
     expect(area(z.stage)).toBeGreaterThan(area(normal.stage) * 1.8);
     const dock = computeZones(input(1600, 900, { reading: true, bottomReserve: 240 }));
     expect(dock.stage.y + dock.stage.h).toBeLessThanOrEqual(900 - 240);
+  });
+
+  it.each(SCREENS)(
+    '%i × %i (dpr %i): the dock stays put when a big window opens (reading mode)',
+    (sw, sh, dpr) => {
+      const { w, h } = css(sw, sh, dpr);
+      const normal = computeZones(input(w, h));
+      const reading = computeZones(input(w, h, { reading: true }));
+      // The rail as measured (labels: 7 buttons; short screens: icons only).
+      for (const railH of [341, 300, 200]) {
+        if (railH > normal.rail.h) continue;
+        const p = railPlacement(normal.rail, reading.rail, railH);
+        // Centred in its column in the normal layout…
+        expect(Math.abs(p.normal.y - (normal.rail.y + (normal.rail.h - railH) / 2))).toBeLessThanOrEqual(0.5);
+        // …and not one pixel lower or higher in reading mode, under the reading strip.
+        if (p.normal.y >= reading.rail.y) expect(p.reading.y).toBe(p.normal.y);
+        expect(p.reading.y).toBeGreaterThanOrEqual(reading.strip.y + reading.strip.h);
+        expect(p.reading.y + railH).toBeLessThanOrEqual(h - MARGIN);
+        expect(p.normal.y + p.normal.h).toBe(normal.rail.y + normal.rail.h);
+        expect(p.reading.y + p.reading.h).toBe(reading.rail.y + reading.rail.h);
+      }
+    },
+  );
+
+  it('moves the dock only when it must clear the reading strip; unmeasured, centres it', () => {
+    const p = railPlacement({ x: 12, y: 12, w: 74, h: 300 }, { x: 12, y: 66, w: 74, h: 600 }, 290);
+    expect(p.normal.y).toBe(17);
+    expect(p.reading.y).toBe(66);
+    const q = railPlacement({ x: 12, y: 12, w: 74, h: 600 }, { x: 12, y: 66, w: 74, h: 800 }, 0);
+    expect(q.normal).toEqual({ y: 12, h: 600 });
+    expect(q.reading).toEqual({ y: 66, h: 800 });
   });
 
   it('widens the columns on wide screens and narrows them on compact ones', () => {

@@ -2,8 +2,9 @@
 import { readJson, writeJson } from '../bridge';
 import { i18n, type Lang } from '../i18n/i18n.svelte';
 import type { ColorVision } from '../../render/colors';
+import { migrateSpacePause } from './keyMigrations';
 
-export const SETTINGS_VERSION = 4;
+export const SETTINGS_VERSION = 5;
 
 export const DEFAULT_KEYS: Record<string, string> = {
   attackHover: 'KeyG',
@@ -23,14 +24,17 @@ export const DEFAULT_KEYS: Record<string, string> = {
   allyAccept: 'KeyK',
   allyRefuse: 'KeyL',
   selectWarships: 'KeyF',
-  terrainView: 'Space',
+  /** Tab (1.14.0): Space pauses now; Tab prints the same on every layout (AZERTY Macs too). */
+  terrainView: 'Tab',
   fogView: 'KeyV',
   resourcesView: 'KeyR',
   loyaltyView: 'KeyN',
   tradeRoutes: 'KeyC',
   home: 'KeyH',
   chat: 'Enter',
-  pause: 'KeyP',
+  /** Solo and replays: Space (1.14.0, before: the terrain view), and P as well (pauseAlt). */
+  pause: 'Space',
+  pauseAlt: 'KeyP',
   general: 'KeyE',
   screenshot: 'F12',
   photoMode: 'F2',
@@ -86,6 +90,8 @@ export interface Settings {
     tradeRoutes: boolean;
     /** Tech tree: when the research queue runs dry, study the cheapest available technology. */
     autoResearch: boolean;
+    /** Map: the reach of our own defences (posts, SAM, radar) always drawn, hatched. */
+    defenceZones: boolean;
   };
   keys: Record<string, string>;
   access: { vision: ColorVision; highContrast: boolean; reducedMotion: boolean; subtitles: boolean };
@@ -115,6 +121,7 @@ export function defaultSettings(): Settings {
       autoUpdate: true,
       tradeRoutes: true,
       autoResearch: false,
+      defenceZones: true,
     },
     keys: { ...DEFAULT_KEYS },
     access: { vision: 'none', highContrast: false, reducedMotion: false, subtitles: true },
@@ -145,6 +152,9 @@ export function migrateSettings(raw: Partial<Settings> & { version?: number }): 
   // v3 → v4: the interface scale became automatic by default; the former default (100 %)
   // was rarely a choice, so it follows the window now. Another value stays the player's.
   if ((raw.version ?? 1) < 4 && s.graphics.uiScale === 1) s.graphics.uiScale = 0;
+  // v4 → v5: Space pauses (the players asked for it); the terrain view moves to Tab. A key
+  // the player chose for either stays theirs.
+  if ((raw.version ?? 1) < 5) migrateSpacePause(s.keys, raw.keys ?? {});
   // The separate tutorial is gone (the campaign teaches the game): its flag goes too.
   delete (s.game as Partial<Record<string, unknown>>).tutorialDone;
   return s;
@@ -196,6 +206,7 @@ export function keyLabel(code: string): string {
   const fr = i18n.lang === 'fr';
   const map: Record<string, string> = {
     Space: fr ? 'Espace' : 'Space',
+    Tab: fr ? 'Tab ⇥' : 'Tab ⇥',
     Equal: '+',
     Minus: '−',
     Enter: fr ? 'Entrée' : 'Enter',

@@ -53,7 +53,7 @@ Chaque tuile a un type de terrain (13 types), une altitude (0–255) et un éven
 - **lents même pour une grande armée** : sur les terres libres, OpenFront borne le coût d'une tuile à [5, 100] (une grande armée prend toute tuile au même rythme) ; sur glacier et hauts sommets les deux bornes sont multipliées par `speed / 16,5` (×1,9 et ×2,2). Mesuré (Monde, IA) : les terres habitables sont prises à 94 % en 4 min, l'inlandsis à 77 % en 4 min et 99 % en 5 min ;
 - la technologie militaire qui allège les pertes en colline et montagne vaut aussi pour les hauts sommets ;
 - **Infranchissable** ne reste que pour les **murs voulus** : les murs et le cadre du Labyrinthe, le trône des dieux au sommet de l'Olympe, le feu de Surt au cœur de Muspelheim (Neuf Mondes). L'éditeur garde ce pinceau pour les murs.
-- **Rendu** : le glacier garde sa glace blanc bleuté, avec de fines crevasses ; les hauts sommets, de la roche nue sous la neige ; les murs passent au basalte sombre (on ne les confond plus avec la glace) ; la vue terrain (Espace) les montre en rose et magenta, plus chers que la montagne rouge ; la carte de survol affiche « Glacier » ou « Hauts sommets », le multiplicateur de pertes et « Lent à conquérir · on n'y construit rien ».
+- **Rendu** : le glacier garde sa glace blanc bleuté, avec de fines crevasses ; les hauts sommets, de la roche nue sous la neige ; les murs passent au basalte sombre (on ne les confond plus avec la glace) ; la vue terrain (Tab) les montre en rose et magenta, plus chers que la montagne rouge ; la carte de survol affiche « Glacier » ou « Hauts sommets », le multiplicateur de pertes et « Lent à conquérir · on n'y construit rien ».
 - **Cartes** : `synth.ts` émet `Glacier` et `Peaks` là où il émettait `Impassable` ; toute la chaîne de génération (rivières, nations, spawns, gisements, masses terrestres) traite les terres rudes comme avant les murs (`HABITABLE`, `HARSH` dans `terrain.ts`), si bien que la reconstruction de toutes les cartes ne change **que** ces tuiles (altitudes, nations, spawns et gisements identiques). Glacier / hauts sommets par carte : Monde 4,4 % / 0,65 %, Monde géant 4,3 % / 0,8 %, Amérique du Nord 0,4 % / 1,0 %, Mars 4,3 % / 0,5 %, Neuf Mondes 1,6 % / 0,4 % ; les autres n'ont que des hauts sommets (Dragon 3,3 %, Inde 2,4 %, Amérique du Sud 2,1 %…).
 
 **Rivières navigables** (propre à Isoline ; OpenFront n'a pas de rivières). Une rivière reste une tuile de **terre** : elle se possède, se conquiert (et coûte plus cher à franchir, ci-dessus), compte dans le territoire et la victoire, porte des bâtiments. Mais une rivière qui **se jette dans une mer ou un lac** (ses tuiles 4-connexes touchent l'eau) est aussi **navigable** : elle forme une seule étendue navigable avec cette mer et les lacs qu'elle relie.
@@ -219,7 +219,7 @@ contre un pays : clamp(r ; 0,82 ; 7,5) × clamp(r / 20 ; 1 ; 50) / 8,55 × coût
 - 12 attaques simultanées au maximum par joueur.
 - **Mort** d'un joueur à 0 tuile : ses navires coulent progressivement (−5 à −8 PV par tick) et ses bâtiments disparaissent.
 - **Capture des bâtiments** : villes, ports, usines, silos, SAM, aérodromes et centres de recherche sont transférés, **pillés et occupés** (§6.4) ; postes de défense et radars sont détruits.
-- **Vue terrain** (Espace) : carte thermique des coûts d'attaque.
+- **Vue terrain** (Tab) : carte thermique des coûts d'attaque.
 
 ### 6.4 Bâtiments capturés : pillage et occupation (1.12, écart voulu avec OpenFront)
 
@@ -668,18 +668,18 @@ Chacune est implémentée, testée (`tests/unit/rules.test.ts`, `units.test.ts`)
 | Bombe A (×5 à la deuxième pression), H, MIRV | 8, 9, 0 |
 | Accepter / refuser une alliance | K / L |
 | Sélectionner les navires de guerre | F |
-| Vue terrain / brouillard / ressources / loyauté (si activée) / routes commerciales | Espace / V / R / N / C |
+| Vue terrain / brouillard / ressources / loyauté (si activée) / routes commerciales | Tab / V / R / N / C |
 | Caméra | ZQSD/WASD, flèches, glisser (gauche ou milieu), +/−, molette, pincement |
 | Centrer sur son territoire | H |
 | Signaux tactiques | Alt + clic |
 | Chat | Entrée |
-| Pause (solo) / menu | P / Échap |
+| Pause (solo ; en partie à plusieurs, une note le rappelle) / menu | Espace ou P / Échap |
 | Général | E |
 | Capture d'écran | F12 |
 | Mode photo | F2 |
 | FPS et temps de tick | F3 |
 
-- **Mode photo** (touche **F2** ou menu Échap → « Mode photo ») : tout le HUD disparaît (fenêtres, cartes, barres, survol), la carte et les unités restent, la caméra est libre (glisser, molette, clavier) et les clics ne donnent plus d'ordre. Une petite barre flottante règle la prise : noms des pays (avec troupes, badges et chiffres flottants), frontières, brouillard (seulement en replay ou en spectateur), météo (orages, bancs de brouillard, nuages), routes commerciales, **heure de la photo** (« Auto » suit l'horloge de la partie ; le curseur force du plein jour à la nuit, lumières des villes comprises), **Figer** (solo et replays : le monde s'arrête pendant la prise, par défaut ; P le bascule), **Capturer** (ou F12) : la barre s'efface le temps de la capture, l'image PNG est enregistrée dans le dossier `screenshots/` des données de l'application et son chemin s'affiche au-dessus de la barre. Échap (ou F2) quitte et rétablit la pause d'avant.
+- **Mode photo** (touche **F2** ou menu Échap → « Mode photo ») : tout le HUD disparaît (fenêtres, cartes, barres, survol), la carte et les unités restent, la caméra est libre (glisser, molette, clavier) et les clics ne donnent plus d'ordre. Une petite barre flottante règle la prise : noms des pays (avec troupes, badges et chiffres flottants), frontières, brouillard (seulement en replay ou en spectateur), météo (orages, bancs de brouillard, nuages), routes commerciales, **heure de la photo** (« Auto » suit l'horloge de la partie ; le curseur force du plein jour à la nuit, lumières des villes comprises), **Figer** (solo et replays : le monde s'arrête pendant la prise, par défaut ; Espace ou P le bascule), **Capturer** (ou F12) : la barre s'efface le temps de la capture, l'image PNG est enregistrée dans le dossier `screenshots/` des données de l'application et son chemin s'affiche au-dessus de la barre. Échap (ou F2) quitte et rétablit la pause d'avant.
 - **Pavé tactile macOS** : défilement à deux doigts pour la caméra, pincement (`ctrl + wheel`) pour le zoom. **Molette Windows** : zoom. Le mode se règle dans les paramètres.
 
 ## 17. Réseau et déterminisme

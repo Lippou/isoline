@@ -198,7 +198,11 @@ export class InputController {
       return;
     }
     if (!action) return;
-    if (action === 'terrainView' || action.startsWith('pan')) e.preventDefault();
+    // Space and Tab are the browser's too (a focused button would be pressed, the focus
+    // would move): the game takes them. In a modal (the menu, a confirmation), Tab still
+    // moves between its buttons.
+    if (e.code === 'Tab' && document.querySelector('[aria-modal="true"]')) return;
+    if (e.code === 'Space' || e.code === 'Tab' || action.startsWith('pan')) e.preventDefault();
     if (action === 'zoomIn') this.r.camera.zoomAt(1.4, this.r.camera.viewW / 2, this.r.camera.viewH / 2);
     else if (action === 'zoomOut')
       this.r.camera.zoomAt(1 / 1.4, this.r.camera.viewW / 2, this.r.camera.viewH / 2);

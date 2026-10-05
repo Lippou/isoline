@@ -192,6 +192,32 @@ export function computeZones(i: ZoneInput): Zones {
   };
 }
 
+/**
+ * Where the dock rail stands (its top, and the room under it down to its column's foot), in
+ * the normal layout and in reading mode. Normally centred in its column; in reading mode it
+ * stays exactly where it was (opening the technologies or the journal used to centre it
+ * anew in the taller column under the reading strip: the whole dock slid down ~150 px), and
+ * only moves when it must, to clear the reading strip or the screen's foot.
+ * `railH`: the rail's measured height (0: not measured yet: centred).
+ */
+export function railPlacement(
+  normal: Rect,
+  reading: Rect,
+  railH: number,
+): { normal: { y: number; h: number }; reading: { y: number; h: number } } {
+  const h = Math.max(0, railH);
+  const centred = (z: Rect) => (h > 0 && h < z.h ? z.y + (z.h - h) / 2 : z.y);
+  const ny = Math.round(centred(normal));
+  // Same top as in the normal layout, nudged into the reading column if it does not fit.
+  const lo = reading.y;
+  const hi = Math.max(lo, reading.y + reading.h - h);
+  const ry = h > 0 ? Math.round(Math.min(hi, Math.max(lo, ny))) : Math.round(centred(reading));
+  return {
+    normal: { y: ny, h: nonNeg(normal.y + normal.h - ny) },
+    reading: { y: ry, h: nonNeg(reading.y + reading.h - ry) },
+  };
+}
+
 // ------------------------------------------------------------------ the columns' pieces
 
 /** How whole a piece of a column is printed: whole, on one line, or as a chip (a badge). */

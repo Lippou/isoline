@@ -1,6 +1,8 @@
 // Generates the complete Isoline brand kit from code:
 //   brand/*.svg + brand/png/*      logo symbol, logotype, full logos (dark/light/mono)
 //   build-resources/icon.{icns,ico,png}, dmg-background(@2x).png
+//   build-resources/Isoline.icon    the macOS 26+ icon (Icon Composer: layers + icon.json),
+//                                   compiled by electron-builder into Assets.car
 //   brand/moodboard.{svg,png}, brand/palette.svg
 //   src/ui/assets/brand/*.svg      in-app copies
 // Text is converted to outlines with opentype.js so every SVG is self-contained.
@@ -171,6 +173,58 @@ function iconSvg(simple: boolean, fullBleed: boolean): string {
   </g>
   <rect x="${inset + 3}" y="${inset + 3}" width="${size - 6}" height="${size - 6}" rx="${rx - 3}" fill="none" stroke="${PALETTE.aurora}" stroke-opacity="0.22" stroke-width="6"/>
 </svg>`;
+}
+
+/**
+ * The macOS 26+ icon, as Icon Composer saves it (`Isoline.icon`: icon.json + layers): the
+ * system draws it in its own squircle, with its depth. Two full-bleed 1024 layers, the
+ * chart (body, glow, grid) and the isolines with their summit; the system masks the corners.
+ * electron-builder compiles it with actool into Assets.car (CFBundleIconName), which the
+ * system's own surfaces read (Game Mode, notifications, the menu bar), and an icns.
+ */
+function iconComposer(): { json: string; layers: Record<string, string> } {
+  const grid: string[] = [];
+  for (let i = 1; i < 8; i++) {
+    const v = (1024 / 8) * i;
+    grid.push(`<line x1="0" y1="${v}" x2="1024" y2="${v}"/>`, `<line x1="${v}" y1="0" x2="${v}" y2="1024"/>`);
+  }
+  const chart = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B2C48"/><stop offset="1" stop-color="${PALETTE.abyss}"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.45" cy="0.4" r="0.6">
+      <stop offset="0" stop-color="${PALETTE.aurora}" stop-opacity="0.22"/><stop offset="1" stop-color="${PALETTE.aurora}" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#body)"/>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+  <g stroke="${PALETTE.aurora}" stroke-opacity="0.07" stroke-width="3">${grid.join('')}</g>
+</svg>`;
+  // The mark at the size it has in the squircle of the classic icon (824 of 1024, ×0.9).
+  const scale = (1024 / 824) * 0.9;
+  const marks = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">${markGroup(
+    { rings: ['#2A8F7C', '#3BC2A5', PALETTE.aurora], summit: PALETTE.brass, stroke: 40 },
+    512,
+    530,
+    scale,
+  )}</svg>`;
+  const json = {
+    fill: { solid: 'extended-srgb:0.04314,0.07059,0.12549,1.00000' },
+    groups: [
+      {
+        layers: [{ 'image-name': 'isolines.png', name: 'isolines' }],
+        shadow: { kind: 'neutral', opacity: 0.4 },
+        translucency: { enabled: false, value: 0 },
+      },
+      { layers: [{ 'image-name': 'chart.png', name: 'chart' }] },
+    ],
+    'supported-platforms': { squares: 'shared' },
+  };
+  return {
+    json: JSON.stringify(json, null, 2) + '\n',
+    layers: { 'chart.png': chart, 'isolines.png': marks },
+  };
 }
 
 type Variant = 'dark' | 'light' | 'mono' | 'mono-white';
@@ -470,6 +524,15 @@ function main(): void {
   for (const [name, s] of icnsSizes) render(s <= 32 ? iconSmall : icon, s, path.join(iconset, name));
   execFileSync('iconutil', ['-c', 'icns', iconset, '-o', path.join(BUILD_RES, 'icon.icns')]);
   fs.copyFileSync(path.join(BUILD_RES, 'icon.icns'), path.join(BRAND, 'icon.icns'));
+
+  // The macOS 26+ icon (Icon Composer), next to the icns that older systems read.
+  const composer = iconComposer();
+  const iconDir = path.join(BUILD_RES, 'Isoline.icon');
+  fs.rmSync(iconDir, { recursive: true, force: true });
+  fs.mkdirSync(path.join(iconDir, 'Assets'), { recursive: true });
+  fs.writeFileSync(path.join(iconDir, 'icon.json'), composer.json);
+  for (const [name, svg] of Object.entries(composer.layers))
+    render(svg, 1024, path.join(iconDir, 'Assets', name));
 
   const ico = [16, 24, 32, 48, 64, 128, 256].map((s) => ({
     size: s,

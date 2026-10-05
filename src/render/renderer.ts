@@ -12,11 +12,13 @@ import { UNIT_STRIDE, type BuildingView } from '../engine/protocol';
 import { U } from '../core/units/unit';
 import {
   B,
+  DEFENSE_POST_RANGE,
   N,
   NUKE_FALLOUT_RADIUS,
   NUKE_RADIUS,
   NUKE_TARGETABLE_RANGE,
   RECON_RADIUS,
+  radarRange,
 } from '../core/game/constants';
 import { Trajectory } from '../core/units/trajectory';
 import type { GameEvent } from '../core/game/events';
@@ -28,6 +30,7 @@ import { ShipLayer } from './ships';
 import { WeatherLayer } from './weatherLayer';
 import { TradeRouteLayer } from './tradeRoutes';
 import { CapitalLayer } from './capitals';
+import { DefenceZoneLayer, type Circle, type ZoneKind } from './defenceZones';
 import { FlagTextures } from './flagTextures';
 import {
   DEFENSE_BADGE_ZOOM,
@@ -68,6 +71,8 @@ export interface Overlay {
   airPreview: AirPreview | null;
   /** Show every known SAM's coverage (own green, allies yellow, others red). */
   samCoverage: boolean;
+  /** Our defences' reach always drawn: posts, SAMs, radars (settings.game.defenceZones). */
+  defenceZones: boolean;
   /** Build-bar filter: these building types light up, the others fade (null: no filter). */
   buildingFilter: number[] | null;
   selection: Set<number>;
@@ -237,6 +242,7 @@ export class GameRenderer {
   private weather!: WeatherLayer;
   private routes!: TradeRouteLayer;
   private capitals!: CapitalLayer;
+  private zones = new DefenceZoneLayer();
   private unitSprites = new Map<number, UnitSprite>();
   private buildingSprites = new Map<number, Container>();
   private labelPool = new Map<number, MapLabel>();
@@ -281,6 +287,7 @@ export class GameRenderer {
     nukePreview: null,
     airPreview: null,
     samCoverage: false,
+    defenceZones: true,
     buildingFilter: null,
     selection: new Set(),
     dragRect: null,
@@ -339,6 +346,7 @@ export class GameRenderer {
       this.routes.lanes,
       this.routes.cuts,
       this.nukeFx.ground,
+      this.zones.container,
       this.deposits,
       this.lights,
       this.buildings,
@@ -535,6 +543,7 @@ export class GameRenderer {
     this.updateUnits(alpha, tickF, dt, t);
     this.particles.update(dt, z);
     this.nukeFx.update(dt, cam.bounds());
+    this.updateDefenceZones(z);
     this.drawOverlay(t);
     this.updateLabels(z);
     this.updateFronts(z);
@@ -1128,6 +1137,36 @@ export class GameRenderer {
       } else open = false;
     }
     g.stroke({ width: Math.max(0.08, widthPx / z), color, alpha });
+  }
+
+  /**
+   * Our defences' reach, always drawn (defenceZones.ts): posts, SAM batteries (left to the
+   * coverage view while it shows) and radars in service. Faded away when zoomed far out.
+   */
+  private updateDefenceZones(z: number): void {
+    const s = this.state;
+    const ov = this.overlay;
+    const on = ov.defenceZones && s.viewer > 0 && !ov.photo;
+    if (!on) {
+      this.zones.update(z, this.camera.bounds(), 0);
+      return;
+    }
+    // (A technology widens the SAMs' reach: the bonus is part of what the circles depend on.)
+    const version = `${s.buildingsVersion}|${s.viewer}|${ov.samCoverage ? 1 : 0}|${s.players.get(s.viewer)?.samBonus ?? 0}`;
+    if (version !== this.zones.version) {
+      const zones: Record<ZoneKind, Circle[]> = { post: [], sam: [], radar: [] };
+      for (const b of s.buildings) {
+        if (b.owner !== s.viewer || !b.ready) continue;
+        const at = { x: b.x + 0.5, y: b.y + 0.5 };
+        if (b.type === B.DefensePost) zones.post.push({ ...at, r: DEFENSE_POST_RANGE });
+        else if (b.type === B.Sam && !ov.samCoverage)
+          zones.sam.push({ ...at, r: s.samReach(b.owner, b.level) });
+        else if (b.type === B.Radar) zones.radar.push({ ...at, r: radarRange(b.level) });
+      }
+      this.zones.setZones(zones, version);
+    }
+    // (Far out, over the whole map, they fade: half-strength at 0.5 px per tile, gone at 0.3.)
+    this.zones.update(z, this.camera.bounds(), Math.max(0, Math.min(1, (z - 0.3) / 0.4)));
   }
 
   /** Every known SAM's reach: own green, allies yellow, the others red (merged outlines). */

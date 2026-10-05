@@ -318,6 +318,20 @@
                   onchange={change}
                 />
               </label>
+              <label class="srow">
+                <span class="sl"
+                  ><span class="lb">{t('settings.defenceZones')}</span><small
+                    >{t('settings.d.defenceZones')}</small
+                  ></span
+                >
+                <input
+                  class="switch"
+                  type="checkbox"
+                  data-testid="settings-defence-zones"
+                  bind:checked={settings.game.defenceZones}
+                  onchange={change}
+                />
+              </label>
               <div class="srow">
                 <div class="sl">
                   <label for="set-font">{t('settings.fontSize')}</label><small

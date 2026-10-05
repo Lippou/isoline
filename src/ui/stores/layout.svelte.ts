@@ -12,6 +12,7 @@ import {
   allocate,
   PIECES,
   FOLD_OF,
+  railPlacement,
   FOLD_TAB_W,
   type Level,
   type PieceId,
@@ -112,6 +113,8 @@ class Layout {
     const z = this.normal;
     const R = this.readingZones;
     const { w, h } = this.input;
+    // The dock stands at the same place in both layouts (railPlacement).
+    const rail = railPlacement(z.rail, R.rail, hudBox.rail);
     const px = (v: number) => `${Math.round(v)}px`;
     const v: Record<string, string> = {
       '--card-w': px(z.sizes.card),
@@ -123,8 +126,8 @@ class Layout {
       '--zone-left-y': px(z.left.y),
       '--zone-left-h': px(z.left.h),
       '--zone-right-x': px(z.right.x),
-      '--zone-rail-y': px(z.rail.y),
-      '--zone-rail-h': px(z.rail.h),
+      '--zone-rail-y': px(rail.normal.y),
+      '--zone-rail-h': px(rail.normal.h),
       '--zone-band-x': px(z.band.x),
       '--zone-band-w': px(z.band.w),
       '--zone-band-c': px(z.band.x + z.band.w / 2),
@@ -136,8 +139,8 @@ class Layout {
       '--zone-stage-w': px(z.stage.w),
       '--zone-stage-h': px(z.stage.h),
       '--zone-stage-b': px(h - z.stage.y - z.stage.h),
-      '--zone-read-rail-y': px(R.rail.y),
-      '--zone-read-rail-h': px(R.rail.h),
+      '--zone-read-rail-y': px(rail.reading.y),
+      '--zone-read-rail-h': px(rail.reading.h),
     };
     return Object.entries(v)
       .map(([k, val]) => `${k}: ${val}`)

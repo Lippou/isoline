@@ -64,8 +64,8 @@
 </script>
 
 {#if showRail}
-  <!-- The dock: a rail along the left edge, centred in its zone (above the resources panel;
-       in reading mode, under the reading strip). -->
+  <!-- The dock: a rail along the left edge, centred in its zone (above the resources panel);
+       in reading mode it stays put (zones.ts, railPlacement): opening a window never moves it. -->
   <div class="strip" class:reading={layout.reading}>
     <nav class="rail glass" aria-label={t('hud.panels')} use:hudSize={'rail'}>
       {#each tabs.filter((tb) => !tb.hidden) as tb (tb.id)}
@@ -126,7 +126,8 @@
     top: var(--zone-rail-y, 12px);
     height: var(--zone-rail-h, 50vh);
     display: flex;
-    align-items: center;
+    /* Its top is placed by the zones (centred there), the same in reading mode. */
+    align-items: flex-start;
     pointer-events: none;
     z-index: 29;
   }

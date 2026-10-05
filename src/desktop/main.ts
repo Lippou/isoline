@@ -140,6 +140,13 @@ process.on('uncaughtException', (err) => {
 });
 
 app.whenReady().then(() => {
+  // Unpackaged (npm run dev, the QA scripts), the app is Electron's own bundle: its Dock tile
+  // shows Isoline's icon at least. (The system's surfaces — Game Mode, notifications — read
+  // the bundle's icon: only a packaged app carries ours, see electron-builder.yml.)
+  if (!app.isPackaged && process.platform === 'darwin') {
+    const icon = path.join(app.getAppPath(), 'build-resources', 'icon.png');
+    if (fs.existsSync(icon)) app.dock?.setIcon(icon);
+  }
   registerProtocol();
   registerStorageIpc();
   registerLanIpc();

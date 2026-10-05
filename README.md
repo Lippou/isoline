@@ -100,7 +100,7 @@ scripts/       build, packaging, vérification, benchmarks, médias, marque, car
 
 ## Contrôles essentiels
 
-Clic gauche : attaquer ou étendre · Clic droit : menu contextuel · Molette ou pincement : zoom · ZQSD/WASD, flèches ou glisser : caméra · 1–6, O, I, 7 : construire · 8 / 9 / 0 : bombes A, H et MIRV · U : inverser la trajectoire des missiles · T/Y : ratio d'attaque · K/L : accepter/refuser une alliance · E : général · Espace / V / R / N : vues terrain, brouillard, ressources, loyauté · Échap : menu. Tous les raccourcis sont remappables (Paramètres → Contrôles) ; liste complète dans `GAME_DESIGN.md` §16.
+Clic gauche : attaquer ou étendre · Clic droit : menu contextuel · Molette ou pincement : zoom · ZQSD/WASD, flèches ou glisser : caméra · 1–6, O, I, 7 : construire · 8 / 9 / 0 : bombes A, H et MIRV · U : inverser la trajectoire des missiles · T/Y : ratio d'attaque · K/L : accepter/refuser une alliance · E : général · Espace (ou P) : pause en solo · Tab / V / R / N : vues terrain, brouillard, ressources, loyauté · Échap : menu. Tous les raccourcis sont remappables (Paramètres → Contrôles) ; liste complète dans `GAME_DESIGN.md` §16.
 
 ## Licence
 

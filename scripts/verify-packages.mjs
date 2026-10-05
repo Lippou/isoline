@@ -71,6 +71,16 @@ if (doMac) {
     'Contents/Resources/maps/world.png (extraResources)',
   );
   check(fs.existsSync(path.join(app, 'Contents', 'Resources', 'icon.icns')), 'Contents/Resources/icon.icns');
+  // macOS 26+: the system's own surfaces (Game Mode, notifications) read the asset catalog.
+  const car = path.join(app, 'Contents', 'Resources', 'Assets.car');
+  check(fs.existsSync(car), 'Contents/Resources/Assets.car (icon for macOS 26+)');
+  try {
+    const info = JSON.parse(execFileSync('xcrun', ['assetutil', '--info', car]).toString());
+    const icons = info.filter((e) => e.Name === 'Icon' && e.AssetType === 'Icon Image');
+    check(icons.length > 0, 'Assets.car holds the app icon', `${icons.length} sizes`);
+  } catch (e) {
+    check(false, 'Assets.car readable (xcrun assetutil)', String(e).split('\n')[0]);
+  }
   check(
     dirSize(app) > 0,
     'App bundle size',
@@ -100,6 +110,16 @@ if (doMac) {
       plist('NSHumanReadableCopyright').includes('Isoline'),
       'Info.plist copyright',
       plist('NSHumanReadableCopyright'),
+    );
+    check(
+      plist('CFBundleIconName') === 'Icon',
+      'Info.plist CFBundleIconName (asset catalog)',
+      plist('CFBundleIconName'),
+    );
+    check(
+      plist('CFBundleIconFile') === 'icon.icns',
+      'Info.plist CFBundleIconFile (older macOS)',
+      plist('CFBundleIconFile'),
     );
     check(
       plist('LSMinimumSystemVersion').startsWith('12'),

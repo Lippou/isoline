@@ -141,6 +141,14 @@ test('LAN: host a game, a second instance joins by address + code, both play the
   await host.page.waitForTimeout(3000);
   const [a, b] = [await clock(host.page), await clock(guest.page)];
   expect(Math.abs(toSec(a) - toSec(b))).toBeLessThanOrEqual(1);
+  // Space pauses a solo game; with other players the clock goes on, and a note says so.
+  const box = (await host.page.locator('canvas').first().boundingBox())!;
+  await host.page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5);
+  const before = toSec(await clock(host.page));
+  await host.page.keyboard.press('Space');
+  await expect(host.page.getByTestId('cursor-note')).toContainText(/plusieurs|other players/);
+  await host.page.waitForTimeout(2200);
+  expect(toSec(await clock(host.page))).toBeGreaterThan(before);
   expect(host.errors).toEqual([]);
   expect(guest.errors).toEqual([]);
   await guest.app.close();

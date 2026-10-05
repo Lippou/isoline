@@ -82,7 +82,13 @@
             class="tbtn"
             class:on={hud.paused}
             aria-pressed={hud.paused}
-            data-tip="{t(hud.paused ? 'hud.resume' : 'hud.pause')} ({keyLabel(settings.keys.pause ?? '')})"
+            data-tip="{t(hud.paused ? 'hud.resume' : 'hud.pause')} ({[
+              settings.keys.pause,
+              settings.keys.pauseAlt,
+            ]
+              .filter((k) => !!k)
+              .map((k) => keyLabel(k ?? ''))
+              .join(' / ')})"
             aria-label={t(hud.paused ? 'hud.resume' : 'hud.pause')}
             onclick={() => ctl.togglePause()}><Icon name={hud.paused ? 'play' : 'pause'} size={14} /></button
           >
