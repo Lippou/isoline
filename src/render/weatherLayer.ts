@@ -9,8 +9,13 @@ import type { IconSet } from './icons';
 const FADE_TICKS = 50;
 /** On-screen size of the centre glyph (px). */
 const MARK_PX = 22;
-/** Dashed outline colours: storm (cold slate) and fog bank (paper white). */
-const RING_COLOR = [0xc9d6e8, 0xf2f5f7] as const;
+/**
+ * Dashed outline colours: storm (cold slate), fog bank (paper white); a world event's zone
+ * (earthquake, volcanic ash) in brass, with longer and bolder dashes and its own glyph.
+ */
+const RING_COLOR = [0xc9d6e8, 0xf2f5f7, 0xe9b44c, 0xe9b44c] as const;
+/** Mark kinds of the world events' zones (icons.weather[kind]). */
+const EVENT_KIND: Record<string, 2 | 3> = { earthquake: 2, volcano: 3 };
 
 interface Mark {
   c: Container;
@@ -55,6 +60,14 @@ export class WeatherLayer {
       this.packed[k * 4 + 3] = (c.kind === 1 ? 2 : 0) + fade;
       this.mark(born * 2 + c.kind, c.kind, x, y, c.r, fade, zoom);
     }
+    // The zone of a world event under way (GAME_DESIGN.md §12): the earthquake's circle,
+    // the ash cloud where no aircraft flies.
+    const ev = w?.event;
+    const ek = ev ? EVENT_KIND[ev.id] : undefined;
+    if (ev && ek !== undefined && (ev.r ?? 0) > 0 && ev.until > tickF) {
+      const fade = Math.max(0, Math.min(1, (ev.until - tickF) / FADE_TICKS));
+      this.mark(-1 - ev.until, ek, ev.x ?? 0, ev.y ?? 0, ev.r ?? 0, fade, zoom);
+    }
     for (const [id, m] of this.marks) {
       if (m.seen === this.frame) continue;
       m.c.destroy({ children: true });
@@ -63,7 +76,15 @@ export class WeatherLayer {
     return this.packed;
   }
 
-  private mark(id: number, kind: 0 | 1, x: number, y: number, r: number, fade: number, z: number): void {
+  private mark(
+    id: number,
+    kind: 0 | 1 | 2 | 3,
+    x: number,
+    y: number,
+    r: number,
+    fade: number,
+    z: number,
+  ): void {
     let m = this.marks.get(id);
     if (!m) {
       const c = new Container();
@@ -80,7 +101,11 @@ export class WeatherLayer {
       m.zoom = z;
       m.r = r;
       m.ring.clear();
-      dashedRing(m.ring, r, z, RING_COLOR[kind]);
+      if (kind >= 2) {
+        // A world event's zone reads as an area: a faint wash inside the bold dashes.
+        m.ring.circle(0, 0, r).fill({ color: RING_COLOR[kind], alpha: 0.09 });
+        dashedRing(m.ring, r, z, RING_COLOR[kind], 16, 6, 2.4, 0.85);
+      } else dashedRing(m.ring, r, z, RING_COLOR[kind]);
     }
     m.c.position.set(x, y);
     m.c.alpha = fade;
@@ -88,14 +113,23 @@ export class WeatherLayer {
     const px = Math.min(MARK_PX, r * z * 0.7);
     m.icon.visible = px >= 10;
     m.icon.width = m.icon.height = px / z;
+    // A world event's glyph sits on its circle's top edge: the building at the epicentre stays visible.
+    m.icon.position.set(0, kind >= 2 ? -r : 0);
   }
 }
 
 /** A faint dashed circle of radius r (tiles) centred on the origin; dashes in screen pixels. */
-function dashedRing(g: Graphics, r: number, z: number, color: number): void {
+function dashedRing(
+  g: Graphics,
+  r: number,
+  z: number,
+  color: number,
+  dash = 9,
+  gap = 7,
+  width = 1.4,
+  alpha = 0.5,
+): void {
   const circ = Math.PI * 2 * r * z;
-  const dash = 9;
-  const gap = 7;
   const n = Math.max(8, Math.min(240, Math.round(circ / (dash + gap))));
   const on = (dash / (dash + gap)) * ((Math.PI * 2) / n);
   for (let k = 0; k < n; k++) {
@@ -109,5 +143,5 @@ function dashedRing(g: Graphics, r: number, z: number, color: number): void {
       g.lineTo(Math.cos(a) * r, Math.sin(a) * r);
     }
   }
-  g.stroke({ width: Math.max(0.06, 1.4 / z), color, alpha: 0.5, cap: 'round' });
+  g.stroke({ width: Math.max(0.06, width / z), color, alpha, cap: 'round' });
 }

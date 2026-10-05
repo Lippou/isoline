@@ -1,5 +1,6 @@
 // Railways: factories automatically lay track to stations (cities, ports,
 // factories) within range; trains wander the network and pay at every stop.
+import { trainPayMult } from '../rules/worldEvents';
 import type { Game } from '../game/state';
 import { inService, type Building } from '../buildings/building';
 import {
@@ -314,7 +315,9 @@ function payStop(game: Game, train: Unit, station: Building): void {
           ? TRAIN_PAY_ALLY
           : TRAIN_PAY_OTHER;
   const amount =
-    Math.floor(trainStopGold(base, train.level) * game.config.goldMultiplier) * game.features.tradeMult;
+    Math.floor(trainStopGold(base, train.level) * game.config.goldMultiplier) *
+    game.features.tradeMult *
+    trainPayMult(game); // a rail strike (world event): the trains run empty
   train.level++;
   payTrain(game, p, amount, station);
   if (station.owner !== p.id) {

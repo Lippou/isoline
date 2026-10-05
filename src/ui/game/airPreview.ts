@@ -2,6 +2,7 @@
 // off from, its reach, the building a bomber would hit and what is left of it, the hostile
 // SAMs and interceptors waiting on the way. Mirrors the simulation (src/core/units/air.ts)
 // on the client mirror; fog of war hides what the viewer cannot see.
+import { ashOnRoute } from '../hud/worldEvents';
 import type { ClientState } from '../../engine/clientState';
 import {
   A,
@@ -29,7 +30,7 @@ const MAX_LEVEL_ONE = new Set<number>([B.DefensePost]);
 export interface AirAim {
   overlay: AirPreview;
   /** Why the order would be refused ('' when it would fly). */
-  problem: '' | 'noAirfield' | 'full' | 'range' | 'noTarget' | 'teammate';
+  problem: '' | 'noAirfield' | 'full' | 'range' | 'noTarget' | 'teammate' | 'ash';
   /** Bomber: the building it would hit, and its level after the hit (0: destroyed). */
   target: { type: number; owner: number; level: number; after: number } | null;
   /** Loaded hostile SAM missiles reaching the bomber's route (each one downs a bomber). */
@@ -171,6 +172,8 @@ export function airAim(
   if (!field) problem = 'noAirfield';
   else if (flying >= room) problem = 'full';
   else if (fd > reach) problem = 'range';
+  // A volcanic ash cloud (world event) on the way: the flight is refused.
+  else if (ashOnRoute(s.world, s.tick, field.x + 0.5, field.y + 0.5, tx, ty)) problem = 'ash';
   else if (kind === A.Bomber && (victim <= 0 || mate(victim))) problem = victim > 0 ? 'teammate' : 'noTarget';
   const betrays = kind === A.Bomber && victim > 0 && !!me?.allies.includes(victim) ? victim : 0;
   const ok = problem === '';

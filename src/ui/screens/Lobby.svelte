@@ -23,7 +23,7 @@
   import { myFlag } from '../stores/profile.svelte';
   import { flagUrl } from '../../render/flags';
   import { hashString } from '../../core/rng';
-  import { pickNations } from '../../core/map/nationPick';
+  import { nationsForDifficulty, pickNations } from '../../core/map/nationPick';
   import type { PlayerFlag } from '../../core/data/flagSpec';
 
   interface MapEntry {
@@ -155,9 +155,29 @@
     }
   });
 
-  /** A map's default nation count (custom maps: up to 30, the former default for every map). */
-  function defaultNations(m: MapEntry): number {
-    return Math.min(m.nations, m.defaultNations ?? 30);
+  /**
+   * A map's default nation count at the chosen difficulty (map/nationPick.ts: the map's own
+   * default on Hard, fewer on Easy, more on Impossible; custom maps start from 30).
+   */
+  function defaultNations(m: MapEntry, difficulty: Difficulty = cfg.difficulty): number {
+    return nationsForDifficulty(m.defaultNations ?? 30, m.nations, difficulty);
+  }
+
+  /** The difficulty changes the default count too, until the player has moved the slider. */
+  function pickDifficulty(d: Difficulty): void {
+    cfg.difficulty = d;
+    const m = selected;
+    if (m && !cfg.procedural && app.lobby.nationsAuto) cfg.nations = defaultNations(m, d);
+    push();
+  }
+
+  /** Back to the default for this map and difficulty (the count follows them again). */
+  function resetNations(): void {
+    const m = selected;
+    if (!m) return;
+    cfg.nations = defaultNations(m);
+    app.lobby.nationsAuto = true;
+    push();
   }
 
   function pickMap(m: MapEntry): void {
@@ -535,10 +555,7 @@
                   class:on={cfg.difficulty === d}
                   aria-pressed={cfg.difficulty === d}
                   disabled={!isHost}
-                  onclick={() => {
-                    cfg.difficulty = d;
-                    push();
-                  }}>{t(`difficulty.${d}`)}</button
+                  onclick={() => pickDifficulty(d)}>{t(`difficulty.${d}`)}</button
                 >
               {/each}
             </div>
@@ -564,7 +581,23 @@
               disabled={!isHost}
               data-testid="opt-nations"
               use:rangeFill={[cfg.nations, selected?.nations]}
-            /><small>{t('lobby.nationsHelp')}</small></label
+            /><small
+              >{t('lobby.nationsHelp')}
+              {#if selected && !cfg.procedural && !randomMap}
+                {#if app.lobby.nationsAuto}
+                  <span class="auto" data-testid="nations-auto"
+                    >{t('lobby.nationsAuto', { diff: t(`difficulty.${cfg.difficulty}`) })}</span
+                  >
+                {:else if isHost}
+                  <button class="reset" type="button" data-testid="nations-reset" onclick={resetNations}
+                    >{t('lobby.nationsReset', {
+                      n: defaultNations(selected),
+                      diff: t(`difficulty.${cfg.difficulty}`),
+                    })}</button
+                  >
+                {/if}
+              {/if}</small
+            ></label
           >
           <label class="field"
             ><span>{t('lobby.tribes')} <b class="mono">{cfg.tribes}</b></span><input
@@ -1264,6 +1297,26 @@
     color: var(--np-ink-2);
     font-size: 0.82em;
     line-height: 1.4;
+  }
+  /* Why the nation count is what it is: it follows the map and the difficulty (or a reset link). */
+  .field small .auto,
+  .field small .reset {
+    display: block;
+    margin-top: 2px;
+    font-family: var(--text);
+    font-size: 0.95em;
+    font-style: italic;
+    color: var(--np-ink);
+  }
+  .field small .reset {
+    appearance: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
   }
   .row {
     display: flex;

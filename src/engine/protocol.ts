@@ -33,7 +33,7 @@ export const enum UF {
   T0 = 12,
   T1 = 13,
   Troops = 14, // transports: troops · trains: direction · missiles: arc (-1 up, 1 down, 0 straight)
-  Dest = 15, // missiles: target tile (-1 otherwise)
+  Dest = 15, // destination tile: missile target, transport landing, merchant port, train station (-1 none)
 }
 
 export type MapSource =
@@ -51,7 +51,9 @@ export type ToWorker =
   /** QA (?automation, solo only): a revolution breaks out in `player`'s land at once. */
   | { type: 'qa'; action: 'revolution'; player: number }
   /** QA (?automation, solo only): `player` keeps only its `keep` tiles nearest its centre. */
-  | { type: 'qa'; action: 'shrink'; player: number; keep: number };
+  | { type: 'qa'; action: 'shrink'; player: number; keep: number }
+  /** QA (?automation, solo only): world event `id` strikes at once, for real (its zone, its effects). */
+  | { type: 'qa'; action: 'worldEvent'; id: string };
 
 export type Query =
   | { q: 'tile'; tile: number }
@@ -258,7 +260,8 @@ export interface WorldView {
   /** Battle royale zone (GAME_DESIGN.md §14.1), null in other modes. */
   ring: ZoneView | null;
   weather: WeatherCell[];
-  event: { id: string; until: number } | null;
+  /** The world event under way; x, y, r: the zone it strikes (earthquake, volcanic ash). */
+  event: { id: string; until: number; x?: number; y?: number; r?: number } | null;
   council: { closes: number; votes: number; myVote: number } | null;
   /** Next World Council session (absolute tick; -1 when the council is off). */
   councilNext: number;

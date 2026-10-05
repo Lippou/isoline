@@ -3,6 +3,7 @@
 // a share of the tick (troop ratio, terrain, length of the front) and troops on both
 // sides. Only the order in which tiles fall is Isoline's own: a weighted flood fill
 // (min-heap keyed by an eikonal "arrival time") that grows rounded fronts.
+import { attackCap, winterCost } from './worldEvents';
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import {
@@ -150,7 +151,7 @@ function falloutMult(game: Game, tile: number): number {
 /** Relative cost of crossing tile i for the front's shape (1 = plains): terrain, defence posts, fallout. */
 function tileCost(game: Game, tile: number, target: number): number {
   const t = game.map.terrain[tile]!;
-  let cost = (SPEED[t]! / PLAINS_COST) * falloutMult(game, tile);
+  let cost = (SPEED[t]! / PLAINS_COST) * falloutMult(game, tile) * winterCost(game, t);
   if (target > 0) cost *= game.defenseSpeedMult(tile, target);
   return cost;
 }
@@ -189,7 +190,8 @@ export function attackLogic(game: Game, a: Attack, tile: number, borderSize: num
   const A = game.players[a.attacker]!;
   const T = a.target > 0 ? game.players[a.target]! : null;
   let mag = MAG[t]! * game.techMagMult(a.attacker, t);
-  let cost = SPEED[t]!;
+  // A harsh winter (world event) slows the conquest of cold land.
+  let cost = SPEED[t]! * winterCost(game, t);
   if (T) {
     mag *= game.defenseMagMult(tile, a.target) * game.reconLossMult(a.attacker, tile);
     cost *= game.defenseSpeedMult(tile, a.target);
@@ -400,6 +402,13 @@ export function launchAttack(
     return null;
   }
   const boat = landing !== undefined;
+  // Mutinies (world event): a new order commits at most MUTINY_CAP of the army, the rest stays home.
+  const cap = boat ? 1 : attackCap(game);
+  if (cap < 1 && p.kind !== 'tribe' && troops > cap * (p.troops + troops)) {
+    const keep = cap * (p.troops + troops);
+    p.troops += troops - keep;
+    troops = keep;
+  }
   let a = boat
     ? null
     : (game.attacks.find((x) => !x.done && x.attacker === attackerId && x.target === targetId && !x.boat) ??

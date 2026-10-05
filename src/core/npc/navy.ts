@@ -9,6 +9,7 @@
 //   3 (impossible) + raids on the ports and merchants of the country it fights.
 // A ship is only ever given orders while healthy (≥ NAVY_HEALTHY of its hit points): a
 // move order would call off its repair retreat (ships.ts).
+import { portsClosed } from '../rules/worldEvents';
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import type { Building } from '../buildings/building';
@@ -84,7 +85,7 @@ export function thinkNavy(game: Game, p: Player, ctx: NavyContext): number {
     const c = warshipCost(game, p);
     let fleet = 0;
     for (const u of game.units) if (u.alive && u.owner === p.id && u.type === U.Warship) fleet++;
-    if (p.gold > c * 2 && fleet < 2 + p.buildingCount[B.Port]! * 2 && p.coast.length) {
+    if (p.gold > c * 2 && fleet < 2 + p.buildingCount[B.Port]! * 2 && p.coast.length && !portsClosed(game)) {
       const wt = game.map.adjacentWater(p.coast[game.rng.int(0, p.coast.length - 1)]!);
       if (wt >= 0) applyCommand(game, p.id, { t: 'warship', tile: wt });
     }
@@ -140,7 +141,8 @@ export function thinkNavy(game: Game, p: Player, ctx: NavyContext): number {
       (level >= 3 && ctx.war > 0 ? 1 : 0),
   );
   const kept = raiders.length > 0 ? 0 : (ctx.reserve ?? 0);
-  if (fleet.length < want && p.gold - kept > price * NAVY_GOLD_MARGIN) {
+  // (Not while a hurricane closes the ports: the order would be refused.)
+  if (fleet.length < want && p.gold - kept > price * NAVY_GOLD_MARGIN && !portsClosed(game)) {
     // Laid down at the port nearest the threat (else a random port).
     const threat = raiders[0] ?? hostile[0];
     let at = portWater[game.rng.int(0, portWater.length - 1)]!;

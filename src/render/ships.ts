@@ -844,6 +844,23 @@ export class ShipLayer {
   }
 
   /**
+   * The ship drawn nearest to the world point (x, y), within `reach` tiles of its centre or
+   * within its own half length (the hover card: a far ship is a dot of a few pixels, so the
+   * caller passes a generous reach). Only ships drawn last frame (not fogged out). −1: none.
+   */
+  nearest(x: number, y: number, reach: number): { id: number; d: number } | null {
+    let best: { id: number; d: number } | null = null;
+    const ui = this.deps.uiScale();
+    for (const [id, v] of this.views) {
+      if (v.seen !== this.frame || !v.gfx?.root.visible) continue;
+      const d = Math.hypot(v.x - x, v.y - y);
+      const r = Math.max(reach, shipPx(v.type, this.z, ui) / this.z / 2);
+      if (d <= r && (!best || d < best.d)) best = { id, d };
+    }
+    return best;
+  }
+
+  /**
    * Drop what was not seen this frame (a ship sunk goes under: sink); a shell that vanished
    * has struck: spark and splash.
    */

@@ -15,16 +15,9 @@
   import type { IconName } from '../icons/icons';
   import type { GameController } from '../game/controller';
   import { WORLD_EVENT_TICKS, type WorldEventId } from '../../core/rules/features';
+  import { eventIcon } from './worldEvents';
 
   let { ctl }: { ctl: GameController } = $props();
-
-  const ICON: Record<WorldEventId, IconName> = {
-    crisis: 'crisis',
-    pandemic: 'pandemic',
-    boom: 'income',
-    solarStorm: 'solarStorm',
-    peaceSummit: 'ceasefire',
-  };
 
   const w = $derived(hud.world);
   const now = $derived(hud.tick);
@@ -166,7 +159,7 @@
               openLabel={t('pressPhoto.open')}
             />
           {/if}
-          <p class="fx"><Icon name={ICON[ev.id] ?? 'event'} size={15} />{t(`worldEvent.${ev.id}.fx`)}</p>
+          <p class="fx"><Icon name={eventIcon(ev.id)} size={15} />{t(`worldEvent.${ev.id}.fx`)}</p>
           <p class="desc">{t(`worldEvent.${ev.id}.desc`)}</p>
           <p class="when">
             <span>{t('news.flash.since', { clock: clock(ev.since) })}</span>

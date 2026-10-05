@@ -7,6 +7,7 @@
 // the same nations, map and seed always give the same pick (the lobby shows it before launch).
 import { IS_LAND } from './terrain';
 import type { MapMeta } from './gamemap';
+import type { Difficulty } from '../game/config';
 
 export interface PickableNation {
   x: number;
@@ -122,6 +123,26 @@ export const LAND_PER_DEFAULT_NATION = 9000;
 export function defaultNationCount(landTiles: number, listed: number): number {
   const perNation = LAND_PER_DEFAULT_NATION * Math.max(1, Math.sqrt(1_500_000 / Math.max(1, landTiles)));
   return Math.min(listed, Math.max(30, Math.round(landTiles / perNation)));
+}
+
+/**
+ * The lobby's default count scales with the difficulty around the map's default (which is the
+ * Hard count): fewer rivals on Easy, more on Impossible (« le nombre de nations doit être
+ * équivalent à la difficulté choisie »). Never above the map's list; never below 12 (or the
+ * map's default when it is smaller), so a small map on Easy still has neighbours to fight.
+ * World (43): 26 / 37 / 43 / 52; Giant World (173): 104 / 147 / 173 / 208.
+ */
+export const NATIONS_BY_DIFFICULTY: Record<Difficulty, number> = {
+  easy: 0.6,
+  normal: 0.85,
+  hard: 1,
+  impossible: 1.2,
+};
+export const MIN_DEFAULT_NATIONS = 12;
+export function nationsForDifficulty(mapDefault: number, listed: number, difficulty: Difficulty): number {
+  const base = Math.min(listed, mapDefault);
+  const scaled = Math.round(base * (NATIONS_BY_DIFFICULTY[difficulty] ?? 1));
+  return Math.max(0, Math.min(listed, Math.max(Math.min(base, MIN_DEFAULT_NATIONS), scaled)));
 }
 
 /** Fills each nation's room and the map's default nation count (every map builder calls it). */

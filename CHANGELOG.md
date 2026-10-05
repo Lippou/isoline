@@ -2,6 +2,32 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [Unreleased]
+### Ajouté
+- **Onze nouveaux événements mondiaux, pas plus souvent** (« plus d'événements comme ça… pas plus niveau fréquence, mais plus au niveau diversité ») : toujours un toutes les 4 à 6 minutes, mais seize au lieu de cinq, chacun avec un effet clair, une durée, un article (titre et chapeau, en français et en anglais) et sa **vraie photo de presse** (Wikimedia Commons, domaine public ou CC BY, créditée dans `CREDITS.md`) :
+  - **Séisme** (60 s) : tous les bâtiments autour de l'épicentre, tiré sur un bâtiment au hasard, sont hors service le temps des réparations ; le cercle est tracé sur la carte et le survol d'un bâtiment touché dit « Endommagé par le séisme ».
+  - **Éruption volcanique** (2 min) : un nuage de cendres (cercle sur la carte) où aucun avion ne vole : ni vers lui, ni depuis lui, ni à travers ; la visée aérienne le dit (« Nuage de cendres sur la route : aucun vol ») et l'IA n'y envoie pas ses bombardiers.
+  - **Ouragan** (90 s) : ports fermés, ni marchands ni navires de guerre ; le bouton du navire de guerre est barré avec la raison, comme l'interdiction nucléaire, et l'IA n'en commande pas.
+  - **Hiver rigoureux** (2 min) : toundra, collines, montagnes, glaciers et hauts sommets 50 % plus lents à conquérir.
+  - **Choc pétrolier** (2 min) : le pétrole rapporte le double.
+  - **Mutineries** (90 s) : un ordre d'attaque ou de débarquement engage au plus 25 % de l'armée, rappelé sous le curseur d'attaque.
+  - **Fièvre de réarmement** (2 min) : silos et SAM construits deux fois plus vite (l'horloge de l'Apocalypse avance de 10 s).
+  - **Grève du rail** (90 s) : les trains ne rapportent rien.
+  - **Percée scientifique** (2 min) : recherche +50 %.
+  - **Grands travaux** (2 min) : villes, ports et usines construits deux fois plus vite.
+  - **Jeux mondiaux** (2 min) : l'opinion des nations envers tous les pays gagne 20 points et ne retombe pas tant qu'ils durent (l'horloge de l'Apocalypse recule de 15 s).
+- **Plus de variété au tirage** : jamais deux fois le même d'affilée ; chaque événement sort une fois avant qu'un autre revienne, puis le tirage préfère les moins récents. Un événement n'est tiré que s'il a un sens dans la partie (pas d'ouragan sans ports, pas d'éruption sans aviation, pas d'hiver sur une carte sans terres froides…). L'événement en cours et la mémoire du tirage sont dans les sauvegardes et le hash d'état (parties en réseau).
+- **Puce d'événement** en haut : le glyphe propre à l'événement (seize glyphes distincts), son nom, son effet en quelques mots et le temps restant ; l'infobulle donne l'effet et l'article. Sons : un grondement pour le séisme et l'éruption, la foule pour les Jeux.
+- **Survol d'un navire** (« quand on passe notre souris sur un bateau, j'aimerais bien savoir de qui il vient ») : une petite carte papier donne le drapeau et le nom du propriétaire, la relation en icône et en mot (à vous, coéquipier, allié, ennemi, neutre), le type, les soldats à bord d'un transport, la coque d'un navire de guerre (et sa vétérance), ce qu'il fait (patrouille, réparations, rappelé, capturé) et sa destination (« Vers Maroc », « Vers des terres libres »). Aussi pour les avions (coque, « Vers Estonie », « Au-dessus de Suède ») et les trains. Zone de survol généreuse (16 px à l'écran) : les navires sont petits.
+- QA (`?automation`) : `__iso.simEvent(id)` déclenche un événement mondial pour de vrai dans la simulation (zone et effets) ; `__iso.worldEvent(id, zone?)` accepte une zone.
+### Modifié
+- **Le nombre de nations suit la difficulté** (« le nombre de nations doit être équivalent à la difficulté choisie ») : le nombre par défaut de la carte vaut pour le Difficile ; moins de rivaux en Facile (×0,6), un peu moins en Normal (×0,85), davantage en Impossible (×1,2), toujours dans la limite de la carte et jamais moins de 12 (Monde : 26 / 37 / 43 / 52 ; Monde géant : 104 / 147 / 173 / 208). Il se met à jour en changeant de carte ou de difficulté tant que vous n'avez pas bougé le curseur (« Par défaut pour cette carte, selon la difficulté ») ; un lien « Rétablir le nombre par défaut » le fait de nouveau suivre. `scripts/pacing.ts` prend ce nombre (`NATIONS=n` pour le forcer).
+### Vérifié
+- Rythme (`scripts/pacing.ts`, IA seules, nombre de nations par défaut de la difficulté, graines 1234 / 42) : Normal — Europe 35,2 / 40,0, Mer Noire 42,6 / 35,0, Monde 40,5 / 56,5 min ; Difficile — Europe 42,7 / 35,0, Mer Noire 35,0 / 45,0, Monde 40,0 / 40,5 min. Monde géant : Normal 48,3 / 55,9, Difficile 60,0 (graine 7) ; Facile : Monde 57,1, Monde géant 61,4 (déjà trop long avant, l'IA Facile s'étend lentement sur cette carte) ; Impossible : Monde 60,0, Monde géant 45,0 (graine 1234).
+- Événements avec ou sans, Monde en Normal sur 12 autres graines : 49,0 contre 49,3 min en moyenne (les événements ne ralentissent pas la partie) ; sur 21 graines, deux parties avec événements dépassent l'heure (64,9 min, et une partie bloquée à 35 % des terres, le dernier seuil des prolongations) contre aucune sans : un face-à-face de fin de partie entre IA que les événements déplacent d'une graine à l'autre.
+- Captures Electron : articles du Flash info et du journal avec leur photo (ouragan, mutineries, grands travaux, Jeux mondiaux, éruption, séisme), puces d'événement, navire de guerre barré pendant l'ouragan, plafond des mutineries sous le curseur, cercles du séisme et du nuage de cendres sur la carte, bâtiment « Endommagé par le séisme » ; cartes de survol d'un transport, d'un navire de guerre, d'un marchand, d'un train et d'un bombardier ; nombre de nations du salon en Facile et en Impossible.
+- Tests : `world-events` (16 événements, tirage sans répétition, tous vus, rythme de 4 à 6 min inchangé, déterminisme, hash et sauvegarde, effet de chacun), `unit-hover` (données de la carte de survol), `nation-default` (nombre par difficulté) ; 498 tests unitaires et 5 de bout en bout.
+
 ## [1.15.0] — Défenses resserrées, révolutions visibles, naufrages, cartes peuplées
 ### Ajouté
 - `scripts/pacing.ts` : missiles interceptés, tirs sur une cible couverte par un SAM ennemi et part des niveaux de villes des nations sous un de leurs SAM (`| launches … intercepted … at-SAM … | city levels under SAM …`).

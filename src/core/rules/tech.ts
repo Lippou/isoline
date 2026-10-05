@@ -337,10 +337,10 @@ export function migrateTech(p: Player, fourLevels: boolean): void {
 }
 
 /** One tick of research. Returns the technology completed this tick (-1: none). */
-export function updateResearch(p: Player): number {
+export function updateResearch(p: Player, mult = 1): number {
   if (p.tech.length < BRANCHES.length) migrateTech(p, false);
   p.researchQueue ??= [];
-  p.researchPoints += researchRate(p);
+  p.researchPoints += researchRate(p) * mult;
   if (p.researching < 0) {
     if (p.researchQueue.length === 0) return -1;
     advanceQueue(p);

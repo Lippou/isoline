@@ -47,6 +47,7 @@ import { HABITABLE, IS_LAND } from '../../core/map/terrain';
 import { UI } from '../../render/colors';
 import type { MissionResult } from './missionResult';
 import { WORLD_EVENT_TICKS, type WorldEventId } from '../../core/rules/features';
+import { GOOD_EVENTS } from '../hud/worldEvents';
 import { emulateScreen } from '../stores/viewport.svelte';
 import { focusView } from './focus';
 import type { WinId } from '../stores/windows.svelte';
@@ -70,7 +71,7 @@ export class GameController {
   private lastIntensity = 0;
   private disposed = false;
   /** QA (?automation): a world event printed without waiting for the draw. */
-  private qaEvent: { id: string; until: number } | null = null;
+  private qaEvent: { id: string; until: number; x?: number; y?: number; r?: number } | null = null;
 
   constructor(private readonly req: LaunchRequest) {}
 
@@ -295,12 +296,17 @@ export class GameController {
         },
         /** QA: the nuclear alerts forgotten (the missiles stay where they are). */
         clearNukeAlerts: () => (hud.nukeAlerts = []),
-        /** QA: print a world event (the Flash info card, the journal's article) right away. */
-        worldEvent: (id: string) => {
-          this.qaEvent = { id, until: hud.tick + (WORLD_EVENT_TICKS[id as WorldEventId] ?? 1200) };
+        /** QA: print a world event (the Flash info card, the journal's article, its zone on the map) right away. */
+        worldEvent: (id: string, zone?: { x: number; y: number; r: number }) => {
+          this.qaEvent = { id, until: hud.tick + (WORLD_EVENT_TICKS[id as WorldEventId] ?? 1200), ...zone };
           const key = `worldEvent.${id}`;
-          const level = id === 'boom' ? 'good' : 'warn';
+          const level = GOOD_EVENTS.has(id) ? 'good' : 'warn';
           hud.log = [...hud.log, { tick: hud.tick, text: t(key), level, key, params: {} }];
+        },
+        /** QA: world event `id` strikes at once in the simulation, for real (solo only). */
+        simEvent: (id: string) => {
+          this.qaEvent = null;
+          this.session.sim.qaWorldEvent(id);
         },
         /** QA: a revolution breaks out at once in `player`'s land (default: ours; solo only). */
         revolution: (player = this.session.viewer) => this.session.sim.qaRevolution(player),
@@ -1348,6 +1354,9 @@ export class GameController {
         break;
       case 'worldEvent':
         audio.sfx('event', 0.9);
+        // A fitting second layer: the rumble of a quake or an eruption, the stadium's crowd.
+        if (e.id === 'earthquake' || e.id === 'volcano') audio.sfx('explosionSmall', 0.35);
+        else if (e.id === 'worldGames') audio.sfx('crowd', 0.4);
         break;
       case 'council':
         hud.councilOpen = e.phase === 'open';

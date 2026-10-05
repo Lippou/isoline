@@ -1,6 +1,13 @@
 /// <reference lib="webworker" />
 // Dedicated simulation worker: owns the deterministic Game, steps it on each
 // turn and streams compact deltas (tiles, units, views, events, fog, labels).
+import {
+  endWorldEvent,
+  researchMult,
+  startWorldEvent,
+  WORLD_EVENTS,
+  type WorldEventId,
+} from '../core/rules/worldEvents';
 import { Game } from '../core/game/state';
 import { GameMap } from '../core/map/gamemap';
 import { decodeGreyPng, decodeTerrainPng } from '../core/map/format';
@@ -34,6 +41,7 @@ import type {
   WorldView,
 } from './protocol';
 import { UNIT_STRIDE } from './protocol';
+import { unitDestTile } from './unitDest';
 import { sanitizeFlag, type PlayerFlag } from '../core/data/flagSpec';
 import type { Turn } from '../core/net/commands';
 import { TradeLedger, embargoesOf } from './tradeLedger';
@@ -163,6 +171,13 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
           game.changedTiles.length = 0;
           if (p) startRevolution(game, p);
           sendUpdate(game, [...game.changedTiles], [], 0, true, [...game.events]);
+        }
+        if (game && msg.action === 'worldEvent' && (WORLD_EVENTS as readonly string[]).includes(msg.id)) {
+          game.events.length = 0;
+          game.changedTiles.length = 0;
+          if (game.features.event) endWorldEvent(game);
+          startWorldEvent(game, msg.id as WorldEventId, game.tick - game.startTick);
+          sendUpdate(game, [], [], 0, true, [...game.events]);
         }
         if (game && msg.action === 'shrink') {
           const p = game.players[msg.player];
@@ -308,7 +323,10 @@ function sendUpdate(
 
 function packUnits(g: Game): number {
   let n = 0;
+  // Trains name the station they run to (the hover card's destination): rails by id.
+  let rails: Map<number, Game['rails'][number]> | undefined;
   for (const u of g.units) {
+    if (u.alive && u.type === U.Train && !rails) rails = new Map(g.rails.map((r) => [r.id, r]));
     if (!u.alive) continue;
     if (u.type === U.Nuke && g.tick < u.t0) continue;
     if ((n + 1) * UNIT_STRIDE > unitBuf.length) {
@@ -337,7 +355,7 @@ function packUnits(g: Game): number {
         : u.type === U.Train || u.type === U.Nuke || u.type === U.Interceptor
           ? u.dir
           : 0;
-    unitBuf[o + 15] = u.type === U.Nuke ? u.dest : -1;
+    unitBuf[o + 15] = unitDestTile(g, u, rails);
     n++;
   }
   return n;
@@ -566,7 +584,8 @@ function localView(g: Game): LocalView | undefined {
     researching: p.researching,
     researchPoints: p.researchPoints,
     researchCost: p.researching >= 0 ? nextTechCost(p, p.researching) : 0,
-    researchRate: researchRate(p) * 10,
+    // (A scientific breakthrough, world event, speeds it up.)
+    researchRate: researchRate(p) * researchMult(g) * 10,
     research: researchSources(p),
     researchQueue: [...(p.researchQueue ?? [])],
     generalReadyIn: Math.max(0, p.generalReadyTick - t),

@@ -250,6 +250,8 @@
     "fogLocked": "The fog of war can only be lifted when spectating or in a replay.",
     "pauseMulti": "A game with other players: the clock does not stop.",
     "attackRatioTip": "Share of your troops sent with each attack or expansion order.",
+    "attackCap": "Mutinies: {pct}% at most",
+    "attackCapTip": "Mutinies (world event): an order commits at most {pct}% of the army, whatever the slider ({clock} left)",
     "boatsTip": "Troop transports at sea.",
     "buildTime": "Build time: {s} s",
     "capTip": "Troops compared with the ceiling set by your land and completed cities (+60,000 per city level).",
@@ -952,6 +954,8 @@
     "gVictory": "Victory and start",
     "gEconomy": "Economy and pace",
     "nationsHelp": "Computer-controlled countries, placed at their real position.",
+    "nationsAuto": "Default for this map, set by the difficulty ({diff}).",
+    "nationsReset": "Restore the default: {n} (set by the difficulty, {diff})",
     "tribesHelp": "Small neutral peoples who guard a treasury of gold.",
     "victoryHelp": "Share of the land needed to win. After 30 minutes this threshold gradually decreases.",
     "spawnHelp": "Maximum time to place your capital. The match starts as soon as every player has chosen.",
@@ -1242,6 +1246,11 @@
       "short": "MIRV"
     }
   },
+  "worldEventBlock": {
+    "tip": "{event}: not possible for now ({clock} left)",
+    "ports": "Ports closed",
+    "occupiedQuake": "Damaged by the earthquake · {s} s"
+  },
   "worldEvent": {
     "crisis": "Global economic crisis: −25% income for 2 minutes.",
     "pandemic": "Pandemic: troop growth is halved for 2 minutes.",
@@ -1267,7 +1276,62 @@
     "pandemic.fx": "Troop growth −50%",
     "boom.fx": "Trade and trains ×2",
     "solarStorm.fx": "Radars offline",
-    "peaceSummit.fx": "No attacks between countries, no nuclear launch"
+    "peaceSummit.fx": "No attacks between countries, no nuclear launch",
+    "earthquake": "Earthquake: every building near the epicentre is out of service for 60 seconds.",
+    "volcano": "Volcanic eruption: an ash cloud closes a region's sky for 2 minutes.",
+    "hurricane": "Hurricane: ports are closed for 90 seconds.",
+    "harshWinter": "Harsh winter: conquering cold land takes 50% longer for 2 minutes.",
+    "oilShock": "Oil shock: oil deposits pay double for 2 minutes!",
+    "mutiny": "Mutinies: no attack order commits more than 25% of the army for 90 seconds.",
+    "armsRace": "Rearmament fever: silos and SAM batteries are built twice as fast for 2 minutes.",
+    "railStrike": "Rail strike: trains earn nothing for 90 seconds.",
+    "breakthrough": "Scientific breakthrough: research runs 50% faster for 2 minutes!",
+    "publicWorks": "Public works: cities, ports and factories are built twice as fast for 2 minutes!",
+    "worldGames": "World Games: nations think better of every country for 2 minutes!",
+    "earthquake.short": "Earthquake",
+    "volcano.short": "Eruption",
+    "hurricane.short": "Hurricane",
+    "harshWinter.short": "Harsh winter",
+    "oilShock.short": "Oil shock",
+    "mutiny.short": "Mutinies",
+    "armsRace.short": "Rearmament",
+    "railStrike.short": "Rail strike",
+    "breakthrough.short": "Breakthrough",
+    "publicWorks.short": "Public works",
+    "worldGames.short": "World Games",
+    "earthquake.title": "Violent earthquake levels a region",
+    "volcano.title": "Eruption: skies closed under the ash",
+    "hurricane.title": "Hurricane hits the coasts: ports closed",
+    "harshWinter.title": "Big freeze stalls the fronts",
+    "oilShock.title": "Oil shock: crude prices soar",
+    "mutiny.title": "Mutinies in the barracks",
+    "armsRace.title": "Rearmament fever grips the arsenals",
+    "railStrike.title": "General strike on the railways",
+    "breakthrough.title": "Major scientific breakthrough",
+    "publicWorks.title": "Public works: building sites run day and night",
+    "worldGames.title": "World Games bring the peoples together",
+    "earthquake.desc": "The ground shakes in a populated region: every building inside the epicentre's circle (marked on the map) is out of service for 60 seconds while it is repaired. Cities hit no longer raise the troop ceiling until then.",
+    "volcano.desc": "A volcano wakes up. For 2 minutes its ash cloud (circle on the map) grounds aircraft: no flight leaves for the zone, from it or across it. Planes already in the air complete their mission.",
+    "hurricane.desc": "A hurricane sweeps the coasts: for 90 seconds no merchant ship leaves port and no warship is launched. Boats already at sea and landings carry on.",
+    "harshWinter.desc": "A harsh winter grips the world: for 2 minutes, conquering tundra, hills, mountains, glaciers and high peaks takes 50% longer. Plains, forests and deserts are not affected.",
+    "oilShock.desc": "Crude prices explode: for 2 minutes, every oil deposit you own pays double. Other deposits are unchanged.",
+    "mutiny.desc": "Soldiers refuse the big offensives: for 90 seconds an attack or a landing commits at most 25% of the army, whatever the slider says; the rest stays home. Attacks already under way carry on.",
+    "armsRace.desc": "The arsenals run flat out: for 2 minutes, silos and SAM batteries are built and upgraded twice as fast.",
+    "railStrike.desc": "Railway workers down tools: for 90 seconds trains run empty and earn nothing at stations. Sea trade is not affected.",
+    "breakthrough.desc": "A discovery spreads through the world's laboratories: for 2 minutes, research centres produce 50% more research points.",
+    "publicWorks.desc": "Stimulus plans bloom everywhere: for 2 minutes, cities, ports and factories are built and upgraded twice as fast.",
+    "worldGames.desc": "The world meets at the stadium: every nation's opinion of every country rises by 20 points and does not fade while the Games last (2 minutes). Time to offer an alliance.",
+    "earthquake.fx": "Buildings in the zone out of service",
+    "volcano.fx": "No flight through the ash",
+    "hurricane.fx": "Ports closed: no merchants, no warships",
+    "harshWinter.fx": "Cold land: conquest 50% slower",
+    "oilShock.fx": "Oil ×2",
+    "mutiny.fx": "Attacks capped at 25% of the army",
+    "armsRace.fx": "Silos and SAMs built 2× faster",
+    "railStrike.fx": "Trains earn nothing",
+    "breakthrough.fx": "Research +50%",
+    "publicWorks.fx": "Cities, ports, factories built 2× faster",
+    "worldGames.fx": "Nations' opinion +20"
   },
   "event": {
     "gameStart": "The game begins! Immunity protects players for 60 s.",
@@ -1323,6 +1387,7 @@
     "threat": "{player} is massing an army {ratio} times yours on your border: {why}.",
     "researchRepeat": "Research complete: {tech}, level {level}.",
     "researchIdle": "Nothing is being researched: pick the next technology.",
+    "quakeHit": "Earthquake: {n} of your buildings out of service for 60 s (repairs).",
     "labReady": "Research centre ready: research speeds up.",
     "labLost": "{by} has seized one of your research centres.",
     "labTaken": "You take a research centre from {player}: looted to level {level}, it researches for you after {s} s of occupation.",
@@ -1974,6 +2039,40 @@
     "revolt": "Risen against {player} · {time}",
     "revoltTip": "No gold, no trade. Their land falls back in line when the countdown ends; their buildings burn if another country takes them."
   },
+  "unitHover": {
+    "type": {
+      "transport": "Troop transport",
+      "warship": "Warship",
+      "merchant": "Merchant ship",
+      "train": "Freight train",
+      "fighter": "Fighter",
+      "bomber": "Bomber",
+      "recon": "Reconnaissance plane"
+    },
+    "rel": {
+      "you": "Yours",
+      "teammate": "Teammate",
+      "ally": "Ally",
+      "enemy": "Enemy",
+      "neutral": "Neutral"
+    },
+    "troops": "{n} troops aboard",
+    "hull": "Hull {pct}%",
+    "veteran": "veteran ×{n}",
+    "to": "To {name}",
+    "toWild": "To unclaimed land",
+    "over": "Over {name}",
+    "status": {
+      "turnedBack": "Turned back, sailing home",
+      "patrolling": "On patrol",
+      "repairing": "Heading to port for repairs",
+      "docked": "In port, under repair",
+      "pirated": "Captured: led to its captor's port",
+      "returning": "Flying back to base",
+      "intercepting": "Intercepting",
+      "orbiting": "Circling on reconnaissance"
+    }
+  },
   "weather": {
     "stormNear": "A storm is forming near you: ships {pct}% slower.",
     "fogNear": "A fog bank is forming near you: radar and warship range cut by {pct}% inside it."
@@ -2397,7 +2496,8 @@
       "formerAlly": "Former alliance",
       "trade": "Thriving trade",
       "enemy": "Common enemy",
-      "past": "Old memories"
+      "past": "Old memories",
+      "games": "The World Games"
     },
     "noReasons": "Nothing in particular: they ignore you.",
     "oddsTitle": "If offered an alliance",
@@ -2469,14 +2569,36 @@
       "pandemic": "A sports hall turned into a field hospital to take in the sick.",
       "boom": "The cranes never stop: cargo ships follow one another at the quay.",
       "solarStorm": "Northern lights over an air-defence battery: the radars can no longer see.",
-      "peaceSummit": "The Council chamber awaits the summit's delegations."
+      "peaceSummit": "The Council chamber awaits the summit's delegations.",
+      "earthquake": "A fifteen-storey block collapsed: cranes search the rubble.",
+      "volcano": "The ash plume rises kilometres above the crater.",
+      "hurricane": "Palms bend, the sea floods the coast: nothing leaves port.",
+      "harshWinter": "A column of soldiers on skis returns from the front in the snow.",
+      "oilShock": "Pumpjacks work flat out: every barrel is worth gold.",
+      "mutiny": "Cavalrymen parade under their banner, without waiting for orders.",
+      "armsRace": "Deep in its silo, a missile ready for launch.",
+      "railStrike": "Striking railwaymen wait outside the depot.",
+      "breakthrough": "Two researchers bent over the same microscope.",
+      "publicWorks": "High on the frame, a riveter above the city.",
+      "worldGames": "The delegations enter the stadium to cheers."
     },
     "alt": {
       "crisis": "Electronic stock exchange board covered in red figures",
       "pandemic": "Rows of camp beds set up by soldiers in a sports hall",
       "boom": "Container cranes loading a cargo ship at the quay",
       "solarStorm": "Northern lights over an air-defence missile launcher in the snow",
-      "peaceSummit": "The empty United Nations Security Council chamber and its horseshoe table"
+      "peaceSummit": "The empty United Nations Security Council chamber and its horseshoe table",
+      "earthquake": "Half-collapsed concrete building, a crane and machines in the rubble",
+      "volcano": "Erupting volcano, a huge column of ash above the summit",
+      "hurricane": "Palm trees bent by the wind and waves breaking on a beach in the storm",
+      "harshWinter": "Soldiers on skis and horses moving in single file along a snowy forest road",
+      "oilShock": "Oil pumpjack on a desert plain",
+      "mutiny": "Mounted soldiers parading with a banner down an avenue, a tram behind them",
+      "armsRace": "Warhead of a ballistic missile seen from above at the bottom of its silo",
+      "railStrike": "Group of striking railway workers standing in front of a fence",
+      "breakthrough": "Two scientists in lab coats looking through a double-headed microscope",
+      "publicWorks": "Worker sitting on a steel beam of a skyscraper under construction, the city below",
+      "worldGames": "Delegation of athletes parading with its flag in a stadium"
     }
   },
   "window": {
@@ -2528,7 +2650,8 @@
       "full": "Airfields full: wait for a plane to land",
       "range": "Out of your airfields' range",
       "noTarget": "No enemy target here",
-      "teammate": "You cannot target a teammate"
+      "teammate": "You cannot target a teammate",
+      "ash": "Ash cloud on the route: no flight"
     },
     "hitLevel": "{player}'s {building}: lvl {from} → {to}",
     "hitDestroy": "{player}'s {building}: in ruins",
@@ -2547,7 +2670,9 @@
       "betrayal": "betrayal",
       "crisis": "world crisis",
       "peace": "peace summit",
-      "council": "World Council decision"
+      "council": "World Council decision",
+      "rearm": "rearmament fever",
+      "games": "World Games"
     },
     "stage1": {
       "name": "Arms race",

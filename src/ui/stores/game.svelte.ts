@@ -139,7 +139,7 @@ export const hud = $state({
   },
   /** Aircraft panel: what a plane sent at the hovered tile would do (ui/game/airPreview.ts). */
   airAim: null as null | {
-    problem: '' | 'noAirfield' | 'full' | 'range' | 'noTarget' | 'teammate';
+    problem: '' | 'noAirfield' | 'full' | 'range' | 'noTarget' | 'teammate' | 'ash';
     target: { type: number; owner: number; level: number; after: number } | null;
     samMissiles: number;
     interceptors: number;
@@ -204,6 +204,8 @@ export const hud = $state({
     /** Owner of the capital marker under the pointer (0: none). */
     capital: number;
   },
+  /** The ship, plane or train under the pointer (its card: HoverCard), at screen (sx, sy). */
+  hoverUnit: null as null | { id: number; sx: number; sy: number },
   selection: [] as number[],
   chat: [] as { from: number; text: string; channel: string; t: number }[],
   end: null as null | GameEnd,
@@ -311,6 +313,7 @@ export function resetHud(): void {
   hud.placement = null;
   hud.radial = null;
   hud.hover = null;
+  hud.hoverUnit = null;
   hud.selection = [];
   hud.chat = [];
   hud.end = null;

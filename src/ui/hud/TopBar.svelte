@@ -9,6 +9,7 @@
   import type { GameController } from '../game/controller';
   import { hudSize } from '../stores/hudBox.svelte';
   import ModeBanner from './ModeBanner.svelte';
+  import { eventIcon, GOOD_EVENTS } from './worldEvents';
 
   let { ctl }: { ctl: GameController } = $props();
   const solo = ctl.session.kind === 'solo';
@@ -161,8 +162,15 @@
       {/if}
       {#if hud.world?.event && hud.world.event.until > hud.tick}
         {@const ev = hud.world.event}
-        <span class="chip event" data-testid="event-chip" data-tip={t(`worldEvent.${ev.id}.desc`)}
-          ><Icon name="event" size={13} />{t(`worldEvent.${ev.id}.short`)}
+        <!-- Its own glyph, its effect in the tooltip (good news reads as such: icon and words, not colour alone). -->
+        <span
+          class="chip event"
+          class:good={GOOD_EVENTS.has(ev.id)}
+          data-testid="event-chip"
+          data-event={ev.id}
+          data-tip="{t(`worldEvent.${ev.id}.fx`)} — {t(`worldEvent.${ev.id}.desc`)}"
+          ><Icon name={eventIcon(ev.id)} size={13} />{t(`worldEvent.${ev.id}.short`)}
+          <small class="fx">{t(`worldEvent.${ev.id}.fx`)}</small>
           <span class="mono">{clock(ev.until - hud.tick)}</span></span
         >
       {/if}
@@ -397,6 +405,20 @@
   }
   .status .chip .mono {
     font-weight: 600;
+  }
+  /* The world event's effect in a few words, after its name (the tooltip says the rest). */
+  .status .chip .fx {
+    font-size: 0.86em;
+    font-weight: 600;
+    color: var(--np-ink-2);
+  }
+  .status .chip .fx::before {
+    content: '· ';
+  }
+  @container (max-width: 700px) {
+    .status .chip .fx {
+      display: none;
+    }
   }
   /* At the top of the window: explanations open below the chips, above the dispatches. */
   .top:has(.status [data-tip]:hover) {

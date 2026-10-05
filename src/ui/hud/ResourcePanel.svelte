@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { activeEvent, attackCapOf } from './worldEvents';
   import { hud } from '../stores/game.svelte';
-  import { t, short, num } from '../i18n/i18n.svelte';
+  import { t, short, num, clock } from '../i18n/i18n.svelte';
   import { settings, keyLabel } from '../stores/settings.svelte';
   import type { GameController } from '../game/controller';
   import Icon from '../icons/Icon.svelte';
@@ -72,6 +73,9 @@
   // Folded by the player (remembered, folds.svelte.ts): one line of essentials — troops,
   // gold, the attack ratio — and the attacks coming at us, in magenta, when there are.
   const strip = $derived(folds.res);
+  /** Mutinies (world event): the share of the army an order may commit (1: no limit). */
+  const cap = $derived(attackCapOf(hud.world, hud.tick));
+  const mutinyLeft = $derived(cap < 1 ? (activeEvent(hud.world, hud.tick)?.left ?? 0) : 0);
 </script>
 
 {#if L && strip}
@@ -181,9 +185,23 @@
           data-testid="attack-ratio"
         />
         <span class="mono pct"
-          >{Math.round(hud.attackRatio * 100)} % · {short(L.troops * hud.attackRatio)}</span
+          >{Math.round(hud.attackRatio * 100)} % · {short(L.troops * Math.min(hud.attackRatio, cap))}</span
         >
       </label>
+      <!-- Mutinies (world event): an order commits at most this much, whatever the slider says. -->
+      {#if cap < 1}
+        <p
+          class="capped"
+          data-testid="attack-cap"
+          data-tip={t('hud.attackCapTip', {
+            pct: Math.round(cap * 100),
+            clock: clock(mutinyLeft),
+          })}
+        >
+          <Icon name="mutiny" size={13} />{t('hud.attackCap', { pct: Math.round(cap * 100) })}
+          {#if hud.attackRatio > cap}<s class="mono">{Math.round(hud.attackRatio * 100)} %</s>{/if}
+        </p>
+      {/if}
     </div>
 
     <div class="actions">
@@ -638,5 +656,19 @@
   }
   .x:hover {
     color: var(--np-spot);
+  }
+  .capped {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 3px 0 0;
+    font-size: 0.78em;
+    font-weight: 600;
+    color: var(--np-spot);
+  }
+  .capped s {
+    margin-left: auto;
+    font-weight: 400;
+    color: var(--np-ink-3);
   }
 </style>

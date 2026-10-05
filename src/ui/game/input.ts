@@ -28,6 +28,8 @@ export class InputController {
   private keysHeld = new Set<string>();
   private disposers: (() => void)[] = [];
   private lastHoverTile = -1;
+  /** The pointer on the map (screen px), null when it is off the map or over the interface. */
+  private pointer: { x: number; y: number } | null = null;
 
   constructor(
     private readonly el: HTMLElement,
@@ -46,6 +48,7 @@ export class InputController {
     };
     on(el, 'pointerdown', (e: PointerEvent) => this.pointerDown(e));
     on(window, 'pointermove', (e: PointerEvent) => this.pointerMove(e));
+    on(el, 'pointerleave', () => (this.pointer = null));
     on(window, 'pointerup', (e: PointerEvent) => this.pointerUp(e));
     on(el, 'wheel', (e: WheelEvent) => this.wheel(e), { passive: false });
     on(el, 'contextmenu', (e: MouseEvent) => e.preventDefault());
@@ -70,6 +73,23 @@ export class InputController {
     if (this.keysHeld.has(k.panUp!) || this.keysHeld.has('ArrowUp')) dy += speed;
     if (this.keysHeld.has(k.panDown!) || this.keysHeld.has('ArrowDown')) dy -= speed;
     if (dx || dy) this.r.camera.panScreen(dx, dy);
+    this.updateUnitHover();
+  }
+
+  /**
+   * The ship, plane or train under the pointer, every frame: units move under a still
+   * pointer. Not while dragging the map, with the radial menu open or in photo mode.
+   */
+  private updateUnitHover(): void {
+    const p = this.pointer;
+    const id = p && !this.down?.moved && !hud.radial && !hud.photo ? this.r.unitAtScreen(p.x, p.y) : -1;
+    const cur = hud.hoverUnit;
+    if (id < 0) {
+      if (cur) hud.hoverUnit = null;
+      return;
+    }
+    if (!cur || cur.id !== id || cur.sx !== p!.x || cur.sy !== p!.y)
+      hud.hoverUnit = { id, sx: p!.x, sy: p!.y };
   }
 
   private local(e: { clientX: number; clientY: number }): [number, number] {
@@ -89,6 +109,8 @@ export class InputController {
 
   private pointerMove(e: PointerEvent): void {
     const [x, y] = this.local(e);
+    // Over the map itself (not a panel, a button or a card above it).
+    this.pointer = e.target === this.el || this.el.contains(e.target as Node) ? { x, y } : null;
     // Hover info from the client mirror (no worker round-trip).
     const tile = this.r.tileAtScreen(x, y);
     if (tile !== this.lastHoverTile) {
