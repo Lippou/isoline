@@ -5,7 +5,7 @@ import type { Game } from '../game/state';
 import type { Difficulty } from '../game/config';
 import type { Player, Personality } from '../game/player';
 import { applyCommand } from '../game/commands';
-import { B, DEFENSE_POST_RANGE, RELATION_HOSTILE } from '../game/constants';
+import { B, DEFENSE_POST_RANGE, RELATION_HOSTILE, REVOLUTION_PUSH_CHANCE } from '../game/constants';
 import { HABITABLE, IS_LAND } from '../map/terrain';
 import { MAX_LEVEL, buildCost, checkPlacement, levelsOwned } from '../buildings/buildings';
 import { planBoat } from '../units/ships';
@@ -338,6 +338,7 @@ function hasAttack(game: Game, p: Player, target: number): boolean {
 // ------------------------------------------------------------------ tribes
 function thinkTribe(game: Game, p: Player, m: Mem): number {
   const nb = neighbors(game, p, 24);
+  if (p.revolution) return thinkRebels(game, p, m, nb);
   const cap = troopCap(game, p);
   // OpenFront's tribes fall on a neighbouring traitor, one think in three.
   const traitors = [...nb.values()].filter(
@@ -367,6 +368,47 @@ function thinkTribe(game: Game, p: Player, m: Mem): number {
     }
   }
   return 30;
+}
+
+/**
+ * Rebels (rules/revolution.ts) neither settle the wild nor raid third parties: now and then
+ * they push into their former country's land with a fifth of their troops.
+ */
+function thinkRebels(game: Game, p: Player, m: Mem, nb: Map<number, Neighbor>): number {
+  const home = nb.get(p.rebelOf);
+  if (
+    home &&
+    p.troops > 1500 &&
+    !hasAttack(game, p, p.rebelOf) &&
+    game.attackAllowed(p.id, p.rebelOf, true) &&
+    game.rng.chance(REVOLUTION_PUSH_CHANCE)
+  ) {
+    applyCommand(game, p.id, { t: 'attack', tile: home.tile, ratio: 0.2 });
+    m.lastAttack = game.tick;
+  }
+  return 30;
+}
+
+/**
+ * The revolution risen in p's land, when p touches it and is not attacking it yet, with the
+ * share of p's army that should take it back (1.6 × the rebels, a fifth of p's at least).
+ */
+function revoltTarget(
+  game: Game,
+  p: Player,
+  nb: Map<number, Neighbor>,
+  cap: number,
+): { n: Neighbor; ratio: number } | null {
+  if (p.troops < cap * 0.15) return null;
+  for (const n of nb.values()) {
+    if (n.id === 0) continue;
+    const q = game.players[n.id]!;
+    if (!q.revolution || q.rebelOf !== p.id) continue;
+    if (hasAttack(game, p, q.id) || !game.attackAllowed(p.id, q.id, true)) return null;
+    const ratio = Math.min(0.5, Math.max(0.2, (q.troops * 1.6 + 2000) / Math.max(1, p.troops)));
+    return { n, ratio };
+  }
+  return null;
 }
 
 // ----------------------------------------------------------------- nations
@@ -449,7 +491,13 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
   if (!joined && member && !front && striking(game)) cost += coalitionLanding(game, p, m, runaway);
   // Saving for the next strike: no new venture in the last 20 s before it.
   const saving = front && untilStrike(game) < AI_STRIKE_SAVING;
-  if (!joined && !saving && ready && sinceAttack > AI_EXPAND_COOLDOWN) {
+  // A revolution in our land (rules/revolution.ts) is put down first: our own region, its
+  // buildings come home intact, and the rebels push into us meanwhile. No war cooldown.
+  const retake = !joined && sinceAttack > AI_EXPAND_COOLDOWN ? revoltTarget(game, p, nb, cap) : null;
+  if (retake) {
+    applyCommand(game, p.id, { t: 'attack', tile: retake.n.tile, ratio: retake.ratio });
+    m.lastAttack = game.tick;
+  } else if (!joined && !saving && ready && sinceAttack > AI_EXPAND_COOLDOWN) {
     // A neighbouring traitor is fair game whatever the war cooldown (OpenFront's findTraitor).
     const traitor = member ? null : traitorTarget(game, p, nb);
     if (traitor) {

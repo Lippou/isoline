@@ -386,6 +386,15 @@ void main() {
       float s = sin((tp.x * cos(ang) + tp.y * sin(ang)) * 1.6);
       tinted *= 0.86 + 0.14 * step(0.0, s);
     }
+    // Revolutions (palette alpha 20 below the relation's step, setPalette): paper-white
+    // hatching at a constant screen size, so that they read by their pattern, not by colour.
+    float codeO = floor((1.0 - inkOf(own).a) * 255.0 + 0.5);
+    if (mod(codeO, 50.0) > 10.0) {
+      float spacing = 9.0;
+      float dpx = abs(fract((tp.x + tp.y) * pxPerTile / spacing) - 0.5) * spacing * 0.7071;
+      float hatchLine = 1.0 - smoothstep(0.55, 1.35, dpx);
+      tinted = mix(tinted, vec3(0.95, 0.91, 0.82), hatchLine * 0.62);
+    }
     col = tinted;
   } else if (own > 0.5 && water) {
     // (never happens: water is not owned)

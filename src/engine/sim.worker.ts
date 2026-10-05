@@ -6,6 +6,7 @@ import { GameMap } from '../core/map/gamemap';
 import { decodeGreyPng, decodeTerrainPng } from '../core/map/format';
 import { generateMapData } from '../core/map/generator';
 import { restoreSnapshot, takeSnapshot } from '../core/net/snapshot';
+import { startRevolution } from '../core/rules/revolution';
 import { hashGame } from '../core/net/hash';
 import { B, BUILDING_COUNT, HASH_EVERY, N, radarRange } from '../core/game/constants';
 import { buildCost, levelsByType, planBuild } from '../core/buildings/buildings';
@@ -154,6 +155,16 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
       case 'query':
         if (game) post({ type: 'answer', id: msg.id, a: answer(game, msg.q) });
         break;
+      case 'qa':
+        // Outside the command stream (solo QA only): the outbreak is sent as a tick's update.
+        if (game && msg.action === 'revolution') {
+          const p = game.players[msg.player];
+          game.events.length = 0;
+          game.changedTiles.length = 0;
+          if (p) startRevolution(game, p);
+          sendUpdate(game, [...game.changedTiles], [], 0, true, [...game.events]);
+        }
+        break;
     }
   } catch (e) {
     post({ type: 'error', message: e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e) });
@@ -229,6 +240,7 @@ function sendUpdate(
         e.k === 'eliminated' ||
         e.k === 'alliance' ||
         e.k === 'secession' ||
+        e.k === 'revolution' ||
         e.k === 'betrayal' ||
         e.k === 'capitalLost' ||
         e.k === 'capitalMoved',
@@ -367,6 +379,8 @@ function playerViews(g: Game): PlayerView[] {
       samBonus: g.config.features.tech ? techSam(p).range : 0,
       capital: p.capital,
       disorgFor: Math.max(0, p.disorgUntil - g.tick),
+      rebelOf: p.rebelOf,
+      ...(p.revolution ? { revoltFor: Math.max(0, p.revoltUntil - g.tick) } : {}),
     });
   }
   return out;

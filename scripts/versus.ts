@@ -71,6 +71,12 @@ interface Tally {
   fronts: number;
   fronts3: number;
   outHeavy: number;
+  /** Revolutions: against the bot, against nations, and the bot's land lost to them (tiles). */
+  revoltsBot: number;
+  revoltsNations: number;
+  revoltTiles: number;
+  /** How the bot's revolutions went: outbreak minute and tiles, then how and when it ended. */
+  revoltLog: string[];
 }
 
 export function playOne(
@@ -92,8 +98,13 @@ export function playOne(
     players: [{ slot: 0, name: 'Bot', kind: 'human', team: 0, general: 'blitz' }],
     spawnSeconds: 30,
     difficulty,
-    // Secession is off by default from 1.12 (LOYALTY=1 to measure with it).
-    features: { ...defaultConfig(seed).features, loyalty: process.env.LOYALTY === '1' },
+    // Secession is off by default from 1.12 (LOYALTY=1 to measure with it); revolutions are on
+    // from 1.14 (REVOLUTION=0 to measure without).
+    features: {
+      ...defaultConfig(seed).features,
+      loyalty: process.env.LOYALTY === '1',
+      ...(process.env.REVOLUTION ? { revolution: process.env.REVOLUTION === '1' } : {}),
+    },
   });
   const bot = createBot(kind, seed, {
     attackRatio: Number(process.env.BOT_RATIO ?? 0.3),
@@ -123,6 +134,10 @@ export function playOne(
     fronts: 0,
     fronts3: 0,
     outHeavy: 0,
+    revoltsBot: 0,
+    revoltsNations: 0,
+    revoltTiles: 0,
+    revoltLog: [],
   };
   const marks: string[] = [];
   let outcome = '';
@@ -159,7 +174,16 @@ export function playOne(
         if (g.owner[tile] === bot.id) t.nukes++;
       } else if (e.k === 'council' && e.phase === 'result' && g.features.sanction?.target === bot.id)
         t.sanctions++;
-      else if (e.k === 'eliminated' && e.player === bot.id) outcome = `LOST ${(m / 600).toFixed(1)}`;
+      else if (e.k === 'revolution' && e.phase === 'start') {
+        if (e.from === bot.id) {
+          t.revoltsBot++;
+          t.revoltTiles += e.tiles;
+          t.revoltLog.push(`${(m / 600).toFixed(1)}m/${e.tiles}t`);
+        } else t.revoltsNations++;
+      } else if (e.k === 'revolution' && e.from === bot.id) {
+        const how = e.phase === 'over' ? 'over' : e.by === bot.id ? 'crushed' : 'seized';
+        t.revoltLog.push(`${how}@${(m / 600).toFixed(1)}`);
+      } else if (e.k === 'eliminated' && e.player === bot.id) outcome = `LOST ${(m / 600).toFixed(1)}`;
       else if (e.k === 'gameOver')
         outcome ||=
           e.winner === bot.id ? `WIN ${(m / 600).toFixed(1)}` : `LOST ${(m / 600).toFixed(1)} (${e.reason})`;
@@ -221,7 +245,7 @@ export function playOne(
     `${process.env.TAG ?? ''}${mapId.padEnd(10)} ${String(seed).padEnd(5)} ${difficulty.padEnd(10)} ${kind.padEnd(10)} ${outcome.padEnd(26)} ` +
     `${marks.join(' ')} | peakAtk ${bot.peakAttacks} fronts ${(t.fronts / Math.max(1, t.samples)).toFixed(1)} f3 ${((100 * t.fronts3) / Math.max(1, t.samples)) | 0}% outHeavy ${((100 * t.outHeavy) / Math.max(1, t.samples)) | 0}% | waves ${t.waves} (riposte ${t.ripostes}) from ${t.attackers.size} nations, gang≤${t.peakGang}` +
     ` | nation alliances ${t.alliances} | posts ${t.posts} (near ${t.postsNear}) | warships ${t.warships.size} sunkBot ${t.sunkBot} sunkByBot ${t.sunkByBot}` +
-    ` | raids ${t.raids} nukes ${t.nukes} sanctions ${t.sanctions} (${secs}s)`
+    ` | raids ${t.raids} nukes ${t.nukes} sanctions ${t.sanctions} | revolts bot ${t.revoltsBot} (${t.revoltTiles}t${t.revoltLog.length ? ` ${t.revoltLog.join(' ')}` : ''}) nations ${t.revoltsNations} (${secs}s)`
   );
 }
 

@@ -80,6 +80,11 @@
       border,
       terrain,
       name: s.name(h.owner, i18n.lang),
+      // A revolution (rules/revolution.ts): whom it rose against, and when it runs out of steam.
+      revolt:
+        p && p.revoltFor !== undefined
+          ? { against: s.name(p.rebelOf, i18n.lang), left: p.revoltFor, mine: p.rebelOf === s.viewer }
+          : null,
     };
   });
   /** What the hovered country owns: buildings (count and total levels) and fleet. */
@@ -153,6 +158,7 @@
     if (i.mate) return t('hover.teammate');
     if (i.allied) return t('hover.ally');
     if (i.war) return t('hover.war');
+    if (i.revolt) return t('hover.revolution');
     if (i.p.kind === 'tribe') return t('hover.tribe');
     return t(`personality.${i.p.personality}`);
   });
@@ -197,6 +203,15 @@
               >{t(`opinion.reason.${k}`)} <b class="mono">{w > 0 ? '+' : ''}{w}</b></span
             >
           {/each}
+        </div>
+      {/if}
+      {#if info.revolt}
+        <div class="line revolt" class:bad={info.revolt.mine} data-testid="hover-revolt">
+          <Icon name="revolt" size={13} /><span
+            >{t('hover.revolt', { player: info.revolt.against, time: clock(info.revolt.left) })}<small
+              >{t('hover.revoltTip')}</small
+            ></span
+          >
         </div>
       {/if}
       {#if info.capital}
@@ -526,6 +541,21 @@
   .line.occupied :global(svg) {
     flex: none;
     margin-top: 2px;
+  }
+  .line.revolt {
+    align-items: flex-start;
+  }
+  .line.revolt :global(svg) {
+    flex: none;
+    margin-top: 2px;
+  }
+  .line.revolt span {
+    display: grid;
+    font-weight: 600;
+  }
+  .line.revolt small {
+    font-weight: 400;
+    color: var(--np-ink-2);
   }
   .line.occupied span {
     display: grid;

@@ -71,10 +71,13 @@ function main(): void {
         players: [],
         spawnSeconds: 1,
         difficulty,
-        // LOYALTY=0: without secessions (the 1.12 default).
-        ...(process.env.LOYALTY
-          ? { features: { ...defaultConfig(seed).features, loyalty: process.env.LOYALTY === '1' } }
-          : {}),
+        // LOYALTY=1: with secessions (off by default since 1.12); REVOLUTION=0: without
+        // revolutions (on by default since 1.14).
+        features: {
+          ...defaultConfig(seed).features,
+          ...(process.env.LOYALTY ? { loyalty: process.env.LOYALTY === '1' } : {}),
+          ...(process.env.REVOLUTION ? { revolution: process.env.REVOLUTION === '1' } : {}),
+        },
       });
       const marks: string[] = [];
       const happenings: string[] = [];
@@ -83,6 +86,7 @@ function main(): void {
       let land0 = 0;
       const air = airCounter();
       const tools = toolCounter();
+      const revolts = revolutionCounter();
       const income = report ? incomeCounter() : null;
       let builder = -1;
       const t0 = performance.now();
@@ -90,6 +94,7 @@ function main(): void {
         g.step([]);
         air.observe(g);
         tools.observe(g);
+        revolts.observe(g);
         if (income) {
           const m = g.tick - g.startTick;
           if (report === 'builder' && builder < 0 && g.phase === 'playing' && m >= 1800)
@@ -137,6 +142,7 @@ function main(): void {
         `${id.padEnd(14)} ${seed} ${difficulty} ${mode} ${end.padEnd(22)} ${marks.join(' ')}${extra}  (${((performance.now() - t0) / 1000).toFixed(0)} s)`,
       );
       console.log(`${''.padEnd(14)} air: ${air.report()}`);
+      console.log(`${''.padEnd(14)} revolutions: ${revolts.report()}`);
       const toolbox = tools.finish(g);
       console.log(
         `${''.padEnd(14)} tools: ${Object.entries(toolbox)
@@ -152,6 +158,39 @@ function main(): void {
         );
     }
   }
+}
+
+/**
+ * Revolutions (rules/revolution.ts) over one game: each outbreak (minute, victim's share of
+ * the land then, tiles risen) and how it ended — `over` (rejoined), `crushed` by its country,
+ * `seized` by another — and when.
+ */
+function revolutionCounter() {
+  const live = new Map<number, string>();
+  const done: string[] = [];
+  return {
+    observe(g: Game) {
+      for (const e of g.events) {
+        if (e.k !== 'revolution') continue;
+        if (e.phase === 'start') {
+          const from = g.players[e.from]!;
+          const share = Math.round((from.usefulTiles / Math.max(1, g.usefulLand)) * 100);
+          // The army that defected, as a share of the country's army before the outbreak.
+          const rebels = g.players[e.tribe]!.troops;
+          const army = Math.round((100 * rebels) / Math.max(1, rebels + from.troops));
+          live.set(e.tribe, `${minutes(g)}m ${share}%-${e.tiles}t army-${army}%`);
+        } else {
+          const how = e.phase === 'over' ? 'over' : e.by === e.from ? 'crushed' : 'seized';
+          done.push(`${live.get(e.tribe) ?? '?'} ${how}@${minutes(g)}`);
+          live.delete(e.tribe);
+        }
+      }
+    },
+    report: () => {
+      const all = [...done, ...[...live.values()].map((v) => `${v} live`)];
+      return all.length ? `n=${all.length} ${all.join(', ')}` : 'none';
+    },
+  };
 }
 
 /** Aviation and radar usage over one game, read from the simulation's events and units. */

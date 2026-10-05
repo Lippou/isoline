@@ -77,6 +77,7 @@
     'fog',
     'tech',
     'resources',
+    'revolution',
     'loyalty',
     'events',
     'generals',

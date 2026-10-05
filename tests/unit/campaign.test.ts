@@ -50,6 +50,7 @@ function player(id: number, kind: PlayerView['kind'], over: Partial<PlayerView> 
     samBonus: 0,
     capital: 0,
     disorgFor: 0,
+    rebelOf: 0,
     ...over,
   };
 }

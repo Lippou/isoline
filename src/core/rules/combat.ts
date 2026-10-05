@@ -216,7 +216,8 @@ export function attackLogic(game: Game, a: Attack, tile: number, borderSize: num
         (TERRA_NULLIUS_BUDGET * border),
     };
   }
-  if (T.kind === 'tribe' && A.kind !== 'tribe') mag *= TRIBE_DEFENDER_LOSS_MULT;
+  // (Revolutionaries defend like a country: rules/revolution.ts.)
+  if (T.kind === 'tribe' && A.kind !== 'tribe' && !T.revolution) mag *= TRIBE_DEFENDER_LOSS_MULT;
   const traitor = T.debuffUntil > game.tick;
   const bonusD = largeTerritoryBonus(T.tiles, LARGE_DEFENDER_DEPTH);
   const defenderLoss = T.troops / Math.max(1, T.tiles);
