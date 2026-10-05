@@ -38,6 +38,8 @@ export interface NavyContext {
   war: number;
   /** Naval inclination of the personality (1 = average). */
   naval: number;
+  /** Gold the war chest keeps for another purchase (npc/arsenal.ts); a transport bound for us overrides it. */
+  reserve?: number;
 }
 
 interface Order {
@@ -137,7 +139,8 @@ export function thinkNavy(game: Game, p: Player, ctx: NavyContext): number {
       (level >= 2 ? hostile.length + (hostile.length > 0 ? 1 : 0) : 0) +
       (level >= 3 && ctx.war > 0 ? 1 : 0),
   );
-  if (fleet.length < want && p.gold > price * NAVY_GOLD_MARGIN) {
+  const kept = raiders.length > 0 ? 0 : (ctx.reserve ?? 0);
+  if (fleet.length < want && p.gold - kept > price * NAVY_GOLD_MARGIN) {
     // Laid down at the port nearest the threat (else a random port).
     const threat = raiders[0] ?? hostile[0];
     let at = portWater[game.rng.int(0, portWater.length - 1)]!;

@@ -33,6 +33,17 @@ const seeds = (process.argv[6] ?? '1234').split(',').map(Number);
 const report = process.argv[7] ?? '';
 /** Minutes between two income reports (PACING_EVERY, default 5). */
 const EVERY = Number(process.env.PACING_EVERY ?? 5);
+// TAC="impossible.bombs=1,hard.airShare=0.2" (tuning experiments, as in versus.ts): overrides
+// the nations' tactics (src/core/npc/tactics.ts).
+if (process.env.TAC) {
+  const { TACTICS } = await import('../src/core/npc/tactics');
+  const table = TACTICS as unknown as Record<string, Record<string, number | boolean>>;
+  for (const kv of process.env.TAC.split(',')) {
+    const [key, v] = kv.split('=');
+    const [d, f] = key!.split('.');
+    if (table[d!]) table[d!]![f!] = v === 'true' ? true : v === 'false' ? false : Number(v);
+  }
+}
 
 function load(id: string) {
   const dir = path.join(ROOT, 'assets/maps');
@@ -71,12 +82,14 @@ function main(): void {
       let nukes = 0;
       let land0 = 0;
       const air = airCounter();
+      const tools = toolCounter();
       const income = report ? incomeCounter() : null;
       let builder = -1;
       const t0 = performance.now();
       while (g.phase !== 'ended' && g.tick < maxMin * 600) {
         g.step([]);
         air.observe(g);
+        tools.observe(g);
         if (income) {
           const m = g.tick - g.startTick;
           if (report === 'builder' && builder < 0 && g.phase === 'playing' && m >= 1800)
@@ -124,6 +137,19 @@ function main(): void {
         `${id.padEnd(14)} ${seed} ${difficulty} ${mode} ${end.padEnd(22)} ${marks.join(' ')}${extra}  (${((performance.now() - t0) / 1000).toFixed(0)} s)`,
       );
       console.log(`${''.padEnd(14)} air: ${air.report()}`);
+      const toolbox = tools.finish(g);
+      console.log(
+        `${''.padEnd(14)} tools: ${Object.entries(toolbox)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(' ')}`,
+      );
+      // TOOLS_OUT=file: one JSON line per game (scripts aggregate the toolbox audit from it).
+      if (process.env.TOOLS_OUT)
+        fs.appendFileSync(
+          process.env.TOOLS_OUT,
+          JSON.stringify({ map: id, seed, difficulty, mode, end, min: Number(minutes(g)), tools: toolbox }) +
+            '\n',
+        );
     }
   }
 }
@@ -157,6 +183,74 @@ function airCounter() {
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([k, v]) => `${k}=${v}`)
         .join(' ') || 'nothing',
+  };
+}
+
+/**
+ * The nations' whole toolbox over one game (what a human can do, GAME_DESIGN.md §13.2):
+ * buildings completed and upgraded by type, bombs by kind, planes by role, warships and
+ * transports, alliances, betrayals, gifts, embargoes, capital moves, generals, offensives,
+ * and at the end the share of the surviving nations with each unlock researched.
+ */
+function toolCounter() {
+  const seen = new Set<number>();
+  const c: Record<string, number> = {};
+  const add = (k: string, n = 1) => (c[k] = (c[k] ?? 0) + n);
+  const nation = (g: Game, id: number) => g.players[id]?.kind === 'nation';
+  const NUKES = ['atom', 'hydrogen', 'mirv'];
+  return {
+    observe(g: Game) {
+      for (const e of g.events) {
+        if (e.k === 'built' && nation(g, e.owner)) add(`b.${BUILDING_KEYS[e.kind]}`);
+        else if (e.k === 'nukeLaunch' && nation(g, e.owner) && e.kind <= 2) add(`n.${NUKES[e.kind]}`);
+        else if (e.k === 'airStrike' && nation(g, e.owner) && e.type >= 0) add('a.hits');
+        else if (e.k === 'planeDown' && nation(g, e.by)) add(`a.downed.${e.cause}`);
+        else if (e.k === 'scramble' && nation(g, e.owner)) add('a.scramble');
+        else if (e.k === 'alliance' && e.on && nation(g, e.a) && nation(g, e.b)) add('d.alliance');
+        else if (e.k === 'betrayal' && nation(g, e.traitor)) add('d.betrayal');
+        else if (e.k === 'capitalMoved' && nation(g, e.player)) add('capitalMoved');
+        else if (e.k === 'general' && nation(g, e.player)) add(`g.${e.ability}`);
+        else if (e.k === 'attackWave' && nation(g, e.attacker) && e.target > 0)
+          add(g.players[e.target]!.kind === 'tribe' ? 'w.tribe' : 'w.country');
+        else if (e.k === 'notify' && e.key === 'notify.donation' && nation(g, Number(e.params?.from))) {
+          if (Number(e.params?.gold) > 0) add('d.giftGold');
+          if (Number(e.params?.troops) > 0) add('d.giftTroops');
+        } else if (e.k === 'notify' && e.key === 'notify.embargoOn' && nation(g, Number(e.params?.by)))
+          add('d.embargo');
+      }
+      for (const u of g.units) {
+        if (seen.has(u.id) || !nation(g, u.owner)) continue;
+        if (u.type === U.Fighter) add(u.kind === 2 ? 'a.interceptor' : 'a.fighter');
+        else if (u.type === U.Bomber) add('a.bomber');
+        else if (u.type === U.Recon) add('a.recon');
+        else if (u.type === U.Warship) add('s.warship');
+        else if (u.type === U.Transport) add('s.transport');
+        else continue;
+        seen.add(u.id);
+      }
+    },
+    finish(g: Game): Record<string, number> {
+      const alive = [...g.alivePlayers()].filter((p) => p.kind === 'nation');
+      const share = (f: (p: Player) => boolean) =>
+        alive.length ? Math.round((100 * alive.filter(f).length) / alive.length) : 0;
+      // Branch levels: industry 3 = Aerospace, defense 1 / 2 = SAM / radar, nuclear 2 / 3 / 5 = silo / H / MIRV.
+      c['%aero'] = share((p) => p.tech[5]! >= 3);
+      c['%radarTech'] = share((p) => p.tech[4]! >= 2);
+      c['%samTech'] = share((p) => p.tech[4]! >= 1);
+      c['%siloTech'] = share((p) => p.tech[3]! >= 2);
+      c['%hTech'] = share((p) => p.tech[3]! >= 3);
+      c['%mirvTech'] = share((p) => p.tech[3]! >= 5);
+      c['%airfield'] = share((p) => p.buildingCount[B.Airfield]! > 0);
+      c['%radar'] = share((p) => p.buildingCount[B.Radar]! > 0);
+      c['%sam'] = share((p) => p.buildingCount[B.Sam]! > 0);
+      c['%silo'] = share((p) => p.buildingCount[B.Silo]! > 0);
+      c['goldEnd'] = Math.round(alive.reduce((s, p) => s + p.gold, 0) / Math.max(1, alive.length) / 1000);
+      // Gold earned by the surviving nations over the game (k per nation), and per minute.
+      const earned = alive.reduce((s, p) => s + p.stats.goldEarned, 0) / Math.max(1, alive.length) / 1000;
+      c['goldEarned'] = Math.round(earned);
+      c['goldPerMin'] = Math.round(earned / Math.max(1, (g.tick - g.startTick) / 600));
+      return Object.fromEntries(Object.entries(c).sort(([a], [b]) => a.localeCompare(b)));
+    },
   };
 }
 
