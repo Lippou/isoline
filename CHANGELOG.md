@@ -2,7 +2,7 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
-## [Unreleased]
+## [1.13.0] — Explosions nucléaires ; des nations qui se servent de tout
 ### Modifié
 - **Explosions nucléaires spectaculaires** (« pour les nukes je veux une plus belle explosion badass. Pas plus forte mais juste niveau visuel ») : une séquence en couches, à l'échelle de la carte (proportionnée à tous les zooms). Éclair blanc aveuglant et halo, voile d'écran qui refroidit du blanc à l'ambre ; onde de choc (front fin et lumineux, anneau de poussière, anneau de condensation) ; boule de feu qui passe du blanc au jaune, à l'orange puis au rouge sombre en montant dans un **champignon** (pied, chapeau qui roule sur lui-même, éclairé par-dessous, qui noircit en fumée et dérive au vent) ; étincelles, braises et débris projetés puis retombant ; **trace de brûlure** au sol qui s'efface en 25 s environ (dessin seul : les couleurs des pays ne changent pas). La bombe H est nettement plus grande et plus lente ; les ogives d'un MIRV sont plus légères (lumière atténuée, petits champignons, budget de sprites) pour qu'une salve reste fluide tout en recouvrant la cible. Rien ne change dans la simulation : rayon, dégâts, durées et empreinte d'état identiques.
 - Mouvements réduits : ni secousse ni clignotement (une salve ne fait qu'un éclair doux), éclair atténué ; boule de feu, champignon et brûlure restent. Densité des particules respectée ; rien n'est dessiné pour une explosion hors de l'écran, à part sa trace au sol.
