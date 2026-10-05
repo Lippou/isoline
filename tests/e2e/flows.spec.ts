@@ -74,6 +74,83 @@ test('settings, profile, campaign, replays, editor and about screens open', asyn
   await app.close();
 });
 
+test('map editor: continuous strokes, undo / redo, map switch with unsaved guard, save and reload, play-test', async () => {
+  const { app, page, errors } = await launch('screen=editor&automation');
+  await expect(page.getByTestId('editor')).toBeVisible({ timeout: 20_000 });
+  type Hooks = {
+    digest: () => {
+      hash: number;
+      undo: number;
+      unsaved: boolean;
+      nations: number;
+      spawns: number;
+      file: string;
+    };
+    continuity: () => Record<string, { tiles: number; pieces: number }>;
+  };
+  const hook = <K extends keyof Hooks>(k: K) =>
+    page.evaluate((k) => (window as unknown as { __isoEditor: Hooks }).__isoEditor[k](), k) as Promise<
+      ReturnType<Hooks[K]>
+    >;
+  await page.getByTestId('editor-new').click();
+  await expect(page.getByTestId('editor-canvas')).toBeVisible();
+  // A fast flick: four pointer events far apart must paint one continuous stroke.
+  await page.getByTestId('tool-brush').click();
+  await page.getByTestId('terrain-forest').click();
+  await page.getByTestId('editor-size').fill('3');
+  const b = (await page.getByTestId('editor-canvas').boundingBox())!;
+  const P = (x: number, y: number) => [b.x + b.width * x, b.y + b.height * y] as const;
+  await page.mouse.move(...P(0.1, 0.15));
+  await page.mouse.down();
+  for (const [x, y] of [
+    [0.45, 0.85],
+    [0.75, 0.1],
+    [0.92, 0.9],
+  ] as const)
+    await page.mouse.move(...P(x, y), { steps: 1 });
+  await page.mouse.up();
+  const forest = (await hook('continuity')).forest!;
+  expect(forest.pieces).toBe(1);
+  expect(forest.tiles).toBeGreaterThan(1000);
+  // Undo / redo with the keyboard.
+  const painted = await hook('digest');
+  const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
+  await page.keyboard.press(`${mod}+z`);
+  expect((await hook('digest')).hash).not.toBe(painted.hash);
+  await page.keyboard.press(`${mod}+Shift+z`);
+  expect((await hook('digest')).hash).toBe(painted.hash);
+  // Switching maps asks first (unsaved changes), then really switches.
+  await page.getByTestId('editor-switch').click();
+  await page.getByTestId('chooser-shipped').click();
+  await page.getByTestId('shipped-black-sea').click();
+  await expect(page.locator('[role=dialog] .np-btn.danger')).toBeVisible();
+  await page.locator('[role=dialog] .np-btn.danger').click();
+  await expect(page.getByTestId('editor-chooser')).toHaveCount(0, { timeout: 20_000 });
+  const black = await hook('digest');
+  expect(black.hash).not.toBe(painted.hash);
+  expect(black.unsaved).toBe(false);
+  // Save, then reopen from "My maps": the same map.
+  await page.getByTestId('editor-save').click();
+  await expect.poll(async () => (await hook('digest')).file, { timeout: 20_000 }).not.toBe('');
+  await page.getByTestId('editor-switch').click();
+  await page.getByTestId('chooser-mine').click();
+  await page.locator('[data-testid^=mine-]').first().click();
+  await expect(page.getByTestId('editor-chooser')).toHaveCount(0, { timeout: 20_000 });
+  const back = await hook('digest');
+  expect(back.hash).toBe(black.hash);
+  expect(back.nations).toBe(black.nations);
+  // Play-test: a solo game on the map, and back to the editor when leaving it.
+  await page.getByTestId('editor-test').click();
+  await expect(page.getByTestId('spawn-countdown')).toBeVisible({ timeout: 40_000 });
+  await page.keyboard.press('Escape');
+  await page.getByTestId('menu-quit').click();
+  await page.locator('[role=dialog] .np-btn.ink').click();
+  await expect(page.getByTestId('editor')).toBeVisible({ timeout: 20_000 });
+  expect((await hook('digest')).hash).toBe(black.hash);
+  expect(errors).toEqual([]);
+  await app.close();
+});
+
 test('autostarted spectator game renders, runs the simulation and saves a replay at the end of a surrender', async () => {
   const { app, page, errors } = await launch('autostart=black-sea&nations=8&tribes=10&spawn=1&speed=4&perf');
   await expect(page.getByTestId('game-screen')).toBeVisible({ timeout: 20_000 });
