@@ -2,7 +2,7 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
-## [Unreleased]
+## [1.15.0] — Défenses resserrées, révolutions visibles, naufrages, cartes peuplées
 ### Ajouté
 - `scripts/pacing.ts` : missiles interceptés, tirs sur une cible couverte par un SAM ennemi et part des niveaux de villes des nations sous un de leurs SAM (`| launches … intercepted … at-SAM … | city levels under SAM …`).
 - **Les révolutions se remarquent** (« la révolution, j'étais en train de jouer, je ne l'ai même pas vue… un son, un visuel sur l'écran aussi ») : chez tous les joueurs, et plus fort chez la victime.
