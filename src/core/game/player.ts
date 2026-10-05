@@ -74,6 +74,14 @@ export class Player {
   revoltUntil = -1;
   /** Land and cities the revolution took at its outbreak. */
   revoltTiles = 0;
+  /** Outbreak tick (the barricades stand REVOLUTION_BARRICADE_TICKS from then). */
+  revoltStart = -1;
+  /** All the land the revolution has raised so far: the outbreak plus every spread. */
+  revoltLand = 0;
+  /** Next contagion check (REVOLUTION_SPREAD_*), -1: none left before it runs out of steam. */
+  revoltSpreadAt = -1;
+  /** The rebels' troops per tile at the outbreak: their levy's measure (REVOLUTION_LEVY_CAP). */
+  revoltDensity = 0;
   /** A country: no new revolution before this tick (REVOLUTION_COOLDOWN). */
   revoltReadyTick = 0;
   /** A country: revolutions it has suffered. */

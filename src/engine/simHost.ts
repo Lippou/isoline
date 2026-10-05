@@ -83,9 +83,14 @@ export class SimHost {
     this.send({ type: 'qa', action: 'shrink', player, keep });
   }
 
-  /** QA (?automation, solo only): world event `id` strikes at once, for real. */
-  qaWorldEvent(id: string): void {
-    this.send({ type: 'qa', action: 'worldEvent', id });
+  /** QA (?automation, solo only): world event `id` strikes at once, for real (`zone`: its circle there). */
+  qaWorldEvent(id: string, zone?: { x: number; y: number; r: number }): void {
+    this.send({ type: 'qa', action: 'worldEvent', id, ...(zone ? { zone } : {}) });
+  }
+
+  /** QA (?automation, solo only): a peace summit opens at once for `secs` seconds. */
+  qaSummit(secs: number): void {
+    this.send({ type: 'qa', action: 'summit', secs });
   }
 
   setViewer(viewer: number, fogEnabled: boolean): void {

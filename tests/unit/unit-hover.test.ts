@@ -124,6 +124,18 @@ describe('unit hover card: data', () => {
     expect(unitHover(s, [], 4)).toMatchObject({ key: 'fighter', status: 'intercepting', dest: null });
   });
 
+  it("a bomber after a ship at sea names the ship's owner (and comes at us)", () => {
+    // Our transport at (1, 1) on open sea; player 2's bomber follows it (units/air.ts).
+    const s = mirror([
+      [5, U.Transport, 1, 0, 1, 900, -1, 0, 0, 0],
+      [6, U.Bomber, 2, 0, 1, 0, -1, 1.2, 1.3, 0],
+    ]);
+    (s.owner as Uint16Array)[1 * W + 1] = 0;
+    const d = unitHover(s, [], 6)!;
+    expect(d.dest).toBe(1);
+    expect(d.relation).toBe('enemy');
+  });
+
   it('nothing for a unit gone, a missile or a shell', () => {
     const s = mirror([
       [1, U.Nuke, 2, 0, 1, 0, 3, 0, 0, 0],

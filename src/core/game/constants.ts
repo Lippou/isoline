@@ -242,7 +242,13 @@ export const CAPTURE_TRANSFER = [true, true, true, false, true, true, false, tru
  * the countdown ends. GAME_DESIGN.md §6.4.
  */
 export const CAPTURE_OCCUPATION_TICKS = sec(60);
+/** Demolition: a quarter of the gold invested comes back, once the building is down. */
 export const DEMOLISH_REFUND = 0.25;
+/**
+ * A demolition takes the type's construction time (Megaprojects included), never less than
+ * this (1.16; it was instant before).
+ */
+export const DEMOLISH_MIN_TICKS = sec(5);
 export const STATION_TYPES: readonly number[] = [B.City, B.Port, B.Factory];
 export const RADAR_RANGE = 60;
 /** Minimum Euclidean distance between two structures (tiles). */
@@ -471,6 +477,18 @@ export const BOMBER_RADIUS = 6;
 export const BOMBER_LEVELS = 1;
 /** …and inside one of the bomber owner's reconnaissance zones. */
 export const BOMBER_LEVELS_SPOTTED = 2;
+/**
+ * Bombers against ships (1.16, the player's request: « avec le bombardier, ce serait bien
+ * qu'on puisse aussi détruire des bateaux »): aimed at sea, a bomber locks on the hostile
+ * ship (warship, transport, trade ship) nearest the aim point within BOMBER_SHIP_SNAP and
+ * follows it; its bombs hit every hostile ship within BOMBER_SHIP_RADIUS of the drop for
+ * BOMBER_SHIP_DAMAGE hp (twice that inside one of the bomber owner's reconnaissance zones):
+ * a transport (300 hp) or a trade ship (200) goes down, a warship (1,000) loses 60 % and
+ * breaks off to its port; two bombers sink it.
+ */
+export const BOMBER_SHIP_SNAP = 8;
+export const BOMBER_SHIP_RADIUS = 3;
+export const BOMBER_SHIP_DAMAGE = 600;
 export const RECON_RANGE = 400;
 export const RECON_RADIUS = 40;
 export const RECON_TICKS = sec(40);
@@ -522,6 +540,35 @@ export const REVOLUTION_TROOPS = 1;
 export const REVOLUTION_TROOPS_MAX = 0.25;
 /** …and the locals join them: the rebels start with the garrison × this. */
 export const REVOLUTION_LEVY = 1.5;
+/**
+ * Guerrilla (1.16, the player's request: « un soulèvement ne doit pas être si facile à
+ * récupérer »): attacks into rebel land lose this many times their usual troops (the mag of
+ * the terrain, like a defence post's ×5)…
+ */
+export const REVOLUTION_GUERRILLA_MAG = 3;
+/** …and their former country, whose garrison the people hide from, this much again… */
+export const REVOLUTION_GUERRILLA_HOME = 1.5;
+/** …and every tile takes this many times longer to take (like a defence post's ×3). */
+export const REVOLUTION_GUERRILLA_SPEED = 3;
+/** Barricades: right after the outbreak, both multipliers are this much higher for a while. */
+export const REVOLUTION_BARRICADE_TICKS = sec(75);
+export const REVOLUTION_BARRICADE_MULT = 2;
+/**
+ * Contagion: a revolt still holding REVOLUTION_SPREAD_HOLD of the land it has raised spreads
+ * into its country, REVOLUTION_SPREAD_FIRST after the outbreak then every
+ * REVOLUTION_SPREAD_EVERY: REVOLUTION_SPREAD_LAND × its first region joins it (never near
+ * the capital), with its garrison.
+ */
+export const REVOLUTION_SPREAD_FIRST = sec(90);
+export const REVOLUTION_SPREAD_EVERY = sec(60);
+export const REVOLUTION_SPREAD_HOLD = 0.5;
+export const REVOLUTION_SPREAD_LAND = 0.25;
+/**
+ * Levy: the rebels raise troops from the region's people at a country's pace (a tribe's
+ * is halved), up to this many times their troops per tile at the outbreak, on the land they
+ * hold (at least a tribe's ceiling): losses refill, a revolt left alone doubles its army.
+ */
+export const REVOLUTION_LEVY_CAP = 2;
 /** Chance per think (4–7 s) that the rebels push into their former country's land. */
 export const REVOLUTION_PUSH_CHANCE = 0.25;
 /** Colour index of the rebels' ink (render/colors.ts): tribes use -1. */

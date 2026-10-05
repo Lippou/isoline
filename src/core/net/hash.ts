@@ -47,13 +47,17 @@ export function hashGame(game: Game): number {
     h = mix(mix(h, p.capital + 1), p.disorgUntil + 1);
     h = mix(mix(h, p.researching + 1), q(p.researchPoints));
     for (let k = 0; k < p.tech.length; k++) h = mix(h, p.tech[k]!);
-    // Revolutions (rules/revolution.ts): the rebels' clock, the countries' cooldown.
+    // Revolutions (rules/revolution.ts): the rebels' clock, the countries' cooldown, the
+    // barricades and the contagion.
     h = mix(mix(mix(h, p.revolution ? 1 : 0), p.revoltUntil + 1), p.revoltReadyTick);
+    h = mix(mix(mix(mix(h, p.revoltStart + 1), p.revoltSpreadAt + 1), p.revoltLand), q(p.revoltDensity));
     for (const [a, e] of p.allies) h = mix(mix(h, a), e);
   }
   for (const a of game.attacks) h = mix(mix(mix(h, a.id), q(a.troops)), a.frontierSize);
-  for (const b of game.buildings.values())
+  for (const b of game.buildings.values()) {
     h = mix(mix(mix(mix(mix(mix(h, b.id), b.owner), b.level), b.buildLeft), b.upgradeLeft), b.occupiedLeft);
+    h = mix(h, b.demolishLeft);
+  }
   for (const u of game.units) h = mix(mix(mix(mix(h, u.id), u.owner), q(u.x)), q(u.y));
   h = mix(h, game.rails.length);
   // World events (rules/worldEvents.ts): the one under way (and its zone), the picker's memory.

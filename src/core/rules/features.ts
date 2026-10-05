@@ -1,6 +1,6 @@
 // Original features driven by the simulation: weather & day/night, world events,
 // loyalty & secession, generals, world council, research ticking, resources.
-import type { Game } from '../game/state';
+import type { Game, Refusal } from '../game/state';
 import type { Player } from '../game/player';
 import {
   B,
@@ -19,7 +19,7 @@ import {
 } from '../game/constants';
 import { recountResources, type ResourceBonus } from './resources';
 import { NODES, repeatCount, techKey, updateResearch } from './tech';
-import { sabotageNear } from '../units/trains';
+import { sabotageNear, sabotageTarget } from '../units/trains';
 import { inService } from '../buildings/building';
 import { endOccupations } from '../buildings/buildings';
 import { inventTribeName } from '../names';
@@ -283,6 +283,27 @@ function secede(game: Game, p: Player, seed: number): void {
 }
 
 // --------------------------------------------------------------- generals
+/**
+ * Why p's general cannot act at `tile` now ('ok' when it can; 1.16: the real reason):
+ * generals off, still recovering, or Sabotage with no hostile train or trade ship within
+ * reach — or only ones covered by a truce (its Refusal, worded with the time left).
+ */
+export function generalError(
+  game: Game,
+  p: Player,
+  tile: number,
+): 'ok' | 'disabled' | 'cooldown' | 'noTarget' | Refusal {
+  if (!game.config.features.generals) return 'disabled';
+  if (game.phase !== 'playing') return 'phase';
+  if (game.tick < p.generalReadyTick) return 'cooldown';
+  if (p.general !== 'sabotage') return 'ok';
+  const near = sabotageTarget(game, p.id, tile, true);
+  if (!near) return 'noTarget';
+  if (!sabotageTarget(game, p.id, tile, false))
+    return game.attackRefusal(p.id, near.owner, true) ?? 'noTarget';
+  return 'ok';
+}
+
 export function useGeneral(game: Game, p: Player, tile: number): boolean {
   if (!game.config.features.generals || game.phase !== 'playing') return false;
   if (game.tick < p.generalReadyTick) return false;

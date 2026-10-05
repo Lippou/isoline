@@ -139,8 +139,10 @@ export const hud = $state({
   },
   /** Aircraft panel: what a plane sent at the hovered tile would do (ui/game/airPreview.ts). */
   airAim: null as null | {
-    problem: '' | 'noAirfield' | 'full' | 'range' | 'noTarget' | 'teammate' | 'ash';
+    problem: '' | 'noAirfield' | 'full' | 'range' | 'noTarget' | 'teammate' | 'ash' | 'truce' | 'immune';
+    truce: { reason: 'summit' | 'ceasefire'; left: number } | null;
     target: { type: number; owner: number; level: number; after: number } | null;
+    ship: { type: number; owner: number; hp: number; after: number; others: number } | null;
     samMissiles: number;
     interceptors: number;
     spotted: boolean;
@@ -198,6 +200,9 @@ export const hud = $state({
       tubes?: number;
       /** Occupied after a capture: ticks left (0 or absent = none). */
       occupied?: number;
+      id?: number;
+      /** Being demolished: ticks left (0 or absent = none). */
+      demolish?: number;
     } | null;
     fallout: number;
     resource: number;

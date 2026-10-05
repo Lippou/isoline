@@ -46,6 +46,13 @@ import { revolutionCrushed, updateRevolutions } from '../rules/revolution';
 
 export type Phase = 'spawn' | 'playing' | 'ended';
 
+/**
+ * Why a hostile order (attack, landing, bombing, sabotage…) is refused (1.16: every refusal
+ * names its real cause). 'summit' and 'ceasefire' are the world's truces (Game.truce):
+ * a peace summit, or the World Council's ceasefire.
+ */
+export type Refusal = 'phase' | 'self' | 'team' | 'gone' | 'immune' | 'summit' | 'ceasefire' | 'ally';
+
 export class Game {
   readonly map: GameMap;
   readonly config: GameConfig;
@@ -287,6 +294,8 @@ export class Game {
     pn.buildingCount[b.type]++;
     if (b.type === B.City) pn.cityLevels += paidLevels(b);
     b.owner = newOwner;
+    // A demolition ordered by the former owner stops with the change of hands.
+    b.demolishLeft = b.demolishTotal = 0;
     this.buildingsDirty = true;
     this.buildingsVersion++;
     this.emit({ k: 'capture', x: b.x, y: b.y, owner: prev, by: newOwner });
@@ -514,16 +523,45 @@ export class Game {
 
   /** Whether `attacker` may (still) attack `target`. `fresh` = a new order (betrayal checks happen in commands). */
   attackAllowed(attacker: number, target: number, fresh: boolean): boolean {
-    if (this.phase !== 'playing') return false;
-    if (target === 0) return true;
-    if (attacker === target || this.sameTeam(attacker, target)) return false;
+    return this.attackRefusal(attacker, target, fresh) === null;
+  }
+
+  /** Why `attacker` may not (or no longer) attack `target`, null when it may (attackAllowed). */
+  attackRefusal(attacker: number, target: number, fresh: boolean): Refusal | null {
+    if (this.phase !== 'playing') return 'phase';
+    if (target === 0) return null;
+    if (attacker === target) return 'self';
+    if (this.sameTeam(attacker, target)) return 'team';
     const T = this.players[target]!;
     const A = this.players[attacker]!;
-    if (!T.alive) return false;
-    if (T.immuneUntil > this.tick) return false;
-    if (this.inTruce(attacker, target)) return false;
-    if (!fresh && A.allies.has(target)) return false;
-    return true;
+    if (!T.alive) return 'gone';
+    if (T.immuneUntil > this.tick) return 'immune';
+    if (this.inTruce(attacker, target)) return this.truce()?.reason ?? 'ceasefire';
+    if (!fresh && A.allies.has(target)) return 'ally';
+    return null;
+  }
+
+  /**
+   * The world's truce in force, if any: a peace summit (a world event) or the World Council's
+   * ceasefire, and when it ends. When both hold, the one that ends last names it.
+   */
+  truce(): { reason: 'summit' | 'ceasefire'; until: number } | null {
+    const f = this.features;
+    if (f.ceasefireUntil <= this.tick) return null;
+    const summit =
+      f.event?.id === 'peaceSummit' && f.event.until > this.tick && f.event.until >= f.ceasefireUntil;
+    return { reason: summit ? 'summit' : 'ceasefire', until: f.ceasefireUntil };
+  }
+
+  /**
+   * Tells p why its order (`act`: attack, boat, bomber, sabotage…) was refused, the truce
+   * named with its time left (error.refused.<reason>, the interface words `act`).
+   */
+  refuse(pid: number, act: string, why: Refusal): void {
+    const truce = why === 'summit' || why === 'ceasefire' ? this.truce() : null;
+    const params: Record<string, string | number> = { act };
+    if (truce) params.left = Math.max(0, truce.until - this.tick);
+    this.notify(pid, `error.refused.${why}`, 'warn', params);
   }
 
   /** A ceasefire (peace summit or the Council's) holds between these two countries; tribes are not covered. */

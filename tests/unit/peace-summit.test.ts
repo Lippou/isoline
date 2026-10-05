@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { asciiMap, cmd, startWith, testGame } from '../helpers';
 import type { Game } from '../../src/core/game/state';
+import type { GameEvent } from '../../src/core/game/events';
 import { B, N, sec } from '../../src/core/game/constants';
 import { placeBuilding } from '../../src/core/buildings/buildings';
 import { maxLaunchable, nuclearHalt } from '../../src/core/units/nukes';
@@ -153,5 +154,93 @@ describe('peace summit', () => {
     expect(g.inTruce(1, 3)).toBe(false);
     expect(g.attackAllowed(1, 2, true)).toBe(false);
     expect(g.attackAllowed(1, 3, true)).toBe(true);
+  });
+});
+
+/** The notices sent to `to` this tick, with their parameters. */
+const said = (g: Game, to: number) =>
+  g.events.filter((e) => e.k === 'notify' && e.to === to) as Extract<GameEvent, { k: 'notify' }>[];
+
+describe('refusals name their real reason (1.16)', () => {
+  it('an attack or a landing during the summit names the summit and its time left', () => {
+    const g = world();
+    g.players[1]!.troops = 100_000;
+    summit(g, sec(42));
+    g.step([cmd(1, { t: 'attack', tile: g.map.idx(81, 24), ratio: 0.2 })]);
+    const n = said(g, 1);
+    expect(n.map((e) => e.key)).toEqual(['error.refused.summit']);
+    expect(n[0]!.params).toMatchObject({ act: 'attack' });
+    expect(n[0]!.params!.left).toBeGreaterThan(sec(40));
+    expect(g.attacks).toHaveLength(0);
+    // The tribe is not covered: that attack goes.
+    g.step([cmd(1, { t: 'attack', tile: g.map.idx(100, 8), ratio: 0.1 })]);
+    expect(said(g, 1)).toHaveLength(0);
+  });
+
+  it("the Council's ceasefire is named as such", () => {
+    const g = world();
+    g.players[1]!.troops = 100_000;
+    g.features.ceasefireUntil = g.tick + sec(30);
+    expect(g.truce()).toEqual({ reason: 'ceasefire', until: g.features.ceasefireUntil });
+    expect(g.attackRefusal(1, 2, true)).toBe('ceasefire');
+    g.step([cmd(1, { t: 'attack', tile: g.map.idx(81, 24), ratio: 0.2 })]);
+    expect(said(g, 1)[0]!.key).toBe('error.refused.ceasefire');
+    // A summit over it: the summit names it.
+    summit(g, sec(60));
+    expect(g.truce()!.reason).toBe('summit');
+    expect(g.attackRefusal(1, 2, true)).toBe('summit');
+  });
+
+  it('an immunity and a teammate are named too', () => {
+    const g = world();
+    g.players[2]!.immuneUntil = g.tick + 100;
+    expect(g.attackRefusal(1, 2, true)).toBe('immune');
+    g.players[1]!.team = g.players[2]!.team = 1;
+    expect(g.attackRefusal(1, 2, true)).toBe('team');
+  });
+
+  it('a nuclear halt and the silo itself say why: summit time left, no silo, reloading, gold', () => {
+    const g = world();
+    summit(g, sec(20));
+    g.step([cmd(1, { t: 'nuke', kind: N.Atom, tile: g.map.idx(140, 30), count: 1 })]);
+    const halt = said(g, 1)[0]!;
+    expect(halt.key).toBe('error.nukeHalt.peaceSummit');
+    expect(halt.params!.left).toBeGreaterThan(sec(18));
+    g.features.event = null;
+    g.features.ceasefireUntil = -1;
+    const p1 = g.players[1]!;
+    p1.gold = 0;
+    g.step([cmd(1, { t: 'nuke', kind: N.Atom, tile: g.map.idx(140, 30), count: 1 })]);
+    expect(said(g, 1)[0]!.key).toBe('error.nukeWhy.gold');
+    p1.gold = 1e8;
+    for (const b of g.buildings.values()) if (b.owner === 1 && b.type === B.Silo) b.tubes[0] = 50;
+    g.step([cmd(1, { t: 'nuke', kind: N.Atom, tile: g.map.idx(140, 30), count: 1 })]);
+    expect(said(g, 1)[0]!.key).toBe('error.nukeWhy.reloading');
+  });
+
+  it('a sabotage during the summit names the truce; with nothing around, says so', () => {
+    const g = testGame(asciiMap(PLAIN, 4), 3, { difficulty: 'hard', features: { generals: true } as never });
+    startWith(g, [
+      [20, 24],
+      [140, 24],
+      [100, 10],
+    ]);
+    const p1 = g.players[1]!;
+    p1.general = 'sabotage';
+    p1.generalReadyTick = 0;
+    g.step([cmd(1, { t: 'general', tile: g.map.idx(120, 30) })]);
+    expect(said(g, 1)[0]!.key).toBe('error.generalWhy.noTarget');
+    addUnit(g, makeUnit(g.nextId(), U.Train, 2, 120.5, 30.5));
+    summit(g);
+    g.step([cmd(1, { t: 'general', tile: g.map.idx(120, 30) })]);
+    const n = said(g, 1)[0]!;
+    expect(n.key).toBe('error.refused.summit');
+    expect(n.params).toMatchObject({ act: 'sabotage' });
+  });
+
+  it('a warship order says which: no port, out of reach, or the gold', () => {
+    const g = world();
+    g.step([cmd(1, { t: 'warship', tile: g.map.idx(20, 46) })]);
+    expect(said(g, 1)[0]!.key).toBe('error.warshipWhy.noPort');
   });
 });

@@ -5,6 +5,10 @@
 // no treasury, no income, nothing to loot; they neither trade nor sign alliances, push a
 // little into their former country, and their buildings stand idle (occupied) while they
 // hold them. Their former country takes them back intact; anyone else finds them burnt.
+// Retaking the region is hard work (1.16): guerrilla in every street (attackers lose more
+// troops and advance slower there, the former country most of all), barricades right after
+// the outbreak, rebels levying troops like a country, no annexation of their last tiles,
+// and a revolt left standing spreads into its country's neighbouring land.
 // Unless put down earlier, a revolution runs out of steam after REVOLUTION_TICKS and its
 // land rejoins its country. Deterministic: the match's PRNG, drawn only when a country
 // qualifies (games without a runaway leader keep their exact course).
@@ -15,18 +19,27 @@ import {
   B,
   LOYALTY_SETTLED,
   REBEL_COLOR,
+  REVOLUTION_BARRICADE_MULT,
+  REVOLUTION_BARRICADE_TICKS,
   REVOLUTION_CAPITAL_SAFE,
   REVOLUTION_CHANCE_BASE,
   REVOLUTION_CHANCE_EXTRA,
   REVOLUTION_CHECK_TICKS,
   REVOLUTION_COOLDOWN,
   REVOLUTION_GRACE,
+  REVOLUTION_GUERRILLA_HOME,
+  REVOLUTION_GUERRILLA_MAG,
+  REVOLUTION_GUERRILLA_SPEED,
   REVOLUTION_LAND,
   REVOLUTION_LEVY,
   REVOLUTION_MAX_TILES,
   REVOLUTION_MIN_LEAD,
   REVOLUTION_MIN_SHARE,
   REVOLUTION_MIN_TILES,
+  REVOLUTION_SPREAD_EVERY,
+  REVOLUTION_SPREAD_FIRST,
+  REVOLUTION_SPREAD_HOLD,
+  REVOLUTION_SPREAD_LAND,
   REVOLUTION_TICKS,
   REVOLUTION_TROOPS,
   REVOLUTION_TROOPS_MAX,
@@ -75,11 +88,54 @@ export function liveRevolutionOf(game: Game, p: Player): Player | null {
   return null;
 }
 
+/** Whether `rebel` is a revolution under way (not over, not crushed). */
+export function liveRevolution(game: Game, rebel: Player): boolean {
+  return rebel.revolution && rebel.alive && rebel.revoltUntil > game.tick;
+}
+
+/** Whether the barricades still stand (REVOLUTION_BARRICADE_TICKS after the outbreak). */
+export function barricadesUp(game: Game, rebel: Player): boolean {
+  return liveRevolution(game, rebel) && game.tick < rebel.revoltStart + REVOLUTION_BARRICADE_TICKS;
+}
+
+/**
+ * Guerrilla: how much more an attack by `attacker` into `rebel`'s land costs — `mag`
+ * multiplies its losses, `speed` the time each tile takes. 1 and 1 outside a revolution.
+ * Every attacker alike (humans and nations), the former country ×REVOLUTION_GUERRILLA_HOME
+ * on losses, everything ×REVOLUTION_BARRICADE_MULT while the barricades stand.
+ */
+export function guerrilla(game: Game, rebel: Player, attacker: number): { mag: number; speed: number } {
+  if (!liveRevolution(game, rebel)) return { mag: 1, speed: 1 };
+  const bar = barricadesUp(game, rebel) ? REVOLUTION_BARRICADE_MULT : 1;
+  const home = attacker === rebel.rebelOf ? REVOLUTION_GUERRILLA_HOME : 1;
+  return { mag: REVOLUTION_GUERRILLA_MAG * home * bar, speed: REVOLUTION_GUERRILLA_SPEED * bar };
+}
+
+/**
+ * Contagion: the next spread of `rebel` into its country, in ticks from now (-1: none left
+ * before the revolt runs out of steam), and whether it holds enough of its land to spread.
+ */
+export function nextSpread(game: Game, rebel: Player): { in: number; holds: boolean } {
+  if (!liveRevolution(game, rebel) || rebel.revoltSpreadAt < 0) return { in: -1, holds: false };
+  return {
+    in: Math.max(0, rebel.revoltSpreadAt - game.tick),
+    holds: rebel.tiles >= REVOLUTION_SPREAD_HOLD * rebel.revoltLand,
+  };
+}
+
 export function updateRevolutions(game: Game): void {
-  // Endings first: rebels whose time is up rejoin their country (checked every second).
+  // Endings first: rebels whose time is up rejoin their country (checked every second);
+  // those still holding their ground spread meanwhile.
   if (game.tick % 10 === 0)
-    for (const q of [...game.alivePlayers()])
-      if (q.revolution && q.revoltUntil >= 0 && game.tick >= q.revoltUntil) endRevolution(game, q);
+    for (const q of [...game.alivePlayers()]) {
+      if (!q.revolution || q.revoltUntil < 0) continue;
+      if (game.tick >= q.revoltUntil) endRevolution(game, q);
+      else if (q.revoltSpreadAt >= 0 && game.tick >= q.revoltSpreadAt) {
+        const next = q.revoltSpreadAt + REVOLUTION_SPREAD_EVERY;
+        q.revoltSpreadAt = next < q.revoltUntil ? next : -1;
+        if (q.tiles >= REVOLUTION_SPREAD_HOLD * q.revoltLand) spreadRevolution(game, q);
+      }
+    }
   if (!game.config.features.revolution) return;
   const rel = game.tick - game.startTick;
   if (rel < REVOLUTION_GRACE || rel % REVOLUTION_CHECK_TICKS !== 0) return;
@@ -111,6 +167,9 @@ export function startRevolution(game: Game, p: Player): Player | null {
   rebel.revolution = true;
   rebel.revoltUntil = game.tick + REVOLUTION_TICKS;
   rebel.revoltTiles = region.length;
+  rebel.revoltLand = region.length;
+  rebel.revoltStart = game.tick;
+  rebel.revoltSpreadAt = game.tick + REVOLUTION_SPREAD_FIRST;
   rebel.color = REBEL_COLOR;
   rebel.flagSeed = game.rng.nextU32();
   rebel.spawned = true;
@@ -121,6 +180,7 @@ export function startRevolution(game: Game, p: Player): Player | null {
   const troops = Math.min(p.troops * REVOLUTION_TROOPS_MAX, density * region.length * REVOLUTION_TROOPS);
   p.troops -= troops;
   rebel.troops = troops * REVOLUTION_LEVY + 1000;
+  rebel.revoltDensity = rebel.troops / region.length;
   for (const t of region) game.setOwner(t, rebel.id);
   // Its buildings (taken as they stand, Game.onBuildingTileCaptured) stand idle meanwhile.
   let cities = 0;
@@ -148,11 +208,83 @@ export function startRevolution(game: Game, p: Player): Player | null {
   return rebel;
 }
 
+/**
+ * Contagion: the revolt wins over a band of its country's land next to it
+ * (REVOLUTION_SPREAD_LAND × its first region, grown breadth-first from their common border,
+ * never near the capital), with the garrison there, like the outbreak.
+ */
+function spreadRevolution(game: Game, rebel: Player): void {
+  const p = game.players[rebel.rebelOf];
+  if (!p || !p.alive || p.kind === 'tribe') return;
+  const map = game.map;
+  const w = map.width;
+  const [hx, hy] = home(game, p);
+  const safe2 = REVOLUTION_CAPITAL_SAFE * REVOLUTION_CAPITAL_SAFE;
+  const want = Math.max(1, Math.round(rebel.revoltTiles * REVOLUTION_SPREAD_LAND));
+  const ok = (v: number) =>
+    game.owner[v] === p.id &&
+    IS_LAND[map.terrain[v]!] &&
+    v !== p.capital &&
+    ((v % w) - hx) ** 2 + (((v / w) | 0) - hy) ** 2 >= safe2;
+  const seen = new Set<number>();
+  const queue: number[] = [];
+  for (const t of rebel.border) {
+    const n = map.neighbors4(t, NB);
+    for (let j = 0; j < n; j++) {
+      const v = NB[j]!;
+      if (seen.has(v) || !ok(v)) continue;
+      seen.add(v);
+      queue.push(v);
+    }
+  }
+  const region: number[] = [];
+  for (let head = 0; head < queue.length && region.length < want; head++) {
+    const t = queue[head]!;
+    region.push(t);
+    const n = map.neighbors4(t, NB);
+    for (let j = 0; j < n; j++) {
+      const v = NB[j]!;
+      if (seen.has(v) || !ok(v)) continue;
+      seen.add(v);
+      queue.push(v);
+    }
+  }
+  if (region.length === 0) return;
+  const density = p.troops / Math.max(1, p.tiles);
+  const troops = Math.min(
+    (p.troops * REVOLUTION_TROOPS_MAX) / 2,
+    density * region.length * REVOLUTION_TROOPS,
+  );
+  p.troops -= troops;
+  rebel.troops += troops * REVOLUTION_LEVY;
+  for (const t of region) game.setOwner(t, rebel.id);
+  const left = Math.max(0, rebel.revoltUntil - game.tick);
+  for (const b of game.buildings.values()) {
+    if (b.owner !== rebel.id || b.occupiedLeft > 0) continue;
+    b.occupiedLeft = b.occupiedTotal = left;
+  }
+  game.buildingsDirty = true;
+  game.buildingsVersion++;
+  rebel.revoltLand += region.length;
+  const at = region[0]!;
+  game.emit({
+    k: 'revolution',
+    phase: 'spread',
+    from: p.id,
+    tribe: rebel.id,
+    tile: at,
+    tiles: region.length,
+    by: 0,
+  });
+  game.notify(p.id, 'notify.revolutionSpread', 'danger', { tribe: rebel.id, tiles: region.length }, at);
+}
+
 /** The revolution runs out of steam: its land rejoins its country (or the wild, if gone). */
 export function endRevolution(game: Game, rebel: Player): void {
   const home = game.players[rebel.rebelOf];
   const back = home && home.alive ? home.id : 0;
   rebel.revoltUntil = -1; // (no longer "crushed" when its last tile goes)
+  rebel.revoltSpreadAt = -1;
   const own = game.owner;
   let tiles = 0;
   let at = rebel.spawnTile;

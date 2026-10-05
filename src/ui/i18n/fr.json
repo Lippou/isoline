@@ -372,7 +372,7 @@
     "boat": "Débarquer",
     "build": "Construire",
     "upgrade": "Améliorer",
-    "demolish": "Démolir (25 %)",
+    "demolish": "Démolir",
     "nukes": "Nucléaire",
     "warshipHere": "Navire de guerre",
     "moveShips": "Déplacer ({n})",
@@ -412,7 +412,10 @@
     "capitalFront": "trop près du front",
     "capitalFallout": "irradié",
     "teammate": "coéquipier",
-    "teamGiftDesc": "Or ou troupes, reçus aussitôt"
+    "teamGiftDesc": "Or ou troupes, reçus aussitôt",
+    "demolishDesc": "Hors service pendant la démolition, abattu à la fin du compte à rebours : {pct} % de l'or investi rendu.",
+    "demolishCancel": "Annuler la démolition",
+    "demolishCancelDesc": "Le bâtiment reprend du service aussitôt, rien n'est perdu."
   },
   "confirm": {
     "betrayTitle": "Trahir votre allié ?",
@@ -1035,7 +1038,7 @@
     },
     "revolution": {
       "name": "Révolutions",
-      "desc": "Activé par défaut. Un pays très en avance voit parfois une région lointaine se soulever : des rebelles sans or, à reprendre ou à laisser s'essouffler."
+      "desc": "Activé par défaut. Un pays très en avance voit parfois une région lointaine se soulever : des rebelles sans or, retranchés (guérilla, barricades), à reprendre à grand prix ou à laisser s'essouffler."
     }
   },
   "general": {
@@ -1149,7 +1152,7 @@
     },
     "bomber": {
       "name": "Bombardier",
-      "desc": "Frappe le bâtiment ennemi le plus proche de la cible (portée 300) : −1 niveau, détruit au niveau 1 ; silos et SAM vidés de leurs missiles. Deux niveaux sous votre reconnaissance. Abattu par les SAM et les chasseurs.",
+      "desc": "Frappe le bâtiment ennemi le plus proche de la cible (portée 300) : −1 niveau, détruit au niveau 1 ; silos et SAM vidés de leurs missiles. En mer, poursuit le navire visé : 600 dégâts à tout navire ennemi dans 3 tuiles (transports et marchands coulés). Double sous votre reconnaissance. Abattu par les SAM et les chasseurs.",
       "short": "Bombardier"
     },
     "recon": {
@@ -1411,7 +1414,12 @@
     "revolutionOver": "La révolte s'essouffle : {tribe} rentrent dans le rang, {tiles} cases vous reviennent.",
     "revolutionCrushed": "Révolution écrasée : {tribe} ne tiennent plus aucune case.",
     "revolutionSeized": "{by} s'empare des dernières terres de {tribe}.",
-    "revolutionBurnt": "Les révolutionnaires incendient {building} avant de fuir : rien à prendre."
+    "revolutionBurnt": "Les révolutionnaires incendient {building} avant de fuir : rien à prendre.",
+    "raidShip": "Raid aérien ({by}) — {ship} touché.",
+    "raidShipSunk": "Raid aérien ({by}) — {ship} coulé !",
+    "raidHitShip": "Raid sur {player} — {ship} touché.",
+    "raidHitShipSunk": "Raid sur {player} — {ship} coulé.",
+    "revolutionSpread": "La révolte s'étend : {tiles} cases de plus rejoignent {tribe}."
   },
   "error": {
     "nukeSelfMirv": "Un MIRV ne peut pas viser votre propre pays : ses ogives tomberaient sur tout votre territoire.",
@@ -1420,8 +1428,8 @@
     "warship": "Impossible d'armer un navire : port requis sur cette mer, ou or insuffisant.",
     "nuke": "Aucun missile disponible (silo, or ou rechargement).",
     "nukeHalt": {
-      "nukeBan": "Le Conseil mondial interdit les armes nucléaires : aucun lancement possible.",
-      "peaceSummit": "Sommet de la paix : aucun lancement nucléaire tant que dure la trêve."
+      "nukeBan": "Le Conseil mondial interdit les armes nucléaires : aucun lancement pendant encore {left}.",
+      "peaceSummit": "Sommet de la paix : aucun lancement nucléaire pendant encore {left} (trêve forcée entre tous les pays)."
     },
     "air": "Aucun aérodrome libre à portée, cible invalide ou or insuffisant.",
     "general": "Capacité indisponible.",
@@ -1453,7 +1461,47 @@
       "front": "Trop près d'une frontière : la capitale doit être à plus de 5 tuiles de toute terre étrangère (alliés exceptés).",
       "cooldown": "Capitale déplacée récemment : nouveau transfert possible dans {s} s."
     },
-    "pactsFrozen": "Dernière minute avant minuit : plus aucune alliance ne peut être signée."
+    "pactsFrozen": "Dernière minute avant minuit : plus aucune alliance ne peut être signée.",
+    "refused": {
+      "phase": "Impossible maintenant : la partie n'est pas en cours.",
+      "self": "C'est votre propre territoire.",
+      "team": "Impossible de viser un coéquipier.",
+      "gone": "Ce pays a disparu.",
+      "immune": "Cible protégée : ce pays est encore sous l'immunité du début de partie.",
+      "summit": "Sommet de la paix : {act} pendant encore {left} (trêve forcée entre tous les pays).",
+      "ceasefire": "Cessez-le-feu du Conseil mondial : {act} pendant encore {left}.",
+      "ally": "Allié : rompez d'abord l'alliance."
+    },
+    "attackSlots": "Déjà {n} attaques en cours : attendez qu'une se termine.",
+    "warshipWhy": {
+      "disabled": "Les navires de guerre sont désactivés dans cette partie.",
+      "hurricane": "Ouragan : les ports sont fermés, aucun navire de guerre pendant encore {left}.",
+      "noPort": "Aucun port en service : construisez-en un pour armer des navires.",
+      "range": "Trop loin : aucun de vos ports de cette mer ne couvre ce point.",
+      "gold": "Or insuffisant pour armer un navire de guerre."
+    },
+    "nukeWhy": {
+      "disabled": "Les armes nucléaires sont désactivées dans cette partie.",
+      "locked": "Recherche nécessaire : {tech}.",
+      "noSilo": "Aucun silo en service : construisez-en un.",
+      "reloading": "Silos en rechargement : aucun tube prêt.",
+      "gold": "Or insuffisant pour ce missile."
+    },
+    "airWhy": {
+      "disabled": "L'aviation est désactivée dans cette partie.",
+      "locked": "Recherche nécessaire : {tech}.",
+      "noAirfield": "Aucun aérodrome en service : construisez-en un.",
+      "full": "Aérodromes pleins : attendez le retour d'un avion.",
+      "range": "Hors de portée de vos aérodromes.",
+      "ash": "Nuage de cendres volcaniques sur la route : aucun vol pendant encore {left}.",
+      "noTarget": "Aucune cible ennemie ici (bâtiment, navire ou terre d'un autre pays).",
+      "gold": "Or insuffisant pour cet avion."
+    },
+    "generalWhy": {
+      "disabled": "Les généraux sont désactivés dans cette partie.",
+      "cooldown": "Votre général se repose : de nouveau prêt dans {s} s.",
+      "noTarget": "Aucun train ni navire marchand ennemi à moins de 40 tuiles."
+    }
   },
   "keys": {
     "attackHover": "Attaque terrestre (cible survolée)",
@@ -2225,7 +2273,13 @@
     "occupiedTip": "Pris et pillé : hors service jusque-là (ni troupes, ni commerce, ni recherche).",
     "revolution": "Révolution",
     "revolt": "Soulevés contre {player} · {time}",
-    "revoltTip": "Ni or ni commerce. Leurs terres rentrent dans le rang à la fin du compte à rebours ; leurs bâtiments brûlent si un autre pays les prend."
+    "revoltTip": "Ni or ni commerce. Leurs terres rentrent dans le rang à la fin du compte à rebours ; leurs bâtiments brûlent si un autre pays les prend.",
+    "barricades": "Barricades · {clock} : pertes ×{mag} (×{home} pour l'ancien pays), avance ×{speed} plus lente",
+    "guerrilla": "Guérilla : pertes ×{mag} (×{home} pour l'ancien pays), avance ×{speed} plus lente",
+    "revoltSpread": "S'étend dans {clock} : tient {held} % de ses terres",
+    "revoltContained": "Contenue : tient {held} % de ses terres (moins de {bar} %), ne s'étend plus",
+    "demolishing": "Démolition · {clock}",
+    "demolishTip": "Hors service jusqu'à sa chute ; {pct} % de l'or investi rendu à la fin. Annulable (clic droit)."
   },
   "unitHover": {
     "type": {
@@ -2507,7 +2561,8 @@
       "zoneClosing": "La zone se referme ({n}/{steps})",
       "zoneFinal": "La dernière zone",
       "revolution": "{tribe} se soulèvent",
-      "revolutionOther": "Révolution — {player}"
+      "revolutionOther": "Révolution — {player}",
+      "revolutionSpread": "La révolte gagne du terrain"
     },
     "deck": {
       "betrayal": "L'alliance vole en éclats : {traitor} porte la marque du traître, et {victim} rompt tout commerce avec {traitor} pendant 5 minutes.",
@@ -2528,8 +2583,9 @@
       "zoneAnnounced": "Elle se referme dans {secs} s ; les terres hors du cercle en tirets seront perdues.",
       "zoneClosing": "Les terres hors du cercle en tirets deviennent inhabitables.",
       "zoneFinal": "Dans {secs} s, le plus grand pays à l'intérieur l'emporte.",
-      "revolution": "{tiles} cases de votre pays font défection avec une partie de la garnison. Rien à piller : les reprendre ne rapporte pas d'or. Sans répression, la révolte s'essouffle en {min} minutes.",
-      "revolutionOther": "{tribe} se soulèvent sur {tiles} cases. Un pays qui prend trop d'avance s'expose aux révoltes."
+      "revolution": "{tiles} cases de votre pays font défection avec une partie de la garnison. Rien à piller, et la reprise coûte cher : guérilla dans chaque rue (vos attaques y perdent ×{home} et avancent ×{speed} moins vite), barricades doublées les {bar} premières secondes. Laissée debout, la révolte s'étend au bout de {spread} s ; sans répression, elle s'essouffle en {min} minutes.",
+      "revolutionOther": "{tribe} se soulèvent sur {tiles} cases. Un pays qui prend trop d'avance s'expose aux révoltes.",
+      "revolutionSpread": "{tiles} cases de plus se rangent derrière {tribe}. Tant que les révolutionnaires tiennent la moitié de leurs terres ({hold} %), la révolte s'étend chaque minute."
     },
     "flash": {
       "title": "Flash info",
@@ -2827,7 +2883,7 @@
   "air": {
     "role": {
       "fighter": "Patrouille de 60 s : abat les avions et les transports d'invasion à 30 tuiles.",
-      "bomber": "Frappe le bâtiment le plus proche du viseur : −1 niveau (détruit au niveau 1).",
+      "bomber": "Frappe le bâtiment le plus proche du viseur (−1 niveau, détruit au niveau 1) ou, en mer, un navire : transport et marchand coulés, navire de guerre −60 %.",
       "recon": "Zone de 40 tuiles pendant 40 s : −25 % de pertes pour vos attaques, frappes doublées, renseignements au survol."
     },
     "flying": "{n}/{max} en vol",
@@ -2839,7 +2895,8 @@
       "range": "Hors de portée de vos aérodromes",
       "noTarget": "Aucune cible ennemie ici",
       "teammate": "Vous ne pouvez pas viser un coéquipier",
-      "ash": "Nuage de cendres sur la route : aucun vol"
+      "ash": "Nuage de cendres sur la route : aucun vol",
+      "immune": "Cible protégée : immunité du début de partie"
     },
     "hitLevel": "{building} ({player}) : niv. {from} → {to}",
     "hitDestroy": "{building} ({player}) : en ruine",
@@ -2847,7 +2904,10 @@
     "railsOnly": "Aucun bâtiment : seuls rails et trains",
     "sam": "{n} missile(s) SAM sur la route : un bombardier abattu par missile",
     "interceptors": "{n} aérodrome(s) ennemi(s) en alerte au-dessus de la cible",
-    "clear": "Route dégagée : aucune défense connue"
+    "clear": "Route dégagée : aucune défense connue",
+    "shipSink": "{ship} ({player}) : coulé",
+    "shipHit": "{ship} ({player}) : coque {from} % → {to} %",
+    "shipOthers": "+{n} autre(s) navire(s) dans le souffle"
   },
   "doom": {
     "why": {
@@ -2924,12 +2984,31 @@
     "kickerMine": "Révolution chez vous",
     "titleMine": "Votre pays se soulève !",
     "titleOther": "Révolution — {player}",
-    "deckMine": "{tribe} tiennent {tiles} cases avec une partie de votre garnison. Reprenez-les (rien à piller) ou attendez : la révolte s'essouffle dans {time}.",
+    "deckMine": "{tribe} tiennent {tiles} cases avec une partie de votre garnison. Les reprendre coûte cher (guérilla, barricades, rien à piller) ; sinon la révolte s'essouffle dans {time}, mais elle s'étend tant qu'elle tient la moitié de ses terres.",
     "deckOther": "{tribe} tiennent {tiles} cases. Un pays qui prend trop d'avance s'expose aux révoltes.",
     "ends": "La révolte s'essouffle dans",
     "show": "Voir",
     "showTip": "Centrer la carte sur la révolte",
     "lineMine": "Chez vous",
     "tiles": "{tiles} cases"
+  },
+  "refusedAct": {
+    "attack": "aucune attaque",
+    "boat": "aucun débarquement",
+    "bomber": "aucun bombardement",
+    "plane": "aucun vol hostile",
+    "fighter": "vos chasseurs n'ouvriront pas le feu",
+    "sabotage": "aucun sabotage"
+  },
+  "truce": {
+    "summit": "Sommet de la paix : {act} pendant encore {clock}",
+    "ceasefire": "Cessez-le-feu du Conseil : {act} pendant encore {clock}",
+    "summitShort": "Sommet · {clock}",
+    "ceasefireShort": "Cessez-le-feu · {clock}"
+  },
+  "shipName": {
+    "warship": "Navire de guerre",
+    "transport": "Transport",
+    "merchant": "Navire marchand"
   }
 }

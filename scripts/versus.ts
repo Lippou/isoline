@@ -180,6 +180,8 @@ export function playOne(
           t.revoltTiles += e.tiles;
           t.revoltLog.push(`${(m / 600).toFixed(1)}m/${e.tiles}t`);
         } else t.revoltsNations++;
+      } else if (e.k === 'revolution' && e.phase === 'spread') {
+        if (e.from === bot.id) t.revoltLog.push(`spread+${e.tiles}t@${(m / 600).toFixed(1)}`);
       } else if (e.k === 'revolution' && e.from === bot.id) {
         const how = e.phase === 'over' ? 'over' : e.by === bot.id ? 'crushed' : 'seized';
         t.revoltLog.push(`${how}@${(m / 600).toFixed(1)}`);

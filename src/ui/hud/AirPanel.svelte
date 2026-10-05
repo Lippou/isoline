@@ -7,6 +7,8 @@
   import Icon from '../icons/Icon.svelte';
   import { BUILDING_ICONS } from '../icons/icons';
   import { A, AIR_COST, BUILDING_KEYS } from '../../core/game/constants';
+  import { UNIT_KEYS } from '../../core/units/unit';
+  import { truceText } from './nukeHalt';
   import type { GameController } from '../game/controller';
   import { lockFor, techKey } from '../../core/rules/tech';
   import { zonePiece } from '../stores/layout.svelte';
@@ -50,14 +52,45 @@
         >
       {:else if !aim}
         <span class="chip">{t('launch.aim')}</span>
+      {:else if aim.problem === 'truce' && aim.truce}
+        <!-- A peace summit or the Council's ceasefire: named, with its time left (1.16). -->
+        <span class="chip bad" data-testid="air-problem" data-reason={aim.truce.reason}
+          ><Icon name="ceasefire" size={13} />{truceText(aim.truce, 'bomber')}</span
+        >
       {:else if aim.problem}
-        <span class="chip bad" data-testid="air-problem"
-          ><Icon name="close" size={13} />{t(`air.problem.${aim.problem}`)}</span
+        <span class="chip bad" data-testid="air-problem" data-reason={aim.problem}
+          ><Icon name={aim.problem === 'immune' ? 'immune' : 'close'} size={13} />{t(
+            `air.problem.${aim.problem}`,
+          )}</span
         >
       {:else}
         {#if broke}<span class="chip warn"><Icon name="gold" size={13} />{t('launch.gold')}</span>{/if}
+        {#if kind === A.Fighter && aim.truce}
+          <span class="chip warn" data-testid="air-truce"
+            ><Icon name="ceasefire" size={13} />{truceText(aim.truce, 'fighter')}</span
+          >
+        {/if}
         {#if kind === A.Bomber}
-          {#if aim.target}
+          {#if aim.ship}
+            <span class="chip good" data-testid="air-ship"
+              ><Icon name={aim.ship.type === 1 ? 'warship' : 'transport'} size={13} />{aim.ship.after === 0
+                ? t('air.shipSink', {
+                    ship: t(`shipName.${UNIT_KEYS[aim.ship.type]}`),
+                    player: name(aim.ship.owner),
+                  })
+                : t('air.shipHit', {
+                    ship: t(`shipName.${UNIT_KEYS[aim.ship.type]}`),
+                    player: name(aim.ship.owner),
+                    from: Math.round(aim.ship.hp * 100),
+                    to: Math.round(aim.ship.after * 100),
+                  })}</span
+            >
+            {#if aim.ship.others > 0}<span class="chip good"
+                ><Icon name="target" size={13} />{t('air.shipOthers', { n: aim.ship.others })}</span
+              >{/if}
+            {#if aim.spotted}<span class="chip good"><Icon name="eye" size={13} />{t('air.spotted')}</span
+              >{/if}
+          {:else if aim.target}
             <span class="chip good" data-testid="air-target"
               ><Icon name={BUILDING_ICONS[aim.target.type] ?? 'city'} size={13} />{aim.target.after === 0
                 ? t('air.hitDestroy', {

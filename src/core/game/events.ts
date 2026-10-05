@@ -36,6 +36,8 @@ export type GameEvent =
   /**
    * A bomber of `owner` dropped its bombs: `victim`'s building of `type` lost `levels` levels
    * (`destroyed`: nothing is left of it); `type` −1 and `victim` 0 when no structure was hit.
+   * At sea (1.16): `ship` is the unit type of the ship hit (`victim`'s; `destroyed`: a ship
+   * went down), `type` −1.
    */
   | {
       k: 'airStrike';
@@ -46,6 +48,7 @@ export type GameEvent =
       type: number;
       levels: number;
       destroyed: boolean;
+      ship?: number;
     }
   /** An aircraft of `owner` (unit type `kind`) was shot down by `by`'s SAM or fighter. */
   | {
@@ -82,17 +85,19 @@ export type GameEvent =
   /**
    * Revolutions (rules/revolution.ts): `tribe` rose up in `from`'s land around `tile`
    * (phase 'start', `tiles` taken), or its revolution ended ('over': the land rejoined
-   * `from`; 'crushed': `by` took its last tile).
+   * `from`; 'crushed': `by` took its last tile; 'spread': `tiles` more of `from`'s land joined it).
    */
   | {
       k: 'revolution';
-      phase: 'start' | 'over' | 'crushed';
+      phase: 'start' | 'over' | 'crushed' | 'spread';
       from: number;
       tribe: number;
       tile: number;
       tiles: number;
       by: number;
     }
+  /** A demolition came to its end (buildings.ts): `refund` gold back to `owner`. */
+  | { k: 'demolished'; owner: number; kind: number; tile: number; refund: number }
   | { k: 'general'; player: number; ability: string; tile: number }
   | { k: 'trainPay'; x: number; y: number; owner: number; amount: number }
   | { k: 'tradePay'; x: number; y: number; owner: number; amount: number }

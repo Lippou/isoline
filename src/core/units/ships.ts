@@ -1,7 +1,7 @@
 // Naval units: transports (amphibious attacks, retreat), warships (targeting, veterancy,
 // repair retreats to port, patrol), merchant ships (trade income, piracy) and shells.
 import { attackCap, portsClosed } from '../rules/worldEvents';
-import type { Game } from '../game/state';
+import type { Game, Refusal } from '../game/state';
 import type { Player } from '../game/player';
 import {
   B,
@@ -171,7 +171,8 @@ function friendlyLand(game: Game, p: number, tile: number): boolean {
   return owner === p || (owner > 0 && game.sameTeam(p, owner));
 }
 
-export type BoatError = 'ok' | 'max' | 'noLanding' | 'noCoast' | 'noPath' | 'friendly' | 'troops' | 'immune';
+/** Why a landing is refused ('ok' when it sails); a truce or an immunity is a Refusal (state.ts). */
+export type BoatError = 'ok' | 'max' | 'noLanding' | 'noCoast' | 'noPath' | 'friendly' | 'troops' | Refusal;
 
 export function planBoat(
   game: Game,
@@ -200,7 +201,7 @@ export function planBoat(
  * TRANSPORT_RETREATING once turned back, (`sx`, `sy`) the launch point.
  */
 export function launchBoat(game: Game, p: Player, tile: number, ratio: number): BoatError {
-  if (game.phase !== 'playing') return 'noPath';
+  if (game.phase !== 'playing') return 'phase';
   let active = 0;
   for (const u of game.units) if (u.alive && u.type === U.Transport && u.owner === p.id) active++;
   if (active >= MAX_TRANSPORTS) return 'max';
@@ -210,7 +211,8 @@ export function launchBoat(game: Game, p: Player, tile: number, ratio: number): 
   const plan = planBoat(game, p, tile);
   if (plan.error !== 'ok') return plan.error;
   const targetOwner = game.owner[plan.landing]!;
-  if (targetOwner > 0 && !game.attackAllowed(p.id, targetOwner, true)) return 'immune';
+  const why = targetOwner > 0 ? game.attackRefusal(p.id, targetOwner, true) : null;
+  if (why) return why;
   if (targetOwner > 0) navalHostilities(game, p, game.players[targetOwner]!);
   p.troops -= troops;
   const [sx, sy] = center(game, plan.from);
@@ -348,18 +350,40 @@ function portsNear(game: Game, p: Player, tile: number): Building[] {
   return ports;
 }
 
-export function buildWarship(game: Game, p: Player, tile: number): boolean {
-  if (!game.config.allowPorts || game.phase !== 'playing' || portsClosed(game)) return false;
-  const cost = warshipCost(game, p);
-  if (p.gold < cost) return false;
-  // The ship is laid down at the nearest own port whose radius of action covers the click.
+/** The port of p that would lay down a warship aimed at `tile` (its radius covers the click). */
+function warshipPort(game: Game, p: Player, tile: number): Building | undefined {
   const w = game.map.width;
   const tx = tile % w;
   const ty = (tile / w) | 0;
-  const port = portsNear(game, p, tile).find(
-    (b) => (b.x - tx) ** 2 + (b.y - ty) ** 2 <= portRange(b.level) ** 2,
-  );
-  if (!port) return false;
+  return portsNear(game, p, tile).find((b) => (b.x - tx) ** 2 + (b.y - ty) ** 2 <= portRange(b.level) ** 2);
+}
+
+/**
+ * Why a warship cannot be laid down for `tile` ('ok' when it can; 1.16: no more « port or
+ * gold »): ports disabled, the ports closed by a hurricane, no ready port of p at all, none
+ * whose radius covers the click, or the gold.
+ */
+export function warshipError(
+  game: Game,
+  p: Player,
+  tile: number,
+): 'ok' | 'disabled' | 'hurricane' | 'noPort' | 'range' | 'gold' {
+  if (!game.config.allowPorts || game.phase !== 'playing') return 'disabled';
+  // A hurricane (world event) closes the ports: no warship is laid down meanwhile.
+  if (portsClosed(game)) return 'hurricane';
+  let ports = 0;
+  for (const b of game.buildings.values()) if (b.owner === p.id && b.type === B.Port && inService(b)) ports++;
+  if (ports === 0) return 'noPort';
+  if (!warshipPort(game, p, tile)) return 'range';
+  if (p.gold < warshipCost(game, p)) return 'gold';
+  return 'ok';
+}
+
+export function buildWarship(game: Game, p: Player, tile: number): boolean {
+  if (warshipError(game, p, tile) !== 'ok') return false;
+  const cost = warshipCost(game, p);
+  // The ship is laid down at the nearest own port whose radius of action covers the click.
+  const port = warshipPort(game, p, tile)!;
   const wt = game.map.adjacentWater(port.tile);
   p.gold -= cost;
   p.warshipsBuilt++;
@@ -661,7 +685,8 @@ function sailToRepair(game: Game, u: Unit, speed: number): boolean {
   return true;
 }
 
-function killUnit(game: Game, victim: Unit, by: number): void {
+/** A ship goes down (`by` sank it): stats, the sinking (shipSunk), the journal for a transport. */
+export function killUnit(game: Game, victim: Unit, by: number): void {
   if (!victim.alive) return;
   victim.alive = false;
   const owner = game.players[victim.owner];

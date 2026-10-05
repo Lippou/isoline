@@ -303,13 +303,15 @@ export class GameController {
           const level = GOOD_EVENTS.has(id) ? 'good' : 'warn';
           hud.log = [...hud.log, { tick: hud.tick, text: t(key), level, key, params: {} }];
         },
-        /** QA: world event `id` strikes at once in the simulation, for real (solo only). */
-        simEvent: (id: string) => {
+        /** QA: world event `id` strikes at once in the simulation, for real (solo only; `zone`: its circle). */
+        simEvent: (id: string, zone?: { x: number; y: number; r: number }) => {
           this.qaEvent = null;
-          this.session.sim.qaWorldEvent(id);
+          this.session.sim.qaWorldEvent(id, zone);
         },
         /** QA: a revolution breaks out at once in `player`'s land (default: ours; solo only). */
         revolution: (player = this.session.viewer) => this.session.sim.qaRevolution(player),
+        /** QA: a peace summit opens in the simulation for `secs` seconds (its truce refuses orders). */
+        summit: (secs = 60) => this.session.sim.qaSummit(secs),
         /** QA: `player` keeps only its `keep` tiles nearest its centre (a one-tile country…). */
         shrink: (player: number, keep = 1) => this.session.sim.qaShrink(player, keep),
         /** QA: the camera finds a country, as a click on its name in the leaderboard does. */
@@ -1135,7 +1137,12 @@ export class GameController {
     }
     const next = {
       problem: a.problem,
+      // The truce's clock moves every second: rounded so the panel is not fed every tick.
+      truce: a.truce ? { reason: a.truce.reason, left: Math.ceil(a.truce.left / 10) * 10 } : null,
       target: a.target,
+      ship: a.ship
+        ? { ...a.ship, hp: Math.round(a.ship.hp * 100) / 100, after: Math.round(a.ship.after * 100) / 100 }
+        : null,
       samMissiles: a.samMissiles,
       interceptors: a.interceptors,
       spotted: a.spotted,
@@ -1204,6 +1211,10 @@ export class GameController {
       else if (k === 'tech' && typeof v === 'string') params[k] = t(`${v}.name`);
       else if (k === 'building' && typeof v === 'string') params[k] = t(`building.${v}.name`);
       else if (k === 'plane' && typeof v === 'string') params[k] = t(`unit.${v}.name`);
+      else if (k === 'ship' && typeof v === 'string') params[k] = t(`shipName.${v}`);
+      // A refused order (1.16): what was refused, and the truce's time left.
+      else if (k === 'act' && typeof v === 'string') params[k] = t(`refusedAct.${v}`);
+      else if (k === 'left' && typeof v === 'number') params[k] = clock(v);
       // The game modes (GAME_DESIGN.md §14.2): what moved the doomsday clock, the milestone reached.
       else if (k === 'why' && typeof v === 'string') params[k] = t(`doom.why.${v}`);
       else if (k === 'stage' && typeof v === 'number') {

@@ -4,6 +4,17 @@ import { t, i18n } from '../i18n/i18n.svelte';
 import type { Fall, LogEntry } from '../stores/game.svelte';
 import type { WorldEventId } from '../../core/rules/features';
 import { hasPressPhoto } from './pressPhotos';
+import {
+  REVOLUTION_BARRICADE_TICKS,
+  REVOLUTION_GUERRILLA_HOME,
+  REVOLUTION_GUERRILLA_MAG,
+  REVOLUTION_GUERRILLA_SPEED,
+  REVOLUTION_SPREAD_FIRST,
+  REVOLUTION_SPREAD_HOLD,
+} from '../../core/game/constants';
+
+/** A multiplier as printed: « 4,5 », « 3 ». */
+const fmtX = (v: number) => v.toLocaleString(i18n.lang, { maximumFractionDigits: 1 });
 
 export type Tone = LogEntry['level'];
 
@@ -70,6 +81,7 @@ const WEIGHT: Record<string, number> = {
   'notify.secessionRegion': 70,
   // Revolutions (GAME_DESIGN.md §6.5): ours leads the minute, another country's makes a headline.
   'notify.revolution': 72,
+  'notify.revolutionSpread': 60,
   'event.revolution': 58,
   'event.capitalFell': 65,
   'event.capitalRazed': 65,
@@ -146,10 +158,27 @@ function headline(key: string, p: Record<string, string | number>, name: Name): 
         [], // tribes fly no flag
       ];
     case 'notify.revolution':
+      // Why it is hard to retake (1.16): the guerrilla's toll, the barricades, the contagion.
       return [
         t('news.head.revolution', { tribe: name(num(p.tribe)) }),
-        t('news.deck.revolution', { tiles: num(p.tiles).toLocaleString(i18n.lang), min: num(p.min) }),
+        t('news.deck.revolution', {
+          tiles: num(p.tiles).toLocaleString(i18n.lang),
+          min: num(p.min),
+          home: fmtX(REVOLUTION_GUERRILLA_MAG * REVOLUTION_GUERRILLA_HOME),
+          speed: fmtX(REVOLUTION_GUERRILLA_SPEED),
+          bar: Math.round(REVOLUTION_BARRICADE_TICKS / 10),
+          spread: Math.round(REVOLUTION_SPREAD_FIRST / 10),
+        }),
         [], // rebels fly no flag
+      ];
+    case 'notify.revolutionSpread':
+      return [
+        t('news.head.revolutionSpread', { tribe: name(num(p.tribe)) }),
+        t('news.deck.revolutionSpread', {
+          tiles: num(p.tiles).toLocaleString(i18n.lang),
+          hold: Math.round(REVOLUTION_SPREAD_HOLD * 100),
+        }),
+        [],
       ];
     case 'event.revolution':
       return [

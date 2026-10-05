@@ -261,6 +261,8 @@ export class InputController {
       upgrade: number;
       tubes: number;
       occupied: number;
+      id: number;
+      demolish: number;
     } | null = null;
     const hit = this.r.buildingAtScreen(sx, sy);
     if (hit)
@@ -271,6 +273,8 @@ export class InputController {
         upgrade: hit.upgrade,
         tubes: hit.tubesReady,
         occupied: hit.occupied,
+        id: hit.id,
+        demolish: hit.demolish,
       };
     else
       for (const b of s.buildings) {
@@ -282,6 +286,8 @@ export class InputController {
             upgrade: b.upgrade,
             tubes: b.tubesReady,
             occupied: b.occupied,
+            id: b.id,
+            demolish: b.demolish,
           };
           break;
         }

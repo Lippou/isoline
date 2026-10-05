@@ -8,8 +8,9 @@ import { A, B, EVENT_MAX, EVENT_MIN, min, sec } from '../../src/core/game/consta
 import { Resource, T } from '../../src/core/map/terrain';
 import { placeBuilding } from '../../src/core/buildings/buildings';
 import { inService } from '../../src/core/buildings/building';
-import { launchAircraft } from '../../src/core/units/air';
-import { buildWarship } from '../../src/core/units/ships';
+import { launchAircraft, planAircraft } from '../../src/core/units/air';
+import { applyCommand } from '../../src/core/game/commands';
+import { buildWarship, warshipError } from '../../src/core/units/ships';
 import { Attack, attackLogic } from '../../src/core/rules/combat';
 import { updateFeatures } from '../../src/core/rules/features';
 import { updateEconomy } from '../../src/core/game/economy';
@@ -224,6 +225,13 @@ describe('world events: the effects', () => {
     const gold = p.gold;
     expect(launchAircraft(g, p, A.Recon, at(g, x + 60, 12))).toBe(false);
     expect(p.gold).toBe(gold);
+    // The refusal names the cloud and its time left (the truthful refusals, Game.refuse & co.).
+    expect(planAircraft(g, p, A.Recon, at(g, x + 60, 12)).error).toBe('ash');
+    g.events.length = 0;
+    applyCommand(g, 1, { t: 'air', kind: A.Recon, tile: at(g, x + 60, 12) });
+    const note = g.events.find((e) => e.k === 'notify' && e.to === 1);
+    expect(note).toMatchObject({ key: 'error.airWhy.ash', params: { left: 100 } });
+    expect(p.gold).toBe(gold);
     expect(launchAircraft(g, p, A.Recon, at(g, x + 2, 28))).toBe(true);
     // The HUD reads the same cloud (the aiming verdict).
     const view = { event: g.features.event } as never;
@@ -240,6 +248,12 @@ describe('world events: the effects', () => {
     port!.buildLeft = 0;
     startWorldEvent(g, 'hurricane', EVENT_MIN);
     expect(buildWarship(g, p, at(g, x, 34))).toBe(false);
+    // The refusal says why, with the time left (not « port or gold »).
+    expect(warshipError(g, p, at(g, x, 34))).toBe('hurricane');
+    g.events.length = 0;
+    applyCommand(g, 3, { t: 'warship', tile: at(g, x, 34) });
+    const note = g.events.find((e) => e.k === 'notify' && e.to === 3);
+    expect(note).toMatchObject({ key: 'error.warshipWhy.hurricane', params: { left: sec(90) } });
     expect(portsBlock({ event: g.features.event } as never, g.tick)?.id).toBe('hurricane');
     g.tick = g.features.event!.until;
     expect(buildWarship(g, p, at(g, x, 34))).toBe(true);

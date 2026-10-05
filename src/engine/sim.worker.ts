@@ -13,9 +13,16 @@ import { GameMap } from '../core/map/gamemap';
 import { decodeGreyPng, decodeTerrainPng } from '../core/map/format';
 import { generateMapData } from '../core/map/generator';
 import { restoreSnapshot, takeSnapshot } from '../core/net/snapshot';
-import { startRevolution } from '../core/rules/revolution';
+import { barricadesUp, nextSpread, startRevolution } from '../core/rules/revolution';
 import { hashGame } from '../core/net/hash';
-import { B, BUILDING_COUNT, HASH_EVERY, N, radarRange } from '../core/game/constants';
+import {
+  B,
+  BUILDING_COUNT,
+  HASH_EVERY,
+  N,
+  REVOLUTION_BARRICADE_TICKS,
+  radarRange,
+} from '../core/game/constants';
 import { buildCost, levelsByType, planBuild } from '../core/buildings/buildings';
 import { inService } from '../core/buildings/building';
 import { warshipCost, planBoat, TRANSPORT_RETREATING } from '../core/units/ships';
@@ -177,7 +184,17 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
           game.changedTiles.length = 0;
           if (game.features.event) endWorldEvent(game);
           startWorldEvent(game, msg.id as WorldEventId, game.tick - game.startTick);
+          if (msg.zone && game.features.event) Object.assign(game.features.event, msg.zone);
           sendUpdate(game, [], [], 0, true, [...game.events]);
+        }
+        if (game && msg.action === 'summit') {
+          const until = game.tick + Math.round(msg.secs * 10);
+          if (game.features.event) endWorldEvent(game);
+          game.features.event = { id: 'peaceSummit', until };
+          game.features.ceasefireUntil = Math.max(game.features.ceasefireUntil, until);
+          game.events.length = 0;
+          game.changedTiles.length = 0;
+          sendUpdate(game, [], [], 0, true, []);
         }
         if (game && msg.action === 'shrink') {
           const p = game.players[msg.player];
@@ -286,7 +303,7 @@ function sendUpdate(
   )
     up.world = worldView(g);
   const constructing = [...g.buildings.values()].some(
-    (b) => b.buildLeft > 0 || b.upgradeLeft > 0 || b.occupiedLeft > 0,
+    (b) => b.buildLeft > 0 || b.upgradeLeft > 0 || b.occupiedLeft > 0 || b.demolishLeft > 0,
   );
   if (
     full ||
@@ -415,7 +432,7 @@ function playerViews(g: Game): PlayerView[] {
       capital: p.capital,
       disorgFor: Math.max(0, p.disorgUntil - g.tick),
       rebelOf: p.rebelOf,
-      ...(p.revolution ? { revoltFor: Math.max(0, p.revoltUntil - g.tick) } : {}),
+      ...(p.revolution ? revoltView(g, p) : {}),
     });
   }
   return out;
@@ -718,6 +735,18 @@ function worldView(g: Game): WorldView {
   };
 }
 
+/** A revolution's countdowns (rules/revolution.ts): the end, the barricades, the next spread. */
+function revoltView(g: Game, p: Player): Partial<PlayerView> {
+  const spread = nextSpread(g, p);
+  return {
+    revoltFor: Math.max(0, p.revoltUntil - g.tick),
+    revoltBarricades: barricadesUp(g, p) ? p.revoltStart + REVOLUTION_BARRICADE_TICKS - g.tick : 0,
+    revoltSpreadIn: spread.in,
+    revoltHolds: spread.holds,
+    revoltLand: p.revoltLand,
+  };
+}
+
 function buildingViews(g: Game): BuildingView[] {
   const out: BuildingView[] = [];
   for (const b of g.buildings.values()) {
@@ -733,6 +762,8 @@ function buildingViews(g: Game): BuildingView[] {
       upgrade: b.upgradeLeft > 0 ? 1 - b.upgradeLeft / b.upgradeTotal : -1,
       occupied: b.occupiedLeft,
       occupiedTotal: b.occupiedTotal,
+      demolish: b.demolishLeft,
+      demolishTotal: b.demolishTotal,
       // Airfields: their alert interceptors (a slot not created yet is loaded, units/air.ts).
       tubesReady:
         b.type === B.Airfield

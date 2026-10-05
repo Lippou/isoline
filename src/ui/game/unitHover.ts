@@ -56,6 +56,20 @@ const AIR_BACK = 1; // bombers: flying home; reconnaissance: orbiting its zone
 const AIR_INTERCEPTOR = 2;
 const AIR_HOME = 3;
 
+/** The owner of the ship nearest (x, y) within 2 tiles (a bomber's prey), null for none. */
+function shipOwnerAt(s: UnitHoverState, x: number, y: number): number | null {
+  let best: number | null = null;
+  let bestD = 4;
+  for (let k = 0; k < s.unitCount; k++) {
+    const o = k * UNIT_STRIDE;
+    const t = s.units[o + UF.Type]!;
+    if (t !== U.Warship && t !== U.Transport && t !== U.Merchant) continue;
+    const d = (s.units[o + UF.X]! - x) ** 2 + (s.units[o + UF.Y]! - y) ** 2;
+    if (d <= bestD && s.units[o + UF.Owner]! > 0) [best, bestD] = [s.units[o + UF.Owner]!, d];
+  }
+  return best;
+}
+
 const HOVERABLE = new Set<number>([
   U.Transport,
   U.Warship,
@@ -138,6 +152,8 @@ export function unitHover(s: UnitHoverState, wars: readonly number[], id: number
           const ty = Math.floor(b[o + UF.Ty]!);
           const d = tx >= 0 && ty >= 0 && tx < s.width && ty < s.height ? ownerAt(ty * s.width + tx) : -1;
           if (d > 0) dest = d;
+          // A bomber after a ship (units/air.ts) aims at the ship itself, out at sea: its owner.
+          else if (type === U.Bomber) dest = shipOwnerAt(s, b[o + UF.Tx]!, b[o + UF.Ty]!);
         }
         break;
       }

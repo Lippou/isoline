@@ -7,7 +7,14 @@
   import Icon from '../icons/Icon.svelte';
   import { BUILDING_ICONS, SIGNALS, type IconName } from '../icons/icons';
   import type { GameController } from '../game/controller';
-  import { B, BUILDING_KEYS, N } from '../../core/game/constants';
+  import {
+    B,
+    BUILD_TICKS,
+    BUILDING_KEYS,
+    DEMOLISH_MIN_TICKS,
+    DEMOLISH_REFUND,
+    N,
+  } from '../../core/game/constants';
   import { IS_LAND, TERRAIN } from '../../core/map/terrain';
   import { audio } from '../../audio/audio';
   import { confirmModal } from '../stores/app.svelte';
@@ -15,7 +22,8 @@
   import { formatShort } from '../../render/renderer';
   import { clientSpotError } from '../game/capitalWatch';
   import { isTeammate } from '../game/team';
-  import { haltShort, haltTip, nukeHalt } from './nukeHalt';
+  import { haltShort, haltTip, nukeHalt, truceText } from './nukeHalt';
+  import { truceCovers, truceOf } from '../game/truce';
 
   let { ctl }: { ctl: GameController } = $props();
   type Item = {
@@ -33,6 +41,8 @@
     featured?: boolean;
     /** Forbidden for now (the World Council's nuclear ban, a peace summit): printed in magenta, not greyed. */
     banned?: boolean;
+    /** Why it is refused, printed under the entry (1.16: a truce named, with its time left). */
+    why?: string;
     group?: string;
   };
   let openSub: string | null = $state(null);
@@ -52,10 +62,23 @@
   }
 
   const NUKE_NAMES = ['nukeA', 'nukeH', 'nukeMirv'];
+  /** The type's construction time (a demolition takes as long, 5 s at least; research may shorten it). */
+  const buildTicksOf = (type: number) => BUILD_TICKS[type as B] ?? 0;
   const gold = (n: number) => `${formatShort(n)}`;
 
   /** The World Council's nuclear ban or a peace summit (null: launches are free). */
   const halt = $derived(nukeHalt(hud.world, hud.tick));
+  /**
+   * A truce (peace summit, Council's ceasefire) covering an order against `target` (1.16):
+   * the entry stays, printed as forbidden, with the truce named and its time left.
+   */
+  function truceFor(target: number, act: string): Partial<Item> {
+    const tr = truceOf(hud.world, hud.tick);
+    if (!tr || !truceCovers(s.state.players, s.viewer, target)) return {};
+    // The reason, with its time left, under the entry (no hint beside it: room for the text).
+    const why = truceText(tr, act);
+    return { banned: true, disabled: true, hint: '', desc: why, why };
+  }
 
   function nukeItems(tile: number, own: boolean): Item[] {
     const L = hud.local;
@@ -330,6 +353,7 @@
         hint: `${Math.round(hud.attackRatio * 100)} %`,
         desc: t('radial.attackDesc'),
         run: attackGuard(owner, () => s.cmd({ t: 'attack', tile, ratio: hud.attackRatio })),
+        ...truceFor(owner, 'attack'),
       });
       out.push({
         id: 'boat',
@@ -339,6 +363,7 @@
         hint: `${Math.round(hud.attackRatio * 100)} %`,
         desc: t('radial.boatDesc'),
         run: attackGuard(owner, () => s.cmd({ t: 'boat', tile, ratio: hud.attackRatio })),
+        ...truceFor(owner, 'boat'),
       });
     }
     if (land && owner === s.viewer) {
@@ -400,14 +425,29 @@
           disabled: b.upgrade >= 0 || !b.ready,
           run: act(() => s.cmd({ t: 'upgrade', id: b.id })),
         });
-        out.push({
-          id: 'del',
-          group: 'main',
-          label: t('radial.demolish'),
-          icon: 'trash',
-          danger: true,
-          run: act(() => s.cmd({ t: 'demolish', id: b.id })),
-        });
+        // Timed since 1.16: a demolition under way can be called off.
+        out.push(
+          b.demolish > 0
+            ? {
+                id: 'del',
+                group: 'main',
+                label: t('radial.demolishCancel'),
+                icon: 'undo',
+                hint: clock(b.demolish),
+                desc: t('radial.demolishCancelDesc'),
+                run: act(() => s.cmd({ t: 'demolish', id: b.id, cancel: true })),
+              }
+            : {
+                id: 'del',
+                group: 'main',
+                label: t('radial.demolish'),
+                icon: 'trash',
+                hint: clock(Math.max(DEMOLISH_MIN_TICKS, b.demolishTotal || buildTicksOf(b.type))),
+                desc: t('radial.demolishDesc', { pct: Math.round(DEMOLISH_REFUND * 100) }),
+                danger: true,
+                run: act(() => s.cmd({ t: 'demolish', id: b.id })),
+              },
+        );
       }
       out.push(...capitalItems(tile));
     }
@@ -449,6 +489,7 @@
             icon: (['airfield', 'bomb', 'eye'] as IconName[])[x.k]!,
             desc: t(`unit.${['fighter', 'bomber', 'recon'][x.k]}.desc`),
             run: act(() => s.cmd({ t: 'air', kind: x.k, tile })),
+            ...(x.k === 1 && owner !== s.viewer ? truceFor(owner, 'bomber') : {}),
           })),
       });
     }
@@ -562,7 +603,9 @@
           >
             {#if it.icon}<Icon name={it.icon} size={17} />{:else}<span class="sp"></span>{/if}
             <span class="lab"
-              >{it.label}{#if it.featured && it.desc}<small class="sub">{it.desc}</small>{/if}</span
+              ><span class="name">{it.label}</span>{#if it.featured && it.desc}<small class="sub"
+                  >{it.desc}</small
+                >{:else if it.why}<small class="sub">{it.why}</small>{/if}</span
             >
             {#if it.hint}<span class="hint mono">{it.hint}</span>{/if}
             {#if it.sub}<Icon name="chevronRight" size={15} />{/if}
@@ -584,10 +627,11 @@
             data-testid="radial-{it.id}"
           >
             {#if it.icon}<Icon name={it.icon} size={17} />{:else}<span class="sp"></span>{/if}
-            <span class="lab">{it.label}</span>
+            <span class="lab"><span class="name">{it.label}</span></span>
             {#if it.hint}<span class="hint mono">{it.hint}</span>{/if}
           </button>
-          {#if it.desc && !it.disabled && sub.length <= 8}<p class="desc">{it.desc}</p>{/if}
+          {#if it.why}<p class="desc">{it.why}</p>
+          {:else if it.desc && !it.disabled && sub.length <= 8}<p class="desc">{it.desc}</p>{/if}
         {/each}
       </div>
     {/if}
@@ -740,7 +784,8 @@
     color: var(--np-spot);
     background: color-mix(in srgb, var(--np-spot) 7%, transparent);
   }
-  .item.banned:disabled .lab {
+  /* The entry's name is struck through; the reason under it stays plain (1.16: the truce named). */
+  .item.banned:disabled .name {
     text-decoration: line-through;
     text-decoration-color: color-mix(in srgb, var(--np-spot) 55%, transparent);
   }

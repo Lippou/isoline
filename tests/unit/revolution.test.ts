@@ -4,18 +4,33 @@ import { describe, expect, it } from 'vitest';
 import { asciiMap, cmd, testGame, startWith } from '../helpers';
 import {
   B,
+  REVOLUTION_BARRICADE_MULT,
+  REVOLUTION_BARRICADE_TICKS,
   REVOLUTION_CAPITAL_SAFE,
   REVOLUTION_CHECK_TICKS,
   REVOLUTION_COOLDOWN,
   REVOLUTION_GRACE,
+  REVOLUTION_GUERRILLA_HOME,
+  REVOLUTION_GUERRILLA_MAG,
+  REVOLUTION_GUERRILLA_SPEED,
+  REVOLUTION_LEVY_CAP,
+  REVOLUTION_SPREAD_EVERY,
+  REVOLUTION_SPREAD_FIRST,
+  REVOLUTION_SPREAD_LAND,
   REVOLUTION_TICKS,
 } from '../../src/core/game/constants';
+import { Attack, attackLogic } from '../../src/core/rules/combat';
+import { maxTroops } from '../../src/core/game/economy';
+import { revoltToll } from '../../src/core/npc/ai';
 import { placeBuilding } from '../../src/core/buildings/buildings';
 import { inService, type Building } from '../../src/core/buildings/building';
 import { restoreSnapshot, snapshotFromJson, snapshotToJson, takeSnapshot } from '../../src/core/net/snapshot';
 import { hashGame } from '../../src/core/net/hash';
 import {
+  barricadesUp,
+  guerrilla,
   liveRevolutionOf,
+  nextSpread,
   revolutionPressure,
   startRevolution,
   updateRevolutions,
@@ -206,6 +221,9 @@ describe('revolutions: endings', () => {
     g.players[2]!.immuneUntil = 1e9; // (the nation would otherwise annex the small human)
     toDraw(g);
     const rebels = startRevolution(g, p1)!;
+    // A small revolt within its means (1.16: a nation weighs the guerrilla's toll first).
+    for (const t of tilesOf(g, rebels.id).slice(150)) g.setOwner(t, 1);
+    rebels.troops = 5_000;
     const start = tilesOf(g, rebels.id).length;
     let crushedAt = -1;
     let attacked = false;
@@ -214,7 +232,7 @@ describe('revolutions: endings', () => {
       if (g.attacks.some((a) => a.attacker === 1 && a.target === rebels.id)) attacked = true;
       if (g.events.some((e) => e.k === 'revolution' && e.phase === 'crushed')) crushedAt = g.tick;
     }
-    expect(start).toBeGreaterThan(100);
+    expect(start).toBe(150);
     expect(attacked).toBe(true);
     expect(crushedAt).toBeGreaterThan(0);
     expect(rebels.alive).toBe(false);
@@ -281,5 +299,159 @@ describe('revolutions: determinism', () => {
     const rng = g.rng.getState().slice();
     updateRevolutions(g);
     expect(g.rng.getState()).toEqual(rng);
+  });
+});
+
+describe('revolutions: hard to retake (1.16)', () => {
+  /** A rebel tile touching `by`'s land, and an attack of `troops` from `by` at the rebels. */
+  function front(g: Game, rebels: Player, by: number, troops: number): { tile: number; a: Attack } {
+    const land = tilesOf(g, rebels.id);
+    const nb = new Int32Array(4);
+    const tile = land.find((t) => {
+      const n = g.map.neighbors4(t, nb);
+      for (let j = 0; j < n; j++) if (g.owner[nb[j]!] === by) return true;
+      return false;
+    })!;
+    return { tile, a: new Attack(9999, by, rebels.id, troops, g.tick) };
+  }
+
+  it('guerrilla: attackers lose more and advance slower, the former country most, doubled behind the barricades', () => {
+    const g = field(150);
+    const p1 = g.players[1]!;
+    toDraw(g);
+    const rebels = startRevolution(g, p1)!;
+    rebels.troops = 50_000;
+    const { tile, a } = front(g, rebels, 1, 100_000);
+    const b = new Attack(9998, 2, rebels.id, 100_000, g.tick);
+    const home = attackLogic(g, a, tile, 30);
+    const other = attackLogic(g, b, tile, 30);
+    // The same tile, were it a plain country's (the rebels' own losses and speed ×1).
+    rebels.revolution = false;
+    rebels.kind = 'nation';
+    const plain = attackLogic(g, a, tile, 30);
+    const plainB = attackLogic(g, b, tile, 30);
+    rebels.revolution = true;
+    rebels.kind = 'tribe';
+    const bar = REVOLUTION_BARRICADE_MULT;
+    expect(guerrilla(g, rebels, 1)).toEqual({
+      mag: REVOLUTION_GUERRILLA_MAG * REVOLUTION_GUERRILLA_HOME * bar,
+      speed: REVOLUTION_GUERRILLA_SPEED * bar,
+    });
+    expect(home.attackerLoss / plain.attackerLoss).toBeCloseTo(
+      REVOLUTION_GUERRILLA_MAG * REVOLUTION_GUERRILLA_HOME * bar,
+      5,
+    );
+    expect(other.attackerLoss / plainB.attackerLoss).toBeCloseTo(REVOLUTION_GUERRILLA_MAG * bar, 5);
+    expect(home.tickFraction / plain.tickFraction).toBeCloseTo(REVOLUTION_GUERRILLA_SPEED * bar, 3);
+    // The barricades come down; the guerrilla goes on until the revolt ends.
+    expect(barricadesUp(g, rebels)).toBe(true);
+    steps(g, REVOLUTION_BARRICADE_TICKS);
+    expect(barricadesUp(g, rebels)).toBe(false);
+    expect(guerrilla(g, rebels, 1)).toEqual({
+      mag: REVOLUTION_GUERRILLA_MAG * REVOLUTION_GUERRILLA_HOME,
+      speed: REVOLUTION_GUERRILLA_SPEED,
+    });
+    expect(guerrilla(g, rebels, 2).mag).toBe(REVOLUTION_GUERRILLA_MAG);
+  });
+
+  it('rebels levy troops (losses refill, up to twice their first strength) and hold out to the last tile', () => {
+    const g = field(150);
+    const p1 = g.players[1]!;
+    toDraw(g);
+    const rebels = startRevolution(g, p1)!;
+    expect(rebels.revoltDensity).toBeCloseTo(rebels.troops / rebels.tiles, 5);
+    expect(maxTroops(g, rebels)).toBeCloseTo(
+      Math.max(
+        (2 * (Math.pow(rebels.usefulTiles, 0.6) * 800 + 25_000)) / 3,
+        REVOLUTION_LEVY_CAP * rebels.revoltDensity * rebels.usefulTiles,
+      ),
+      0,
+    );
+    // Halved by a battle, they levy again (a country's pace, not a tribe's half).
+    const full = rebels.troops;
+    rebels.troops = full / 2;
+    steps(g, 100);
+    expect(rebels.troops).toBeGreaterThan(full * 0.6);
+    // Shrink the revolt to 40 tiles: an attack taking one more does not annex the rest.
+    const land = tilesOf(g, rebels.id);
+    for (const t of land.slice(40)) g.setOwner(t, 1);
+    rebels.troops = 1;
+    p1.troops = 1_000_000;
+    const touching = tilesOf(g, rebels.id).find((t) => {
+      const nb = new Int32Array(4);
+      const n = g.map.neighbors4(t, nb);
+      for (let j = 0; j < n; j++) if (g.owner[nb[j]!] === 1) return true;
+      return false;
+    })!;
+    g.step([cmd(1, { t: 'attack', tile: touching, ratio: 0.01 })]);
+    expect(rebels.tiles).toBeGreaterThan(30);
+  });
+
+  it('left standing, a revolt spreads into its country; contained under half its land, it does not', () => {
+    const g = field(170);
+    const p1 = g.players[1]!;
+    toDraw(g);
+    const rebels = startRevolution(g, p1)!;
+    const first = rebels.revoltTiles;
+    expect(nextSpread(g, rebels)).toEqual({ in: REVOLUTION_SPREAD_FIRST, holds: true });
+    let spread = 0;
+    let troops = 0;
+    for (let k = 0; k < REVOLUTION_SPREAD_FIRST + 10 && spread === 0; k++) {
+      troops = rebels.troops;
+      g.step([]);
+      for (const e of g.events) if (e.k === 'revolution' && e.phase === 'spread') spread = e.tiles;
+    }
+    expect(spread).toBe(Math.round(first * REVOLUTION_SPREAD_LAND));
+    expect(rebels.revoltLand).toBe(first + spread);
+    expect(rebels.troops).toBeGreaterThan(troops); // the garrison there joins them
+    expect(g.events.some((e) => e.k === 'notify' && e.key === 'notify.revolutionSpread' && e.to === 1)).toBe(
+      true,
+    );
+    // Now cut it down below half of all the land it raised: no more spreading.
+    const land = tilesOf(g, rebels.id);
+    for (const t of land.slice(Math.floor(rebels.revoltLand * 0.4))) g.setOwner(t, 1);
+    expect(nextSpread(g, rebels).holds).toBe(false);
+    const before = rebels.revoltLand;
+    steps(g, REVOLUTION_SPREAD_EVERY + 20);
+    expect(rebels.revoltLand).toBe(before);
+    // It still runs out of steam on time: the land, spread included, comes home.
+    steps(g, REVOLUTION_TICKS);
+    expect(rebels.alive).toBe(false);
+    expect(tilesOf(g, rebels.id)).toHaveLength(0);
+  });
+
+  it('a nation waits out the barricades, then commits what the guerrilla will cost — or waits', () => {
+    const g = field(170);
+    const p1 = g.players[1]!;
+    p1.kind = 'nation';
+    g.players[2]!.immuneUntil = 1e9;
+    toDraw(g);
+    const rebels = startRevolution(g, p1)!;
+    for (const t of tilesOf(g, rebels.id).slice(150)) g.setOwner(t, 1);
+    rebels.troops = 5_000;
+    let first = -1;
+    let sent = 0;
+    let toll = 0;
+    for (let k = 0; k < REVOLUTION_TICKS && first < 0; k++) {
+      toll = revoltToll(g, p1, rebels);
+      g.step([]);
+      const a = g.attacks.find((x) => x.attacker === 1 && x.target === rebels.id);
+      if (a) [first, sent] = [g.tick, a.troops];
+    }
+    expect(first - rebels.revoltStart).toBeGreaterThanOrEqual(REVOLUTION_BARRICADE_TICKS);
+    expect(sent).toBeGreaterThan(Math.min(toll, p1.troops * 0.6) * 0.9);
+    // Beyond its means (the whole region, its army defected): it waits — the revolt runs its
+    // course (or spreads), and never sees a hopeless charge.
+    const h = field(170);
+    const q = h.players[1]!;
+    q.kind = 'nation';
+    h.players[2]!.immuneUntil = 1e9;
+    toDraw(h);
+    const r2 = startRevolution(h, q)!;
+    r2.troops = q.troops;
+    steps(h, REVOLUTION_BARRICADE_TICKS + 300, (hh) => {
+      if (revoltToll(hh, q, r2) > q.troops * 0.8)
+        expect(hh.attacks.some((x) => x.attacker === 1 && x.target === r2.id)).toBe(false);
+    });
   });
 });

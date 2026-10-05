@@ -13,7 +13,8 @@
   import { hudSize } from '../stores/hudBox.svelte';
   import { folds, setFold } from '../stores/folds.svelte';
   import FoldButton from './FoldButton.svelte';
-  import { haltIcon, haltShort, haltTip, nukeHalt } from './nukeHalt';
+  import { haltIcon, haltShort, haltTip, nukeHalt, truceShort, truceText } from './nukeHalt';
+  import { truceOf } from '../game/truce';
   import { eventIcon, portsBlock, type EventBlock } from './worldEvents';
 
   let { ctl }: { ctl: GameController } = $props();
@@ -66,6 +67,8 @@
   /** The tooltip of a button greyed by an event: "Hurricane: not possible for now (1:12 left)". */
   const blockTip = (b: EventBlock): string =>
     t('worldEventBlock.tip', { event: t(`worldEvent.${b.id}.short`), clock: clock(b.left) });
+  /** A truce (peace summit, Council's ceasefire): bombers and fighters spare every country meanwhile. */
+  const truce = $derived(truceOf(hud.world, hud.tick));
   const active = (k: string, kind: number) =>
     hud.tool.k === k && 'kind' in hud.tool && hud.tool.kind === kind;
 
@@ -324,7 +327,9 @@
     {/if}
     {#if air.length}
       <div class="group">
-        <div class="gtitle">{t('hud.groupAir')}</div>
+        <div class="gtitle" class:spot={!!truce} data-testid="air-group-title">
+          {t('hud.groupAir')}{#if truce}<span class="mono">{`· ${truceShort(truce)}`}</span>{/if}
+        </div>
         <div class="tools">
           {#each air as a (a.kind)}
             {@const lock = lockOf('airfield')}
@@ -352,6 +357,7 @@
                     L.buildingCount[B.Airfield] === 0 ? t('hud.needsAirfield') : '',
                   ].filter(Boolean),
                   requires(lock),
+                  truce && a.kind !== 2 ? truceText(truce, a.kind === 1 ? 'bomber' : 'fighter') : '',
                 )}
               {/if}
             </div>

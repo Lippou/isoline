@@ -12,6 +12,7 @@ import {
   TRAITOR_DEBUFF_TICKS,
 } from '../../src/core/game/constants';
 import { buildCost, checkPlacement, placeBuilding, upgradeCost } from '../../src/core/buildings/buildings';
+import { inService } from '../../src/core/buildings/building';
 import { restoreSnapshot, snapshotFromJson, snapshotToJson, takeSnapshot } from '../../src/core/net/snapshot';
 import { hashGame } from '../../src/core/net/hash';
 import { attackLogic, largeTerritoryBonus, launchAttack } from '../../src/core/rules/combat';
@@ -662,12 +663,10 @@ describe('buildings', () => {
     expect(checkPlacement(g, p, B.Factory, g.map.idx(51, 37))).toBe('tooClose'); // √202
     expect(checkPlacement(g, p, B.Factory, g.map.idx(52, 37))).toBe('ok'); // √225 = 15
     expect(checkPlacement(g, p, B.Factory, g.map.idx(51, 39))).toBe('ok'); // √242
-    const gold = p.gold;
     g.step([cmd(1, { t: 'demolish', id: city.id })]);
-    // 25 % refund (+ one tick of income).
-    expect(p.gold - gold - 125_000 * 0.25).toBeGreaterThanOrEqual(0);
-    expect(p.gold - gold - 125_000 * 0.25).toBeLessThan(200);
-    expect(g.buildings.size).toBe(0);
+    // Timed since 1.16 (demolition.test.ts: countdown, 25 % refund at the end, cancel).
+    expect(city.demolishTotal).toBe(50);
+    expect(inService(city)).toBe(false);
   });
 
   it('snaps a build order to the nearest free spot 15 tiles away from other structures', () => {

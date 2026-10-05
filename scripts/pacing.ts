@@ -62,6 +62,11 @@ function load(id: string) {
 const minutes = (g: Game) => ((g.tick - g.startTick) / 600).toFixed(1);
 
 function main(): void {
+  run();
+  console.log(revoltSummary());
+}
+
+function run(): void {
   for (const id of maps) {
     const map = load(id);
     for (const seed of seeds) {
@@ -217,10 +222,12 @@ function cityCover(g: Game): number {
 /**
  * Revolutions (rules/revolution.ts) over one game: each outbreak (minute, victim's share of
  * the land then, tiles risen) and how it ended — `over` (rejoined), `crushed` by its country,
- * `seized` by another — and when.
+ * `seized` by another — and when, with how long it lasted (seconds) and how many times it
+ * spread (+n). The durations of every game run so far are summed up at the end.
  */
+const revoltDurations: { how: string; secs: number }[] = [];
 function revolutionCounter() {
-  const live = new Map<number, string>();
+  const live = new Map<number, { text: string; tick: number; spreads: number }>();
   const done: string[] = [];
   return {
     observe(g: Game) {
@@ -232,19 +239,40 @@ function revolutionCounter() {
           // The army that defected, as a share of the country's army before the outbreak.
           const rebels = g.players[e.tribe]!.troops;
           const army = Math.round((100 * rebels) / Math.max(1, rebels + from.troops));
-          live.set(e.tribe, `${minutes(g)}m ${share}%-${e.tiles}t army-${army}%`);
+          live.set(e.tribe, {
+            text: `${minutes(g)}m ${share}%-${e.tiles}t army-${army}%`,
+            tick: g.tick,
+            spreads: 0,
+          });
+        } else if (e.phase === 'spread') {
+          const r = live.get(e.tribe);
+          if (r) r.spreads++;
         } else {
           const how = e.phase === 'over' ? 'over' : e.by === e.from ? 'crushed' : 'seized';
-          done.push(`${live.get(e.tribe) ?? '?'} ${how}@${minutes(g)}`);
+          const r = live.get(e.tribe);
+          const secs = r ? Math.round((g.tick - r.tick) / 10) : 0;
+          revoltDurations.push({ how, secs });
+          done.push(`${r?.text ?? '?'} ${how}@${minutes(g)} (${secs}s${r?.spreads ? ` +${r.spreads}` : ''})`);
           live.delete(e.tribe);
         }
       }
     },
     report: () => {
-      const all = [...done, ...[...live.values()].map((v) => `${v} live`)];
+      const all = [...done, ...[...live.values()].map((v) => `${v.text} live`)];
       return all.length ? `n=${all.length} ${all.join(', ')}` : 'none';
     },
   };
+}
+
+/** Median duration (s) of the revolutions put down, and how many ran their course. */
+function revoltSummary(): string {
+  const down = revoltDurations
+    .filter((d) => d.how !== 'over')
+    .map((d) => d.secs)
+    .sort((a, b) => a - b);
+  const over = revoltDurations.length - down.length;
+  const med = down.length ? down[Math.floor((down.length - 1) / 2)]! : 0;
+  return `revolutions: ${revoltDurations.length}, put down ${down.length} (median ${med} s), ran their course ${over}`;
 }
 
 /** Aviation and radar usage over one game, read from the simulation's events and units. */
@@ -262,6 +290,10 @@ function airCounter() {
           add(`hit.${BUILDING_KEYS[e.type]}`);
           add('levelsKnocked', e.levels);
           if (e.destroyed) add('destroyed');
+        } else if (e.k === 'airStrike' && e.ship !== undefined && e.ship >= 0) {
+          // Bombers against ships (1.16): the ship hit, and whether one went down.
+          add(`hit.ship.${UNIT_KEYS[e.ship]}`);
+          if (e.destroyed) add('shipsSunk');
         } else if (e.k === 'planeDown') add(`downed.${UNIT_KEYS[e.kind]}.${e.cause}`);
         else if (e.k === 'scramble') add(e.radar ? 'scrambles.radar' : 'scrambles');
       }

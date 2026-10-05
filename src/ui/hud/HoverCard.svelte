@@ -5,7 +5,17 @@
   import { ratioText } from '../game/capitalWatch';
   import { currentSession } from '../stores/app.svelte';
   import { TERRAIN, RESOURCE_KEYS } from '../../core/map/terrain';
-  import { B, BUILDING_KEYS, RECON_LOSS_MULT } from '../../core/game/constants';
+  import {
+    B,
+    BUILDING_KEYS,
+    DEMOLISH_REFUND,
+    RECON_LOSS_MULT,
+    REVOLUTION_BARRICADE_MULT,
+    REVOLUTION_GUERRILLA_HOME,
+    REVOLUTION_GUERRILLA_MAG,
+    REVOLUTION_GUERRILLA_SPEED,
+    REVOLUTION_SPREAD_HOLD,
+  } from '../../core/game/constants';
   import { reconZones } from '../game/airPreview';
   import { flagUrl } from '../../render/flags';
   import Icon from '../icons/Icon.svelte';
@@ -16,6 +26,8 @@
   import OpinionMeter from './OpinionMeter.svelte';
   import { pct } from './opinion';
   import { isTeammate } from '../game/team';
+  import { truceCovers, truceOf } from '../game/truce';
+  import { truceText } from './nukeHalt';
   import { unitHover, type UnitRelation, type UnitStatus } from '../game/unitHover';
   import type { IconName } from '../icons/icons';
 
@@ -143,10 +155,52 @@
       // A revolution (rules/revolution.ts): whom it rose against, and when it runs out of steam.
       revolt:
         p && p.revoltFor !== undefined
-          ? { against: s.name(p.rebelOf, i18n.lang), left: p.revoltFor, mine: p.rebelOf === s.viewer }
+          ? {
+              against: s.name(p.rebelOf, i18n.lang),
+              left: p.revoltFor,
+              mine: p.rebelOf === s.viewer,
+              ...guerrillaLines(p.revoltBarricades ?? 0, p.revoltSpreadIn ?? -1, !!p.revoltHolds, p),
+            }
           : null,
     };
   });
+  const num = (v: number) => v.toLocaleString(i18n.lang, { maximumFractionDigits: 1 });
+  /**
+   * Why a revolution is hard to retake (rules/revolution.ts, 1.16): the guerrilla's toll —
+   * behind the barricades for a while — and whether it is about to spread.
+   */
+  function guerrillaLines(
+    barricades: number,
+    spreadIn: number,
+    holds: boolean,
+    p: { tiles: number; revoltLand?: number; rebelOf: number },
+  ) {
+    const bar = barricades > 0 ? REVOLUTION_BARRICADE_MULT : 1;
+    const params = {
+      mag: num(REVOLUTION_GUERRILLA_MAG * bar),
+      home: num(REVOLUTION_GUERRILLA_MAG * REVOLUTION_GUERRILLA_HOME * bar),
+      speed: num(REVOLUTION_GUERRILLA_SPEED * bar),
+      clock: clock(barricades),
+    };
+    // (Their pushes into the country can take them past the land they raised: 100 % at most.)
+    const held = Math.min(100, Math.round((100 * p.tiles) / Math.max(1, p.revoltLand ?? p.tiles)));
+    const guerrilla = t(barricades > 0 ? 'hover.barricades' : 'hover.guerrilla', params);
+    const spread =
+      spreadIn < 0
+        ? ''
+        : holds
+          ? t('hover.revoltSpread', { clock: clock(spreadIn), held })
+          : t('hover.revoltContained', { held, bar: Math.round(REVOLUTION_SPREAD_HOLD * 100) });
+    return { guerrilla, spread, barricades: barricades > 0, holds };
+  }
+  /** The hovered building as it stands now (its demolition countdown runs while the pointer rests). */
+  const liveBuilding = $derived.by(() => {
+    void hud.tick;
+    const id = info?.h.building?.id;
+    if (id === undefined) return null;
+    return currentSession()?.state.buildings.find((b) => b.id === id) ?? null;
+  });
+  const demolish = $derived(liveBuilding?.demolish ?? info?.h.building?.demolish ?? 0);
   /** What the hovered country owns: buildings (count and total levels) and fleet. */
   const assets = $derived.by(() => {
     const i = info;
@@ -204,6 +258,14 @@
       alert: sum(B.Airfield),
       pct: Math.round((1 - RECON_LOSS_MULT) * 100),
     };
+  });
+  /** A truce (peace summit, Council's ceasefire) between us and the hovered country: no attack meanwhile. */
+  const truce = $derived.by(() => {
+    const i = info;
+    const s = currentSession()?.state;
+    if (!i?.p || !s || i.allied) return null;
+    const tr = truceOf(hud.world, hud.tick);
+    return tr && truceCovers(s.players, s.viewer, i.p.id) ? tr : null;
   });
   /** Our own airfield under the pointer: its interceptors on alert. */
   const alert = $derived.by(() => {
@@ -317,6 +379,24 @@
             ></span
           >
         </div>
+        <!-- Why retaking it is hard: the guerrilla (behind barricades at first), the contagion. -->
+        <div class="line revolt guerrilla" data-testid="hover-guerrilla">
+          <Icon name={info.revolt.barricades ? 'defensePost' : 'war'} size={13} /><span
+            >{info.revolt.guerrilla}</span
+          >
+        </div>
+        {#if info.revolt.spread}
+          <div class="line revolt" class:bad={info.revolt.holds} data-testid="hover-spread">
+            <Icon name={info.revolt.holds ? 'warning' : 'borders'} size={13} /><span
+              >{info.revolt.spread}</span
+            >
+          </div>
+        {/if}
+      {/if}
+      {#if truce}
+        <div class="line truce" data-testid="hover-truce">
+          <Icon name="ceasefire" size={13} /><span>{truceText(truce, 'attack')}</span>
+        </div>
       {/if}
       {#if info.capital}
         <div class="line capital" data-testid="hover-capital">
@@ -424,6 +504,16 @@
             >{t('hover.alert', { n: alert.ready, m: alert.all })}</span
           >{/if}
       </div>
+      {#if demolish > 0}
+        <!-- Being demolished (1.16): out of service, down when the countdown ends. -->
+        <div class="line bad demolish" data-testid="hover-demolish">
+          <Icon name="trash" size={13} /><span
+            >{t('hover.demolishing', { clock: clock(demolish) })}<small
+              >{t('hover.demolishTip', { pct: Math.round(DEMOLISH_REFUND * 100) })}</small
+            ></span
+          >
+        </div>
+      {/if}
       {#if (info.h.building.occupied ?? 0) > 0}
         {@const secs = Math.ceil((info.h.building.occupied ?? 0) / 10)}
         <!-- Taken by conquest: looted, and out of service a while (GAME_DESIGN.md §6.4); or
@@ -641,10 +731,12 @@
     color: var(--np-warn);
   }
   /* A captured building under occupation: out of service for a while. */
-  .line.occupied {
+  .line.occupied,
+  .line.demolish {
     align-items: flex-start;
   }
-  .line.occupied :global(svg) {
+  .line.occupied :global(svg),
+  .line.demolish :global(svg) {
     flex: none;
     margin-top: 2px;
   }
@@ -663,11 +755,13 @@
     font-weight: 400;
     color: var(--np-ink-2);
   }
-  .line.occupied span {
+  .line.occupied span,
+  .line.demolish span {
     display: grid;
     font-weight: 600;
   }
-  .line.occupied small {
+  .line.occupied small,
+  .line.demolish small {
     font-weight: 400;
     color: var(--np-ink-2);
   }
