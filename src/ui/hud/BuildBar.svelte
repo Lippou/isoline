@@ -26,7 +26,6 @@
     { kind: B.Port, key: 'buildPort', off: !cfg.allowPorts },
     { kind: B.Factory, key: 'buildFactory', off: !cfg.allowFactories },
     { kind: B.Lab, key: 'buildLab', off: !cfg.features.tech },
-    { kind: B.DefensePost, key: 'buildDefense' },
     { kind: B.Silo, key: 'buildSilo', off: !cfg.allowNukes },
     { kind: B.Sam, key: 'buildSam', off: !cfg.allowNukes && !cfg.features.air },
     { kind: B.Radar, key: 'buildRadar', off: !cfg.features.radar },
@@ -56,6 +55,16 @@
   function pickBuild(kind: number): void {
     hud.tool = hud.tool.k === 'build' && hud.tool.kind === kind ? { k: 'none' } : { k: 'build', kind };
   }
+  /** Front lines (core/rules/lines.ts): 0 defensive, 1 offensive; paid in troops (the attack ratio). */
+  const lines = [
+    { kind: 0, key: 'lineDefense', icon: 'lineDefense' as IconName, name: 'defensive' },
+    { kind: 1, key: 'lineOffense', icon: 'lineOffense' as IconName, name: 'offensive' },
+  ];
+  function pickLine(kind: number): void {
+    hud.tool = hud.tool.k === 'line' && hud.tool.kind === kind ? { k: 'none' } : { k: 'line', kind };
+  }
+  /** The troops a line would take now: the attack ratio of the army. */
+  const lineTroops = $derived(Math.floor((L?.troops ?? 0) * hud.attackRatio));
   function pickNuke(kind: number): void {
     hud.tool =
       hud.tool.k === 'nuke' && hud.tool.kind === kind ? { k: 'none' } : { k: 'nuke', kind, count: 1 };
@@ -106,6 +115,15 @@
         name: (n ? t(`nuke.${n.key}.short`) : '') + (tl.count > 1 ? ` ×${tl.count}` : ''),
         key: n ? keyLabel(settings.keys[n.key] ?? '') : '',
         danger: true,
+      };
+    }
+    if (tl.k === 'line') {
+      const l = lines.find((x) => x.kind === tl.kind)!;
+      return {
+        icon: l.icon,
+        name: t(`line.${l.name}.short`),
+        key: keyLabel(settings.keys[l.key] ?? ''),
+        danger: false,
       };
     }
     if (tl.k === 'warship')
@@ -240,6 +258,33 @@
                 ],
                 requires(lock),
               )}
+            {/if}
+          </div>
+        {/each}
+      </div>
+    </div>
+    <div class="group">
+      <div class="gtitle">{t('hud.groupFront')}</div>
+      <div class="tools">
+        {#each lines as l (l.kind)}
+          <div class="slot">
+            {@render tool(
+              `l${l.kind}`,
+              l.icon,
+              t(`line.${l.name}.short`),
+              short(lineTroops),
+              keyLabel(settings.keys[l.key] ?? ''),
+              hud.tool.k === 'line' && hud.tool.kind === l.kind,
+              lineTroops < 1,
+              false,
+              () => pickLine(l.kind),
+              `line-${l.name}`,
+            )}
+            {#if hovered === `l${l.kind}`}
+              {@render tip(t(`line.${l.name}.name`), t(`line.${l.name}.desc`), [
+                t('line.costTroops', { n: short(lineTroops), pct: Math.round(hud.attackRatio * 100) }),
+                t('line.howTo'),
+              ])}
             {/if}
           </div>
         {/each}

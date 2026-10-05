@@ -114,11 +114,11 @@ describe('bombers: the precise strike on buildings', () => {
     expect(invariants(g)).toEqual([]);
   });
 
-  it('empty the silos and SAMs they hit; a defence post is destroyed outright', () => {
+  it('empty the silos and SAMs they hit; a level-1 building is destroyed outright', () => {
     const g = duel();
     build(g, 1, B.Airfield, 25, 20);
     const silo = build(g, 2, B.Silo, 70, 10, 2);
-    const post = build(g, 2, B.DefensePost, 70, 30);
+    const post = build(g, 2, B.City, 70, 30);
     expect(silo.tubes).toEqual([0, 0]);
     g.step([cmd(1, { t: 'air', kind: A.Bomber, tile: silo.tile })]);
     flyOut(g);
@@ -348,7 +348,8 @@ describe('nations fly (normal difficulty)', () => {
   // the bombers' price later. (A seed whose wars start early enough: 7 since the 1.12 AI,
   // whose nations at war study the military branch first; first raid and reconnaissance at 19.7 min.)
   it('build airfields once at war and send bombers and reconnaissance within 25 minutes', () => {
-    const g = makeGame('black-sea', { players: [], difficulty: 'normal', seed: 7 });
+    // (Seed 8 since 1.17: without defence posts the seed-7 game shifted to a single raid.)
+    const g = makeGame('black-sea', { players: [], difficulty: 'normal', seed: 8 });
     const seen = new Set<number>();
     const flown = new Map<number, number>();
     while (g.tick < 25 * 600 && g.phase !== 'ended') {

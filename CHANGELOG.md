@@ -2,6 +2,25 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.17.0] — Lignes de front, révolutions réalistes, missile à l'échelle, carte plus fluide
+### Ajouté
+- **Lignes de front, à la place du poste de défense** (« retirer la défense et mettre en place une ligne offensive et une ligne défensive ») — GAME_DESIGN.md §6.6 :
+  - **Tracé à la souris** (groupe « Front » de la barre ; touche 4 pour la défensive, A sur AZERTY / Q sur QWERTY pour l'offensive) : un **glisser** d'un point à un autre pose un segment droit au relâchement ; sinon **clic après clic**, la ligne suit les clics, **double-clic** ou **Entrée** pour finir, **Retour arrière** retire le dernier point, Échap ou clic droit annule. Puis on **clique du côté de l'ennemi** : la ligne a un **sens et un dos nu**, elle n'agit que d'un côté. Aperçu en laiton (plein sur vos terres, pointillé ailleurs) et une étiquette au pointeur qui dit l'étape et les troupes engagées.
+  - **Payée en troupes, pas en or** : la part d'armée du curseur d'attaque ; tant qu'elle tient, votre **plafond de troupes baisse d'autant** (100k posées : plafond − 100k). **Démonter** (clic droit sur la ligne) rend les troupes. 8 lignes au plus.
+  - **Ligne défensive** : l'ennemi qui attaque **de face** les 12 cases devant elle avance jusqu'à **3 fois moins vite**, et ses troupes se battent avec les vôtres. Rien par l'arrière ni au-delà de ses bouts. Le général Rempart double son effet 30 s.
+  - **Ligne offensive** : **30 s pour s'installer** (en tirets, compte à rebours), puis vos attaques qui en partent perdent jusqu'à **deux fois moins** de troupes dans les 12 cases devant elle.
+  - Pleine force tant que la ligne porte 8 fois les troupes par case de votre pays, proportionnelle en dessous. Une case de la ligne prise lui coûte sa part de troupes et ouvre une **brèche** (pointillé) qui ne couvre plus.
+  - **Sur la carte**, à l'encre du Courrier sur un liseré papier (lisible sur toutes les couleurs) : **dents** du côté du front pour la défensive, **chevrons** pour l'offensive (des formes, pas des couleurs) ; troupes sur une petite étiquette derrière la ligne ; réglage « Portée des lignes de front » (bande grisée bordée de tirets, à la place des zones des postes).
+  - **Les nations aussi** : une ligne défensive face à qui les attaque (une en Facile et Normal, jusqu'à 2 et 3 en Difficile et Impossible, aussi face au pays en tête et devant une capitale menacée), une ligne offensive avant leurs guerres dès Difficile ; elles les démontent quand le danger est passé.
+  - Campagne, mission 2 « Tenir la ligne » : le guide (avec sa voix) et le bonus parlent maintenant de lignes défensives.
+  - QA (`?automation`) : `__iso.state().lines`.
+### Modifié
+- **Révolutions aux contours réalistes** (« il faut pas un bête losange ») : la région soulevée et sa contagion grandissent selon un bruit à deux échelles (lobes et baies à l'échelle de la région, bord déchiqueté), toujours d'un seul tenant — plus le losange d'un remplissage case par case.
+- **Le missile nucléaire garde la même taille sur la carte à tous les zooms** (« quand on dézoome, il grossit… je le veux tout le temps la même taille ») : plus de taille minimale à l'écran qui le faisait enfler en vue d'ensemble ; fumées et traînées suivent.
+- Le poste de défense est retiré pour tout le monde (bâtiment, touche, IA, raids aériens contre lui) ; une ancienne sauvegarde perd les siens au chargement. Un raccourci personnalisé pour le poste passe à la ligne défensive.
+### Corrigé
+- **Chute de FPS et Mac qui chauffe en milieu de partie** : chaque envoi des textures de la carte attendait le processeur graphique (`gl.getError()`, jusqu'à 38 % du temps du fil principal dans une grande partie) — vérifié aux premiers envois seulement ; et la carte n'envoie plus que les **blocs modifiés** (64 × 16 cases) au lieu de bandes entières, qui avec des fronts partout renvoyaient presque toute la carte à chaque tick. Mesure sur une partie à 200 pays : 128–155 → 199–230 FPS aux mêmes minutes avant la seconde correction.
+
 ## [1.16.0] — Éditeur de cartes, rails, 16 événements, révoltes coriaces
 ### Ajouté
 - **De vraies voies ferrées, qui se construisent** (« pour les rails, j'aimerais un vrai visuel de rails et les rails qui se construisent ») :

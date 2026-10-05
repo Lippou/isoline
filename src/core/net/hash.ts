@@ -58,6 +58,7 @@ export function hashGame(game: Game): number {
     h = mix(mix(mix(mix(mix(mix(h, b.id), b.owner), b.level), b.buildLeft), b.upgradeLeft), b.occupiedLeft);
     h = mix(h, b.demolishLeft);
   }
+  for (const l of game.lines) h = mix(mix(mix(mix(h, l.id), l.owner), q(l.troops)), l.tiles.length);
   for (const u of game.units) h = mix(mix(mix(mix(h, u.id), u.owner), q(u.x)), q(u.y));
   h = mix(h, game.rails.length);
   // World events (rules/worldEvents.ts): the one under way (and its zone), the picker's memory.

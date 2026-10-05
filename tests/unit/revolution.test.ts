@@ -28,6 +28,7 @@ import { restoreSnapshot, snapshotFromJson, snapshotToJson, takeSnapshot } from 
 import { hashGame } from '../../src/core/net/hash';
 import {
   barricadesUp,
+  growOrganic,
   guerrilla,
   liveRevolutionOf,
   nextSpread,
@@ -407,9 +408,13 @@ describe('revolutions: hard to retake (1.16)', () => {
     expect(g.events.some((e) => e.k === 'notify' && e.key === 'notify.revolutionSpread' && e.to === 1)).toBe(
       true,
     );
-    // Now cut it down below half of all the land it raised: no more spreading.
-    const land = tilesOf(g, rebels.id);
-    for (const t of land.slice(Math.floor(rebels.revoltLand * 0.4))) g.setOwner(t, 1);
+    // Now cut it down well below half of all the land it raised (a compact core round
+    // where it rose, no pockets left to swallow back): no more spreading.
+    const w = g.map.width;
+    const d2 = (t: number) =>
+      ((t % w) - (rebels.spawnTile % w)) ** 2 + (((t / w) | 0) - ((rebels.spawnTile / w) | 0)) ** 2;
+    const land = tilesOf(g, rebels.id).sort((a, b) => d2(a) - d2(b));
+    for (const t of land.slice(Math.floor(rebels.revoltLand * 0.25))) g.setOwner(t, 1);
     expect(nextSpread(g, rebels).holds).toBe(false);
     const before = rebels.revoltLand;
     steps(g, REVOLUTION_SPREAD_EVERY + 20);
@@ -453,5 +458,34 @@ describe('revolutions: hard to retake (1.16)', () => {
       if (revoltToll(hh, q, r2) > q.troops * 0.8)
         expect(hh.attacks.some((x) => x.attacker === 1 && x.target === r2.id)).toBe(false);
     });
+  });
+});
+
+describe('revolution region shape', () => {
+  it('grows an organic, connected region, not the diamond of a breadth-first fill', () => {
+    const g = field();
+    const w = g.map.width;
+    const seed = g.map.idx(60, 40);
+    const want = 900;
+    const region = growOrganic(g, [seed], want, (t) => g.owner[t] === 1);
+    expect(region.length).toBe(want);
+    const inRegion = new Set(region);
+    // One piece: every tile reachable from the seed inside the region.
+    const seen = new Set([seed]);
+    const stack = [seed];
+    while (stack.length) {
+      const t = stack.pop()!;
+      for (const v of [t - 1, t + 1, t - w, t + w])
+        if (inRegion.has(v) && !seen.has(v)) {
+          seen.add(v);
+          stack.push(v);
+        }
+    }
+    expect(seen.size).toBe(want);
+    // A diamond fills its Manhattan ball; a real-looking region reaches much further on some
+    // sides than on others, so it fills a small share of the ball of its farthest tile.
+    const [sx, sy] = [60, 40];
+    const m = Math.max(...region.map((t) => Math.abs((t % w) - sx) + Math.abs(((t / w) | 0) - sy)));
+    expect(want / (2 * m * m + 2 * m + 1)).toBeLessThan(0.7);
   });
 });

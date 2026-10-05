@@ -29,8 +29,11 @@ export interface Tactics {
    * neighbour's army (OpenFront hard 0.75, impossible 0.9).
    */
   reserve: number;
-  /** Defence posts per threatened front (OpenFront: hard/impossible ceil(incoming share / 0.4)). */
-  posts: number;
+  /**
+   * Defensive lines per threatened front, where OpenFront builds defence posts (hard and
+   * impossible: ceil(incoming share / 0.4)); from 2, offensive lines before a war too.
+   */
+  lines: number;
   /**
    * Naval play: 0 spawns warships and leaves them where they are (before 1.12); 1 hunts the
    * transports sailing at it; 2 also concentrates its fleet where enemy warships are and
@@ -44,7 +47,7 @@ export interface Tactics {
   /**
    * Air power (npc/airpower.ts, GAME_DESIGN.md §11): 0 rare and clumsy (an airfield only with
    * gold to spare, bombers now and then, no reconnaissance, fighters nor escort); 1 airfields
-   * once at war, raids on the defence posts holding an offensive and on valuable buildings,
+   * once at war, raids on valuable buildings,
    * reconnaissance over offensives, fighters against transports and radar-detected bombers;
    * 2 + reconnaissance before every raid (two levels a hit), escorts against interceptors,
    * fighters against any bomber in sight; 3 + saturation raids (up to 4 bombers through a SAM).
@@ -85,7 +88,7 @@ export const TACTICS: Record<Difficulty, Tactics> = {
     harass: false,
     crownNukes: false,
     reserve: 0,
-    posts: 1,
+    lines: 1,
     navy: 0,
     counter: false,
     adaptiveResearch: false,
@@ -108,7 +111,7 @@ export const TACTICS: Record<Difficulty, Tactics> = {
     harass: false,
     crownNukes: false,
     reserve: 0.5,
-    posts: 1,
+    lines: 1,
     navy: 1,
     counter: true,
     adaptiveResearch: true,
@@ -131,7 +134,7 @@ export const TACTICS: Record<Difficulty, Tactics> = {
     harass: false,
     crownNukes: true,
     reserve: 0.75,
-    posts: 2,
+    lines: 2,
     navy: 2,
     counter: true,
     adaptiveResearch: true,
@@ -154,7 +157,7 @@ export const TACTICS: Record<Difficulty, Tactics> = {
     harass: true,
     crownNukes: true,
     reserve: 0.9,
-    posts: 3,
+    lines: 3,
     navy: 3,
     counter: true,
     adaptiveResearch: true,

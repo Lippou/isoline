@@ -15,6 +15,7 @@
   import RadialMenu from '../hud/RadialMenu.svelte';
   import HoverCard from '../hud/HoverCard.svelte';
   import PlacementTip from '../hud/PlacementTip.svelte';
+  import LineTip from '../hud/LineTip.svelte';
   import NukeAlerts from '../hud/NukeAlerts.svelte';
   import NukePanel from '../hud/NukePanel.svelte';
   import AirPanel from '../hud/AirPanel.svelte';
@@ -138,6 +139,7 @@
     </div>
     <HoverCard />
     <PlacementTip />
+    <LineTip />
     {#if reading}
       <ReadingStrip {ctl} />
     {:else}

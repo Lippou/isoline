@@ -108,18 +108,6 @@ describe('land combat', () => {
     expect(mountain.tickFraction / plains.tickFraction).toBeCloseTo(25 / 16.5, 6);
   });
 
-  it('defence posts: ×5 losses and ×3 tile cost around them', () => {
-    const { g, d, front } = arena(100_000, 100_000);
-    const a = launchAttack(g, 1, 2, 50_000)!;
-    const plain = attackLogic(g, a, front, 60);
-    d.gold = 10_000_000;
-    expect(placeBuilding(g, d, B.DefensePost, front + 3, true)).not.toBeNull();
-    const post = attackLogic(g, a, front, 60);
-    expect(post.attackerLoss).toBeCloseTo(plain.attackerLoss * 5, 6);
-    expect(post.tickFraction).toBeCloseTo(plain.tickFraction * 3, 6);
-    expect(post.defenderLoss).toBeCloseTo(plain.defenderLoss, 6);
-  });
-
   it('cancelling halts the attack for 2 s, then 75 % of its troops come home (all from the wilderness)', () => {
     const { g, p, d } = arena(200_000, 100_000);
     g.step([cmd(1, { t: 'attack', tile: g.map.idx(150, 30), ratio: 0.5 })]);
@@ -601,7 +589,7 @@ describe('buildings', () => {
     expect(p1.levelsBuilt[B.City]).toBe(2);
   });
 
-  it('ports and factories share one ladder; defence posts, SAMs, silos', () => {
+  it('ports and factories share one ladder; SAMs, silos', () => {
     const g = bigField();
     const p = g.players[1]!;
     expect(buildCost(g, p, B.Factory)).toBe(125_000);
@@ -611,13 +599,6 @@ describe('buildings', () => {
     expect(placeBuilding(g, p, B.Port, g.map.idx(8, 28))).not.toBeNull();
     expect(buildCost(g, p, B.Factory)).toBe(500_000);
     expect(buildCost(g, p, B.City)).toBe(125_000);
-    // Defence posts: +50k each, capped at 250k.
-    const posts: number[] = [];
-    for (let k = 0; k < 6; k++) {
-      posts.push(buildCost(g, p, B.DefensePost));
-      placeBuilding(g, p, B.DefensePost, g.map.idx(12 + 22 * k, 44));
-    }
-    expect(posts).toEqual([50_000, 100_000, 150_000, 200_000, 250_000, 250_000]);
     // SAMs: 1.5M then 3M; an upgrade costs the next price.
     expect(buildCost(g, p, B.Sam)).toBe(1_500_000);
     const sam = placeBuilding(g, p, B.Sam, g.map.idx(80, 14), true)!;
@@ -724,7 +705,7 @@ describe('buildings', () => {
     for (let k = 0; k < 25; k++) g.step([]);
     expect(city.level).toBe(2);
     expect(p2.cityLevels).toBe(2);
-    const post = placeBuilding(g, p2, B.DefensePost, g.map.idx(40, 16), true)!;
+    const post = placeBuilding(g, p2, B.Radar, g.map.idx(40, 16), true)!; // (never handed over)
     g.setOwner(t, 1);
     expect(city.owner).toBe(1);
     // Looted on capture (GAME_DESIGN.md §6.4): half its levels, rounded down, are lost.

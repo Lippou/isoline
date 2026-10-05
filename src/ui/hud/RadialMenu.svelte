@@ -22,6 +22,7 @@
   import { formatShort } from '../../render/renderer';
   import { clientSpotError } from '../game/capitalWatch';
   import { isTeammate } from '../game/team';
+  import { locate } from '../../core/rules/lines';
   import { haltShort, haltTip, nukeHalt, truceText } from './nukeHalt';
   import { truceCovers, truceOf } from '../game/truce';
 
@@ -367,17 +368,7 @@
       });
     }
     if (land && owner === s.viewer) {
-      const kinds = [
-        B.City,
-        B.Port,
-        B.Factory,
-        B.Lab,
-        B.DefensePost,
-        B.Silo,
-        B.Sam,
-        B.Radar,
-        B.Airfield,
-      ].filter(
+      const kinds = [B.City, B.Port, B.Factory, B.Lab, B.Silo, B.Sam, B.Radar, B.Airfield].filter(
         (k) =>
           !(
             (k === B.Port && !cfg.allowPorts) ||
@@ -449,6 +440,24 @@
               },
         );
       }
+      // One of our front lines here (within two tiles): taken down, its troops come back.
+      const w = s.state.width;
+      const [tx, ty] = [(tile % w) + 0.5, ((tile / w) | 0) + 0.5];
+      const line = s.state.lines.find((l) => {
+        if (l.owner !== s.viewer) return false;
+        const at = locate(l.pts, tx, ty);
+        return Math.hypot(at.px - tx, at.py - ty) <= 2;
+      });
+      if (line)
+        out.push({
+          id: 'lineRemove',
+          group: 'main',
+          label: t('radial.lineRemove'),
+          icon: line.kind === 0 ? 'lineDefense' : 'lineOffense',
+          hint: formatShort(line.troops),
+          desc: t('radial.lineRemoveDesc'),
+          run: act(() => s.cmd({ t: 'lineRemove', id: line.id })),
+        });
       out.push(...capitalItems(tile));
     }
     // Warships also sail up navigable rivers (river tiles are land, owned like any other).

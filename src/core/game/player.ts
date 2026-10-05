@@ -152,6 +152,9 @@ export class Player {
   generalReadyTick = 0;
   blitzUntil = -1;
   rampartUntil = -1;
+
+  /** Troops standing on front lines (rules/lines.ts): off the army and off its ceiling. */
+  lineTroops = 0;
   propagandaUntil = -1;
 
   // Capital (rules/capital.ts): the seat of government, set on the spawn tile at the start.

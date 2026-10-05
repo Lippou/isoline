@@ -29,7 +29,9 @@ export type Tool =
   | { k: 'ping' }
   | { k: 'shipMove' }
   /** Choosing the tile of a new capital (rules/capital.ts). */
-  | { k: 'capital' };
+  | { k: 'capital' }
+  /** Drawing a front line (core/rules/lines.ts): kind 0 defensive, 1 offensive. */
+  | { k: 'line'; kind: number };
 
 export interface Toast {
   id: number;
@@ -117,6 +119,11 @@ export const hud = $state({
    * `snapped` when the building goes on a free spot beside the cursor; `sx`, `sy`: the
    * cursor's tile on screen.
    */
+  /**
+   * Drawing a front line (LineTip.svelte): what the next click does and the troops it will
+   * take; `sx`, `sy`: the pointer on the map.
+   */
+  lineTip: null as null | { text: string; sx: number; sy: number; ok: boolean },
   placement: null as null | {
     kind: number;
     error: string;

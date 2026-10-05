@@ -12,7 +12,6 @@ import { UNIT_STRIDE, type BuildingView } from '../engine/protocol';
 import { U } from '../core/units/unit';
 import {
   B,
-  DEFENSE_POST_RANGE,
   N,
   NUKE_FALLOUT_RADIUS,
   NUKE_RADIUS,
@@ -31,16 +30,10 @@ import { WeatherLayer } from './weatherLayer';
 import { TradeRouteLayer } from './tradeRoutes';
 import { RailLayer } from './railLayer';
 import { CapitalLayer } from './capitals';
-import { DefenceZoneLayer, type ZoneGroup } from './defenceZones';
+import { FrontLineLayer } from './frontLines';
+import type { LineDraft } from '../ui/game/input';
 import { FlagTextures } from './flagTextures';
-import {
-  DEFENSE_BADGE_ZOOM,
-  MINOR_BADGE_ZOOM,
-  badgePriority,
-  badgePx,
-  badgeSpacing,
-  majorBuilding,
-} from './badgeSize';
+import { MINOR_BADGE_ZOOM, badgePriority, badgePx, badgeSpacing, majorBuilding } from './badgeSize';
 import { flagAspect } from './flags';
 import { REL_COLOR, SAM_LINE } from './relations';
 
@@ -97,8 +90,10 @@ export interface Overlay {
   airPreview: AirPreview | null;
   /** Show every known SAM's coverage (own green, allies yellow, others red). */
   samCoverage: boolean;
-  /** Every known defence post's reach, always drawn (settings.game.defenceZones). */
+  /** The reach of every front line in sight, shaded (settings.game.defenceZones). */
   defenceZones: boolean;
+  /** A front line being drawn (input.ts). */
+  lineDraft: LineDraft | null;
   /** Build-bar filter: these building types light up, the others fade (null: no filter). */
   buildingFilter: number[] | null;
   /**
@@ -288,10 +283,7 @@ export class GameRenderer {
   private weather!: WeatherLayer;
   private routes!: TradeRouteLayer;
   private capitals!: CapitalLayer;
-  private zones = new DefenceZoneLayer();
-  /** The buildings and fog the defence zones were last gathered from. */
-  private zonesBuildings = -1;
-  private zonesFog = -2;
+  private frontLines = new FrontLineLayer(TROOPS_STYLE);
   private unitSprites = new Map<number, UnitSprite>();
   private buildingSprites = new Map<number, Container>();
   private labelPool = new Map<number, MapLabel>();
@@ -341,6 +333,7 @@ export class GameRenderer {
     airPreview: null,
     samCoverage: false,
     defenceZones: true,
+    lineDraft: null,
     buildingFilter: null,
     aimTargets: false,
     selection: new Set(),
@@ -410,7 +403,7 @@ export class GameRenderer {
       this.routes.lanes,
       this.routes.cuts,
       this.nukeFx.ground,
-      this.zones.container,
+      this.frontLines.container,
       this.deposits,
       this.lights,
       this.buildings,
@@ -611,7 +604,7 @@ export class GameRenderer {
     this.updateUnits(alpha, tickF, dt, t);
     this.particles.update(dt, z);
     this.nukeFx.update(dt, cam.bounds());
-    this.updateDefenceZones(z);
+    this.updateFrontLines(z);
     this.drawOverlay(t);
     this.updateLabels(z);
     this.updateFronts(z);
@@ -718,7 +711,6 @@ export class GameRenderer {
       const target = this.aimedAt(b);
       const shown = picked || target;
       if (!shown && z < MINOR_BADGE_ZOOM && !majorBuilding(b.type)) continue;
-      if (!shown && z < DEFENSE_BADGE_ZOOM && b.type === B.DefensePost) continue;
       cands.push({
         id: b.id,
         pri:
@@ -919,7 +911,6 @@ export class GameRenderer {
       dt,
       particles: this.settings.particles,
       reducedMotion: this.settings.reducedMotion,
-      uiScale: this.settings.uiScale,
     });
     for (let k = 0; k < s.unitCount; k++) {
       const o = k * UNIT_STRIDE;
@@ -1282,36 +1273,27 @@ export class GameRenderer {
     g.stroke({ width: Math.max(0.08, widthPx / z), color, alpha });
   }
 
-  /**
-   * Every known defence post's reach, always drawn (defenceZones.ts): ours and every other
-   * country's in sight (fog of war), merged country by country. SAMs and radars have their
-   * own views (coverage while aiming, hover). Faded away when zoomed far out.
-   */
-  private updateDefenceZones(z: number): void {
+  /** Front lines (frontLines.ts): every one in sight, and the one being drawn. */
+  private updateFrontLines(z: number): void {
     const s = this.state;
     const ov = this.overlay;
-    if (!ov.defenceZones || ov.photo) {
-      this.zones.update(z, this.camera.bounds(), 0);
-      return;
-    }
-    // Rebuilt when the posts in sight change (built, lost, revealed or hidden by the fog).
-    if (s.buildingsVersion !== this.zonesBuildings || this.fogVersion !== this.zonesFog) {
-      this.zonesBuildings = s.buildingsVersion;
-      this.zonesFog = this.fogVersion;
-      const byOwner = new Map<number, ZoneGroup>();
-      const ids: number[] = [];
-      for (const b of s.buildings) {
-        if (b.type !== B.DefensePost || !b.ready || !this.revealed(b.owner, b.x, b.y)) continue;
-        let gr = byOwner.get(b.owner);
-        if (!gr) byOwner.set(b.owner, (gr = { side: b.owner === s.viewer ? 'own' : 'other', circles: [] }));
-        gr.circles.push({ x: b.x + 0.5, y: b.y + 0.5, r: DEFENSE_POST_RANGE });
-        ids.push(b.id, b.owner);
-      }
-      const version = `${s.viewer}|${ids.join(',')}`;
-      if (version !== this.zones.version) this.zones.setZones([...byOwner.values()], version);
-    }
-    // (Far out, over the whole map, they fade: half-strength at 0.5 px per tile, gone at 0.3.)
-    this.zones.update(z, this.camera.bounds(), Math.max(0, Math.min(1, (z - 0.3) / 0.4)));
+    this.frontLines.container.visible = !ov.photo;
+    if (ov.photo) return;
+    this.frontLines.width = s.width;
+    this.frontLines.update(
+      s.lines,
+      s.linesVersion * 1000 + (this.fogVersion & 1023),
+      {
+        zoom: z,
+        tick: s.tick,
+        viewer: s.viewer,
+        zones: ov.defenceZones,
+        reducedMotion: this.settings.reducedMotion,
+        visible: (l, x, y) => this.revealed(l.owner, x, y),
+        mine: (x, y) => s.owner[Math.floor(y) * s.width + Math.floor(x)] === s.viewer,
+      },
+      ov.lineDraft,
+    );
   }
 
   /** An × (refused, intercepted…): a dark under-stroke then the colour, so it reads on any ground. */

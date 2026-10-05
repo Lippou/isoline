@@ -4,6 +4,7 @@
 // a victory), generals and embargoes — scaled by difficulty.
 import { describe, expect, it } from 'vitest';
 import { asciiMap, makeGame, startWith, testGame } from '../helpers';
+import { LineKind, placeLine } from '../../src/core/rules/lines';
 import type { Game } from '../../src/core/game/state';
 import type { Difficulty } from '../../src/core/game/config';
 import type { Player } from '../../src/core/game/player';
@@ -42,6 +43,12 @@ function build(g: Game, owner: number, type: B, x: number, y: number): Building 
   expect(b, `${type} at ${x},${y}`).toBeTruthy();
   b.buildLeft = 0;
   return b;
+}
+
+/** A defensive line of `owner` across (x, y), north to south (rules/lines.ts). */
+function wall(g: Game, owner: number, x: number, y: number): void {
+  const l = placeLine(g, g.players[owner]!, LineKind.Defensive, [x + 0.5, y - 6.5, x + 0.5, y + 6.5], 1, 0.1);
+  expect(typeof l, `line at ${x},${y}`).toBe('object');
 }
 
 const war = (enemies: number[]): WarState => ({
@@ -118,19 +125,18 @@ describe('raids', () => {
     const p2 = g.players[2]!;
     p2.gold = 20_000_000;
     build(g, 2, B.Airfield, 130, 24);
-    const post = build(g, 1, B.DefensePost, 72, 24);
     const city = build(g, 1, B.City, 40, 10);
     applyCommand(g, 2, { t: 'attack', tile: g.map.idx(79, 24), ratio: 0.5 });
     g.step([]);
-    return { g, p2, post, city };
+    return { g, p2, city };
   }
 
-  it('bomb the defence post holding the offensive, with reconnaissance first from hard', () => {
-    const { g, p2, post } = front('hard');
+  it('bomb the enemy buildings during an offensive, with reconnaissance first from hard', () => {
+    const { g, p2, city } = front('hard');
     thinkAir(g, p2, armed(p2), sky({ contact: (o) => (o === 1 ? g.map.idx(79, 24) : -1) }));
     const bombers = planes(g, 2, U.Bomber);
     expect(bombers.length).toBeGreaterThan(0);
-    expect(bombers[0]!.target).toBe(post.id);
+    expect(bombers[0]!.target).toBe(city.id);
     // A reconnaissance plane over the front (and over the target): faster, it gets there first.
     expect(planes(g, 2, U.Recon).length).toBeGreaterThan(0);
   });
@@ -274,14 +280,14 @@ describe('bombs', () => {
 });
 
 describe('generals and embargoes', () => {
-  it('Rampart (from hard) when an attack that could break it presses near its capital, on a front held by a post', () => {
+  it('Rampart (from hard) when an attack that could break it presses near its capital, on a front held by a defensive line', () => {
     for (const d of ['easy', 'normal', 'hard'] as const) {
       const g = plain(d);
       const p2 = g.players[2]!;
       p2.general = 'rampart';
       p2.generalReadyTick = 0;
       p2.capital = g.map.idx(95, 24);
-      build(g, 2, B.DefensePost, 90, 24);
+      wall(g, 2, 90, 24);
       thinkGeneral(g, p2, {
         offensive: -1,
         incoming: p2.troops,
@@ -296,7 +302,7 @@ describe('generals and embargoes', () => {
     p2.general = 'rampart';
     p2.generalReadyTick = 0;
     p2.capital = g.map.idx(150, 24);
-    build(g, 2, B.DefensePost, 90, 24);
+    wall(g, 2, 90, 24);
     thinkGeneral(g, p2, {
       offensive: -1,
       incoming: p2.troops,

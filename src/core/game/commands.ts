@@ -6,7 +6,8 @@ import { isWellFormed } from '../net/commands';
 import { handleSpawnCommand } from './spawn';
 import { attackSlotFree, cancelAttack, hasFrontier, launchAttack } from '../rules/combat';
 import { IS_LAND } from '../map/terrain';
-import { B, BUILDING_COUNT, MAX_ATTACKS_PER_PLAYER, N } from './constants';
+import { B, BUILDING_COUNT, LINE_MAX_PER_PLAYER, MAX_ATTACKS_PER_PLAYER, N } from './constants';
+import { placeLine, removeLine, type LineKind } from '../rules/lines';
 import type { Refusal } from './state';
 import {
   cancelDemolition,
@@ -112,6 +113,18 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
     case 'boatRetreat':
       retreatTransport(game, p, c.id);
       return;
+
+    case 'line': {
+      const res = placeLine(game, p, c.kind as LineKind, c.pts, c.side as 1 | -1, c.ratio);
+      if (typeof res === 'string') game.notify(p.id, `error.line.${res}`, 'warn', { n: LINE_MAX_PER_PLAYER });
+      return;
+    }
+
+    case 'lineRemove': {
+      const l = game.lines.find((x) => x.id === c.id && x.owner === p.id);
+      if (l) removeLine(game, l, true);
+      return;
+    }
 
     case 'build': {
       if (!inMap(c.tile) || c.kind < 0 || c.kind >= BUILDING_COUNT) return;

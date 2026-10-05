@@ -14,6 +14,7 @@ import { decodeGreyPng, decodeTerrainPng } from '../core/map/format';
 import { generateMapData } from '../core/map/generator';
 import { restoreSnapshot, takeSnapshot } from '../core/net/snapshot';
 import { barricadesUp, nextSpread, startRevolution } from '../core/rules/revolution';
+import { lineDefended, lineStrength } from '../core/rules/lines';
 import { hashGame } from '../core/net/hash';
 import {
   B,
@@ -43,6 +44,7 @@ import type {
   PlacementView,
   PlayerView,
   RailView,
+  LineView,
   TickUpdate,
   ToWorker,
   WorldView,
@@ -69,6 +71,7 @@ let seen: Uint8Array | null = null;
 let labels = new Map<number, Label>();
 let unitBuf = new Float32Array(UNIT_STRIDE * 256);
 let lastBuildingSend = -1;
+let lastLinesVersion = -1;
 const ledger = new TradeLedger();
 const routes = new TradeRoutes();
 /** Threatened borders of the viewer (view-only intelligence). */
@@ -106,6 +109,7 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
         seen = null;
         labels = new Map();
         lastBuildingSend = -1;
+        lastLinesVersion = -1;
         ledger.reset();
         routes.reset();
         threats.reset();
@@ -320,6 +324,21 @@ function sendUpdate(
       .filter((r) => r.alive)
       .map((r): RailView => ({ id: r.id, owner: r.owner, tiles: r.tiles }));
     g.railsDirty = false;
+  }
+  // Front lines: when they change, and every second while any stands (their strength drifts).
+  if (full || g.linesVersion !== lastLinesVersion || (tick % 10 === 0 && g.lines.length > 0)) {
+    up.lines = g.lines.map((l): LineView => ({
+      id: l.id,
+      owner: l.owner,
+      kind: l.kind,
+      pts: l.pts,
+      side: l.side,
+      troops: l.troops,
+      tiles: l.tiles,
+      readyTick: l.readyTick,
+      strength: lineStrength(g, l),
+    }));
+    lastLinesVersion = g.linesVersion;
   }
   if (fogEnabled && (full || tick % 5 === 0)) up.fog = computeFog(g);
   if (loyaltyLayer && (full || tick % 10 === 0)) up.loyalty = computeLoyalty(g);
@@ -592,6 +611,11 @@ function localView(g: Game): LocalView | undefined {
     gold: p.gold,
     troops: p.troops,
     popCap: p.popCap,
+    lineCount: [
+      g.lines.filter((l) => l.owner === p.id && l.kind === 0).length,
+      g.lines.filter((l) => l.owner === p.id && l.kind === 1).length,
+    ],
+    lineTroops: p.lineTroops,
     growth: p.lastGrowth,
     income: p.income,
     incomeBreakdown: { ...p.incomeBreakdown },
@@ -888,7 +912,7 @@ function answer(g: Game, q: import('./protocol').Query): unknown {
         loyalty: g.loyalty[t],
         resource: g.map.resource[t],
         dead: g.isDead(t),
-        defended: g.owner[t]! > 0 ? g.defenseMagMult(t, g.owner[t]!) > 1 : false,
+        defended: lineDefended(g, t),
         building: b
           ? {
               id: b.id,

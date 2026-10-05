@@ -5,8 +5,8 @@
 // One line per game: outcome (WIN at m min / LOST at m min / share at the time limit), the
 // bot's share of the land every 5 minutes, its peak simultaneous attacks, then the
 // nations' reactions: waves at the bot (and how many answered one of its attacks), the most
-// nations attacking it at once, alliances signed between nations, defence posts built by
-// its neighbours, warships launched by nations and the bot's ships they sank, bombing raids
+// nations attacking it at once, alliances signed between nations, front lines standing at
+// the end, warships launched by nations and the bot's ships they sank, bombing raids
 // and nuclear launches at the bot, council sanctions against it.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,7 +16,6 @@ import type { MapMeta } from '../src/core/map/gamemap';
 import { Game } from '../src/core/game/state';
 import { defaultConfig, type Difficulty, type GameMode } from '../src/core/game/config';
 import { shares } from '../src/core/rules/victory';
-import { B } from '../src/core/game/constants';
 import { U } from '../src/core/units/unit';
 import { createBot, type BotKind } from './bots';
 
@@ -58,8 +57,7 @@ interface Tally {
   attackers: Set<number>;
   peakGang: number;
   alliances: number;
-  posts: number;
-  postsNear: number;
+  lines: number;
   warships: Set<number>;
   sunkBot: number;
   sunkByBot: number;
@@ -121,8 +119,7 @@ export function playOne(
     attackers: new Set(),
     peakGang: 0,
     alliances: 0,
-    posts: 0,
-    postsNear: 0,
+    lines: 0,
     warships: new Set(),
     sunkBot: 0,
     sunkByBot: 0,
@@ -142,7 +139,6 @@ export function playOne(
   const marks: string[] = [];
   let outcome = '';
   const isNation = (id: number) => g.players[id]?.kind === 'nation';
-  let neighbours = new Set<number>();
   const t0 = performance.now();
   while (g.tick < 600 * minutes + g.startTick || g.phase === 'spawn') {
     if (g.phase === 'ended') break;
@@ -162,10 +158,7 @@ export function playOne(
         if (e.riposte) t.ripostes++;
         t.attackers.add(e.attacker);
       } else if (e.k === 'alliance' && e.on && isNation(e.a) && isNation(e.b)) t.alliances++;
-      else if (e.k === 'built' && e.kind === B.DefensePost && isNation(e.owner)) {
-        t.posts++;
-        if (neighbours.has(e.owner)) t.postsNear++;
-      } else if (e.k === 'shipSunk') {
+      else if (e.k === 'shipSunk') {
         if (e.owner === bot.id && isNation(e.by)) t.sunkBot++;
         if (e.by === bot.id) t.sunkByBot++;
       } else if (e.k === 'airStrike' && e.victim === bot.id) t.raids++;
@@ -211,16 +204,6 @@ export function playOne(
       }
       for (const u of g.units) if (u.alive && u.type === U.Warship && isNation(u.owner)) t.warships.add(u.id);
     }
-    if (g.phase === 'playing' && m % 300 === 0 && me.alive) {
-      neighbours = new Set();
-      for (const b of me.border) {
-        const w = g.map.width;
-        for (const v of [b - 1, b + 1, b - w, b + w]) {
-          const o = g.owner[v] ?? 0;
-          if (o !== bot.id && o > 0) neighbours.add(o);
-        }
-      }
-    }
     if (process.env.VERBOSE && g.phase === 'playing' && m % Number(process.env.VERBOSE) === 0) {
       // Compact trace: the bot's land, army and attacks, who attacks it, the threat picture.
       const k = (v: number) => `${(v / 1000).toFixed(0)}k`;
@@ -241,12 +224,13 @@ export function playOne(
     }
   }
   const me = g.players[bot.id]!;
+  t.lines = g.lines.filter((l) => isNation(l.owner)).length;
   if (!outcome) outcome = `share ${((shares(g).get(bot.id) ?? 0) * 100) | 0}%${me.alive ? '' : ' dead'}`;
   const secs = ((performance.now() - t0) / 1000).toFixed(0);
   return (
     `${process.env.TAG ?? ''}${mapId.padEnd(10)} ${String(seed).padEnd(5)} ${difficulty.padEnd(10)} ${kind.padEnd(10)} ${outcome.padEnd(26)} ` +
     `${marks.join(' ')} | peakAtk ${bot.peakAttacks} fronts ${(t.fronts / Math.max(1, t.samples)).toFixed(1)} f3 ${((100 * t.fronts3) / Math.max(1, t.samples)) | 0}% outHeavy ${((100 * t.outHeavy) / Math.max(1, t.samples)) | 0}% | waves ${t.waves} (riposte ${t.ripostes}) from ${t.attackers.size} nations, gang≤${t.peakGang}` +
-    ` | nation alliances ${t.alliances} | posts ${t.posts} (near ${t.postsNear}) | warships ${t.warships.size} sunkBot ${t.sunkBot} sunkByBot ${t.sunkByBot}` +
+    ` | nation alliances ${t.alliances} | lines ${t.lines} | warships ${t.warships.size} sunkBot ${t.sunkBot} sunkByBot ${t.sunkByBot}` +
     ` | raids ${t.raids} nukes ${t.nukes} sanctions ${t.sanctions} | revolts bot ${t.revoltsBot} (${t.revoltTiles}t${t.revoltLog.length ? ` ${t.revoltLog.join(' ')}` : ''}) nations ${t.revoltsNations} (${secs}s)`
   );
 }

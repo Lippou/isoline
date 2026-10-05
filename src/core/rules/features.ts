@@ -169,7 +169,7 @@ function updateLoyalty(game: Game): void {
   const map = game.map;
   const n = map.size;
   if (f.loyaltyCursor === 0) f.secessionCandidates.clear();
-  // Coarse "stabilised" cells around cities and defence posts.
+  // Coarse "stabilised" cells around cities.
   const stable = stabilityGrid(game);
   const cell = 16;
   const cw = Math.ceil(map.width / cell);
@@ -214,7 +214,7 @@ function stabilityGrid(game: Game): Map<number, number> {
   const cw = Math.ceil(game.map.width / cell);
   const rc = Math.ceil(LOYALTY_STABILISE_RANGE / cell);
   for (const b of game.buildings.values()) {
-    if ((b.type !== B.City && b.type !== B.DefensePost) || !inService(b)) continue;
+    if (b.type !== B.City || !inService(b)) continue;
     const cx = (b.x / cell) | 0;
     const cy = (b.y / cell) | 0;
     for (let dy = -rc; dy <= rc; dy++)

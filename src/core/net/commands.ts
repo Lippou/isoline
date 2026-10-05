@@ -13,6 +13,13 @@ export type Command =
   /** Orders one of your buildings down (timed); `cancel`: calls off a demolition under way. */
   | { t: 'demolish'; id: number; cancel?: boolean }
   | { t: 'warship'; tile: number }
+  /**
+   * Lays a front line (rules/lines.ts): kind 0 defensive, 1 offensive; `pts` its vertices
+   * [x0, y0, x1, y1, …] in tiles; `side` the side it faces; `ratio` of the army on it.
+   */
+  | { t: 'line'; kind: number; pts: number[]; side: number; ratio: number }
+  /** Takes one of your lines down: its troops come back. */
+  | { t: 'lineRemove'; id: number }
   | { t: 'shipMove'; ids: number[]; tile: number; patrol: boolean }
   /** `up`: arc towards the top of the map (default) or the bottom (A and H bombs). */
   | { t: 'nuke'; kind: number; tile: number; count: number; up?: boolean }
@@ -68,7 +75,19 @@ export function isWellFormed(c: unknown): c is Command {
     case 'cancelAttack':
     case 'boatRetreat':
     case 'upgrade':
+    case 'lineRemove':
       return isInt(o.id);
+    case 'line':
+      return (
+        (o.kind === 0 || o.kind === 1) &&
+        (o.side === 1 || o.side === -1) &&
+        ratioOk(o.ratio) &&
+        Array.isArray(o.pts) &&
+        o.pts.length >= 4 &&
+        o.pts.length <= 64 &&
+        o.pts.length % 2 === 0 &&
+        o.pts.every((v) => isNum(v) && v >= 0 && v < 1e5)
+      );
     case 'demolish':
       return isInt(o.id) && (o.cancel === undefined || isBool(o.cancel));
     case 'build':

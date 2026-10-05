@@ -9,7 +9,8 @@
 //    map: "up" on the map is up in the air);
 //  - MIRV: at the separation point a flash, the payload fairing breaking in two, the empty bus
 //    drifting on, and the warheads fanning out (each a small dark cone with a re-entry glow).
-// Sizes scale with the map, with a minimum (and a maximum) on screen. Every sprite comes from
+// Sizes are fixed on the map (a missile keeps its size against the land at every zoom, like a
+// real object: no on-screen minimum that would swell it when zooming out). Every sprite comes from
 // per-layer pools reused frame after frame: many missiles at once stay cheap.
 import { Container, Sprite, Texture } from 'pixi.js';
 import { N, NUKE_TARGETABLE_RANGE } from '../core/game/constants';
@@ -31,12 +32,10 @@ import {
 
 type Look = 'atom' | 'hydrogen' | 'mirv' | 'warhead' | 'interceptor';
 
-/** Per-kind look. Lengths in tiles; on-screen bounds in CSS pixels. */
+/** Per-kind look. Lengths in tiles at scale 1 (drawn ×MAP_SCALE, at every zoom). */
 interface Spec {
   art: MissileArt;
   len: number;
-  minPx: number;
-  maxPx: number;
   /** Contrail puff size (tiles at full size), 0: a streak only. */
   trail: number;
   /** Flame: length and width in body lengths, texture. */
@@ -51,8 +50,6 @@ const SPECS: Record<Look, Spec> = {
   atom: {
     art: ATOM_ART,
     len: 6,
-    minPx: 26,
-    maxPx: 120,
     trail: 1.6,
     flameLen: 0.95,
     flameW: 0.3,
@@ -62,8 +59,6 @@ const SPECS: Record<Look, Spec> = {
   hydrogen: {
     art: HYDROGEN_ART,
     len: 9,
-    minPx: 36,
-    maxPx: 170,
     trail: 2.4,
     flameLen: 1.05,
     flameW: 0.32,
@@ -73,8 +68,6 @@ const SPECS: Record<Look, Spec> = {
   mirv: {
     art: MIRV_ART,
     len: 11,
-    minPx: 42,
-    maxPx: 190,
     trail: 2.8,
     flameLen: 0.7,
     flameW: 0.27,
@@ -84,8 +77,6 @@ const SPECS: Record<Look, Spec> = {
   warhead: {
     art: WARHEAD_ART,
     len: 2.4,
-    minPx: 11,
-    maxPx: 42,
     trail: 0,
     flameLen: 0,
     flameW: 0,
@@ -95,8 +86,6 @@ const SPECS: Record<Look, Spec> = {
   interceptor: {
     art: INTERCEPTOR_ART,
     len: 3,
-    minPx: 13,
-    maxPx: 56,
     trail: 0.55,
     flameLen: 0.9,
     flameW: 0.32,
@@ -104,6 +93,9 @@ const SPECS: Record<Look, Spec> = {
     plume: 0.3,
   },
 };
+
+/** How much larger than their `len` missiles are drawn on the map (smoke and trails alike). */
+const MAP_SCALE = 2.4;
 
 const lookOf = (type: number, kind: number): Look =>
   type === U.Interceptor
@@ -228,7 +220,6 @@ export interface MissileFrame {
   dt: number;
   particles: number;
   reducedMotion: boolean;
-  uiScale: number;
 }
 
 export class MissileFx {
@@ -261,7 +252,6 @@ export class MissileFx {
     dt: 0,
     particles: 1,
     reducedMotion: false,
-    uiScale: 1,
   };
   private puffs = 0;
   /** Recent launch sites (a salvo from one silo shares its plume). */
@@ -376,7 +366,6 @@ export class MissileFx {
     fl.path = path;
     const spec = fl.spec;
     const look = fl.look;
-    const z = fr.zoom;
     const f = clamp01((tickF - t0) / Math.max(1, t1 - t0));
     // Waiting in its tube (a salvo leaves one tube after the other) or a warhead not yet
     // released: the hatch glows, nothing flies.
@@ -400,10 +389,9 @@ export class MissileFx {
     const ca = Math.cos(angle);
     const sa = Math.sin(angle);
 
-    // Size: the map's scale, within the on-screen bounds.
-    const px = Math.max(spec.minPx * fr.uiScale, Math.min(spec.maxPx, spec.len * z));
-    const L = px / z; // body length in tiles
-    const ls = L / spec.len;
+    // Size: fixed on the map.
+    const L = spec.len * MAP_SCALE; // body length in tiles
+    const ls = MAP_SCALE;
     const hn = this.height(fl, f);
     const rise = smooth(0, 0.5, tau);
     const born = look === 'warhead' ? smooth(0, 0.25, fl.age) : 1;
@@ -689,9 +677,7 @@ export class MissileFx {
   // ------------------------------------------------------------ launch & split
 
   private hatch(x: number, y: number, spec: Spec, a: number): void {
-    const fr = this.fr;
-    const px = Math.max(spec.minPx * fr.uiScale, Math.min(spec.maxPx, spec.len * fr.zoom));
-    const L = px / fr.zoom;
+    const L = spec.len * MAP_SCALE;
     const g = this.glow.take(this.tex.bloom);
     g.anchor.set(0.5);
     g.position.set(x, y);
@@ -705,9 +691,8 @@ export class MissileFx {
     const fr = this.fr;
     const spec = fl.spec;
     if (spec.plume <= 0) return;
-    const px = Math.max(spec.minPx * fr.uiScale, Math.min(spec.maxPx, spec.len * fr.zoom));
-    const ls = px / fr.zoom / spec.len;
-    // Ground smoke grows with the missile's minimum size, but less (no cloud over a region).
+    const ls = MAP_SCALE;
+    // Ground smoke at the missile's scale (damped: no cloud over a region).
     const S = spec.plume * damp(ls);
     const { sx: x, sy: y } = fl;
     const now = fr.t;
@@ -799,10 +784,8 @@ export class MissileFx {
   private split(fl: Flight): void {
     const fr = this.fr;
     const spec = fl.spec;
-    const px = Math.max(spec.minPx * fr.uiScale, Math.min(spec.maxPx, spec.len * fr.zoom));
-    const L = px / fr.zoom;
-    const ls = L / spec.len;
-    const S = damp(ls);
+    const L = spec.len * MAP_SCALE;
+    const S = damp(MAP_SCALE);
     const [x, y] = [fl.tx, fl.ty];
     const ca = Math.cos(fl.angle);
     const sa = Math.sin(fl.angle);

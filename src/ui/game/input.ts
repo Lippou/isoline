@@ -12,6 +12,22 @@ import { UNIT_STRIDE } from '../../engine/protocol';
 import { capitalPx } from '../../render/badgeSize';
 import { isTeammate } from './team';
 import { note } from '../stores/note.svelte';
+import { short } from '../i18n/i18n.svelte';
+import { LINE_MAX_POINTS, LINE_OFFENSE_SETUP } from '../../core/game/constants';
+import { sideOf } from '../../core/rules/lines';
+
+/**
+ * A front line being drawn (core/rules/lines.ts): its points (tile centres, flat x, y…),
+ * the pointer, and the stage — tracing (a drag from one point to another, or click after
+ * click, a double click or Enter to end), then picking the side it faces.
+ */
+export interface LineDraft {
+  kind: number;
+  pts: number[];
+  cursor: [number, number];
+  stage: 'trace' | 'side';
+  side: 1 | -1;
+}
 
 export interface InputHooks {
   onAction: (tile: number, ev: PointerEvent) => void;
@@ -30,6 +46,8 @@ export class InputController {
   private lastHoverTile = -1;
   /** The pointer on the map (screen px), null when it is off the map or over the interface. */
   private pointer: { x: number; y: number } | null = null;
+  /** The last click of a line being drawn (a second one there, soon after: the double click). */
+  private lineClick = { t: 0, x: -99, y: -99 };
 
   constructor(
     private readonly el: HTMLElement,
@@ -74,6 +92,88 @@ export class InputController {
     if (this.keysHeld.has(k.panDown!) || this.keysHeld.has('ArrowDown')) dy -= speed;
     if (dx || dy) this.r.camera.panScreen(dx, dy);
     this.updateUnitHover();
+    // The line tool put down (Escape, another tool, right click): the drawing goes with it.
+    if (this.r.overlay.lineDraft && hud.tool.k !== 'line') this.clearLine();
+  }
+
+  // ------------------------------------------------------------ front lines
+  private get draft(): LineDraft | null {
+    const tl = hud.tool;
+    if (tl.k !== 'line') return null;
+    let d = this.r.overlay.lineDraft;
+    if (!d || d.kind !== tl.kind)
+      d = this.r.overlay.lineDraft = { kind: tl.kind, pts: [], cursor: [0, 0], stage: 'trace', side: 1 };
+    return d;
+  }
+
+  private clearLine(): void {
+    this.r.overlay.lineDraft = null;
+    hud.lineTip = null;
+  }
+
+  /** The tile centre under the pointer (screen px), in tiles. */
+  private snap(sx: number, sy: number): [number, number] {
+    const [wx, wy] = this.r.camera.screenToWorld(sx, sy);
+    const s = this.session.state;
+    const x = Math.min(s.width - 1, Math.max(0, Math.floor(wx)));
+    const y = Math.min(s.height - 1, Math.max(0, Math.floor(wy)));
+    return [x + 0.5, y + 0.5];
+  }
+
+  /** Pointer moved with the line tool in hand: the preview follows, the side under it is picked. */
+  private lineMove(d: LineDraft, sx: number, sy: number): void {
+    d.cursor = this.snap(sx, sy);
+    if (d.stage === 'side' && d.pts.length >= 4) d.side = sideOf(d.pts, d.cursor[0], d.cursor[1]);
+    this.lineTip(d, sx, sy);
+  }
+
+  /** The note beside the pointer: what the next click does, the troops it will take. */
+  private lineTip(d: LineDraft, sx: number, sy: number): void {
+    const L = hud.local;
+    const troops = short(Math.floor((L?.troops ?? 0) * hud.attackRatio));
+    const key =
+      d.stage === 'side' ? 'line.tip.side' : d.pts.length === 0 ? 'line.tip.start' : 'line.tip.next';
+    const text = t(key, { troops, pct: Math.round(hud.attackRatio * 100), s: LINE_OFFENSE_SETUP / 10 });
+    hud.lineTip = { text, sx, sy, ok: (L?.troops ?? 0) * hud.attackRatio >= 1 };
+  }
+
+  /** A press, then a release (a drag or a click) of the left button with the line tool. */
+  private lineRelease(d: LineDraft, sx: number, sy: number, moved: boolean): void {
+    const [x, y] = this.snap(sx, sy);
+    if (d.stage === 'side') {
+      this.commitLine(d);
+      return;
+    }
+    const now = performance.now();
+    const dbl = now - this.lineClick.t < 380 && Math.hypot(sx - this.lineClick.x, sy - this.lineClick.y) < 8;
+    this.lineClick = { t: now, x: sx, y: sy };
+    const [lx, ly] = [d.pts.at(-2), d.pts.at(-1)];
+    const fresh = lx !== x || ly !== y;
+    if (moved) {
+      // A drag from the first point: a straight line, ended on release.
+      if (fresh) d.pts.push(x, y);
+      this.endTrace(d);
+    } else if (dbl && d.pts.length >= 4) this.endTrace(d);
+    else if (fresh && d.pts.length < 2 * LINE_MAX_POINTS) d.pts.push(x, y);
+    this.lineTip(d, sx, sy);
+  }
+
+  /** Down with the left button: a drag starts the line from here. */
+  private linePress(d: LineDraft, sx: number, sy: number): void {
+    if (d.stage === 'trace' && d.pts.length === 0) d.pts.push(...this.snap(sx, sy));
+  }
+
+  /** The tracing ends (a drag released, a double click, Enter): the side is picked next. */
+  private endTrace(d: LineDraft): void {
+    if (d.pts.length < 4) return;
+    d.stage = 'side';
+    d.side = sideOf(d.pts, d.cursor[0], d.cursor[1]);
+  }
+
+  private commitLine(d: LineDraft): void {
+    this.session.cmd({ t: 'line', kind: d.kind, pts: d.pts.slice(), side: d.side, ratio: hud.attackRatio });
+    hud.tool = { k: 'none' };
+    this.clearLine();
   }
 
   /**
@@ -100,6 +200,8 @@ export class InputController {
   private pointerDown(e: PointerEvent): void {
     const [x, y] = this.local(e);
     this.down = { x, y, button: e.button, shift: e.shiftKey, moved: false, t: performance.now() };
+    const d = e.button === 0 ? this.draft : null;
+    if (d) this.linePress(d, x, y);
     this.last = { x, y };
     this.velocity = { x: 0, y: 0 };
     this.r.camera.vx = this.r.camera.vy = 0;
@@ -118,7 +220,14 @@ export class InputController {
       this.r.overlay.hoverTile = tile;
       this.updateHover(tile, x, y);
     }
+    const d = this.pointer ? this.draft : null;
+    if (d) this.lineMove(d, x, y);
     if (!this.down) return;
+    if (d && this.down.button === 0) {
+      // Drawing, not panning: the drag traces the line.
+      if (Math.hypot(x - this.down.x, y - this.down.y) > 6) this.down.moved = true;
+      return;
+    }
     const dx = x - this.last.x;
     const dy = y - this.last.y;
     this.last = { x, y };
@@ -146,6 +255,11 @@ export class InputController {
       this.r.overlay.dragRect = null;
       const ids = this.r.unitsInRect(x0, y0, x1, y1, this.session.viewer, U.Warship);
       this.setSelection(ids);
+      return;
+    }
+    const line = d.button === 0 ? this.draft : null;
+    if (line) {
+      this.lineRelease(line, x, y, d.moved);
       return;
     }
     if (d.moved) {
@@ -217,6 +331,20 @@ export class InputController {
     const action = Object.keys(k).find((a) => k[a] === e.code);
     if (e.code === 'Escape') {
       this.hooks.onKey('escape', e);
+      return;
+    }
+    // Drawing a line: Enter ends the tracing (or lays it), Backspace takes the last point back.
+    const d = this.draft;
+    if (d && (e.code === 'Enter' || e.code === 'NumpadEnter')) {
+      e.preventDefault();
+      if (d.stage === 'side') this.commitLine(d);
+      else this.endTrace(d);
+      return;
+    }
+    if (d && e.code === 'Backspace') {
+      e.preventDefault();
+      if (d.stage === 'side') d.stage = 'trace';
+      else d.pts.length = Math.max(0, d.pts.length - 2);
       return;
     }
     if (!action) return;
@@ -405,12 +533,14 @@ export const BUILD_KEYS: Record<string, number> = {
   buildCity: B.City,
   buildPort: B.Port,
   buildFactory: B.Factory,
-  buildDefense: B.DefensePost,
   buildSilo: B.Silo,
   buildSam: B.Sam,
   buildRadar: B.Radar,
   buildAirfield: B.Airfield,
   buildLab: B.Lab,
 };
+
+/** The front-line tools (core/rules/lines.ts): 0 defensive, 1 offensive. */
+export const LINE_KEYS: Record<string, number> = { lineDefense: 0, lineOffense: 1 };
 
 export const NUKE_KEYS: Record<string, number> = { nukeA: N.Atom, nukeH: N.Hydrogen, nukeMirv: N.Mirv };

@@ -10,7 +10,9 @@ import type { Building } from '../buildings/building';
 import { toBase64, fromBase64 } from '../map/format';
 import { migrateCapitals } from '../rules/capital';
 import { migrateTech } from '../rules/tech';
-import { BUILDING_COUNT } from '../game/constants';
+import { B, BUILDING_COUNT } from '../game/constants';
+import { rebuildLineIndex, type FrontLine } from '../rules/lines';
+import { removeBuilding } from '../buildings/buildings';
 
 /**
  * 2: OpenFront economy (1.2.0) — per-type build counters.
@@ -94,6 +96,8 @@ export interface Snapshot {
   players: unknown[];
   attacks: unknown[];
   buildings: unknown[];
+  /** Front lines (1.17; absent from older saves). */
+  lines?: unknown[];
   units: unknown;
   rails: unknown;
   victory: unknown;
@@ -128,6 +132,7 @@ export function takeSnapshot(game: Game): Snapshot {
     players: game.players.map((p) => (p ? toPlain(p) : null)) as unknown[],
     attacks: game.attacks.map((a) => toPlain(a)) as unknown[],
     buildings: [...game.buildings.values()].map((b) => toPlain(b)) as unknown[],
+    lines: game.lines.map((l) => toPlain(l)) as unknown[],
     units: toPlain(game.units),
     rails: toPlain(game.rails),
     victory: toPlain(game.victory),
@@ -217,6 +222,10 @@ export function restoreSnapshot(map: GameMap, snap: Snapshot): Game {
       if (p) p.levelsBuilt[b.type] = p.levelsBuilt[b.type]! + b.level;
     }
   }
+  game.lines = (snap.lines ?? []).map((raw) => fromPlain(raw) as FrontLine);
+  rebuildLineIndex(game);
+  // Defence posts were retired in 1.17 (front lines): an older save's are taken down.
+  for (const b of [...game.buildings.values()]) if (b.type === B.DefensePost) removeBuilding(game, b, false);
   game.units = fromPlain(snap.units) as Game['units'];
   game.rails = fromPlain(snap.rails) as Game['rails'];
   rebuildRailIndex(game);

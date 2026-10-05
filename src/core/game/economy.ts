@@ -47,7 +47,8 @@ export function maxTroops(game: Game, p: Player, cityLevels = completedCityLevel
   if (p.revolution) max = Math.max(max, REVOLUTION_LEVY_CAP * p.revoltDensity * p.usefulTiles);
   else if (p.kind === 'nation') max *= game.difficulty().troops;
   if (p.kind !== 'tribe' && game.config.features.tech) max *= techTroopCap(p); // Conscription
-  return max;
+  // Troops on front lines (rules/lines.ts) count against the ceiling while they stand.
+  return Math.max(1, max - p.lineTroops);
 }
 
 /**

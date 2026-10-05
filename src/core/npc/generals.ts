@@ -8,7 +8,8 @@
 // impossible AI games without a winner after 60 minutes.)
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
-import { B, DEFENSE_POST_RANGE } from '../game/constants';
+import { LINE_REACH } from '../game/constants';
+import { LineKind, linesOf, locate } from '../rules/lines';
 import { applyCommand } from '../game/commands';
 import { U } from '../units/unit';
 import { TACTICS } from './tactics';
@@ -48,7 +49,7 @@ function pick(game: Game, p: Player, ctx: GeneralContext, level: number): number
         ctx.contact >= 0 &&
         ctx.incoming >= p.troops * AI_RAMPART_SHARE &&
         nearCapital(game, p, ctx.contact) &&
-        postNear(game, p, ctx.contact)
+        lineNear(game, p, ctx.contact)
         ? ctx.contact
         : -1;
     case 'sabotage': {
@@ -78,15 +79,14 @@ function nearCapital(game: Game, p: Player, tile: number): boolean {
   );
 }
 
-function postNear(game: Game, p: Player, tile: number): boolean {
+/** Whether a defensive line of p stands near `tile` (the Rampart doubles what lines hold back). */
+function lineNear(game: Game, p: Player, tile: number): boolean {
   const w = game.map.width;
-  const x = tile % w;
-  const y = (tile / w) | 0;
-  let found = false;
-  game.grid.query(x, y, DEFENSE_POST_RANGE, (id) => {
-    const b = game.buildings.get(id)!;
-    if (b.owner === p.id && b.type === B.DefensePost && Math.hypot(b.x - x, b.y - y) <= DEFENSE_POST_RANGE)
-      found = true;
+  const x = (tile % w) + 0.5;
+  const y = ((tile / w) | 0) + 0.5;
+  return linesOf(game, p.id).some((l) => {
+    if (l.kind !== LineKind.Defensive) return false;
+    const at = locate(l.pts, x, y);
+    return Math.hypot(at.px - x, at.py - y) <= LINE_REACH + 6;
   });
-  return found;
 }

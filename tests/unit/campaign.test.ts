@@ -376,7 +376,8 @@ describe('campaign: guide', () => {
   });
 
   it('the starting treasury pays for the first build of the missions that start with one', () => {
-    for (const id of ['m1', 'm2', 'm3', 'm4', 'm5']) {
+    // (m2's first order is a defensive line since 1.17: paid in troops, not gold.)
+    for (const id of ['m1', 'm3', 'm4', 'm5']) {
       const m = mission(id);
       const first = m.guide.find((s) => s.cost)!;
       expect(m.config(1, 'X').startGold, `${id} ${first.key}`).toBeGreaterThanOrEqual(first.cost!(ctx()));

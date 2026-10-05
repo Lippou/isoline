@@ -9,8 +9,6 @@ import {
   CAPTURE_OCCUPATION_TICKS,
   CITY_COST_BASE,
   CITY_COST_CAP,
-  DEFENSE_POST_COST_CAP,
-  DEFENSE_POST_COST_STEP,
   DEMOLISH_MIN_TICKS,
   DEMOLISH_REFUND,
   LAB_COST_BASE,
@@ -82,8 +80,6 @@ function rawCost(game: Game, p: Player, type: B): number {
     case B.Port:
     case B.Factory:
       return Math.min(CITY_COST_CAP, CITY_COST_BASE * 2 ** priceIndex(game, p, type));
-    case B.DefensePost:
-      return Math.min(DEFENSE_POST_COST_CAP, DEFENSE_POST_COST_STEP * (priceIndex(game, p, type) + 1));
     case B.Silo:
       return SILO_COST;
     case B.Sam:
@@ -119,6 +115,8 @@ export function upgradeCost(game: Game, p: Player, b: Building): number {
 export function buildingAllowed(game: Game, type: B): boolean {
   const cfg = game.config;
   switch (type) {
+    case B.DefensePost:
+      return false; // retired in 1.17: front lines (rules/lines.ts)
     case B.Port:
       return cfg.allowPorts;
     case B.Factory:

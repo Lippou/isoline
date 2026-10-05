@@ -14,7 +14,9 @@ export const DEFAULT_KEYS: Record<string, string> = {
   buildCity: 'Digit1',
   buildPort: 'Digit2',
   buildFactory: 'Digit3',
-  buildDefense: 'Digit4',
+  /** Front lines (1.17): the defensive line took the defence post's key; the offensive one is new. */
+  lineDefense: 'Digit4',
+  lineOffense: 'KeyQ',
   buildSilo: 'Digit5',
   buildSam: 'Digit6',
   warship: 'Digit7',
@@ -155,6 +157,12 @@ export function migrateSettings(raw: Partial<Settings> & { version?: number }): 
   // v4 → v5: Space pauses (the players asked for it); the terrain view moves to Tab. A key
   // the player chose for either stays theirs.
   if ((raw.version ?? 1) < 5) migrateSpacePause(s.keys, raw.keys ?? {});
+  // 1.17: the defence post gave way to the defensive line, which keeps the key chosen for it.
+  const oldKeys = s.keys as Record<string, string>;
+  if (oldKeys.buildDefense !== undefined) {
+    if (raw.keys?.buildDefense) oldKeys.lineDefense = raw.keys.buildDefense;
+    delete oldKeys.buildDefense;
+  }
   // The separate tutorial is gone (the campaign teaches the game): its flag goes too.
   delete (s.game as Partial<Record<string, unknown>>).tutorialDone;
   return s;

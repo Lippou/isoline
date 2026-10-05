@@ -54,5 +54,3 @@ export function majorBuilding(type: number): boolean {
 
 /** Below this zoom only the major buildings are drawn (plus the build-bar filter's). */
 export const MINOR_BADGE_ZOOM = 1.1;
-/** Below this zoom defence posts are hidden (they come in clusters along fronts). */
-export const DEFENSE_BADGE_ZOOM = 2;

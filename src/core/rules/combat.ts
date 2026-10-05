@@ -44,6 +44,7 @@ import { hash2 } from '../rng';
 import { addGold } from '../game/economy';
 import { capitalSpeedMult } from './capital';
 import { guerrilla } from './revolution';
+import { lineDefense, lineOffenseMult } from './lines';
 
 export class Attack {
   readonly id: number;
@@ -149,11 +150,11 @@ function falloutMult(game: Game, tile: number): number {
   return FALLOUT_COMBAT_MULT - (FALLOUT_COMBAT_SLOPE * Math.max(0, land - game.usefulLand)) / land;
 }
 
-/** Relative cost of crossing tile i for the front's shape (1 = plains): terrain, defence posts, fallout. */
-function tileCost(game: Game, tile: number, target: number): number {
+/** Relative cost of crossing tile i for the front's shape (1 = plains): terrain, defensive lines, fallout. */
+function tileCost(game: Game, tile: number, target: number, attacker: number): number {
   const t = game.map.terrain[tile]!;
   let cost = (SPEED[t]! / PLAINS_COST) * falloutMult(game, tile) * winterCost(game, t);
-  if (target > 0) cost *= game.defenseSpeedMult(tile, target);
+  if (target > 0) cost *= lineDefense(game, tile, target, attacker)?.speed ?? 1;
   return cost;
 }
 
@@ -176,10 +177,11 @@ export interface TileOutcome {
 
 /**
  * OpenFront's attackLogic for attack `a` taking `tile`, with `borderSize` tiles on its
- * front this tick. mag and tile cost come from the terrain, ×5 / ×3 near an enemy
- * defence post, ×(5 − 2 × fallout share) on fallout; mag ×0.75 inside the attacker's
- * reconnaissance zone (Isoline's aviation); both × the guerrilla's on a revolution's land
- * (rules/revolution.ts).
+ * front this tick. mag and tile cost come from the terrain, ×(5 − 2 × fallout share) on
+ * fallout; mag ×0.75 inside the attacker's reconnaissance zone (Isoline's aviation) and
+ * down to ×0.5 out of its offensive lines; tile cost up to ×3 in front of a defensive line,
+ * whose troops add to the defender's (rules/lines.ts, in place of OpenFront's defence
+ * post); both × the guerrilla's on a revolution's land (rules/revolution.ts).
  * - Wilderness: loss mag / 5 (tribes mag / 10); fraction clamp(2,000 × cost / troops, 5, 100) / (2 × border),
  *   the bounds × cost / 16.5 on glaciers and high peaks.
  * - Player: loss mag × clamp(r, 0.6, 2) × (0.463 × bonus(A, 0.7) × bonus(D, 0.3) + 0.0039 × D troops per tile),
@@ -194,9 +196,15 @@ export function attackLogic(game: Game, a: Attack, tile: number, borderSize: num
   let mag = MAG[t]! * game.techMagMult(a.attacker, t);
   // A harsh winter (world event) slows the conquest of cold land.
   let cost = SPEED[t]! * winterCost(game, t);
+  // A defensive line in the way (rules/lines.ts): slower, and its troops stand in the clash.
+  let lineTroops = 0;
   if (T) {
-    mag *= game.defenseMagMult(tile, a.target) * game.reconLossMult(a.attacker, tile);
-    cost *= game.defenseSpeedMult(tile, a.target);
+    mag *= game.reconLossMult(a.attacker, tile) * lineOffenseMult(game, tile, a.attacker);
+    const line = lineDefense(game, tile, a.target, a.attacker);
+    if (line) {
+      cost *= line.speed;
+      lineTroops = line.troops;
+    }
     // Revolutions (1.16): guerrilla in every street, barricades right after the outbreak.
     if (T.revolution) {
       const g = guerrilla(game, T, a.attacker);
@@ -231,7 +239,7 @@ export function attackLogic(game: Game, a: Attack, tile: number, borderSize: num
   const traitor = T.debuffUntil > game.tick;
   const bonusD = largeTerritoryBonus(T.tiles, LARGE_DEFENDER_DEPTH);
   const defenderLoss = T.troops / Math.max(1, T.tiles);
-  const r = T.troops / troops;
+  const r = (T.troops + lineTroops) / troops;
   const attackerLoss =
     mag *
     (traitor ? TRAITOR_DEFENSE_MULT : 1) *
@@ -305,7 +313,7 @@ function arrivalTime(game: Game, a: Attack, j: number): number {
     owner[q] !== a.attacker ? Infinity : game.queuedBy[q] === a.id ? game.frontTime[q]! : a.seedClock;
   const th = Math.min(x > 0 ? reached(j - 1) : Infinity, x < w - 1 ? reached(j + 1) : Infinity);
   const tv = Math.min(y > 0 ? reached(j - w) : Infinity, y < map.height - 1 ? reached(j + w) : Infinity);
-  const c = tileCost(game, j, a.target) * jitter(game, j, a.id);
+  const c = tileCost(game, j, a.target, a.attacker) * jitter(game, j, a.id);
   let t: number;
   if (th === Infinity && tv === Infinity) t = a.clock + c;
   else if (th === Infinity || tv === Infinity) t = Math.min(th, tv) + c;

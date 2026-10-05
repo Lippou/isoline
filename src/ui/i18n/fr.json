@@ -331,7 +331,8 @@
     "teammateClick": "Votre coéquipier : clic droit pour lui donner de l'or ou des troupes",
     "modeHvnSolo": "Seul contre les nations",
     "modeHvnSoloTip": "Vous seul contre une coalition de toutes les nations (elles ne s'attaquent pas entre elles).",
-    "modeHvnTip": "Tous les humains ensemble contre la coalition des nations (elles ne s'attaquent pas entre elles)."
+    "modeHvnTip": "Tous les humains ensemble contre la coalition des nations (elles ne s'attaquent pas entre elles).",
+    "groupFront": "Front"
   },
   "panel": {
     "diplomacy": "Diplomatie",
@@ -415,7 +416,9 @@
     "teamGiftDesc": "Or ou troupes, reçus aussitôt",
     "demolishDesc": "Hors service pendant la démolition, abattu à la fin du compte à rebours : {pct} % de l'or investi rendu.",
     "demolishCancel": "Annuler la démolition",
-    "demolishCancelDesc": "Le bâtiment reprend du service aussitôt, rien n'est perdu."
+    "demolishCancelDesc": "Le bâtiment reprend du service aussitôt, rien n'est perdu.",
+    "lineRemove": "Démonter la ligne",
+    "lineRemoveDesc": "Ses troupes reviennent dans l’armée."
   },
   "confirm": {
     "betrayTitle": "Trahir votre allié ?",
@@ -1048,7 +1051,7 @@
     },
     "rampart": {
       "name": "Rempart",
-      "desc": "Postes de défense deux fois plus efficaces pendant 30 s."
+      "desc": "Lignes défensives deux fois plus efficaces pendant 30 s."
     },
     "sabotage": {
       "name": "Sabotage",
@@ -1419,7 +1422,8 @@
     "raidShipSunk": "Raid aérien ({by}) — {ship} coulé !",
     "raidHitShip": "Raid sur {player} — {ship} touché.",
     "raidHitShipSunk": "Raid sur {player} — {ship} coulé.",
-    "revolutionSpread": "La révolte s'étend : {tiles} cases de plus rejoignent {tribe}."
+    "revolutionSpread": "La révolte s'étend : {tiles} cases de plus rejoignent {tribe}.",
+    "lineReady": "Votre ligne offensive est installée."
   },
   "error": {
     "nukeSelfMirv": "Un MIRV ne peut pas viser votre propre pays : ses ogives tomberaient sur tout votre territoire.",
@@ -1501,6 +1505,13 @@
       "disabled": "Les généraux sont désactivés dans cette partie.",
       "cooldown": "Votre général se repose : de nouveau prêt dans {s} s.",
       "noTarget": "Aucun train ni navire marchand ennemi à moins de 40 tuiles."
+    },
+    "line": {
+      "phase": "Les lignes se posent une fois la partie lancée.",
+      "max": "{n} lignes au plus : démontez-en une (clic droit dessus).",
+      "short": "Une ligne se trace sur vos propres terres.",
+      "troops": "Pas assez de troupes pour tenir cette ligne.",
+      "points": "Tracé invalide."
     }
   },
   "keys": {
@@ -1511,7 +1522,6 @@
     "buildCity": "Ville",
     "buildPort": "Port",
     "buildFactory": "Usine",
-    "buildDefense": "Poste de défense",
     "buildSilo": "Silo",
     "buildSam": "SAM",
     "buildRadar": "Tour radar",
@@ -1546,7 +1556,9 @@
     "speedUp": "Accélérer le temps (solo)",
     "buildLab": "Centre de recherche",
     "photoMode": "Mode photo",
-    "hudFold": "Replier / déplier l'interface"
+    "hudFold": "Replier / déplier l'interface",
+    "lineDefense": "Ligne défensive",
+    "lineOffense": "Ligne offensive"
   },
   "settings": {
     "tab": {
@@ -1582,7 +1594,7 @@
     "muteUnfocused": "Atténuer quand la fenêtre est inactive",
     "testSound": "Tester le son",
     "confirmations": "Demander confirmation (trahisons)",
-    "defenceZones": "Zones des postes de défense sur la carte",
+    "defenceZones": "Portée des lignes de front sur la carte",
     "fontSize": "Taille du texte",
     "wheel": "Molette / pavé tactile",
     "wheel.zoom": "Molette : zoom",
@@ -1623,7 +1635,7 @@
       "muteUnfocused": "Baisse le son quand vous passez à une autre fenêtre.",
       "playerName": "Affiché sur la carte et dans les salons en réseau.",
       "confirmations": "Une confirmation est demandée avant de trahir un allié.",
-      "defenceZones": "La portée des postes de défense de chaque pays en vue, toujours affichée en grisé : les vôtres hachurés « / » sous une ligne continue à crans, ceux des autres hachurés « \\ » sous une ligne en tirets. Les SAM gardent leur vue de couverture pendant la visée.",
+      "defenceZones": "Devant chaque ligne de front en vue, sa portée en grisé, bordée de tirets. Les lignes elles-mêmes restent toujours affichées : dents pour la défensive, chevrons pour l'offensive.",
       "fontSize": "Taille du texte de l'interface.",
       "wheel": "Adaptez le zoom à une souris ou à un pavé tactile.",
       "highContrast": "Renforce les filets et le texte secondaire.",
@@ -1686,11 +1698,11 @@
     "m2": {
       "title": "Tenir la ligne",
       "main": "Survivre 20 minutes",
-      "bonus": "Construire 3 postes de défense",
+      "bonus": "Tenir 2 lignes défensives",
       "outro": "Vos lignes ont tenu. Les assaillants se sont brisés sur vos remparts.",
       "brief": "L'Europe est une poudrière. Trente nations s'y disputent chaque vallée, et la difficulté est réglée sur difficile. Vous ne gagnerez pas cette guerre ; il s'agit de ne pas la perdre. Tenez vingt minutes sans être rayé de la carte.",
       "tip1": "Les montagnes, les collines et les forêts coûtent plus cher à l'attaquant : appuyez-vous dessus.",
-      "tip2": "Un poste de défense multiplie par cinq les pertes de l'assaillant dans un rayon de quinze tuiles."
+      "tip2": "Une ligne défensive ralentit jusqu'à trois fois l'assaillant qui arrive de face, mais son dos est nu."
     },
     "m3": {
       "title": "L'île",
@@ -2189,7 +2201,7 @@
     "m2": {
       "spawn": "Placez votre capitale. Un relief accidenté, comme les Alpes ou les Carpates, sera plus facile à défendre.",
       "expand": "Prenez vite des terres libres avant que les nations voisines ne vous encerclent.",
-      "defense": "Construisez un poste de défense (touche 4) près de votre frontière la plus exposée.",
+      "line": "Tracez une ligne défensive (touche 4) face à votre frontière la plus exposée, puis cliquez du côté de l’ennemi.",
       "threats": "Quand un voisin masse une armée bien plus forte que la vôtre à votre frontière, une alerte « frontière menacée » s'affiche et le journal la consigne. Renforcez ce front, ou faites de ce voisin un allié.",
       "alliance": "Proposez une alliance à un voisin : clic droit sur son territoire, ou fenêtre Diplomatie dans le rail de gauche. Les offres que vous recevez s'affichent en bas à droite : K pour accepter, L pour refuser.",
       "troops": "Laissez votre armée se reconstituer avant de repartir à l'attaque : atteignez la moitié de votre plafond de troupes.",
@@ -2577,7 +2589,7 @@
       "capitalRazed": "Le trésor qui s'y trouvait part en fumée ; choisissez un nouveau siège du gouvernement.",
       "capitalTaken": "{gold} or saisis dans son trésor ; le pays est désorganisé pendant une minute.",
       "capitalFell": "Le pays est désorganisé pendant une minute et doit choisir un nouveau siège.",
-      "secessionRegion": "{tiles} cases mal tenues proclament leur indépendance. Villes et postes de défense calment les conquêtes récentes.",
+      "secessionRegion": "{tiles} cases mal tenues proclament leur indépendance. Les villes calment les conquêtes récentes.",
       "doomStage": "Désormais, {effect}.",
       "midnight": "L'horloge de l'apocalypse arrête la partie : le plus grand pays l'emporte.",
       "zoneAnnounced": "Elle se referme dans {secs} s ; les terres hors du cercle en tirets seront perdues.",
@@ -3010,5 +3022,24 @@
     "warship": "Navire de guerre",
     "transport": "Transport",
     "merchant": "Navire marchand"
+  },
+  "line": {
+    "defensive": {
+      "name": "Ligne défensive",
+      "short": "Ligne déf.",
+      "desc": "Tracez-la sur vos terres : elle ralentit jusqu'à trois fois l'ennemi qui attaque de face les 12 cases devant elle, et ses troupes se battent avec vous. Son dos est nu : elle ne protège qu'un côté. Payée en troupes (la part d'armée choisie), rendues au démontage ; tant qu'elle tient, votre plafond de troupes baisse d'autant."
+    },
+    "offensive": {
+      "name": "Ligne offensive",
+      "short": "Ligne off.",
+      "desc": "Tracez-la sur vos terres face à l'ennemi : après 30 s d'installation, vos attaques qui en partent perdent jusqu'à deux fois moins de troupes dans les 12 cases devant elle. Dos nu, payée en troupes comme la ligne défensive."
+    },
+    "costTroops": "{n} troupes ({pct} % de l’armée)",
+    "howTo": "Glisser d’un point à un autre, ou cliquer point par point (double-clic ou Entrée pour finir), puis cliquer du côté de l’ennemi.",
+    "tip": {
+      "start": "Cliquez ou glissez pour tracer · {troops} troupes ({pct} %)",
+      "next": "Clic : point suivant · double-clic ou Entrée : terminer · Retour : annuler le point",
+      "side": "Cliquez du côté de l’ennemi pour poser la ligne · {troops} troupes"
+    }
   }
 }

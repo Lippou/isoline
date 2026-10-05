@@ -86,6 +86,8 @@ const placed = (c: MissionCtx) => (meView(c)?.tiles ?? 0) > 0;
  */
 const built = (c: MissionCtx, type: number) =>
   c.local?.buildingLevels?.[type] ?? c.local?.buildingCount[type] ?? 0;
+/** My defensive front lines standing (core/rules/lines.ts). */
+const defLines = (c: MissionCtx) => c.local?.lineCount?.[0] ?? 0;
 const buildCost = (type: number) => (c: MissionCtx) => c.local?.buildCosts[type] ?? 0;
 const mem = (c: MissionCtx, k: string) => c.memory[k] ?? 0;
 /** Ticks the current guide step has been on screen. */
@@ -233,13 +235,13 @@ export const MISSIONS: Mission[] = [
     ],
     bonus: {
       key: 'campaign.m2.bonus',
-      check: (c) => built(c, B.DefensePost) >= 3,
-      progress: (c) => count(built(c, B.DefensePost), 3),
+      check: (c) => defLines(c) >= 2,
+      progress: (c) => count(defLines(c), 2),
     },
     guide: [
       { key: 'guide.m2.spawn', done: placed },
       { key: 'guide.m2.expand', done: (c) => share(c) >= 0.015 },
-      { key: 'guide.m2.defense', done: (c) => built(c, B.DefensePost) >= 1, cost: buildCost(B.DefensePost) },
+      { key: 'guide.m2.line', done: (c) => defLines(c) >= 1 },
       { key: 'guide.m2.threats', done: read(READ * 1.5) },
       { key: 'guide.m2.alliance', done: (c) => (c.local?.allies.length ?? 0) >= 1 },
       { key: 'guide.m2.troops', done: (c) => !!c.local && c.local.troops >= c.local.popCap * 0.5 },

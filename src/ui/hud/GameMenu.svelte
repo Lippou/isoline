@@ -79,7 +79,19 @@
   /** The reference of the keys, by group (the help page). */
   const GROUPS: [string, string[]][] = $derived([
     ['attack', ['attackHover', 'boatHover', 'ratioDown', 'ratioUp']],
-    ['build', ['buildCity', 'buildPort', 'buildFactory', 'buildDefense', 'buildSilo', 'buildSam', 'warship']],
+    [
+      'build',
+      [
+        'buildCity',
+        'buildPort',
+        'buildFactory',
+        'lineDefense',
+        'lineOffense',
+        'buildSilo',
+        'buildSam',
+        'warship',
+      ],
+    ],
     ['nukes', ['nukeA', 'nukeH', 'nukeMirv', 'flipArc']],
     ['command', ['selectWarships', 'general', 'home']],
     ['diplomacy', ['allyAccept', 'allyRefuse', 'chat']],

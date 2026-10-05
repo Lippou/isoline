@@ -1,7 +1,7 @@
 // Glue between a Session, the renderer, the HUD store, audio and persistence.
 import { Session, loadMapSource } from '../../engine/session';
 import { GameRenderer, type RenderSettings } from '../../render/renderer';
-import { InputController, BUILD_KEYS, NUKE_KEYS, guardBetrayal } from './input';
+import { InputController, BUILD_KEYS, LINE_KEYS, NUKE_KEYS, guardBetrayal } from './input';
 import { hud, resetHud, toast, subtitle, reportFall, showPact, openPanel } from '../stores/game.svelte';
 import { note } from '../stores/note.svelte';
 import { isTeammate } from './team';
@@ -13,16 +13,7 @@ import { t, i18n, clock, short } from '../i18n/i18n.svelte';
 import { mapsBase, bridge, writeJson } from '../bridge';
 import { app, setSession, go, confirmModal, type LaunchRequest } from '../stores/app.svelte';
 import type { GameEvent } from '../../core/game/events';
-import {
-  portRange,
-  A,
-  B,
-  N,
-  DEFENSE_POST_RANGE,
-  RAIL_CONNECT_RANGE,
-  FIGHTER_RANGE,
-  radarRange,
-} from '../../core/game/constants';
+import { portRange, A, B, N, RAIL_CONNECT_RANGE, FIGHTER_RANGE, radarRange } from '../../core/game/constants';
 import { launchInfo, type LaunchInfo } from './nukePreview';
 import { AIR_REACH, airAim, type AirAim } from './airPreview';
 import { audio } from '../../audio/audio';
@@ -211,6 +202,15 @@ export class GameController {
               gold: p.gold,
               troops: p.troops,
               capital: p.capital,
+            })),
+            lines: st.lines.map((l) => ({
+              id: l.id,
+              owner: l.owner,
+              kind: l.kind,
+              troops: l.troops,
+              tiles: l.tiles.length,
+              readyTick: l.readyTick,
+              strength: l.strength,
             })),
           };
         },
@@ -474,6 +474,11 @@ export class GameController {
     }
     if (action in BUILD_KEYS) {
       hud.tool = { k: 'build', kind: BUILD_KEYS[action]! };
+      return;
+    }
+    if (action in LINE_KEYS) {
+      const kind = LINE_KEYS[action]!;
+      hud.tool = hud.tool.k === 'line' && hud.tool.kind === kind ? { k: 'none' } : { k: 'line', kind };
       return;
     }
     if (action in NUKE_KEYS) {
@@ -962,17 +967,15 @@ export class GameController {
     const rangeOf = (type: number, level: number, owner: number): number =>
       type === B.Sam
         ? this.session.state.samReach(owner, level)
-        : type === B.DefensePost
-          ? DEFENSE_POST_RANGE
-          : type === B.Radar
-            ? radarRange(level)
-            : type === B.Port
-              ? portRange(level)
-              : type === B.Factory
-                ? RAIL_CONNECT_RANGE
-                : type === B.Airfield
-                  ? FIGHTER_RANGE
-                  : 0;
+        : type === B.Radar
+          ? radarRange(level)
+          : type === B.Port
+            ? portRange(level)
+            : type === B.Factory
+              ? RAIL_CONNECT_RANGE
+              : type === B.Airfield
+                ? FIGHTER_RANGE
+                : 0;
     const colorOf = (type: number) => (type === B.Sam ? 0x7fa9d6 : type === B.Port ? 0x6fb6c9 : 0xd1a64a);
     if (
       hud.hover?.building &&

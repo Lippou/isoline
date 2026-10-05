@@ -4,7 +4,7 @@
 // reserve), so that the air war never starves the economy. What a nation does with it
 // depends on the difficulty (TACTICS.air):
 //   0 (easy)       bombers now and then at whatever building of its enemy is in reach;
-//   1 (normal)     raids on the defence post holding its offensive, on SAMs before a nuclear
+//   1 (normal)     raids on SAMs before a nuclear
 //                  strike, then on silos, airfields and the most valuable buildings, avoiding
 //                  loaded SAMs (unless it can empty them); reconnaissance over its offensives
 //                  (one in two) and before half of its raids; fighters at transports sailing
@@ -28,7 +28,6 @@ import {
   AIR_SPEED,
   B,
   BOMBER_RANGE,
-  DEFENSE_POST_RANGE,
   FIGHTER_RANGE,
   RECON_RANGE,
   SCRAMBLE_SIGHT,
@@ -321,14 +320,6 @@ function strike(game: Game, p: Player, m: AirMem, ctx: AirContext): number {
   for (const b of game.buildings.values())
     if (b.owner === p.id && b.type === B.Airfield && inService(b)) fields.push(b);
   if (fields.length === 0) return cost;
-  // Our offensive's front against q (a few frontier tiles), to find the defence post holding it.
-  const frontTiles: number[] = [];
-  for (const a of game.attacks) {
-    if (a.done || a.attacker !== p.id || a.target !== q.id) continue;
-    const h = a.heapTiles;
-    const step = Math.max(1, Math.floor(h.length / 8));
-    for (let k = 0; k < h.length; k += step) frontTiles.push(h[k]!);
-  }
   const nukes = game.config.allowNukes && p.buildingCount[B.Silo]! > 0;
   const sams: { b: Building; range: number }[] = [];
   for (const b of game.buildings.values())
@@ -371,7 +362,7 @@ function strike(game: Game, p: Player, m: AirMem, ctx: AirContext): number {
     if (score > bestScore) [best, bestScore, bestNeed, bestEscort] = [{ tile, x, y }, score, need, escort];
   };
   for (const b of game.buildings.values())
-    if (b.owner === q.id) consider(b.x, b.y, b.tile, buildingValue(b, frontTiles, nukes, w));
+    if (b.owner === q.id) consider(b.x, b.y, b.tile, buildingValue(b, nukes));
   // Its fleet at sea (1.16, normal and up): invasion transports (the troops aboard go down
   // with them) and veteran warships, when they are worth a bomber.
   if (tac.air >= 1)
@@ -405,14 +396,9 @@ function strike(game: Game, p: Player, m: AirMem, ctx: AirContext): number {
   return cost + 40;
 }
 
-/** What a raid on b is worth (before the defences): the front's defence post first. */
-function buildingValue(b: Building, frontTiles: number[], nukes: boolean, w: number): number {
+/** What a raid on b is worth (before the defences). */
+function buildingValue(b: Building, nukes: boolean): number {
   switch (b.type) {
-    case B.DefensePost: {
-      const r2 = (DEFENSE_POST_RANGE + 5) ** 2;
-      const onFront = frontTiles.some((ft) => ((ft % w) - b.x) ** 2 + (((ft / w) | 0) - b.y) ** 2 <= r2);
-      return onFront ? 9 : 0.5;
-    }
     case B.Sam:
       return nukes ? 6 : 2;
     case B.Silo:

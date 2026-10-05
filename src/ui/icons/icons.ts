@@ -154,6 +154,21 @@ const ArcDown: IconNode = [
   ['path', { d: 'm17.5 10.5 3.5-3 1.5 4.3' }],
 ];
 
+// Front lines (1.17): as on the map (render/frontLines.ts) — a line with teeth on the side it
+// faces (defensive), a line with chevrons pointing where it pushes (offensive).
+const LineDefense: IconNode = [
+  ['path', { d: 'M2 15h20' }],
+  ['path', { d: 'M3.5 15 5.5 10l2 5' }],
+  ['path', { d: 'M10 15l2-5 2 5' }],
+  ['path', { d: 'M16.5 15l2-5 2 5' }],
+];
+const LineOffense: IconNode = [
+  ['path', { d: 'M2 18h20' }],
+  ['path', { d: 'm3.5 14 3-4 3 4' }],
+  ['path', { d: 'm9 10 3-4 3 4' }],
+  ['path', { d: 'm14.5 14 3-4 3 4' }],
+];
+
 export const ICONS = {
   // resources & stats
   gold: Coins,
@@ -168,6 +183,8 @@ export const ICONS = {
   port: Anchor,
   factory: Factory,
   defensePost: Castle,
+  lineDefense: LineDefense,
+  lineOffense: LineOffense,
   silo: Rocket,
   sam: Crosshair,
   radar: Radar,

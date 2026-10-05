@@ -123,14 +123,28 @@ export const WILD_REACH = 200;
 /** Relation of a country towards its attacker, by difficulty (OpenFront: −60 / −70 / −80 / −100). */
 export const ATTACK_RELATION = { easy: -60, normal: -70, hard: -80, impossible: -100 } as const;
 
-// ----------------------------------------------------------- defence post
+// ------------------------------------------------------------ front lines
 /**
- * A defence post's reach: 15 tiles (1.15, deliberate deviation): OpenFront's 30 halved at
- * the player's request (« les défenses, on peut les diviser par deux »).
+ * Front lines (1.17, rules/lines.ts) replace the defence post, at the player's request: a
+ * line drawn on your own land and garrisoned with troops (the attack ratio), never gold.
+ * It faces one side (chosen after drawing) and leaves its back bare. Within LINE_REACH tiles
+ * in front of it, a defensive line slows what comes at it from the front (tile cost up to
+ * ×LINE_DEFENSE_SPEED, OpenFront's defence-post slowdown, and its troops stand in the
+ * clash); an offensive line cuts the losses of your attacks pushing out from it (×(1 −
+ * LINE_OFFENSE_LOSS)) once dug in, LINE_OFFENSE_SETUP ticks after it is laid. Both act
+ * in full while their troops per tile reach LINE_FULL_DENSITY × the country's own,
+ * proportionally below. Troops on lines come off the troop ceiling until taken down.
  */
-export const DEFENSE_POST_RANGE = 15;
-export const DEFENSE_POST_MAG = 5;
-export const DEFENSE_POST_SPEED = 3;
+export const LINE_REACH = 12;
+export const LINE_DEFENSE_SPEED = 3;
+export const LINE_OFFENSE_LOSS = 0.5;
+export const LINE_OFFENSE_SETUP = 300;
+export const LINE_FULL_DENSITY = 8;
+/** Lines a player may hold at once; tiles of one line; points a drawing may have. */
+export const LINE_MAX_PER_PLAYER = 8;
+export const LINE_MAX_TILES = 400;
+export const LINE_MIN_TILES = 3;
+export const LINE_MAX_POINTS = 24;
 
 // ---------------------------------------------------------------- traitor
 /**
@@ -193,9 +207,6 @@ export const INACTIVE_TICKS = sec(60);
  */
 export const CITY_COST_BASE = 125_000;
 export const CITY_COST_CAP = 1_000_000;
-/** Defence posts: min(cap, step × (n + 1)). */
-export const DEFENSE_POST_COST_STEP = 50_000;
-export const DEFENSE_POST_COST_CAP = 250_000;
 export const SILO_COST = 1_000_000;
 export const RADAR_COST = 300_000;
 export const AIRFIELD_COST = 800_000;
@@ -211,6 +222,7 @@ export const enum B {
   City = 0,
   Port = 1,
   Factory = 2,
+  /** Retired in 1.17 (front lines replaced it): never built; the slot keeps the tables aligned. */
   DefensePost = 3,
   Silo = 4,
   Sam = 5,
@@ -473,7 +485,7 @@ export const BOMBER_RANGE = 300;
 export const BOMBER_SNAP = 12;
 /** Rails and trains within this radius of the impact are cut / destroyed. */
 export const BOMBER_RADIUS = 6;
-/** Levels a hit knocks off (a level-1 building, a defence post, is destroyed)… */
+/** Levels a hit knocks off (a level-1 building is destroyed)… */
 export const BOMBER_LEVELS = 1;
 /** …and inside one of the bomber owner's reconnaissance zones. */
 export const BOMBER_LEVELS_SPOTTED = 2;

@@ -7,6 +7,7 @@ import type {
   WorldView,
   BuildingView,
   RailView,
+  LineView,
   TradeRoutesView,
 } from './protocol';
 import { UNIT_STRIDE } from './protocol';
@@ -38,6 +39,8 @@ export class ClientState {
   buildings: BuildingView[] = [];
   buildingById = new Map<number, BuildingView>();
   rails: RailView[] = [];
+  lines: LineView[] = [];
+  linesVersion = 0;
   railsVersion = 0;
   buildingsVersion = 0;
   fog: { w: number; h: number; data: Uint8Array } | null = null;
@@ -124,6 +127,10 @@ export class ClientState {
       this.buildings = u.buildings;
       this.buildingById = new Map(u.buildings.map((b) => [b.id, b]));
       this.buildingsVersion++;
+    }
+    if (u.lines) {
+      this.lines = u.lines;
+      this.linesVersion++;
     }
     if (u.rails) {
       this.rails = u.rails;

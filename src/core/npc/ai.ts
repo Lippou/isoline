@@ -7,7 +7,9 @@ import type { Player, Personality } from '../game/player';
 import { applyCommand } from '../game/commands';
 import {
   B,
-  DEFENSE_POST_RANGE,
+  LINE_MAX_PER_PLAYER,
+  LINE_OFFENSE_SETUP,
+  LINE_REACH,
   MIN_BUILDING_SPACING,
   RELATION_HOSTILE,
   REVOLUTION_PUSH_CHANCE,
@@ -39,6 +41,7 @@ import { AI_RAID_MEMORY, raider, thinkAir } from './airpower';
 import { skyThreat, tryNuke, warWish, type ArsenalMem, type WarState, type Wish } from './arsenal';
 import { thinkGeneral } from './generals';
 import { barricadesUp, guerrilla, nextSpread } from '../rules/revolution';
+import { LineKind, lineAcross, linesOf, locate } from '../rules/lines';
 
 /** A nation's memory (part of the AI state, hence of saves; the air force's and the arsenal's included). */
 interface Mem extends ArsenalMem {
@@ -195,6 +198,16 @@ const AI_RETAKE_MEMORY = 3000;
 const AI_COALITION_ODDS = 0.3;
 /** Ticks between two looks at the capital's safety. */
 const AI_CAPITAL_CHECK = 300;
+/**
+ * Front lines (rules/lines.ts): half-length and depth behind the border of a line laid
+ * across an enemy's way, the army's share on a defensive (offensive) line, and how long one
+ * stays before coming down when idle.
+ */
+const AI_LINE_HALF = 14;
+const AI_LINE_BACK = 5;
+const AI_LINE_RATIO = 0.12;
+const AI_OFFENSE_LINE_RATIO = 0.06;
+const AI_LINE_KEEP = 3000;
 /** A wave is spent once the troops still pressing fall under this share of its peak. */
 const AI_SPENT_WAVE = 0.3;
 /** Coalition strikes: the members stop starting other ventures this long before one (ticks)… */
@@ -472,7 +485,7 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
   // normal, a nation at war studies the military branch first (1.12), with SAMs, silos and
   // Aerospace on the way (1.12.1).
   if (game.config.features.tech) {
-    const silos = front && tac.posts >= 2 && game.players[runaway]!.buildingCount[B.Silo]! > 0;
+    const silos = front && tac.lines >= 2 && game.players[runaway]!.buildingCount[B.Silo]! > 0;
     // Threatened from the sky: SAM batteries (normal: nuked; from hard: also an enemy's silos).
     const threat = tac.adaptiveResearch ? skyThreat(game, p, war) : null;
     const sam = game.ai.nukedBy.has(p.id) || silos || threat === 'silos' ? lockFor(p.tech, 'sam') : -1;
@@ -495,6 +508,7 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
 
   // 3. Defence: counter-attack, fortify the front, guard the capital, answer spent waves.
   if (underAttack) cost += defend(game, p, m, tac, nb, incoming, runaway);
+  retireLines(game, p, underAttack);
   if (tac.counter) cost += answerSpentWaves(game, p, m, nb, incoming, cap);
 
   // 4. Expansion & offensive choice.
@@ -547,6 +561,10 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
       // Hard and up keep a reserve against their strongest hostile neighbour (OpenFront).
       const ratio = q ? reserveRatio(game, p, nb, q, offensiveRatio(p, q, t), tac) : 0;
       if (target && q && ratio > 0) {
+        // Hard and up dig an offensive line in first against a country (it acts after 30 s:
+        // the war's later waves push out from it).
+        if (tac.lines >= 2 && q.kind !== 'tribe' && linesNear(game, p, target.tile, LineKind.Offensive) === 0)
+          layLine(game, p, m, target.tile, q.id, LineKind.Offensive, AI_OFFENSE_LINE_RATIO);
         applyCommand(game, p.id, { t: 'attack', tile: target.tile, ratio });
         m.lastAttack = game.tick;
         if (q.kind !== 'tribe') [m.lastWar, m.warOn] = [game.tick, q.id];
@@ -576,11 +594,11 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
     enemies,
   });
 
-  // 5. Economy: build things (from normal, defence posts on the border with the runaway), the
+  // 5. Economy: build things (from normal, defensive lines on the border with the runaway), the
   // war chest first: what the war needs is saved for (arsenal.ts).
   const wish = warWish(game, p, m, war);
   if (game.tick - m.lastBuild > AI_BUILD_COOLDOWN / t.build) {
-    const post = front ? fortifyAgainst(game, p, m, tac, nb.get(runaway)!.tile) : 0;
+    const post = front ? fortifyAgainst(game, p, m, tac, nb.get(runaway)!.tile, runaway) : 0;
     cost += post > 0 ? post : tryBuild(game, p, m, t, underAttack, wish, war, nb);
   }
 
@@ -655,38 +673,74 @@ function warGoal(p: Player, plan: 'normal' | 'hard'): number {
   return -1;
 }
 
-/** Defence posts of p within `r` tiles of `tile`. */
-function postsNear(game: Game, p: Player, tile: number, r: number): number {
+/** p's lines of `kind` standing within reach of `tile` (rules/lines.ts). */
+function linesNear(game: Game, p: Player, tile: number, kind: LineKind): number {
   const w = game.map.width;
-  const x = tile % w;
-  const y = (tile / w) | 0;
+  const x = (tile % w) + 0.5;
+  const y = ((tile / w) | 0) + 0.5;
   let n = 0;
-  game.grid.query(x, y, r, (id) => {
-    const b = game.buildings.get(id);
-    if (b && b.owner === p.id && b.type === B.DefensePost && Math.hypot(b.x - x, b.y - y) <= r) n++;
-  });
+  for (const l of linesOf(game, p.id)) {
+    if (l.kind !== kind) continue;
+    const at = locate(l.pts, x, y);
+    if (Math.hypot(at.px - x, at.py - y) <= LINE_REACH + 6) n++;
+  }
   return n;
 }
 
-/** Build a defence post a few tiles inside p from `near` (true when ordered). */
-function buildPost(game: Game, p: Player, m: Mem, near: number): boolean {
-  if (p.gold < buildCost(game, p, B.DefensePost)) return false;
-  for (let k = 0; k < 4; k++) {
-    const tile = innerTile(game, p, near, 3 + game.rng.int(0, 4));
-    if (tile >= 0 && checkPlacement(game, p, B.DefensePost, tile) === 'ok') {
-      applyCommand(game, p.id, { t: 'build', kind: B.DefensePost, tile });
-      m.lastBuild = game.tick;
-      return true;
-    }
+/**
+ * Lays a line of `kind` across the way of `enemy` at `contact` (a tile on our common
+ * border): a few tiles inside our land, square to where its land lies, facing it, with
+ * `ratio` of the army on it. True when laid.
+ */
+function layLine(
+  game: Game,
+  p: Player,
+  m: Mem,
+  contact: number,
+  enemy: number,
+  kind: LineKind,
+  ratio: number,
+): boolean {
+  if (linesOf(game, p.id).length >= LINE_MAX_PER_PLAYER) return false;
+  const across = lineAcross(
+    game,
+    p,
+    contact,
+    enemy,
+    kind === LineKind.Defensive ? AI_LINE_BACK : AI_LINE_BACK - 2,
+    AI_LINE_HALF,
+  );
+  if (!across) return false;
+  const { pts, side } = across;
+  const before = game.lines.length;
+  applyCommand(game, p.id, { t: 'line', kind, pts, side, ratio });
+  if (game.lines.length === before) return false;
+  m.lastBuild = game.tick;
+  return true;
+}
+
+/**
+ * Lines no longer needed come down, their troops back in the army: after AI_LINE_KEEP, a
+ * defensive line once nobody attacks us, an offensive one once we attack nobody.
+ */
+function retireLines(game: Game, p: Player, underAttack: boolean): void {
+  for (const l of [...linesOf(game, p.id)]) {
+    const laid = l.readyTick - (l.kind === LineKind.Offensive ? LINE_OFFENSE_SETUP : 0);
+    if (game.tick - laid < AI_LINE_KEEP) continue;
+    const idle =
+      l.kind === LineKind.Defensive
+        ? !underAttack
+        : !game.attacks.some((a) => !a.done && a.attacker === p.id && a.target > 0);
+    if (idle) applyCommand(game, p.id, { t: 'lineRemove', id: l.id });
   }
-  return false;
 }
 
 /**
  * Under attack: OpenFront's defence. The biggest attacker's push is met in the clash; the
- * front is fortified once the incoming troops reach 35 % of ours (one post on easy and
- * normal, up to TACTICS.posts from hard, OpenFront's ceil(share / 0.4)); from normal, a
- * capital close to the front gets a post and, if a safer seat exists, moves away.
+ * front is fortified once the incoming troops reach 35 % of ours (a defensive line where
+ * OpenFront built defence posts: one on easy and normal, up to TACTICS.lines from hard,
+ * ceil(share / 0.4)); from normal, a capital close to the front gets a line and, if a safer
+ * seat exists, moves away.
  */
 function defend(
   game: Game,
@@ -731,17 +785,21 @@ function defend(
   const fortify =
     tac.runaway > 0 ? share >= 0.35 || worst === runaway : !(p.troops > worstTroops * 0.8) || share >= 1;
   if (fortify && game.tick - m.lastBuild > 30) {
-    const want = Math.min(tac.posts, Math.max(1, Math.ceil(share / 0.4)));
-    if (postsNear(game, p, contact, DEFENSE_POST_RANGE) < want && buildPost(game, p, m, contact)) cost += 30;
+    const want = Math.min(tac.lines, Math.max(1, Math.ceil(share / 0.4)));
+    if (
+      linesNear(game, p, contact, LineKind.Defensive) < want &&
+      layLine(game, p, m, contact, worst, LineKind.Defensive, AI_LINE_RATIO)
+    )
+      cost += 30;
   }
-  // The capital near the front: a post beside it, then a safer seat (5-min cooldown).
+  // The capital near the front: a line before it, then a safer seat (5-min cooldown).
   if (tac.counter && p.capital >= 0 && game.tick - (m.lastCapital ?? -AI_CAPITAL_CHECK) >= AI_CAPITAL_CHECK) {
     m.lastCapital = game.tick;
     cost += 40;
     const d = frontDistance(game, p, p.capital, 12);
     if (d <= 6) {
-      if (postsNear(game, p, p.capital, DEFENSE_POST_RANGE) === 0 && game.tick - m.lastBuild > 30)
-        buildPost(game, p, m, p.capital);
+      if (linesNear(game, p, p.capital, LineKind.Defensive) === 0 && game.tick - m.lastBuild > 30)
+        layLine(game, p, m, contact, worst, LineKind.Defensive, AI_LINE_RATIO);
       if (capitalCooldown(game, p) === 0) {
         cost += 80;
         const spot = bestCapitalSpot(game, p);
@@ -850,10 +908,17 @@ function coalitionLanding(game: Game, p: Player, m: Mem, runaway: number): numbe
   return 60;
 }
 
-/** Normal and up: defence posts along the border with the runaway (TACTICS.posts of them near the contact). */
-function fortifyAgainst(game: Game, p: Player, m: Mem, tac: Tactics, contact: number): number {
-  if (postsNear(game, p, contact, DEFENSE_POST_RANGE) >= tac.posts) return 0;
-  return buildPost(game, p, m, contact) ? 60 : 0;
+/** Normal and up: defensive lines along the border with the runaway (TACTICS.lines of them near the contact). */
+function fortifyAgainst(
+  game: Game,
+  p: Player,
+  m: Mem,
+  tac: Tactics,
+  contact: number,
+  runaway: number,
+): number {
+  if (linesNear(game, p, contact, LineKind.Defensive) >= tac.lines) return 0;
+  return layLine(game, p, m, contact, runaway, LineKind.Defensive, AI_LINE_RATIO) ? 60 : 0;
 }
 
 /**

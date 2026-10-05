@@ -1,5 +1,6 @@
 // The map surface: one full-map quad rendered by the atlas shader, fed by data
-// textures. Ownership/state textures are updated in dirty horizontal bands.
+// textures. Ownership/state textures are updated in dirty blocks (BLOCK_W × BLOCK_H tiles),
+// a run of neighbouring dirty blocks of a row at once.
 import {
   Geometry,
   Mesh,
@@ -14,7 +15,13 @@ import { navigableRivers } from '../core/map/rivers';
 import type { ClientState } from '../engine/clientState';
 import { worldCode } from './worldPalette';
 
-const BANDS = 32;
+/**
+ * Dirty blocks of the owner/state textures (tiles). Whole-width bands used to be re-sent: with
+ * fronts all over a large map nearly every band was dirty, and both textures went up almost
+ * whole on every tick (29 % of the main thread in a 200-country game, 1.17 profile).
+ */
+const BLOCK_W = 64;
+const BLOCK_H = 16;
 
 export interface MapUniforms {
   time: number;
@@ -76,7 +83,9 @@ export class MapLayer {
   private fogSrc: BufferImageSource;
   private readonly terrainSrc: BufferImageSource;
   private readonly reliefSrc: BufferImageSource;
-  private dirtyBands = new Uint8Array(BANDS);
+  private readonly cols: number;
+  private readonly rows: number;
+  private dirty: Uint8Array;
   /**
    * Tiles whose conquest ink is still diffusing, with the tick they changed. The
    * texture only keeps that tick modulo 256: once the fade is over the previous owner
@@ -87,10 +96,10 @@ export class MapLayer {
   private settleTicks: number[] = [];
   private settleHead = 0;
   private dirtyAny = false;
-  private readonly bandRows: number;
   private readonly shader: Shader;
   private glPartial = true;
   private loggedError = false;
+  private errorChecks = 8;
 
   constructor(
     private readonly state: ClientState,
@@ -99,7 +108,9 @@ export class MapLayer {
     const { width: w, height: h } = state;
     this.w = w;
     this.h = h;
-    this.bandRows = Math.ceil(h / BANDS);
+    this.cols = Math.ceil(w / BLOCK_W);
+    this.rows = Math.ceil(h / BLOCK_H);
+    this.dirty = new Uint8Array(this.cols * this.rows);
     const n = w * h;
     const terrain = new Uint8Array(n * 4);
     const relief = new Uint8Array(n * 4);
@@ -196,7 +207,6 @@ export class MapLayer {
     this.settle(s.tick);
     if (s.pendingTiles.length === 0 && s.pendingState.length === 0) return;
     const tick = s.tick & 255;
-    const w = this.w;
     for (const t of s.pendingTiles) {
       this.settleTiles.push(t);
       this.settleTicks.push(s.tick);
@@ -208,13 +218,13 @@ export class MapLayer {
       this.ownerData[k] = o & 255;
       this.ownerData[k + 1] = o >> 8;
       this.stateData[k + 2] = tick;
-      this.dirtyBands[Math.floor(t / w / this.bandRows)] = 1;
+      this.mark(t);
     }
     for (const t of s.pendingState) {
       const k = t * 4;
       this.stateData[k] = s.fallout[t]!;
       this.stateData[k + 1] = s.flags[t]!;
-      this.dirtyBands[Math.floor(t / w / this.bandRows)] = 1;
+      this.mark(t);
     }
     s.pendingTiles.length = 0;
     s.pendingState.length = 0;
@@ -232,7 +242,7 @@ export class MapLayer {
       const k = tiles[i]! * 4;
       this.ownerData[k + 2] = this.ownerData[k]!;
       this.ownerData[k + 3] = this.ownerData[k + 1]!;
-      this.dirtyBands[Math.floor(tiles[i]! / this.w / this.bandRows)] = 1;
+      this.mark(tiles[i]!);
       this.dirtyAny = true;
       i++;
     }
@@ -244,7 +254,12 @@ export class MapLayer {
     }
   }
 
-  /** Upload dirty bands of the owner/state textures. */
+  private mark(t: number): void {
+    const w = this.w;
+    this.dirty[Math.floor(t / w / BLOCK_H) * this.cols + Math.floor((t % w) / BLOCK_W)] = 1;
+  }
+
+  /** Upload the dirty blocks of the owner/state textures. */
   upload(): void {
     if (!this.dirtyAny) return;
     this.dirtyAny = false;
@@ -253,7 +268,7 @@ export class MapLayer {
     if (!this.glPartial || !gl) {
       this.ownerSrc.update();
       this.stateSrc.update();
-      this.dirtyBands.fill(0);
+      this.dirty.fill(0);
       return;
     }
     try {
@@ -271,35 +286,53 @@ export class MapLayer {
       ] as const) {
         const glTex = r.texture.getGlSource(src);
         gl.bindTexture(gl.TEXTURE_2D, glTex.texture);
-        let b = 0;
-        while (b < BANDS) {
-          if (!this.dirtyBands[b]) {
-            b++;
-            continue;
-          }
-          let e = b;
-          while (e + 1 < BANDS && this.dirtyBands[e + 1]) e++;
-          const y0 = b * this.bandRows;
-          const y1 = Math.min(this.h, (e + 1) * this.bandRows);
-          if (y1 > y0) {
+        // WebGL 2 reads a rectangle straight out of the full array (row length, skips);
+        // WebGL 1 cannot: whole rows of blocks then.
+        const gl2 = 'UNPACK_ROW_LENGTH' in gl;
+        if (gl2) gl.pixelStorei(gl.UNPACK_ROW_LENGTH, this.w);
+        for (let row = 0; row < this.rows; row++) {
+          const y0 = row * BLOCK_H;
+          const y1 = Math.min(this.h, y0 + BLOCK_H);
+          let c = 0;
+          while (c < this.cols) {
+            if (!this.dirty[row * this.cols + c]) {
+              c++;
+              continue;
+            }
+            let e = c;
+            while (e + 1 < this.cols && this.dirty[row * this.cols + e + 1]) e++;
+            const x0 = gl2 ? c * BLOCK_W : 0;
+            const x1 = gl2 ? Math.min(this.w, (e + 1) * BLOCK_W) : this.w;
+            if (gl2) {
+              gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, x0);
+              gl.pixelStorei(gl.UNPACK_SKIP_ROWS, y0);
+            }
             gl.texSubImage2D(
               gl.TEXTURE_2D,
               0,
-              0,
+              x0,
               y0,
-              this.w,
+              x1 - x0,
               y1 - y0,
               gl.RGBA,
               gl.UNSIGNED_BYTE,
-              data.subarray(y0 * this.w * 4, y1 * this.w * 4),
+              gl2 ? data : data.subarray(y0 * this.w * 4, y1 * this.w * 4),
             );
+            if (!gl2) break; // the whole row of blocks is up
+            c = e + 1;
           }
-          b = e + 1;
+        }
+        if (gl2) {
+          gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+          gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0);
+          gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
         }
       }
       gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
       gl.bindTexture(gl.TEXTURE_2D, prev);
-      const err = gl.getError();
+      // gl.getError() is a synchronous round trip to the GPU process (a full pipeline
+      // stall): only the first uploads are checked, where a size/format mismatch shows.
+      const err = this.errorChecks > 0 ? (this.errorChecks--, gl.getError()) : gl.NO_ERROR;
       if (err !== gl.NO_ERROR && !this.loggedError) {
         this.loggedError = true;
         const gt = r.texture.getGlSource(this.ownerSrc);
@@ -313,7 +346,7 @@ export class MapLayer {
       this.ownerSrc.update();
       this.stateSrc.update();
     }
-    this.dirtyBands.fill(0);
+    this.dirty.fill(0);
   }
 
   /**

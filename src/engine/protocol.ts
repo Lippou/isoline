@@ -134,8 +134,11 @@ export interface LocalView {
   alive: boolean;
   gold: number;
   troops: number;
-  /** Troop ceiling (maxTroops). */
+  /** Troop ceiling (maxTroops), lowered by the troops on front lines. */
   popCap: number;
+  /** My front lines standing: [defensive, offensive], and the troops on them. */
+  lineCount: [number, number];
+  lineTroops: number;
   /** Troops gained per tick (negative above the ceiling). */
   growth: number;
   /** Passive gold per tick. */
@@ -311,6 +314,23 @@ export interface BuildingView {
   cooldown: number;
 }
 
+/** A front line (core/rules/lines.ts) as the map draws it. */
+export interface LineView {
+  id: number;
+  owner: number;
+  /** 0 defensive, 1 offensive. */
+  kind: number;
+  pts: number[];
+  side: 1 | -1;
+  troops: number;
+  /** Tiles of it still held (the rest: breaches). */
+  tiles: number[];
+  /** Tick it takes effect (an offensive line digs in for 30 s). */
+  readyTick: number;
+  /** How fully it acts, 0–1 (its troops per tile against its country's). */
+  strength: number;
+}
+
 export interface RailView {
   id: number;
   owner: number;
@@ -366,6 +386,7 @@ export interface TickUpdate {
   world?: WorldView;
   buildings?: BuildingView[];
   rails?: RailView[];
+  lines?: LineView[];
   fog?: { w: number; h: number; data: Uint8Array };
   /** Low-resolution loyalty of the viewer's tiles (0 = not owned, 1..255). */
   loyalty?: { w: number; h: number; data: Uint8Array };

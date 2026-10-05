@@ -24,6 +24,7 @@ import { HABITABLE, IS_LAND, SPEED } from '../src/core/map/terrain';
 import { MAX_LEVEL, buildCost, checkPlacement } from '../src/core/buildings/buildings';
 import { validSpawnTile } from '../src/core/game/spawn';
 import { isResearched, techId } from '../src/core/rules/tech';
+import { lineAcross, linesOf } from '../src/core/rules/lines';
 
 export type BotKind = 'aggressive' | 'mixed' | 'builder';
 
@@ -184,7 +185,7 @@ export interface BotOptions {
   /** Share of its troop ceiling it waits for before an offensive on a nation, and keeps home. */
   strike?: number;
   reserve?: number;
-  /** Fortify the fronts it is attacked on (defence posts). */
+  /** Fortify the fronts it is attacked on (defensive lines). */
   defend?: boolean;
   /** Offer alliances to the neighbours it does not mean to fight. */
   courts?: boolean;
@@ -305,13 +306,14 @@ export function createBot(kind: BotKind, seed: number, opts: BotOptions = {}): B
     for (const a of game.attacks)
       if (!a.done && a.target === p.id) incoming.set(a.attacker, (incoming.get(a.attacker) ?? 0) + a.troops);
     // Gold: cities in the opening (all game long with ports and factories for a builder);
-    // posts on the fronts it is attacked on.
+    // defensive lines (rules/lines.ts) on the fronts it is attacked on.
     if (o.defend)
       for (const [att, tr] of incoming) {
         const n = nb.get(att);
-        if (n && tr > p.troops * 0.15 && p.buildingCount[B.DefensePost]! < 2 + p.tiles / 4000) {
-          const c = buildCommand(game, p, B.DefensePost, rng, n.tile);
-          if (c) out.push(c);
+        if (n && tr > p.troops * 0.15 && linesOf(game, p.id).length < 2 + p.tiles / 4000) {
+          const across = lineAcross(game, p, n.tile, att, 5, 14);
+          if (across)
+            out.push({ p: p.id, c: { t: 'line', kind: 0, pts: across.pts, side: across.side, ratio: 0.1 } });
           if (incoming.size < 2) break;
         }
       }

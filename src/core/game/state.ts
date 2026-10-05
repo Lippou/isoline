@@ -10,9 +10,6 @@ import {
   BUILDING_COUNT,
   BUILDING_KEYS,
   CAPTURE_TRANSFER,
-  DEFENSE_POST_MAG,
-  DEFENSE_POST_RANGE,
-  DEFENSE_POST_SPEED,
   HISTORY_EVERY,
   LARGE_DEFENDER_DEPTH,
   LOYALTY_CONQUERED,
@@ -43,6 +40,7 @@ import { updateAI, type AIState, createAIState } from '../npc/ai';
 import { techMagMultiplier, techSpeedMultiplier } from '../rules/tech';
 import { capitalTileTaken, updateCapitals } from '../rules/capital';
 import { revolutionCrushed, updateRevolutions } from '../rules/revolution';
+import { lineTileLost, updateLines, type FrontLine } from '../rules/lines';
 
 export type Phase = 'spawn' | 'playing' | 'ended';
 
@@ -83,6 +81,10 @@ export class Game {
   // ---- entities
   players: (Player | null)[] = [null];
   attacks: Attack[] = [];
+  /** Front lines (rules/lines.ts), and the tile → line index (derived, rebuilt on restore). */
+  lines: FrontLine[] = [];
+  lineAt = new Map<number, number>();
+  linesVersion = 0;
   buildings = new Map<number, Building>();
   readonly grid: BuildingGrid;
   units: Unit[] = [];
@@ -250,6 +252,7 @@ export class Game {
     const bid = this.buildingAt[tile]!;
     if (bid >= 0) this.onBuildingTileCaptured(bid, newOwner);
     if (this.railTiles[tile]) cutRailsAt(this, tile, newOwner);
+    if (old > 0 && this.lineAt.has(tile)) lineTileLost(this, tile);
     if (old > 0) {
       const p = this.players[old]!;
       if (p.tiles === 0 && p.alive && this.phase === 'playing') this.eliminate(p, newOwner, tile);
@@ -456,37 +459,6 @@ export class Game {
   }
 
   // ------------------------------------------------------ combat modifiers
-  /** Defence post / rampart multiplier on attacker losses for a tile owned by `target`. */
-  defenseMagMult(tile: number, target: number): number {
-    return this.nearDefensePost(tile, target) ? DEFENSE_POST_MAG * this.rampartMult(target) : 1;
-  }
-
-  defenseSpeedMult(tile: number, target: number): number {
-    return this.nearDefensePost(tile, target) ? DEFENSE_POST_SPEED : 1;
-  }
-
-  private rampartMult(target: number): number {
-    const p = this.players[target]!;
-    return p.rampartUntil > this.tick ? 2 : 1;
-  }
-
-  private nearDefensePost(tile: number, target: number): boolean {
-    const p = this.players[target]!;
-    if (p.buildingCount[B.DefensePost] === 0) return false;
-    const w = this.map.width;
-    const x = tile % w;
-    const y = (tile / w) | 0;
-    const r2 = DEFENSE_POST_RANGE * DEFENSE_POST_RANGE;
-    let found = false;
-    this.grid.query(x, y, DEFENSE_POST_RANGE, (id) => {
-      if (found) return;
-      const b = this.buildings.get(id)!;
-      if (b.type !== B.DefensePost || b.owner !== target || b.buildLeft > 0) return;
-      if ((b.x - x) ** 2 + (b.y - y) ** 2 <= r2) found = true;
-    });
-    return found;
-  }
-
   /**
    * Reconnaissance (GAME_DESIGN.md §11): inside a zone spotted by the attacker (or a friend
    * of it), its land attacks lose RECON_LOSS_MULT of their usual losses.
@@ -597,6 +569,7 @@ export class Game {
       updateDiplomacy(this);
       updateFeatures(this);
       updateRevolutions(this);
+      updateLines(this);
       updateAI(this);
       updateCapitals(this);
       updateVictory(this);

@@ -469,7 +469,7 @@ describe('tech tree: locks', () => {
     const p = g.players[1]!;
     const tile = g.map.idx(30, 20);
     expect(checkPlacement(g, p, B.City, tile)).toBe('ok');
-    expect(checkPlacement(g, p, B.DefensePost, tile)).toBe('ok');
+    expect(checkPlacement(g, p, B.DefensePost, tile)).toBe('disabled'); // retired (front lines)
     expect(checkPlacement(g, p, B.Lab, tile)).toBe('ok');
     for (const [kind, key] of [
       [B.Silo, 'nuclear.2'],

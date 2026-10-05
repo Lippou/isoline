@@ -13,6 +13,7 @@
 // land rejoins its country. Deterministic: the match's PRNG, drawn only when a country
 // qualifies (games without a runaway leader keep their exact course).
 import type { Game } from '../game/state';
+import { Noise2D } from '../noise';
 import type { Player } from '../game/player';
 import type { LocalizedName } from '../map/gamemap';
 import {
@@ -223,32 +224,10 @@ function spreadRevolution(game: Game, rebel: Player): void {
   const want = Math.max(1, Math.round(rebel.revoltTiles * REVOLUTION_SPREAD_LAND));
   const ok = (v: number) =>
     game.owner[v] === p.id &&
-    IS_LAND[map.terrain[v]!] &&
+    !!IS_LAND[map.terrain[v]!] &&
     v !== p.capital &&
     ((v % w) - hx) ** 2 + (((v / w) | 0) - hy) ** 2 >= safe2;
-  const seen = new Set<number>();
-  const queue: number[] = [];
-  for (const t of rebel.border) {
-    const n = map.neighbors4(t, NB);
-    for (let j = 0; j < n; j++) {
-      const v = NB[j]!;
-      if (seen.has(v) || !ok(v)) continue;
-      seen.add(v);
-      queue.push(v);
-    }
-  }
-  const region: number[] = [];
-  for (let head = 0; head < queue.length && region.length < want; head++) {
-    const t = queue[head]!;
-    region.push(t);
-    const n = map.neighbors4(t, NB);
-    for (let j = 0; j < n; j++) {
-      const v = NB[j]!;
-      if (seen.has(v) || !ok(v)) continue;
-      seen.add(v);
-      queue.push(v);
-    }
-  }
+  const region = growOrganic(game, rebel.border, want, ok);
   if (region.length === 0) return;
   const density = p.troops / Math.max(1, p.tiles);
   const troops = Math.min(
@@ -355,31 +334,124 @@ function home(game: Game, p: Player): [number, number] {
   return p.centroid(w);
 }
 
-/** A coherent region of p's land grown breadth-first from `seed` (`want` tiles at most). */
+/** A coherent region of p's land grown from `seed` (`want` tiles at most), never near the capital. */
 function growRegion(game: Game, p: Player, seed: number, want: number): number[] {
   const map = game.map;
   const w = map.width;
   const [hx, hy] = home(game, p);
   const safe2 = REVOLUTION_CAPITAL_SAFE * REVOLUTION_CAPITAL_SAFE;
-  const queue = new Int32Array(want + 4 * want + 4);
-  const seen = new Set<number>([seed]);
+  const ok = (v: number) =>
+    game.owner[v] === p.id &&
+    !!IS_LAND[map.terrain[v]!] &&
+    v !== p.capital &&
+    ((v % w) - hx) ** 2 + (((v / w) | 0) - hy) ** 2 >= safe2;
+  return ok(seed) ? growOrganic(game, [seed], want, ok) : [];
+}
+
+/**
+ * A region shaped like a real one, not the diamond of a breadth-first fill: grown from
+ * `sources` (each tile next to the region so far, so it stays in one piece), the nearest
+ * first, where "near" is the distance to the source it grew from, stretched and shrunk by
+ * a low-frequency noise (lobes and bays at the region's scale) plus a finer one (a ragged
+ * edge). Deterministic: the noise is seeded from the game's rng.
+ */
+export function growOrganic(
+  game: Game,
+  sources: readonly number[],
+  want: number,
+  ok: (tile: number) => boolean,
+): number[] {
+  const map = game.map;
+  const w = map.width;
+  const noise = new Noise2D(game.rng.nextU32());
+  const r0 = Math.max(4, Math.sqrt(want / Math.PI));
+  const lobe = 1 / (r0 * 0.9);
+  const edge = 1 / 5;
+  const origin = new Map<number, number>();
+  const heap = new TileHeap();
+  const push = (v: number, from: number) => {
+    origin.set(v, from);
+    const x = v % w;
+    const y = (v / w) | 0;
+    const d = Math.hypot(x - (from % w), y - ((from / w) | 0));
+    const stretch = Math.max(0.25, 1 + 0.75 * noise.fbm(x * lobe, y * lobe, 3));
+    heap.push(v, d * stretch + r0 * 0.35 * noise.fbm(x * edge + 91.7, y * edge - 33.1, 2));
+  };
+  for (const s of sources) {
+    if (origin.has(s)) continue;
+    if (ok(s)) push(s, s);
+    else {
+      // A border tile of the rebels: grow from its neighbours on the country's side.
+      origin.set(s, s);
+      const n = map.neighbors4(s, NB);
+      for (let j = 0; j < n; j++) {
+        const v = NB[j]!;
+        if (!origin.has(v) && ok(v)) push(v, s);
+      }
+    }
+  }
   const region: number[] = [];
-  let head = 0;
-  let tail = 0;
-  queue[tail++] = seed;
-  while (head < tail && region.length < want) {
-    const t = queue[head++]!;
+  while (heap.size > 0 && region.length < want) {
+    const t = heap.pop();
     region.push(t);
+    const from = origin.get(t)!;
     const n = map.neighbors4(t, NB);
     for (let j = 0; j < n; j++) {
       const v = NB[j]!;
-      if (seen.has(v) || game.owner[v] !== p.id || !IS_LAND[map.terrain[v]!] || v === p.capital) continue;
-      if (((v % w) - hx) ** 2 + (((v / w) | 0) - hy) ** 2 < safe2) continue;
-      seen.add(v);
-      if (tail < queue.length) queue[tail++] = v;
+      if (!origin.has(v) && ok(v)) push(v, from);
     }
   }
   return region;
+}
+
+/** A binary min-heap of tiles by priority (ties: the lower tile, so every client agrees). */
+class TileHeap {
+  private tiles: number[] = [];
+  private prio: number[] = [];
+  get size(): number {
+    return this.tiles.length;
+  }
+  private less(i: number, j: number): boolean {
+    const a = this.prio[i]!;
+    const b = this.prio[j]!;
+    return a < b || (a === b && this.tiles[i]! < this.tiles[j]!);
+  }
+  private swap(i: number, j: number): void {
+    [this.tiles[i], this.tiles[j]] = [this.tiles[j]!, this.tiles[i]!];
+    [this.prio[i], this.prio[j]] = [this.prio[j]!, this.prio[i]!];
+  }
+  push(tile: number, p: number): void {
+    this.tiles.push(tile);
+    this.prio.push(p);
+    let i = this.tiles.length - 1;
+    while (i > 0) {
+      const up = (i - 1) >> 1;
+      if (!this.less(i, up)) break;
+      this.swap(i, up);
+      i = up;
+    }
+  }
+  pop(): number {
+    const top = this.tiles[0]!;
+    const lastT = this.tiles.pop()!;
+    const lastP = this.prio.pop()!;
+    if (this.tiles.length > 0) {
+      this.tiles[0] = lastT;
+      this.prio[0] = lastP;
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1;
+        const r = l + 1;
+        let m = i;
+        if (l < this.tiles.length && this.less(l, m)) m = l;
+        if (r < this.tiles.length && this.less(r, m)) m = r;
+        if (m === i) break;
+        this.swap(i, m);
+        i = m;
+      }
+    }
+    return top;
+  }
 }
 
 /**
