@@ -3,7 +3,7 @@ import type { GameRenderer } from '../../render/renderer';
 import type { Session } from '../../engine/session';
 import { hud } from '../stores/game.svelte';
 import { confirmModal } from '../stores/app.svelte';
-import { t } from '../i18n/i18n.svelte';
+import { i18n, t } from '../i18n/i18n.svelte';
 import { settings } from '../stores/settings.svelte';
 import { B, N } from '../../core/game/constants';
 import { U } from '../../core/units/unit';
@@ -32,12 +32,24 @@ export interface LineDraft {
   maxTiles: number;
 }
 
-/** An offensive line's assault being aimed (FrontPanel, the radial menu): the sector traced so far. */
-export interface AssaultDraft {
-  line: number;
+/**
+ * An offensive line being laid (1.22): on our border with the country under the pointer (a
+ * click), or along the stretch swept with the right button held.
+ */
+export interface BorderDraft {
+  /** That country's tiles swept so far (the right button held). */
   tiles: Set<number>;
-  /** The brush under the pointer: x, y, radius (tiles). */
+  /** The brush under the pointer while sweeping: x, y, radius (tiles). */
   brush: [number, number, number] | null;
+  /** Our tiles the line would stand on, and those past what its troops allow. */
+  preview: number[];
+  over: number[];
+}
+
+/** An offensive line's arrow being aimed (a click on the line): from the line to the pointer. */
+export interface AimDraft {
+  line: number;
+  to: [number, number] | null;
 }
 
 export interface InputHooks {
@@ -105,20 +117,23 @@ export class InputController {
     this.updateUnitHover();
     // The line tool put down (Escape, another tool, right click): the drawing goes with it.
     if (this.r.overlay.lineDraft && hud.tool.k !== 'line') this.clearLine();
-    // The assault tool put down: its sector goes with it.
-    if (
-      this.r.overlay.assault &&
-      (hud.tool.k !== 'assault' || hud.tool.line !== this.r.overlay.assault.line)
-    ) {
-      this.r.overlay.assault = null;
-      if (hud.tool.k !== 'line') hud.lineTip = null;
+    // The offensive line's tool or its arrow put down: their drawing goes with them.
+    const tl = hud.tool;
+    if (this.r.overlay.border && !(tl.k === 'line' && tl.kind === 1)) {
+      this.r.overlay.border = null;
+      this.borderOf = null;
+      if (tl.k !== 'line') hud.lineTip = null;
+    }
+    if (this.r.overlay.aim && (tl.k !== 'assault' || tl.line !== this.r.overlay.aim.line)) {
+      this.r.overlay.aim = null;
+      if (tl.k !== 'line') hud.lineTip = null;
     }
   }
 
   // ------------------------------------------------------------ front lines
   private get draft(): LineDraft | null {
     const tl = hud.tool;
-    if (tl.k !== 'line') return null;
+    if (tl.k !== 'line' || tl.kind !== 0) return null;
     let d = this.r.overlay.lineDraft;
     if (!d || d.kind !== tl.kind)
       d = this.r.overlay.lineDraft = {
@@ -193,14 +208,103 @@ export class InputController {
     }
   }
 
-  /** The assault being aimed (hud.tool 'assault'): its sector so far and the brush. */
-  private get assault(): AssaultDraft | null {
+  /** The army's share the line tool takes, and the most tiles it can hold (lineMaxTiles). */
+  private lineBudget(): { take: number; max: number } {
+    const L = hud.local;
+    const army = L?.troops ?? 0;
+    const take = army * hud.attackRatio;
+    const tiles = this.session.state.players.get(this.session.viewer)?.tiles ?? 1;
+    return { take, max: lineMaxTiles(take, army + (L?.lineTroops ?? 0), tiles) };
+  }
+
+  // ------------------------------------------------- offensive line: the border
+  /** An offensive line being laid (hud.tool 'line', kind 1). */
+  private get border(): BorderDraft | null {
     const tl = hud.tool;
-    if (tl.k !== 'assault') return null;
-    let a = this.r.overlay.assault;
-    if (!a || a.line !== tl.line)
-      a = this.r.overlay.assault = { line: tl.line, tiles: new Set(), brush: null };
-    return a;
+    if (tl.k !== 'line' || tl.kind !== 1) return null;
+    return (this.r.overlay.border ??= { tiles: new Set(), brush: null, preview: [], over: [] });
+  }
+
+  /** Our tiles touching `owner`'s land (computed again each second, or for another country). */
+  private borderOf: { owner: number; tick: number; tiles: number[] } | null = null;
+  private borderWith(owner: number): number[] {
+    const s = this.session.state;
+    const b = this.borderOf;
+    if (b && b.owner === owner && s.tick - b.tick < 10) return b.tiles;
+    const me = this.session.viewer;
+    const w = s.width;
+    const tiles: number[] = [];
+    for (let t = 0; t < s.owner.length; t++) {
+      if (s.owner[t] !== me || !IS_LAND[s.terrain[t]!]) continue;
+      const x = t % w;
+      if (
+        (x > 0 && s.owner[t - 1] === owner) ||
+        (x < w - 1 && s.owner[t + 1] === owner) ||
+        (t >= w && s.owner[t - w] === owner) ||
+        (t + w < s.owner.length && s.owner[t + w] === owner)
+      )
+        tiles.push(t);
+    }
+    this.borderOf = { owner, tick: s.tick, tiles };
+    return tiles;
+  }
+
+  /** The country swept most along the stretch (the right button held), 0 none. */
+  private sweptOwner(bd: BorderDraft): number {
+    const s = this.session.state;
+    const n = new Map<number, number>();
+    for (const t of bd.tiles) n.set(s.owner[t]!, (n.get(s.owner[t]!) ?? 0) + 1);
+    let [best, most] = [0, 0];
+    for (const [o, k] of n) if (k > most) [best, most] = [o, k];
+    return best;
+  }
+
+  /**
+   * What the line would hold, under the pointer at `tile`: the whole border with that country
+   * (or, swept, along the stretch), past what its troops allow the part nearest the pointer.
+   */
+  private borderPreview(bd: BorderDraft, tile: number, sx: number, sy: number): void {
+    const s = this.session.state;
+    const w = s.width;
+    const me = this.session.viewer;
+    const swept = bd.tiles.size > 0;
+    const owner = swept ? this.sweptOwner(bd) : tile >= 0 ? (s.owner[tile] ?? 0) : 0;
+    let tiles: number[] = [];
+    if (owner > 0 && owner !== me) {
+      tiles = this.borderWith(owner);
+      if (swept)
+        tiles = tiles.filter((t) => {
+          const x = t % w;
+          const on = (v: number) => bd.tiles.has(v) && s.owner[v] === owner;
+          return (x > 0 && on(t - 1)) || (x < w - 1 && on(t + 1)) || on(t - w) || on(t + w);
+        });
+    }
+    const { take, max } = this.lineBudget();
+    const at = swept ? [...bd.tiles][0]! : tile;
+    if (tiles.length > max) {
+      const [ax, ay] = [at % w, Math.floor(at / w)];
+      const d = (t: number) => ((t % w) - ax) ** 2 + (Math.floor(t / w) - ay) ** 2;
+      const sorted = tiles.slice().sort((a, b) => d(a) - d(b) || a - b);
+      bd.preview = sorted.slice(0, max);
+      bd.over = sorted.slice(max);
+    } else [bd.preview, bd.over] = [tiles, []];
+    const pv = owner > 0 && owner !== me ? s.players.get(owner) : undefined;
+    const name = pv ? pv.name[i18n.lang] || pv.name.en : '';
+    const vars = {
+      troops: short(Math.floor(take)),
+      pct: Math.round(hud.attackRatio * 100),
+      n: tiles.length,
+      max,
+      name,
+    };
+    const key = !name
+      ? 'line.tip.borderStart'
+      : bd.over.length
+        ? 'line.tip.borderOver'
+        : swept
+          ? 'line.tip.borderSector'
+          : 'line.tip.border';
+    hud.lineTip = { text: t(key, vars), sx, sy, ok: !!name && take >= 1 && bd.preview.length >= 3 };
   }
 
   private brushAt(sx: number, sy: number): [number, number, number] {
@@ -208,9 +312,9 @@ export class InputController {
     return [wx, wy, Math.max(1.5, 16 / this.r.camera.zoom)];
   }
 
-  /** Paints the border under the brush: tiles of another owner touching our land. */
-  private paintSector(a: AssaultDraft, sx: number, sy: number): void {
-    const [wx, wy, r] = this.brushAt(sx, sy);
+  /** Sweeps the border under the brush: tiles of another country touching our land. */
+  private sweep(bd: BorderDraft, sx: number, sy: number): void {
+    const [wx, wy, r] = (bd.brush = this.brushAt(sx, sy));
     const s = this.session.state;
     const w = s.width;
     const me = this.session.viewer;
@@ -220,48 +324,88 @@ export class InputController {
         if ((x + 0.5 - wx) ** 2 + (y + 0.5 - wy) ** 2 > r * r) continue;
         const t = y * w + x;
         const o = s.owner[t]!;
-        if (o === me || !IS_LAND[s.terrain[t]!]) continue;
+        if (o === me || o <= 0 || !IS_LAND[s.terrain[t]!]) continue;
         const touches =
           (x > 0 && s.owner[t - 1] === me) ||
           (x < w - 1 && s.owner[t + 1] === me) ||
           (y > 0 && s.owner[t - w] === me) ||
           (y < s.height - 1 && s.owner[t + w] === me);
-        if (touches) a.tiles.add(t);
+        if (touches) bd.tiles.add(t);
       }
   }
 
-  private assaultTip(a: AssaultDraft, sx: number, sy: number): void {
-    const text = a.tiles.size ? t('front.aimSector', { n: a.tiles.size }) : t('front.aimTip');
-    hud.lineTip = { text, sx, sy, ok: true };
-  }
-
   /**
-   * The assault aimed: a left click on another country, its whole border with us; the right
-   * button released after a drag along the border, that sector; a plain right click drops it.
+   * The offensive line laid: a left click on a country, on all our border with it; the right
+   * button released after a sweep, along that stretch; a plain right click puts the tool down.
    */
-  private assaultRelease(a: AssaultDraft, button: number, sx: number, sy: number, moved: boolean): void {
-    const send = (c: { target?: number; tiles?: number[] }) => {
-      this.session.cmd({ t: 'lineLaunch', id: a.line, ...c });
+  private borderRelease(bd: BorderDraft, button: number, sx: number, sy: number, moved: boolean): void {
+    const done = () => {
       hud.tool = { k: 'none' };
-      this.r.overlay.assault = null;
+      this.r.overlay.border = null;
+      this.borderOf = null;
       hud.lineTip = null;
     };
+    const ratio = hud.attackRatio;
     if (button === 2) {
-      if (moved && a.tiles.size) send({ tiles: [...a.tiles] });
-      else if (!moved) {
-        hud.tool = { k: 'none' };
-        this.r.overlay.assault = null;
-        hud.lineTip = null;
+      const target = this.sweptOwner(bd);
+      if (moved && target > 0 && target !== this.session.viewer) {
+        this.session.cmd({ t: 'lineBorder', target, at: [...bd.tiles][0]!, tiles: [...bd.tiles], ratio });
+        done();
+      } else if (!moved) done();
+      else {
+        // Swept nothing of a country: start again.
+        bd.tiles.clear();
+        bd.brush = null;
       }
       return;
     }
     const tile = this.r.tileAtScreen(sx, sy);
-    const owner = tile >= 0 ? (this.session.state.owner[tile] ?? 0) : -1;
-    if (tile < 0 || owner === this.session.viewer) {
+    const owner = tile >= 0 ? (this.session.state.owner[tile] ?? 0) : 0;
+    if (owner <= 0 || owner === this.session.viewer) {
+      note(t('line.tip.borderStart'), 'info');
+      return;
+    }
+    this.session.cmd({ t: 'lineBorder', target: owner, at: tile, ratio });
+    done();
+  }
+
+  // ------------------------------------------------- offensive line: the arrow
+  /** An offensive line's arrow being aimed (hud.tool 'assault'). */
+  private get aim(): AimDraft | null {
+    const tl = hud.tool;
+    if (tl.k !== 'assault') return null;
+    let a = this.r.overlay.aim;
+    if (!a || a.line !== tl.line) a = this.r.overlay.aim = { line: tl.line, to: null };
+    return a;
+  }
+
+  private aimTip(sx: number, sy: number): void {
+    hud.lineTip = { text: t('front.aimTip'), sx, sy, ok: true };
+  }
+
+  /**
+   * The arrow given: a left click points the assault there (ready, it goes; else when ready);
+   * a right click takes the arrow back (and the order it had, if any).
+   */
+  private aimRelease(a: AimDraft, button: number, sx: number, sy: number): void {
+    const line = this.session.state.lines.find((l) => l.id === a.line);
+    hud.tool = { k: 'none' };
+    this.r.overlay.aim = null;
+    hud.lineTip = null;
+    if (!line) return;
+    if (button === 2) {
+      if (line.aim >= 0 && line.attack < 0) this.session.cmd({ t: 'lineLaunch', id: a.line, aim: -1 });
+      return;
+    }
+    const tile = this.r.tileAtScreen(sx, sy);
+    if (tile < 0) return;
+    if (this.session.state.owner[tile] === this.session.viewer) {
+      // On our own land: no direction; the arrow stays in hand.
+      hud.tool = { k: 'assault', line: a.line };
       note(t('front.aimOwn'), 'info');
       return;
     }
-    send({ target: owner });
+    this.session.cmd({ t: 'lineLaunch', id: a.line, aim: tile });
   }
 
   /** A press, then a release (a drag or a click) of the left button with the line tool. */
@@ -329,9 +473,12 @@ export class InputController {
     this.down = { x, y, button: e.button, shift: e.shiftKey, moved: false, t: performance.now() };
     const d = e.button === 0 ? this.draft : null;
     if (d) this.linePress(d, x, y);
-    // Aiming an assault: the right button held paints the sector along the border.
-    const as = e.button === 2 ? this.assault : null;
-    if (as) this.paintSector(as, x, y);
+    // Laying an offensive line: the right button held sweeps the stretch of border.
+    const bd = e.button === 2 ? this.border : null;
+    if (bd) {
+      bd.tiles.clear();
+      this.sweep(bd, x, y);
+    }
     this.last = { x, y };
     this.velocity = { x: 0, y: 0 };
     this.r.camera.vx = this.r.camera.vy = 0;
@@ -351,14 +498,18 @@ export class InputController {
       this.updateHover(tile, x, y);
       this.updateLineHover(tile);
     }
-    const as = this.pointer ? this.assault : null;
-    if (as) {
-      as.brush = this.brushAt(x, y);
+    const bd = this.pointer ? this.border : null;
+    if (bd) {
       if (this.down?.button === 2) {
         if (Math.hypot(x - this.down.x, y - this.down.y) > 4) this.down.moved = true;
-        this.paintSector(as, x, y);
-      }
-      this.assaultTip(as, x, y);
+        this.sweep(bd, x, y);
+      } else bd.brush = null;
+      this.borderPreview(bd, tile, x, y);
+    }
+    const am = this.pointer ? this.aim : null;
+    if (am) {
+      am.to = this.r.camera.screenToWorld(x, y);
+      this.aimTip(x, y);
     }
     const d = this.pointer ? this.draft : null;
     if (d) this.lineMove(d, x, y);
@@ -402,9 +553,14 @@ export class InputController {
       this.lineRelease(line, x, y, d.moved);
       return;
     }
-    const as = this.assault;
-    if (as && (d.button === 2 || (d.button === 0 && !d.moved))) {
-      this.assaultRelease(as, d.button, x, y, d.moved);
+    const bd = this.border;
+    if (bd && (d.button === 2 || (d.button === 0 && !d.moved))) {
+      this.borderRelease(bd, d.button, x, y, d.moved);
+      return;
+    }
+    const am = this.aim;
+    if (am && !d.moved && (d.button === 0 || d.button === 2)) {
+      this.aimRelease(am, d.button, x, y);
       return;
     }
     if (d.moved) {

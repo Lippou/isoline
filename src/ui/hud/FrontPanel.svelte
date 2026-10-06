@@ -5,11 +5,12 @@
   // strength — a click selects it and brings the camera to it (a click on a line on the map
   // opens this window on it). The selected line's sheet: garrison and where a head-on push
   // breaks it, a slider setting its troops (more from the army, fewer back to it), take it
-  // down; an offensive line, ready, launches its assault: a click on a country's border
-  // takes its whole border, a right-button drag along the border traces the sector to hit.
+  // down; an offensive line (laid on a border, 1.22) gets its arrow: the button (or a click
+  // on the line) then a click on the map points its assault there — it goes once ready, and
+  // launched, the line is its attack's front (its troops counting down).
   import './paper.css';
   import { hud } from '../stores/game.svelte';
-  import { t, short, clock } from '../i18n/i18n.svelte';
+  import { i18n, t, short, clock } from '../i18n/i18n.svelte';
   import Icon from '../icons/Icon.svelte';
   import PaperMast from './PaperMast.svelte';
   import { keyLabel, settings } from '../stores/settings.svelte';
@@ -28,10 +29,16 @@
   const sel = $derived(lines.find((l) => l.id === hud.frontSel) ?? null);
   const locked = $derived(hud.local?.lineTroops ?? 0);
 
-  const leftOf = (l: LineView) => Math.max(0, l.readyTick - hud.tick);
+  const leftOf = (l: LineView) => (l.attack >= 0 ? 0 : Math.max(0, l.readyTick - hud.tick));
+  const nameOfPlayer = (id: number): string => {
+    const p = s.state.players.get(id);
+    return p ? p.name[i18n.lang] || p.name.en : '—';
+  };
   /** A line's state: its words and mark (a shape, not only a colour). */
   const stateOf = (l: LineView): { key: string; icon: 'hourglass' | 'warning' | 'check' | 'lineOffense' } => {
+    if (l.attack >= 0) return { key: 'front.state.attacking', icon: 'lineOffense' };
     if (l.troops < 1) return { key: 'front.state.empty', icon: 'warning' };
+    if (l.kind === 1 && leftOf(l) > 0 && l.aim >= 0) return { key: 'front.state.ordered', icon: 'hourglass' };
     if (leftOf(l) > 0) return { key: 'front.state.preparing', icon: 'hourglass' };
     return l.kind === 0
       ? { key: 'front.state.holding', icon: 'check' }
@@ -70,11 +77,11 @@
     if (sel) s.cmd({ t: 'lineTroops', id: sel.id, troops: target });
   }
   function remove(): void {
-    if (!sel) return;
+    if (!sel || sel.attack >= 0) return;
     s.cmd({ t: 'lineRemove', id: sel.id });
     hud.frontSel = -1;
   }
-  /** An offensive line, ready: aim its assault on the map (a click: a whole border; a right drag: a sector). */
+  /** An offensive line's arrow, on the map: a click points its assault there. */
   function aim(): void {
     if (!sel) return;
     hud.tool = { k: 'assault', line: sel.id };
@@ -162,6 +169,12 @@
           <dd>{Math.round(sel.strength * 100)} %</dd>
           <dt>{t('line.card.length')}</dt>
           <dd>{t('line.card.tiles', { n: sel.tiles.length })}</dd>
+          {#if sel.kind === 1}
+            <dt>{t('line.card.facing')}</dt>
+            <dd>{nameOfPlayer(sel.target)}</dd>
+            <dt>{t('line.card.arrow')}</dt>
+            <dd>{sel.aim >= 0 ? t('line.card.arrowSet') : t('line.card.arrowNone')}</dd>
+          {/if}
           {#if sel.kind === 0}
             <dt>{t('line.card.garrison')}</dt>
             <dd>{short(sel.tiles.length ? sel.troops / sel.tiles.length : 0)}</dd>
@@ -171,50 +184,50 @@
         </dl>
 
         {#if sel.kind === 1}
-          <button
-            class="np-btn ink launch"
-            onclick={aim}
-            disabled={leftOf(sel) > 0 || sel.troops < 1}
-            data-testid="front-launch"
-            ><Icon name="lineOffense" size={14} />{leftOf(sel) > 0
-              ? t('line.card.launchIn', { clock: clock(leftOf(sel)) })
-              : t('line.card.launch', { n: short(sel.troops) })}</button
+          <button class="np-btn ink launch" onclick={aim} disabled={sel.troops < 1} data-testid="front-launch"
+            ><Icon name="lineOffense" size={14} />{sel.attack >= 0
+              ? t('line.card.turn')
+              : leftOf(sel) > 0
+                ? t('line.card.launchIn', { clock: clock(leftOf(sel)) })
+                : t('line.card.launch', { n: short(sel.troops) })}</button
           >
           {#if hud.tool.k === 'assault' && hud.tool.line === sel.id}
             <p class="aiming" data-testid="front-aiming"><Icon name="info" size={12} />{t('front.aiming')}</p>
           {/if}
         {/if}
 
-        <label class="slider">
-          <span>{t('line.card.set')}</span>
-          <input
-            type="range"
-            min="0"
-            max={Math.max(1, max)}
-            step={Math.max(1, Math.round(max / 200))}
-            bind:value={target}
-            data-testid="front-slider"
-          />
-          <b class="mono">{short(target)}</b>
-        </label>
-        <p class="delta mono">
-          {target >= sel.troops + 1
-            ? t('line.card.fromArmy', { n: short(target - sel.troops) })
-            : target <= sel.troops - 1
-              ? t('line.card.toArmy', { n: short(sel.troops - target) })
-              : ''}
-        </p>
-        <div class="actions">
-          <button
-            class="np-btn ink"
-            onclick={apply}
-            disabled={Math.abs(target - sel.troops) < 1}
-            data-testid="front-apply"><Icon name="check" size={13} />{t('line.card.apply')}</button
-          >
-          <button class="np-btn" onclick={remove} data-testid="front-remove"
-            ><Icon name="trash" size={13} />{t('line.card.remove')}<kbd class="np-kbd">Suppr</kbd></button
-          >
-        </div>
+        {#if sel.attack < 0}
+          <label class="slider">
+            <span>{t('line.card.set')}</span>
+            <input
+              type="range"
+              min="0"
+              max={Math.max(1, max)}
+              step={Math.max(1, Math.round(max / 200))}
+              bind:value={target}
+              data-testid="front-slider"
+            />
+            <b class="mono">{short(target)}</b>
+          </label>
+          <p class="delta mono">
+            {target >= sel.troops + 1
+              ? t('line.card.fromArmy', { n: short(target - sel.troops) })
+              : target <= sel.troops - 1
+                ? t('line.card.toArmy', { n: short(sel.troops - target) })
+                : ''}
+          </p>
+          <div class="actions">
+            <button
+              class="np-btn ink"
+              onclick={apply}
+              disabled={Math.abs(target - sel.troops) < 1}
+              data-testid="front-apply"><Icon name="check" size={13} />{t('line.card.apply')}</button
+            >
+            <button class="np-btn" onclick={remove} data-testid="front-remove"
+              ><Icon name="trash" size={13} />{t('line.card.remove')}<kbd class="np-kbd">Suppr</kbd></button
+            >
+          </div>
+        {/if}
       </section>
     {:else if lines.length}
       <p class="np-empty">{t('front.pick')}</p>

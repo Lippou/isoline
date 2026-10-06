@@ -425,8 +425,8 @@
     "lineRemoveDesc": "Its troops return to the army.",
     "lineTroops": "Line troops…",
     "lineTroopsDesc": "Add troops from the army, or send some back.",
-    "lineLaunch": "Launch the assault",
-    "lineLaunchDesc": "Then aim: left click a country (its whole border) or hold the right button along the border (a sector)."
+    "lineLaunch": "Give the direction",
+    "lineLaunchDesc": "Then click the map: the assault heads for that point (a capital, a city, a port). Right click: take the arrow back."
   },
   "confirm": {
     "betrayTitle": "Betray your ally?",
@@ -1431,7 +1431,7 @@
     "raidHitShip": "Raid on {player} — {ship} hit.",
     "raidHitShipSunk": "Raid on {player} — {ship} sunk.",
     "revolutionSpread": "The revolt spreads: {tiles} more tiles join {tribe}.",
-    "lineReady": "Your offensive line is ready: open it (click it) and launch the assault.",
+    "lineReady": "Your offensive line is ready: click it, then the map, to give the assault its direction.",
     "lineEmpty": "One of your defensive lines has lost all its men: it no longer holds. Reinforce it or take it down.",
     "lineShattered": "One of your lines was turned: it shatters, {n} men lost."
   },
@@ -1524,7 +1524,9 @@
       "troops": "Not enough troops to hold this line.",
       "points": "Invalid drawing.",
       "notReady": "The troops are still getting ready: ready in {s} s.",
-      "noTarget": "Nothing to attack in front of this line."
+      "noTarget": "This line no longer touches the border: nothing to attack.",
+      "border": "No border with that country there.",
+      "target": "An offensive line is laid on the border of a country you can attack (not an ally or a teammate)."
     }
   },
   "keys": {
@@ -2254,7 +2256,7 @@
       "economy": "Build three cities to sustain the war effort.",
       "weather": "Watch the sky: storms slow ships and aircraft down, and fog banks halve the range of radars.",
       "clock": "The clock is ticking: the dial at the top announces the next milestone. A peace summit or a Council vote turns it back; bombs hasten it.",
-      "offensive": "Before a big push, draw an offensive line (key Q) facing the enemy. Its troops get ready for thirty seconds. Then click it, launch the assault, and click the country to strike, or hold the right button along the border to hit only a sector.",
+      "offensive": "Before a big push, lay an offensive line (key Q): click the country you want, and it is laid along your border with it. Its troops get ready for thirty seconds. Then click the line, then its capital: the assault will head that way.",
       "push": "Push towards forty percent. A vulnerable nation is marked on the map."
     },
     "hint": {
@@ -2524,7 +2526,7 @@
     },
     "count": "{d} defensive · {o} offensive",
     "locked": "{n} troops on the lines",
-    "none": "No line. Draw a defensive line (key {d}) or an offensive one (key {o}) on your land.",
+    "none": "No line. Draw a defensive line on your land (key {d}), or lay an offensive line on a country's border (key {o}).",
     "pick": "Click a line, here or on the map, to manage it.",
     "defensiveN": "Defensive {n}",
     "offensiveN": "Offensive {n}",
@@ -2532,15 +2534,16 @@
       "empty": "Empty: holds nothing any more",
       "preparing": "Troops getting ready: {clock}",
       "holding": "Holding the front",
-      "ready": "Ready to attack"
+      "ready": "Ready: give the direction",
+      "ordered": "Direction given: goes in {clock}",
+      "attacking": "On the assault"
     },
-    "aiming": "Aim on the map: left click a country = its whole border; right button held along the border = that sector only. Escape cancels.",
-    "aimTip": "Left click: this country’s whole border · right button held: trace the sector",
-    "aimSector": "Sector: {n} tiles — release to launch the assault",
-    "aimOwn": "Aim at another country’s border.",
+    "aiming": "Click the map: the assault heads for that point. Right click: take the arrow back.",
+    "aimTip": "Click: the assault heads here · right click: take the arrow back",
     "rules": "How it works",
     "rulesDraw": "Defensive: head-on, the attacker loses 3 men for 1 and only breaks through beyond 3 to 1; turned, it shatters. Click a line to manage it, right click to take it down.",
-    "rulesAssault": "Offensive: its troops get ready for 30 s, then “Launch the assault”: left click a country for its whole border, or hold the right button along the border for a sector (even against a country already attacked). Those soldiers lose half as many and advance 1.5 times faster."
+    "rulesAssault": "Offensive: click a neighbouring country to lay it along your whole border with it, or hold the right button along a stretch. Its troops get ready for 30 s. Click the line, then the map: the arrow gives the assault its direction (a capital, a city). Ready, it goes; the line moves with the front and its counter drops with the men. These soldiers lose half as many and advance 1.5× faster.",
+    "aimOwn": "Point the arrow into enemy land."
   },
   "news": {
     "masthead": "The Isoline Courier",
@@ -3066,20 +3069,24 @@
     "offensive": {
       "name": "Offensive line",
       "short": "Off. line",
-      "desc": "Draw it on your land facing the enemy: its troops mass there for 30 s. Then launch the assault (click the line): the line empties into an attack straight ahead, and those prepared soldiers lose half as many and advance 1.5 times faster all the attack long. Its length depends on the troops put on it; turned, it shatters."
+      "desc": "Click a neighbouring country: it is laid along your whole border with it (hold the right button along the border: that stretch only). Its troops mass there for 30 s. Then click the line, then the map: the assault heads for that point, half the losses and 1.5× faster. The line moves with the front and is gone with its last men."
     },
     "costTroops": "{n} troops ({pct}% of the army)",
-    "howTo": "Drag from one point to another, or click point by point (double click or Enter to finish), then click on the enemy’s side. Click one of your lines: set its troops or take it down.",
+    "howTo": "Defensive: drag from one point to another, or click point by point (double click or Enter to end), then click the enemy's side. Offensive: click a neighbouring country, or hold the right button along the border. Click one of your lines: manage it.",
     "tip": {
       "start": "Click or drag to draw · {troops} troops ({pct}%)",
       "next": "Click: next point · double click or Enter: finish · right click: take the last point back",
       "side": "Click on the enemy’s side to lay the line · {troops} troops",
-      "tooLong": "Too long for {troops} troops: {max} tiles at most (the rest, in red, will not be held)"
+      "tooLong": "Too long for {troops} troops: {max} tiles at most (the rest, in red, will not be held)",
+      "borderStart": "Click a neighbouring country: the line is laid along your whole border with it · hold right click: a stretch",
+      "border": "{name}: the whole border, {n} tiles · {troops} troops ({pct} %) · hold right click: a stretch",
+      "borderSector": "Stretch facing {name}: {n} tiles · release to lay the line",
+      "borderOver": "Too long for {troops} troops: the nearest {max} tiles (the rest, in red, will not be held)"
     },
     "card": {
       "laying": "In place in {clock}",
       "holding": "Holding the front: head-on, it only gives way beyond 3 to 1",
-      "ready": "Ready: launch the assault",
+      "ready": "Ready: give the direction",
       "empty": "Empty: it holds nothing any more",
       "emptyShort": "empty",
       "troops": "Troops on the line",
@@ -3093,9 +3100,14 @@
       "remove": "Take down",
       "garrison": "Garrison per tile",
       "breaks": "Broken head-on beyond (per tile)",
-      "launch": "Launch the assault ({n})",
-      "launchIn": "Ready in {clock}",
-      "preparing": "Troops getting ready: {clock}"
+      "launch": "Give the direction ({n})",
+      "launchIn": "Give the direction (goes in {clock})",
+      "preparing": "Troops getting ready: {clock}",
+      "turn": "Change direction",
+      "facing": "Facing",
+      "arrow": "Direction",
+      "arrowSet": "given",
+      "arrowNone": "to give"
     }
   }
 }

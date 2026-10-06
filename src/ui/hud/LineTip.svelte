@@ -9,7 +9,9 @@
 
   const tip = $derived(hud.lineTip && !hud.radial && !hud.photo ? hud.lineTip : null);
   const icon = $derived<IconName>(
-    hud.tool.k === 'line' && hud.tool.kind === 1 ? 'lineOffense' : 'lineDefense',
+    (hud.tool.k === 'line' && hud.tool.kind === 1) || hud.tool.k === 'assault'
+      ? 'lineOffense'
+      : 'lineDefense',
   );
 </script>
 

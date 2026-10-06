@@ -21,9 +21,19 @@
 // per tile — 3 to 1 against the attacker at even forces, the tile falls past 3 to 1);
 // turned (lineTurned: the enemy LINE_TURN_DEPTH tiles behind a quarter of it) it shatters,
 // its troops lost; an offensive line speeds its attacks up as well as sparing them.
+// 1.22 (the player's design): an offensive line is no longer drawn but laid on the border
+// with the country to attack (placeOffensive): the whole border (a click on that country),
+// or the stretch the player swept along it (the right button held). A click on the line, then
+// on the map, gives the assault its direction (orderLine: the arrow). Ready, it goes over the
+// top: its troops become an attack starting from the line only (combat.ts Attack.focused),
+// taking first what lies towards the arrow's head (Attack.aim) — a capital, a city, a port.
+// The line then follows the attack's front, its counter going down with the troops, and is
+// gone with the last of them.
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import { IS_LAND } from '../map/terrain';
+import { aimAttack, attackSlotFree, launchAttack } from './combat';
+import { openHostilities } from './diplomacy';
 import {
   LINE_DEFENSE_SETUP,
   LINE_BREAK_RATIO,
@@ -37,6 +47,7 @@ import {
   LINE_MIN_DENSITY,
   LINE_OFFENSE_REACH,
   LINE_OFFENSE_SETUP,
+  MAX_ATTACKS_PER_PLAYER,
   LINE_REACH,
   LINE_TURN_DEPTH,
   LINE_TURN_SHARE,
@@ -60,6 +71,12 @@ export interface FrontLine {
   tiles: number[];
   /** Tick it takes effect (an offensive line digs in first). */
   readyTick: number;
+  /** Offensive (1.22): the country whose border it is laid on; 0 for a defensive line. */
+  target: number;
+  /** Offensive: the tile its assault heads for (the arrow), -1 while none is given. */
+  aim: number;
+  /** Offensive, launched: the attack it became (the line follows its front), -1 before. */
+  attack: number;
 }
 
 /** Derived (never saved): bounding boxes (with the reach) and the lines of each owner. */
@@ -175,6 +192,8 @@ function heldNear(game: Game, l: FrontLine, px: number, py: number): boolean {
 
 /** How fully a line acts (0–1): its troops per tile against LINE_FULL_DENSITY × its country's. */
 export function lineStrength(game: Game, l: FrontLine): number {
+  // Launched: the preparation its troops carry into the attack.
+  if (l.attack >= 0) return game.attacks.find((a) => a.id === l.attack)?.prepared ?? 0;
   const p = game.players[l.owner];
   if (!p || l.tiles.length === 0 || l.troops <= 0) return 0;
   const country = (p.troops + p.lineTroops) / Math.max(1, p.tiles);
@@ -252,44 +271,6 @@ export function lineDefense(
   // The Rampart general doubles what its lines hold back for 30 s (rules/features.ts).
   const rampart = game.players[target]!.rampartUntil > game.tick ? 2 : 1;
   return { speed: 1 + (LINE_DEFENSE_SPEED - 1) * s * rampart };
-}
-
-/**
- * Where an offensive line's assault goes (the command 'lineLaunch', 1.20): straight out in
- * front of it, LINE_OFFENSE_REACH tiles at most, the first land that is not ours along each
- * of its tiles; the country met most often (wilderness when nobody), and one of its tiles
- * there. Allies and teammates are never aimed at. Null when nothing lies in front.
- */
-export function lineTarget(game: Game, l: FrontLine): { target: number; tile: number } | null {
-  const map = game.map;
-  const w = map.width;
-  const seen = new Map<number, { n: number; tile: number }>();
-  for (let k = 0; k < l.tiles.length; k += 2) {
-    const t = l.tiles[k]!;
-    const [x, y] = [(t % w) + 0.5, ((t / w) | 0) + 0.5];
-    const [bx, by] = backNormal(l, x, y);
-    for (let d = 1; d <= LINE_OFFENSE_REACH; d++) {
-      const [ux, uy] = [Math.floor(x - bx * d), Math.floor(y - by * d)];
-      if (!map.inBounds(ux, uy)) break;
-      const v = uy * w + ux;
-      if (!IS_LAND[map.terrain[v]!] || game.isDead(v)) continue;
-      const o = game.owner[v]!;
-      if (o === l.owner) continue;
-      if (o > 0 && game.friendly(o, l.owner)) break;
-      const cur = seen.get(o);
-      if (cur) cur.n++;
-      else seen.set(o, { n: 1, tile: v });
-      break;
-    }
-  }
-  let best: { target: number; tile: number } | null = null;
-  let bestN = 0;
-  // A country before the wilderness: an assault is aimed at an enemy.
-  for (const [o, { n, tile }] of seen) {
-    const score = n + (o > 0 ? 1e6 : 0);
-    if (score > bestN) [best, bestN] = [{ target: o, tile }, score];
-  }
-  return best;
 }
 
 /** Whether a defensive line of the tile's owner covers it (the tile's hover card). */
@@ -396,7 +377,8 @@ export function lineClash(game: Game, l: FrontLine, force: number): { holds: boo
  */
 export function lineTurned(game: Game, l: FrontLine): boolean {
   const n = l.tiles.length;
-  if (n === 0) return false;
+  // (An offensive line stands on the border itself: what it loses there, it loses tile by tile.)
+  if (n === 0 || l.kind !== LineKind.Defensive) return false;
   const map = game.map;
   const w = map.width;
   let turned = 0;
@@ -452,13 +434,12 @@ export function setLineTroops(game: Game, p: Player, l: FrontLine, troops: numbe
   game.linesVersion++;
 }
 
-export type LineError = 'phase' | 'max' | 'short' | 'troops' | 'points';
+export type LineError = 'phase' | 'max' | 'short' | 'troops' | 'points' | 'target' | 'border';
 
-/** Lays a line for p (the command 'line'); its troops: `ratio` of the army. */
+/** Lays a defensive line for p as drawn (the command 'line'); its troops: `ratio` of the army. */
 export function placeLine(
   game: Game,
   p: Player,
-  kind: LineKind,
   pts: readonly number[],
   side: 1 | -1,
   ratio: number,
@@ -479,22 +460,255 @@ export function placeLine(
   }
   if (own < LINE_MIN_TILES) return 'short';
   if (tiles.length < LINE_MIN_TILES || troops < tiles.length) return 'troops';
+  return lay(game, p, LineKind.Defensive, pts.slice(), side, troops, tiles, 0, LINE_DEFENSE_SETUP);
+}
+
+function lay(
+  game: Game,
+  p: Player,
+  kind: LineKind,
+  pts: number[],
+  side: 1 | -1,
+  troops: number,
+  tiles: number[],
+  target: number,
+  setup: number,
+): FrontLine {
   p.troops -= troops;
   p.lineTroops += troops;
   const l: FrontLine = {
     id: game.nextId(),
     owner: p.id,
     kind,
-    pts: pts.slice(),
+    pts,
     side,
     troops,
     tiles,
-    readyTick: game.tick + (kind === LineKind.Offensive ? LINE_OFFENSE_SETUP : LINE_DEFENSE_SETUP),
+    readyTick: game.tick + setup,
+    target,
+    aim: -1,
+    attack: -1,
   };
   game.lines.push(l);
   for (const t of tiles) game.lineAt.set(t, l.id);
   game.linesVersion++;
   return l;
+}
+
+/**
+ * Lays an offensive line for p on its border with `target` (the command 'lineBorder', 1.22):
+ * our tiles touching that country's land — all of them, or (`sector`, tiles of that country
+ * the player swept) those touching the sector. Longer than its troops allow, it keeps the
+ * stretch nearest `at` (where the player clicked). Its troops: `ratio` of the army.
+ */
+export function placeOffensive(
+  game: Game,
+  p: Player,
+  target: number,
+  at: number,
+  sector: readonly number[] | null,
+  ratio: number,
+): FrontLine | LineError {
+  if (game.phase !== 'playing') return 'phase';
+  if (linesOf(game, p.id).length >= LINE_MAX_PER_PLAYER) return 'max';
+  const q = game.players[target];
+  if (!q || !q.alive || target === p.id || game.friendly(target, p.id)) return 'target';
+  const map = game.map;
+  const w = map.width;
+  const focus = sector ? new Set(sector) : null;
+  const tiles: number[] = [];
+  for (const b of p.border) {
+    if (!IS_LAND[map.terrain[b]!] || game.lineAt.has(b)) continue;
+    const n = map.neighbors4(b, NB);
+    for (let k = 0; k < n; k++) {
+      const v = NB[k]!;
+      if (game.owner[v] !== target || !IS_LAND[map.terrain[v]!] || game.isDead(v)) continue;
+      if (focus && !focus.has(v)) continue;
+      tiles.push(b);
+      break;
+    }
+  }
+  if (tiles.length < LINE_MIN_TILES) return 'border';
+  const troops = p.troops * ratio;
+  const most = Math.min(LINE_MAX_TILES, lineMaxTiles(troops, p.troops + p.lineTroops, p.tiles));
+  // (The border set's order is history: sorted, every client lays the same line.)
+  tiles.sort((x, y) => x - y);
+  if (tiles.length > most) {
+    const [ax, ay] = [at % w, (at / w) | 0];
+    const d = (t: number) => ((t % w) - ax) ** 2 + (((t / w) | 0) - ay) ** 2;
+    tiles.sort((x, y) => d(x) - d(y) || x - y);
+    tiles.length = most;
+    tiles.sort((x, y) => x - y);
+  }
+  if (tiles.length < LINE_MIN_TILES || troops < tiles.length) return 'troops';
+  return lay(game, p, LineKind.Offensive, chainPts(w, tiles), 1, troops, tiles, target, LINE_OFFENSE_SETUP);
+}
+
+/**
+ * Tiles as the stretches of line they make: each chain walked from an end, tile to touching
+ * tile (sides before corners), what lies alongside a chain taken into it. In tile order:
+ * the same on every client (the map draws offensive lines from it).
+ */
+export function borderChains(w: number, tiles: readonly number[]): number[][] {
+  const left = new Set(tiles);
+  const near = (t: number): number[] => {
+    const [x, y] = [t % w, (t / w) | 0];
+    const out: number[] = [];
+    for (const [dx, dy] of STEPS) {
+      if (x + dx < 0 || x + dx >= w) continue;
+      const v = (y + dy) * w + x + dx;
+      if (left.has(v)) out.push(v);
+    }
+    return out;
+  };
+  const chains: number[][] = [];
+  for (const start of [...tiles].sort((a, b) => a - b)) {
+    if (!left.has(start)) continue;
+    // From an end of its stretch: walk back from here as far as it goes, then out again.
+    let end = start;
+    const back = new Set([start]);
+    for (;;) {
+      const next = near(end).find((v) => !back.has(v));
+      if (next === undefined) break;
+      back.add(next);
+      end = next;
+    }
+    const chain = [end];
+    left.delete(end);
+    for (let cur = end; ;) {
+      const next = near(cur)[0];
+      if (next === undefined) break;
+      chain.push(next);
+      left.delete(next);
+      cur = next;
+    }
+    for (const t of chain) for (const v of near(t)) left.delete(v);
+    chains.push(chain);
+  }
+  return chains;
+}
+const STEPS: readonly [number, number][] = [
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+  [0, -1],
+  [1, 1],
+  [-1, 1],
+  [-1, -1],
+  [1, -1],
+];
+
+/** The chains of `tiles` end to end as vertices (tile centres): where the line is found. */
+function chainPts(w: number, tiles: readonly number[]): number[] {
+  const pts: number[] = [];
+  for (const c of borderChains(w, tiles)) for (const t of c) pts.push((t % w) + 0.5, ((t / w) | 0) + 0.5);
+  if (pts.length === 2) pts.push(pts[0]!, pts[1]!);
+  return pts;
+}
+
+/**
+ * The direction of an offensive line's assault (the command 'lineLaunch', 1.22): the tile its
+ * arrow points at (-1 takes the order back). Ready, it goes over the top at once; still
+ * digging in, when it is ready; launched, its attack turns that way.
+ */
+export function orderLine(game: Game, l: FrontLine, aim: number): void {
+  if (l.kind !== LineKind.Offensive) return;
+  if (l.attack >= 0) {
+    const a = game.attacks.find((x) => x.id === l.attack && !x.done);
+    if (a && aim >= 0) aimAttack(game, a, aim);
+    if (aim >= 0) l.aim = aim;
+    game.linesVersion++;
+    return;
+  }
+  l.aim = aim;
+  game.linesVersion++;
+  if (aim >= 0 && l.readyTick <= game.tick) launchLine(game, l);
+}
+
+/**
+ * The troops that waited on an offensive line go over the top (1.20): an attack on its
+ * country from the line only (its land touching ours along it, within 3 tiles: the border
+ * may have moved), carrying the line's preparation (Attack.prepared) towards its arrow.
+ */
+function launchLine(game: Game, l: FrontLine): void {
+  const p = game.players[l.owner];
+  const q = game.players[l.target];
+  if (!p || !q || l.troops < 1) return;
+  const at = l.tiles[l.tiles.length >> 1];
+  const drop = (key: string, params: Record<string, number> = {}) => {
+    game.notify(p.id, key, 'warn', params, at);
+    l.aim = -1;
+    game.linesVersion++;
+  };
+  const why = game.attackRefusal(p.id, q.id, true);
+  if (why) {
+    game.refuse(p.id, 'attack', why);
+    l.aim = -1;
+    return;
+  }
+  if (!attackSlotFree(game, p.id, -1)) return drop('error.attackSlots', { n: MAX_ATTACKS_PER_PLAYER });
+  const map = game.map;
+  const w = map.width;
+  const focus = new Set<number>();
+  for (const t of l.tiles) {
+    const [x, y] = [t % w, (t / w) | 0];
+    for (let dy = -3; dy <= 3; dy++)
+      for (let dx = -3; dx <= 3; dx++) {
+        if (!map.inBounds(x + dx, y + dy)) continue;
+        const v = (y + dy) * w + x + dx;
+        if (game.owner[v] !== q.id || !IS_LAND[map.terrain[v]!] || game.isDead(v) || focus.has(v)) continue;
+        const n = map.neighbors4(v, NB);
+        for (let k = 0; k < n; k++)
+          if (game.owner[NB[k]!] === p.id) {
+            focus.add(v);
+            break;
+          }
+      }
+  }
+  if (focus.size === 0) return drop('error.line.noTarget');
+  const troops = l.troops;
+  const prepared = lineStrength(game, l);
+  openHostilities(game, p, q);
+  // Off the line, into the attack: the ceiling is freed, the line becomes the attack's front.
+  p.lineTroops = Math.max(0, p.lineTroops - troops);
+  for (const t of l.tiles) if (game.lineAt.get(t) === l.id) game.lineAt.delete(t);
+  l.troops = 0;
+  const a = launchAttack(
+    game,
+    p.id,
+    q.id,
+    troops,
+    undefined,
+    prepared,
+    [...focus].sort((x, y) => x - y),
+    l.aim,
+  );
+  if (!a) {
+    removeLine(game, l, false);
+    return;
+  }
+  l.attack = a.id;
+  follow(game, l);
+}
+
+/** A launched line on its attack's front: our tiles touching what it is about to take, its troops. */
+function follow(game: Game, l: FrontLine): void {
+  const a = game.attacks.find((x) => x.id === l.attack && !x.done);
+  if (!a || a.troops < 1) {
+    removeLine(game, l, false);
+    return;
+  }
+  const map = game.map;
+  const tiles = new Set<number>();
+  for (const j of a.border) {
+    if (game.owner[j] !== a.target) continue;
+    const n = map.neighbors4(j, NB);
+    for (let k = 0; k < n; k++) if (game.owner[NB[k]!] === l.owner) tiles.add(NB[k]!);
+  }
+  l.tiles = [...tiles].sort((x, y) => x - y);
+  if (l.tiles.length) l.pts = chainPts(map.width, l.tiles);
+  l.troops = a.troops;
+  game.linesVersion++;
 }
 
 /** Takes a line down: its troops come back to the army (`refund`) or are lost with it. */
@@ -504,7 +718,8 @@ export function removeLine(game: Game, l: FrontLine, refund: boolean): void {
   game.lines.splice(i, 1);
   for (const t of l.tiles) if (game.lineAt.get(t) === l.id) game.lineAt.delete(t);
   const p = game.players[l.owner];
-  if (p) {
+  // (A launched line's troops are its attack's.)
+  if (p && l.attack < 0) {
     p.lineTroops = Math.max(0, p.lineTroops - l.troops);
     if (refund && p.alive) p.troops += l.troops;
   }
@@ -528,13 +743,22 @@ export function lineTileLost(game: Game, tile: number): void {
 }
 
 /**
- * Every tick: an offensive line that has dug in tells its owner (a defensive one is laid in
- * 3 s: no news); every second, a turned line shatters (lineTurned), its troops lost.
+ * Every tick: an offensive line that has dug in goes over the top if its arrow is given, else
+ * tells its owner; twice a second, a launched one follows its attack's front; every second, a
+ * turned line shatters (lineTurned), its troops lost.
  */
 export function updateLines(game: Game): void {
-  for (const l of game.lines)
-    if (l.kind === LineKind.Offensive && l.readyTick === game.tick)
-      game.notify(l.owner, 'notify.lineReady', 'good', {}, l.tiles[l.tiles.length >> 1]);
+  for (const l of [...game.lines]) {
+    if (l.kind !== LineKind.Offensive || l.attack >= 0 || l.readyTick !== game.tick) continue;
+    if (l.aim >= 0) launchLine(game, l);
+    else game.notify(l.owner, 'notify.lineReady', 'good', {}, l.tiles[l.tiles.length >> 1]);
+  }
+  // (Its troops every tick; where its front stands — and the news to the map — twice a second.)
+  for (const l of [...game.lines]) {
+    if (l.attack < 0) continue;
+    if (game.tick % 5 === 0) follow(game, l);
+    else l.troops = game.attacks.find((x) => x.id === l.attack)?.troops ?? l.troops;
+  }
   if (game.tick % 10 !== 0) return;
   for (const l of [...game.lines]) {
     if (!lineTurned(game, l)) continue;
@@ -550,6 +774,12 @@ export function updateLines(game: Game): void {
 /** After a save is restored: the tile index of the lines. */
 export function rebuildLineIndex(game: Game): void {
   game.lineAt.clear();
-  for (const l of game.lines) for (const t of l.tiles) game.lineAt.set(t, l.id);
+  for (const l of game.lines) {
+    // Saves from before 1.22: no border, no arrow, not launched.
+    l.target ??= 0;
+    l.aim ??= -1;
+    l.attack ??= -1;
+    if (l.attack < 0) for (const t of l.tiles) game.lineAt.set(t, l.id);
+  }
   game.linesVersion++;
 }

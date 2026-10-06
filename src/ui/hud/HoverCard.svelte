@@ -110,6 +110,10 @@
   const info = $derived.by(() => {
     const h = hud.hover;
     if (!h || hud.radial) return null;
+    // Laying an offensive line or aiming its arrow: the note by the pointer says it all, and
+    // the card would hide the border and the arrow.
+    const tl = hud.tool;
+    if (tl.k === 'assault' || (tl.k === 'line' && tl.kind === 1)) return null;
     const s = currentSession()?.state;
     if (!s) return null;
     // Fog of war: other players' details only where the viewer can see.

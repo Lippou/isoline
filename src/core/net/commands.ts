@@ -14,8 +14,9 @@ export type Command =
   | { t: 'demolish'; id: number; cancel?: boolean }
   | { t: 'warship'; tile: number }
   /**
-   * Lays a front line (rules/lines.ts): kind 0 defensive, 1 offensive; `pts` its vertices
+   * Lays a defensive front line (rules/lines.ts) as drawn: `pts` its vertices
    * [x0, y0, x1, y1, …] in tiles; `side` the side it faces; `ratio` of the army on it.
+   * (`kind`: 0; offensive lines are laid on a border, 'lineBorder'.)
    */
   | { t: 'line'; kind: number; pts: number[]; side: number; ratio: number }
   /** Takes one of your lines down: its troops come back. */
@@ -23,11 +24,16 @@ export type Command =
   /** Sets the troops on one of your lines (more from the army, fewer back to it; 0: empty). */
   | { t: 'lineTroops'; id: number; troops: number }
   /**
-   * Launches the assault of one of your offensive lines, once ready: it empties into an
-   * attack on `target`'s whole border with you, or on the stretch of border `tiles` (its
-   * tiles), or (neither) straight ahead of the line.
+   * Lays an offensive line on your border with `target` (1.22): all of it, or the stretch
+   * along `tiles` (that country's tiles swept); too long for its troops, the part nearest
+   * `at`. `ratio` of the army on it.
    */
-  | { t: 'lineLaunch'; id: number; target?: number; tiles?: number[] }
+  | { t: 'lineBorder'; target: number; at: number; tiles?: number[]; ratio: number }
+  /**
+   * The arrow of one of your offensive lines: the tile its assault heads for (-1 takes the
+   * order back). Ready, it goes over the top at once; else when ready; launched, it turns.
+   */
+  | { t: 'lineLaunch'; id: number; aim: number }
   | { t: 'shipMove'; ids: number[]; tile: number; patrol: boolean }
   /** `up`: arc towards the top of the map (default) or the bottom (A and H bombs). */
   | { t: 'nuke'; kind: number; tile: number; count: number; up?: boolean }
@@ -86,16 +92,21 @@ export function isWellFormed(c: unknown): c is Command {
     case 'lineRemove':
       return isInt(o.id);
     case 'lineLaunch':
+      return isInt(o.id) && isInt(o.aim) && o.aim >= -1;
+    case 'lineBorder':
       return (
-        isInt(o.id) &&
-        (o.target === undefined || (isInt(o.target) && o.target >= 0)) &&
+        isInt(o.target) &&
+        o.target > 0 &&
+        isInt(o.at) &&
+        o.at >= 0 &&
+        ratioOk(o.ratio) &&
         (o.tiles === undefined || (Array.isArray(o.tiles) && o.tiles.length <= 2000 && o.tiles.every(isInt)))
       );
     case 'lineTroops':
       return isInt(o.id) && isNum(o.troops) && o.troops >= 0 && o.troops < 1e12;
     case 'line':
       return (
-        (o.kind === 0 || o.kind === 1) &&
+        o.kind === 0 &&
         (o.side === 1 || o.side === -1) &&
         ratioOk(o.ratio) &&
         Array.isArray(o.pts) &&

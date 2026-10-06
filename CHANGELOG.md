@@ -2,6 +2,15 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.22.0] — Ligne offensive sur la frontière, direction d'attaque
+### Modifié
+- **La ligne offensive se pose sur la frontière** (elle ne se trace plus) : outil en main, **clic gauche sur un pays voisin** = toute votre frontière avec lui ; **clic droit maintenu le long de la frontière** = ce tronçon seulement. Aperçu en laiton au survol ; trop longue pour ses troupes, elle garde les cases les plus proches du clic.
+- **La flèche d'attaque** : un clic sur la ligne fait apparaître la flèche, un clic sur la carte donne la **direction de l'assaut** (une capitale, une ville, un port) ; un clic droit retire la flèche. Prête, la ligne part aussitôt ; encore en préparation, elle partira à la fin de ses 30 s.
+- **L'assaut suit la flèche** : il part de la ligne seule et prend d'abord ce qui va vers la pointe de la flèche, au même rythme. Les soldats préparés gardent leur bonus (pertes −50 %, vitesse +50 %).
+- **La ligne avance avec le front** : lancée, elle devient le front de son attaque, son pion compte les hommes qui restent, et elle disparaît avec les derniers. Un nouveau clic sur elle réoriente l'attaque.
+- Les nations posent leurs lignes offensives sur la frontière et pointent la flèche sur la capitale ennemie.
+- Fenêtre Front, menu radial, aide et campagne (mission 6, voix comprise) mis à jour.
+
 ## [1.21.0] — Fenêtre Front, assauts ciblés
 ### Ajouté
 - **Fenêtre « Front »** (bouton du dock, ou clic sur une de vos lignes) : toutes vos lignes avec leur état, leurs troupes et leur force ; un clic en sélectionne une et y amène la caméra ; sa fiche donne garnison, seuil de percée, règle les troupes, la démonte (Suppr) et lance l'assaut d'une offensive.

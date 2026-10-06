@@ -5,28 +5,30 @@
 //     close fringe of small teeth (a held front); in front of it its zone, a soft ink shade
 //     fading out over LINE_REACH tiles, its far edge a fine dotted line. Being laid (3 s):
 //     dashed, no teeth; emptied: grey, dashed.
-//   - Offensive: a jump-off line (dark, a dashed light rail along it) and sweeping
-//     battle-plan arrows out of it across its zone (LINE_OFFENSE_REACH): tapered, curved,
-//     with a flared head; while it prepares (30 s) they are amber and fill from tail to head
-//     as the time runs, then turn green: ready. Its zone is a warm shade.
+//   - Offensive (1.22): laid along the border with the country it faces, a jump-off line
+//     (dark, a dashed light rail along it); its arrow (its owner's eyes only), once given, a
+//     battle-plan arrow from the line to the tile aimed at — tapered, curved, a flared head —
+//     amber, filling from tail to head while the troops wait (30 s), green when ready.
+//     Launched, the line is the attack's front: solid, bristling forward, moving with it, one
+//     counter with the troops left; the arrow still points the way.
 //   - Unit counters along each line, as in HOI4: a dark tab with the owner's flag, the
 //     troops it holds (and the time left while it prepares) and a strength bar.
 //   - A stretch lost to the enemy (a breach): a faint dotted trace, no shade, no counter.
 // The line being drawn (input.ts LineDraft) is previewed in brass the same way: solid over
 // our land within the length its troops allow, dotted elsewhere, red and crossed out past
-// that length; then, picking the side, with its zone and teeth or arrow.
+// that length; then, picking the side, with its zone and teeth. An offensive line being laid
+// (BorderDraft): the border it would take in brass, past its troops red and crossed out.
 // Lines and zones are redrawn when they change or the zoom moves on; counters keep their
 // size on screen and follow the camera every frame.
 import { BitmapText, Container, Graphics, Sprite, TextStyle, type Texture } from 'pixi.js';
 import type { LineView } from '../engine/protocol';
 import { LINE_OFFENSE_REACH, LINE_OFFENSE_SETUP, LINE_REACH } from '../core/game/constants';
-import { traceTiles } from '../core/rules/lines';
-import type { AssaultDraft, LineDraft } from '../ui/game/input';
+import { borderChains, locate, traceTiles } from '../core/rules/lines';
+import type { AimDraft, BorderDraft, LineDraft } from '../ui/game/input';
 
 const CORE = 0x14202c;
 const RIM = 0xf3ead6;
 const SHADE = 0x0b1824;
-const WARM = 0xe0a23a;
 const BRASS = 0xf2b84b;
 const READY = 0x5fbf6a;
 const PREPARING = 0xf0b43c;
@@ -60,8 +62,11 @@ export interface FrontLineContext {
   bounds: [number, number, number, number];
   /** My line under the pointer (lit), -1 none. */
   hover: number;
-  /** An offensive line's assault being aimed: its sector and the brush. */
-  assault: AssaultDraft | null;
+  /** The owner of the tile at (x, y) (which side of the border an offensive line faces). */
+  owner: (x: number, y: number) => number;
+  /** An offensive line being laid on a border; an offensive line's arrow being aimed. */
+  border: BorderDraft | null;
+  aim: AimDraft | null;
 }
 
 /** A point along a polyline, with the unit normal pointing to the side faced. */
@@ -157,13 +162,15 @@ export class FrontLineLayer {
   readonly container = new Container();
   private readonly lineLayer = new Container();
   private readonly draft = new Graphics();
+  private readonly borderDraft = new Graphics();
+  private borderKey = '';
   private readonly lit = new Graphics();
   private readonly pions = new Container();
   private readonly pool: PionView[] = [];
   private readonly gfx = new Map<number, LineGfx>();
 
   constructor() {
-    this.container.addChild(this.lineLayer, this.lit, this.draft, this.pions);
+    this.container.addChild(this.lineLayer, this.lit, this.borderDraft, this.draft, this.pions);
   }
 
   /** Map width (tile keys), set by the renderer. */
@@ -212,18 +219,26 @@ export class FrontLineLayer {
       const lod = !mine && z < 1.6 ? 'far' : 'near';
       const left = Math.max(0, l.readyTick - ctx.tick);
       const empty = l.troops < 1;
-      const sig = `${step}|${lod}|${ctx.zones && mine}|${l.tiles.length}|${l.tiles[0]}|${empty}|${left > 0}`;
+      const launched = l.attack >= 0;
+      const sig = `${step}|${lod}|${ctx.zones && mine}|${l.tiles.length}|${l.tiles[0]}|${l.tiles.at(-1)}|${empty}|${left > 0}|${launched}`;
       if (sig !== v.sig) {
         v.sig = sig;
         v.arrowSig = '';
+        v.box = lineBox(l);
         this.build(v, l, ctx, lod, mine, left, empty);
       }
       if (l.kind === 1) {
-        const progress = left > 0 ? 1 - left / LINE_OFFENSE_SETUP : 1;
-        const arrowSig = `${step}|${empty}|${Math.floor(progress * 40)}`;
+        const progress = launched ? 1 : left > 0 ? 1 - left / LINE_OFFENSE_SETUP : 1;
+        // (Its aim taken, the arrow has done its work: gone, the front spreads on round it.)
+        const w = this.width;
+        const to: [number, number] = [(l.aim % w) + 0.5, Math.floor(l.aim / w) + 0.5];
+        const reached = l.aim >= 0 && ctx.owner(to[0], to[1]) === l.owner;
+        const arrowSig = `${v.sig}|${l.aim}|${reached}|${Math.floor(progress * 40)}`;
         if (arrowSig !== v.arrowSig) {
           v.arrowSig = arrowSig;
-          this.buildArrows(v, ctx, empty, progress);
+          v.arrows.clear();
+          if (l.aim >= 0 && !reached && mine && lod === 'near')
+            planArrow(v.arrows, v.runs, to, progress, ctx.zoom);
         }
       }
       for (const pn of v.pions) {
@@ -240,15 +255,15 @@ export class FrontLineLayer {
       }
     this.placePions(ctx);
     this.drawDraft(draft, ctx);
-    this.drawLit(lines, ctx);
+    this.drawBorderDraft(ctx.border, ctx);
+    this.drawLit(ctx);
   }
 
   /**
    * Lit on top: the line under the pointer (a brass glow along it: a click opens it), and an
-   * assault being aimed — its line, the sector traced (brass tiles), the brush, and an arrow
-   * from the line to the sector.
+   * offensive line's arrow being aimed — its line lit, a brass arrow from it to the pointer.
    */
-  private drawLit(lines: readonly LineView[], ctx: FrontLineContext): void {
+  private drawLit(ctx: FrontLineContext): void {
     const g = this.lit;
     g.clear();
     const px = (n: number) => Math.max(0.04, n / ctx.zoom);
@@ -261,34 +276,54 @@ export class FrontLineLayer {
       }
     };
     if (ctx.hover >= 0) glow(ctx.hover);
-    const a = ctx.assault;
-    if (!a) return;
-    glow(a.line);
-    const w = this.width;
-    let [cx, cy, n] = [0, 0, 0];
-    for (const t of a.tiles) {
-      const [x, y] = [t % w, Math.floor(t / w)];
-      g.rect(x, y, 1, 1);
-      [cx, cy, n] = [cx + x + 0.5, cy + y + 0.5, n + 1];
-    }
-    if (n) g.fill({ color: BRASS, alpha: 0.7 });
-    if (a.brush) {
-      const [bx, by, r] = a.brush;
+    const bd = ctx.border;
+    if (bd?.brush) {
+      const [bx, by, r] = bd.brush;
       g.circle(bx, by, r).stroke({ color: CORE, width: px(2.5), alpha: 0.8 });
       g.circle(bx, by, r).stroke({ color: BRASS, width: px(1.2), alpha: 1 });
     }
-    // From the line to the sector (or to the brush, before anything is traced).
-    const line = lines.find((l) => l.id === a.line);
+    const a = ctx.aim;
+    if (!a) return;
+    glow(a.line);
     const v = this.gfx.get(a.line);
-    const run = v?.runs[0];
-    if (!line || !run || run.length < 2) return;
-    const from = pointAt(run, (run[0]!.s + run[run.length - 1]!.s) / 2);
-    const to: [number, number] | null = n ? [cx / n, cy / n] : a.brush ? [a.brush[0], a.brush[1]] : null;
-    if (!to) return;
-    const d = Math.hypot(to[0] - from.x, to[1] - from.y);
-    if (d < 2) return;
-    const [nx, ny] = [(to[0] - from.x) / d, (to[1] - from.y) / d];
-    battleArrow(g, { x: from.x, y: from.y, nx, ny, s: 0 }, 1.6, d, 0, 1, px, BRASS);
+    if (v && a.to) planArrow(g, v.runs, a.to, 1, ctx.zoom, BRASS);
+  }
+
+  /**
+   * An offensive line being laid: the border it would take, as the line will run (brass);
+   * past what its troops allow, red, dashed and crossed out. Redrawn when it changes.
+   */
+  private drawBorderDraft(bd: BorderDraft | null, ctx: FrontLineContext): void {
+    const g = this.borderDraft;
+    const step = Math.round(Math.log2(ctx.zoom) * 2);
+    const key = bd
+      ? `${step}|${bd.preview.length}|${bd.preview[0]}|${bd.preview.at(-1)}|${bd.over.length}|${bd.over[0]}|${bd.tiles.size}`
+      : '';
+    if (key === this.borderKey) return;
+    this.borderKey = key;
+    g.clear();
+    if (!bd) return;
+    const px = (n: number) => Math.max(0.04, n / ctx.zoom);
+    const w = this.width;
+    // The stretch swept so far: its tiles, faint.
+    for (const t of bd.tiles) g.rect(t % w, Math.floor(t / w), 1, 1);
+    if (bd.tiles.size) g.fill({ color: BRASS, alpha: 0.28 });
+    for (const run of chainRuns(w, bd.over, 1)) {
+      dashed(g, run, px(7), px(5), OVER, px(3.5), 0.95);
+      for (let i = 0; i < run.length; i += 10) {
+        const p = run[i]!;
+        const k = px(4);
+        g.moveTo(p.x - k, p.y - k)
+          .lineTo(p.x + k, p.y + k)
+          .moveTo(p.x + k, p.y - k)
+          .lineTo(p.x - k, p.y + k)
+          .stroke({ width: px(1.8), color: OVER });
+      }
+    }
+    for (const run of chainRuns(w, bd.preview, 1)) {
+      polyline(g, run, CORE, px(7), 0.9);
+      polyline(g, run, BRASS, px(4), 1);
+    }
   }
 
   /** A line's static drawing: its zone (ours), its body, its counters' places. */
@@ -306,31 +341,45 @@ export class FrontLineLayer {
     v.zone.clear();
     v.ink.clear();
     v.pions = [];
-    const held = new Set(l.tiles);
-    const samples = sampleLine(smooth(l.pts), l.side, lod === 'far' ? 1 : 0.5);
-    const isHeld = (p: Sample) => heldAt(held, p.x, p.y, this.width);
-    const reach = l.kind === 0 ? LINE_REACH : LINE_OFFENSE_REACH;
+    const step = lod === 'far' ? 1 : 0.5;
     let heldRuns: Sample[][] = [];
-    runs(samples, isHeld, (run, on) => {
-      if (on) heldRuns.push(run);
-      else if (lod === 'near') dotted(v.ink, run, px(5), px(1.3), CORE, 0.55);
-    });
-    heldRuns = heldRuns.filter((r) => r.length >= 2);
+    if (l.kind === 0) {
+      const held = new Set(l.tiles);
+      const samples = sampleLine(smooth(l.pts), l.side, step);
+      const isHeld = (p: Sample) => heldAt(held, p.x, p.y, this.width);
+      runs(samples, isHeld, (run, on) => {
+        if (on) heldRuns.push(run);
+        else if (lod === 'near') dotted(v.ink, run, px(5), px(1.3), CORE, 0.55);
+      });
+      heldRuns = heldRuns.filter((r) => r.length >= 2);
+    } else {
+      // Along the border it stands on (launched: its attack's front), facing that country.
+      const target = (x: number, y: number) => ctx.owner(x, y) === l.target;
+      heldRuns = chainRuns(this.width, l.tiles, step, target);
+    }
     v.runs = heldRuns;
-    if (ctx.zones && mine && !empty)
-      for (const run of heldRuns) zoneShade(v.zone, run, reach, l.kind === 0 ? SHADE : WARM, px, left > 0);
+    const launched = l.attack >= 0;
+    if (ctx.zones && mine && !empty && l.kind === 0)
+      for (const run of heldRuns) zoneShade(v.zone, run, LINE_REACH, SHADE, px, left > 0);
     for (const run of heldRuns) {
       if (lod === 'far') {
         polyline(v.ink, run, CORE, px(4), 0.9);
         continue;
       }
       if (l.kind === 0) defensiveLine(v.ink, run, px, empty ? 'empty' : left > 0 ? 'laying' : 'held');
+      else if (launched) attackFront(v.ink, run, px);
       else jumpOffLine(v.ink, run, px, empty);
     }
     if (lod === 'far') return;
-    // Counters: one every ~22 tiles of held line, sharing its troops, just behind it.
+    // Counters: one every ~22 tiles of held line, sharing its troops, just behind it (a
+    // launched line: one, the attack's).
     const total = heldRuns.reduce((s, r) => s + (r[r.length - 1]!.s - r[0]!.s), 0);
-    const count = Math.max(1, Math.min(6, Math.round(total / 22)));
+    const count = launched ? 1 : Math.max(1, Math.min(6, Math.round(total / 22)));
+    if (launched)
+      heldRuns = heldRuns
+        .slice()
+        .sort((a, b) => b[b.length - 1]!.s - a[a.length - 1]!.s)
+        .slice(0, 1);
     let k = 0;
     for (const run of heldRuns) {
       const len = run[run.length - 1]!.s - run[0]!.s;
@@ -347,22 +396,6 @@ export class FrontLineLayer {
           left,
           empty,
         });
-      }
-    }
-  }
-
-  /** An offensive line's planned assault: its arrows, filling while its troops wait. */
-  private buildArrows(v: LineGfx, ctx: FrontLineContext, empty: boolean, progress: number): void {
-    const px = (n: number) => Math.max(0.04, n / ctx.zoom);
-    v.arrows.clear();
-    if (empty || v.sig.includes('far')) return;
-    for (const run of v.runs) {
-      const len = run[run.length - 1]!.s - run[0]!.s;
-      const n = Math.max(1, Math.round(len / 20));
-      for (let k = 0; k < n; k++) {
-        const base = pointAt(run, run[0]!.s + ((k + 0.5) / n) * len);
-        const width = Math.min(2.4, Math.max(1.1, (len / n) * 0.09));
-        battleArrow(v.arrows, base, width, LINE_OFFENSE_REACH, (k % 2 ? 1 : -1) * 0.12, progress, px);
       }
     }
   }
@@ -469,13 +502,8 @@ export class FrontLineLayer {
     }
     for (const run of ok) {
       if (d.stage === 'side') {
-        const reach = d.kind === 0 ? LINE_REACH : LINE_OFFENSE_REACH;
-        zoneShade(g, run, reach, BRASS, px, false);
-        if (d.kind === 0) teeth(g, run, px, BRASS);
-        else {
-          const mid = pointAt(run, (run[0]!.s + run[run.length - 1]!.s) / 2);
-          battleArrow(g, mid, 1.8, reach, 0.12, 1, px, BRASS);
-        }
+        zoneShade(g, run, LINE_REACH, BRASS, px, false);
+        teeth(g, run, px, BRASS);
       }
       polyline(g, run, CORE, px(7), 0.9);
       polyline(g, run, BRASS, px(4), 1);
@@ -566,6 +594,79 @@ function teeth(g: Graphics, run: Sample[], px: (v: number) => number, color: num
       alpha: 0.95,
     });
   }
+}
+
+/** A launched offensive line, its attack's front: solid, bristling forward (light teeth on dark). */
+function attackFront(g: Graphics, run: Sample[], px: (v: number) => number): void {
+  teeth(g, run, px, CORE);
+  polyline(g, run, CORE, px(6.5), 0.95);
+  polyline(g, run, RIM, px(2), 0.9);
+}
+
+/**
+ * Our tiles as the stretches of line they make (core/rules/lines.ts borderChains), smoothed
+ * and sampled every `step` tiles; facing the side where `front` holds (the country across
+ * the border), else either.
+ */
+function chainRuns(
+  w: number,
+  tiles: readonly number[],
+  step: number,
+  front?: (x: number, y: number) => boolean,
+): Sample[][] {
+  const out: Sample[][] = [];
+  for (const c of borderChains(w, tiles)) {
+    if (c.length < 2) continue;
+    // Every other tile (and the last): the staircase of a slanting border smoothed out.
+    const pts: number[] = [];
+    for (let k = 0; k < c.length; k++)
+      if (k % 2 === 0 || k === c.length - 1) pts.push((c[k]! % w) + 0.5, Math.floor(c[k]! / w) + 0.5);
+    let side = 0;
+    if (front) {
+      const every = Math.max(1, Math.floor(c.length / 24));
+      for (let k = 0; k < c.length; k += every) {
+        const [x, y] = [(c[k]! % w) + 0.5, Math.floor(c[k]! / w) + 0.5];
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ] as const)
+          if (front(x + dx, y + dy)) side += Math.sign(locate(pts, x + dx, y + dy).sd);
+      }
+    }
+    const run = sampleLine(smooth(pts), side >= 0 ? 1 : -1, step);
+    if (run.length >= 2) out.push(run);
+  }
+  return out;
+}
+
+/**
+ * An offensive line's arrow: from the point of the line nearest `to` to it, a battle-plan
+ * arrow (amber filling to `progress`, green when ready; `tint` while being aimed), its width
+ * steady on screen.
+ */
+function planArrow(
+  g: Graphics,
+  runsOf: Sample[][],
+  to: [number, number],
+  progress: number,
+  zoom: number,
+  tint?: number,
+): void {
+  let from: Sample | null = null;
+  let best = Infinity;
+  for (const run of runsOf)
+    for (const p of run) {
+      const d = (p.x - to[0]) ** 2 + (p.y - to[1]) ** 2;
+      if (d < best) [from, best] = [p, d];
+    }
+  if (!from) return;
+  const d = Math.sqrt(best);
+  if (d < 2) return;
+  const px = (n: number) => Math.max(0.04, n / zoom);
+  const base = { x: from.x, y: from.y, nx: (to[0] - from.x) / d, ny: (to[1] - from.y) / d, s: 0 };
+  battleArrow(g, base, Math.max(1.2, px(9)), d / 0.95, 0.06, progress, px, tint);
 }
 
 /** An offensive stretch: a dark jump-off line with a dashed light rail along it. */

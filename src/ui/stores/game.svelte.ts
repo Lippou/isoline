@@ -30,7 +30,7 @@ export type Tool =
   | { k: 'shipMove' }
   /** Choosing the tile of a new capital (rules/capital.ts). */
   | { k: 'capital' }
-  /** Aiming an offensive line's assault: a click a country's whole border, a right drag a stretch of it. */
+  /** An offensive line's arrow (1.22): a click points its assault there, a right click takes it back. */
   | { k: 'assault'; line: number }
   /** Drawing a front line (core/rules/lines.ts): kind 0 defensive, 1 offensive. */
   | { k: 'line'; kind: number };

@@ -329,6 +329,12 @@ export interface LineView {
   readyTick: number;
   /** How fully it acts, 0–1 (its troops per tile against its country's). */
   strength: number;
+  /** Offensive (1.22): the country whose border it stands on; 0 for a defensive line. */
+  target: number;
+  /** Offensive: the tile its arrow points at (-1 none) — its owner's eyes only. */
+  aim: number;
+  /** Offensive, launched: its attack's id (the line is that attack's front), -1 before. */
+  attack: number;
 }
 
 export interface RailView {

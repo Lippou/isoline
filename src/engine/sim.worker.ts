@@ -337,6 +337,9 @@ function sendUpdate(
       tiles: l.tiles,
       readyTick: l.readyTick,
       strength: lineStrength(g, l),
+      target: l.target,
+      aim: l.owner === viewer ? l.aim : -1,
+      attack: l.attack,
     }));
     lastLinesVersion = g.linesVersion;
   }
@@ -613,7 +616,7 @@ function localView(g: Game): LocalView | undefined {
     popCap: p.popCap,
     lineCount: [
       g.lines.filter((l) => l.owner === p.id && l.kind === 0 && l.troops >= 1).length,
-      g.lines.filter((l) => l.owner === p.id && l.kind === 1 && l.troops >= 1).length,
+      g.lines.filter((l) => l.owner === p.id && l.kind === 1 && l.attack < 0 && l.troops >= 1).length,
     ],
     lineTroops: p.lineTroops,
     growth: p.lastGrowth,

@@ -457,17 +457,17 @@
         group: 'main',
         label: t('radial.lineLaunch'),
         icon: 'lineOffense',
-        hint: wait > 0 ? clock(wait) : formatShort(line.troops),
+        hint: wait > 0 && line.attack < 0 ? clock(wait) : formatShort(line.troops),
         desc: t('radial.lineLaunchDesc'),
-        disabled: wait > 0 || line.troops < 1,
-        // Aimed on the map next: a click a whole border, a right drag a sector of it.
+        disabled: line.troops < 1,
+        // Its arrow on the map next: a click points the assault there.
         run: act(() => {
           hud.frontSel = line.id;
           hud.tool = { k: 'assault', line: line.id };
         }),
       });
     }
-    if (line) {
+    if (line && line.attack < 0) {
       out.push({
         id: 'lineTroops',
         group: 'main',

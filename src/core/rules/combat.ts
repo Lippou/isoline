@@ -19,6 +19,7 @@ import {
   LARGE_ATTACKER_SPEED_DEPTH,
   LARGE_DEFENDER_DEPTH,
   LARGE_TERRITORY_MIDPOINT,
+  LINE_AIM_PULL,
   LINE_OFFENSE_LOSS,
   LINE_OFFENSE_SPEED,
   LARGE_TERRITORY_STEEPNESS,
@@ -80,6 +81,11 @@ export class Attack {
    * same country and absorbs none.
    */
   focused = false;
+  /**
+   * The tile an offensive line's arrow points at (1.22), -1 none: the front takes first what
+   * lies that way (aimBias), at the same pace.
+   */
+  aim = -1;
 
   constructor(id: number, attacker: number, target: number, troops: number, tick: number) {
     this.id = id;
@@ -289,6 +295,27 @@ function jitter(game: Game, tile: number, attackId: number): number {
   return 0.65 + (hash2(tile, attackId, game.config.seed) & 1023) / 1460;
 }
 
+/** An aimed attack's wait on tile j: LINE_AIM_PULL × its distance to the aim (0 when not aimed). */
+function aimBias(game: Game, a: Attack, j: number): number {
+  if (a.aim < 0) return 0;
+  const w = game.map.width;
+  return LINE_AIM_PULL * Math.hypot((j % w) - (a.aim % w), ((j / w) | 0) - ((a.aim / w) | 0));
+}
+
+/** Turns attack `a` towards `aim` (an offensive line's new arrow): its front re-ordered. */
+export function aimAttack(game: Game, a: Attack, aim: number): void {
+  a.aim = aim;
+  const tiles = a.heapTiles.slice();
+  a.heapTiles.length = 0;
+  a.heapPri.length = 0;
+  const seen = new Set<number>();
+  for (const t of tiles) {
+    if (seen.has(t) || game.queuedBy[t] !== a.id) continue;
+    seen.add(t);
+    a.push(t, game.frontTime[t]! + aimBias(game, a, t));
+  }
+}
+
 function enqueueNeighbors(game: Game, a: Attack, tile: number): void {
   const owner = game.owner;
   const map = game.map;
@@ -307,7 +334,7 @@ function pushFrontier(game: Game, a: Attack, j: number): void {
   game.queuedBy[j] = a.id;
   game.frontTime[j] = t;
   a.border.add(j);
-  a.push(j, t);
+  a.push(j, t + aimBias(game, a, j));
 }
 
 /**
@@ -427,6 +454,7 @@ export function launchAttack(
   landing?: number,
   prepared = 0,
   focus?: readonly number[],
+  aim = -1,
 ): Attack | null {
   const p = game.players[attackerId]!;
   if (!p.alive) return null;
@@ -457,6 +485,7 @@ export function launchAttack(
     a = new Attack(game.nextId(), attackerId, targetId, 0, game.tick);
     a.boat = boat;
     a.focused = !!focus;
+    if (focus) a.aim = aim;
   }
   // A riposte: the target was already attacking us when this attack began (the clash below
   // may end its attack, so this is read first). The wave is the target's defence answered,
@@ -648,7 +677,7 @@ function advance(game: Game, a: Attack, p: Player, T: Player | null): void {
       finishAttack(game, a);
       break;
     }
-    a.clock = Math.max(a.clock, a.peekPri());
+    a.clock = Math.max(a.clock, a.peekPri() - aimBias(game, a, a.heapTiles[0]!));
     const tile = a.pop();
     a.border.delete(tile);
     if (owner[tile] !== a.target || !IS_LAND[map.terrain[tile]!] || game.isDead(tile)) continue;
@@ -676,7 +705,7 @@ function advance(game: Game, a: Attack, p: Player, T: Player | null): void {
       game.queuedBy[tile] = a.id;
       game.frontTime[tile] = t;
       a.border.add(tile);
-      a.push(tile, t);
+      a.push(tile, t + aimBias(game, a, tile));
       continue;
     }
     enqueueNeighbors(game, a, tile);

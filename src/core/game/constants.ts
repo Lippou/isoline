@@ -139,8 +139,11 @@ export const ATTACK_RELATION = { easy: -60, normal: -70, hard: -80, impossible: 
  *   forces, 1 to 1 at 3 to 1); past LINE_BREAK_RATIO to 1 the tile falls. Turned — the
  *   enemy holding land LINE_TURN_DEPTH tiles behind LINE_TURN_SHARE of it — it shatters,
  *   its troops lost.
- * - Offensive: dug in after LINE_OFFENSE_SETUP ticks; attacks pushing out from it within
- *   LINE_OFFENSE_REACH tiles lose ×(1 − LINE_OFFENSE_LOSS) and advance ×LINE_OFFENSE_SPEED.
+ * - Offensive (1.22): laid on the border with one country, dug in after LINE_OFFENSE_SETUP
+ *   ticks; its troops then go over the top from it, losing ×(1 − LINE_OFFENSE_LOSS) and
+ *   advancing ×LINE_OFFENSE_SPEED, towards the tile its arrow points at: a frontier tile
+ *   waits LINE_AIM_PULL × its distance to that tile (in plains tiles' worth of time) before
+ *   its turn — the front heads that way rather than spreading evenly.
  * Both act in full while their troops per tile reach LINE_FULL_DENSITY × the country's.
  */
 export const LINE_REACH = 12;
@@ -149,6 +152,7 @@ export const LINE_DEFENSE_SPEED = 3;
 export const LINE_OFFENSE_LOSS = 0.5;
 export const LINE_OFFENSE_SPEED = 1.5;
 export const LINE_OFFENSE_SETUP = 300;
+export const LINE_AIM_PULL = 0.6;
 export const LINE_DEFENSE_SETUP = 0;
 export const LINE_BREAK_RATIO = 3;
 export const LINE_CLASH = 0.1;

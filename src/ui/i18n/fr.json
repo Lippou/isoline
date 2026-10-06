@@ -425,8 +425,8 @@
     "lineRemoveDesc": "Ses troupes reviennent dans l’armée.",
     "lineTroops": "Troupes de la ligne…",
     "lineTroopsDesc": "Ajouter des troupes depuis l’armée, ou en rendre.",
-    "lineLaunch": "Lancer l’assaut",
-    "lineLaunchDesc": "Puis visez : clic gauche sur un pays (toute sa frontière) ou clic droit maintenu le long de la frontière (un secteur)."
+    "lineLaunch": "Donner la direction",
+    "lineLaunchDesc": "Puis cliquez sur la carte : l’assaut part vers ce point (une capitale, une ville, un port). Clic droit : retirer la flèche."
   },
   "confirm": {
     "betrayTitle": "Trahir votre allié ?",
@@ -1431,7 +1431,7 @@
     "raidHitShip": "Raid sur {player} — {ship} touché.",
     "raidHitShipSunk": "Raid sur {player} — {ship} coulé.",
     "revolutionSpread": "La révolte s'étend : {tiles} cases de plus rejoignent {tribe}.",
-    "lineReady": "Votre ligne offensive est prête : ouvrez-la (clic dessus) et lancez l’assaut.",
+    "lineReady": "Votre ligne offensive est prête : cliquez dessus, puis sur la carte pour donner la direction de l’assaut.",
     "lineEmpty": "Une de vos lignes défensives a perdu tous ses hommes : elle ne tient plus. Renforcez-la ou démontez-la.",
     "lineShattered": "Une de vos lignes a été prise à revers : elle éclate, {n} hommes perdus."
   },
@@ -1524,7 +1524,9 @@
       "troops": "Pas assez de troupes pour tenir cette ligne.",
       "points": "Tracé invalide.",
       "notReady": "Les troupes se préparent encore : prêtes dans {s} s.",
-      "noTarget": "Rien à attaquer devant cette ligne."
+      "noTarget": "Cette ligne ne touche plus la frontière : rien à attaquer.",
+      "border": "Pas de frontière avec ce pays à cet endroit.",
+      "target": "Une ligne offensive se pose sur la frontière d’un pays que vous pouvez attaquer (ni allié ni coéquipier)."
     }
   },
   "keys": {
@@ -2254,7 +2256,7 @@
       "economy": "Construisez trois villes pour soutenir l'effort de guerre.",
       "weather": "Surveillez le ciel : les orages ralentissent navires et avions, et les bancs de brouillard réduisent de moitié la portée des radars.",
       "clock": "L'horloge avance : le cadran en haut annonce le prochain palier. Une paix, un vote du Conseil la font reculer ; les bombes la précipitent.",
-      "offensive": "Avant une grande poussée, tracez une ligne offensive (touche A) face à l’ennemi. Ses troupes se préparent trente secondes. Ensuite, cliquez dessus, lancez l’assaut, puis cliquez sur le pays visé, ou maintenez le clic droit le long de la frontière pour n’en frapper qu’un secteur.",
+      "offensive": "Avant une grande poussée, posez une ligne offensive (touche A) : cliquez sur le pays visé, elle se pose sur votre frontière avec lui. Ses troupes se préparent trente secondes. Cliquez ensuite sur la ligne, puis sur sa capitale : l’assaut partira dans cette direction.",
       "push": "Poussez vers quarante pour cent. Une nation vulnérable est signalée sur la carte."
     },
     "hint": {
@@ -2524,7 +2526,7 @@
     },
     "count": "{d} défensive(s) · {o} offensive(s)",
     "locked": "{n} troupes sur les lignes",
-    "none": "Aucune ligne. Tracez une ligne défensive (touche {d}) ou offensive (touche {o}) sur vos terres.",
+    "none": "Aucune ligne. Tracez une ligne défensive sur vos terres (touche {d}), ou posez une ligne offensive sur la frontière d’un pays (touche {o}).",
     "pick": "Cliquez sur une ligne, ici ou sur la carte, pour la gérer.",
     "defensiveN": "Défensive {n}",
     "offensiveN": "Offensive {n}",
@@ -2532,15 +2534,16 @@
       "empty": "Vide : ne tient plus rien",
       "preparing": "Troupes en préparation : {clock}",
       "holding": "Tient le front",
-      "ready": "Prête à l’assaut"
+      "ready": "Prête : donnez la direction",
+      "ordered": "Direction donnée : part dans {clock}",
+      "attacking": "À l’assaut"
     },
-    "aiming": "Visez sur la carte : clic gauche sur un pays = toute sa frontière ; clic droit maintenu le long de la frontière = ce secteur seulement. Échap annule.",
-    "aimTip": "Clic gauche : toute la frontière de ce pays · clic droit maintenu : tracer le secteur",
-    "aimSector": "Secteur : {n} cases — relâchez pour lancer l’assaut",
-    "aimOwn": "Visez la frontière d’un autre pays.",
+    "aiming": "Cliquez sur la carte : l’assaut part vers ce point. Clic droit : retirer la flèche.",
+    "aimTip": "Clic : l’assaut part vers ce point · clic droit : retirer la flèche",
     "rules": "Comment ça marche",
     "rulesDraw": "Défensive : de face, l’assaillant perd 3 hommes pour 1 et ne perce qu’au-delà de 3 contre 1 ; prise à revers, elle éclate. Clic sur une ligne pour la gérer, clic droit pour la démonter.",
-    "rulesAssault": "Offensive : ses troupes se préparent 30 s, puis « Lancer l’assaut » : clic gauche sur un pays pour toute sa frontière, ou clic droit maintenu le long de la frontière pour un secteur (même chez un pays déjà attaqué). Ces soldats perdent deux fois moins et avancent 1,5 fois plus vite."
+    "rulesAssault": "Offensive : cliquez sur un pays voisin pour la poser sur toute votre frontière avec lui, ou maintenez le clic droit le long d’un tronçon. Ses troupes se préparent 30 s. Cliquez sur la ligne, puis sur la carte : la flèche donne la direction de l’assaut (une capitale, une ville). Prête, elle part ; la ligne avance avec le front et son compteur descend avec les hommes. Ces soldats perdent deux fois moins et avancent 1,5 fois plus vite.",
+    "aimOwn": "Pointez la flèche vers les terres ennemies."
   },
   "news": {
     "masthead": "Le Courrier des Isolignes",
@@ -3066,20 +3069,24 @@
     "offensive": {
       "name": "Ligne offensive",
       "short": "Ligne off.",
-      "desc": "Tracez-la sur vos terres face à l'ennemi : ses troupes s'y massent pendant 30 s. Ensuite, lancez l'assaut (clic sur la ligne) : la ligne se vide dans une attaque droit devant, et ces soldats préparés perdent deux fois moins et avancent 1,5 fois plus vite pendant toute l'attaque. Sa longueur dépend des troupes posées ; prise à revers, elle éclate."
+      "desc": "Cliquez sur un pays voisin : elle se pose sur toute votre frontière avec lui (clic droit maintenu le long de la frontière : ce tronçon seulement). Ses troupes s’y massent pendant 30 s. Cliquez ensuite sur la ligne, puis sur la carte : l’assaut part vers ce point, deux fois moins de pertes et 1,5 fois plus vite. La ligne avance avec le front et disparaît avec ses derniers hommes."
     },
     "costTroops": "{n} troupes ({pct} % de l’armée)",
-    "howTo": "Glisser d’un point à un autre, ou cliquer point par point (double-clic ou Entrée pour finir), puis cliquer du côté de l’ennemi. Clic sur une de vos lignes : régler ses troupes ou la démonter.",
+    "howTo": "Défensive : glisser d’un point à un autre, ou cliquer point par point (double-clic ou Entrée pour finir), puis cliquer du côté de l’ennemi. Offensive : cliquer sur un pays voisin, ou maintenir le clic droit le long de la frontière. Clic sur une de vos lignes : la gérer.",
     "tip": {
       "start": "Cliquez ou glissez pour tracer · {troops} troupes ({pct} %)",
       "next": "Clic : point suivant · double-clic ou Entrée : terminer · clic droit : retirer le dernier point",
       "side": "Cliquez du côté de l’ennemi pour poser la ligne · {troops} troupes",
-      "tooLong": "Trop longue pour {troops} troupes : {max} cases au plus (le reste, en rouge, ne sera pas tenu)"
+      "tooLong": "Trop longue pour {troops} troupes : {max} cases au plus (le reste, en rouge, ne sera pas tenu)",
+      "borderStart": "Cliquez sur un pays voisin : la ligne se pose sur toute votre frontière avec lui · clic droit maintenu : un tronçon",
+      "border": "{name} : toute la frontière, {n} cases · {troops} troupes ({pct} %) · clic droit maintenu : un tronçon",
+      "borderSector": "Tronçon face à {name} : {n} cases · relâchez pour poser la ligne",
+      "borderOver": "Trop longue pour {troops} troupes : les {max} cases les plus proches (le reste, en rouge, ne sera pas tenu)"
     },
     "card": {
       "laying": "En place dans {clock}",
       "holding": "Tient le front : de face, ne cède qu’à plus de 3 contre 1",
-      "ready": "Prête : lancez l’assaut",
+      "ready": "Prête : donnez la direction",
       "empty": "Vide : elle ne tient plus rien",
       "emptyShort": "vide",
       "troops": "Troupes sur la ligne",
@@ -3093,9 +3100,14 @@
       "remove": "Démonter",
       "garrison": "Garnison par case",
       "breaks": "Percée de face au-delà de (par case)",
-      "launch": "Lancer l’assaut ({n})",
-      "launchIn": "Prête dans {clock}",
-      "preparing": "Troupes en préparation : {clock}"
+      "launch": "Donner la direction ({n})",
+      "launchIn": "Donner la direction (part dans {clock})",
+      "preparing": "Troupes en préparation : {clock}",
+      "turn": "Changer de direction",
+      "facing": "Face à",
+      "arrow": "Direction",
+      "arrowSet": "donnée",
+      "arrowNone": "à donner"
     }
   }
 }

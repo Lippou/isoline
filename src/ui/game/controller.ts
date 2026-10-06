@@ -210,8 +210,12 @@ export class GameController {
               kind: l.kind,
               troops: l.troops,
               tiles: l.tiles.length,
+              mid: l.tiles[l.tiles.length >> 1] ?? -1,
               readyTick: l.readyTick,
               strength: l.strength,
+              target: l.target,
+              aim: l.aim,
+              attack: l.attack,
             })),
           };
         },
@@ -415,15 +419,17 @@ export class GameController {
   // ------------------------------------------------------------- actions
   action(tile: number, ev?: PointerEvent): void {
     if (this.session.kind === 'replay' || hud.photo) return;
-    // A click on one of my front lines, no tool in hand: the Front window, on that line
-    // (within ~14 screen pixels of it, at any zoom).
+    // A click on one of my front lines, no tool in hand (within ~14 screen pixels of it, at
+    // any zoom): an offensive line's arrow, to point its assault (1.22); a defensive line's
+    // place in the Front window.
     void ev;
     const reach = Math.max(1.5, 14 / this.renderer.camera.zoom);
     const line =
       hud.tool.k === 'none' ? ownLineAt(this.session.state, this.session.viewer, tile, reach) : null;
     if (line) {
       hud.frontSel = line.id;
-      openPanel('front');
+      if (line.kind === 1) hud.tool = { k: 'assault', line: line.id };
+      else openPanel('front');
       audio.ui('click');
       return;
     }

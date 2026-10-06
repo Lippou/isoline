@@ -12,8 +12,14 @@ export function ownLineAt(s: ClientState, viewer: number, tile: number, reach = 
   let bestD = reach;
   for (const l of s.lines) {
     if (l.owner !== viewer) continue;
-    const at = locate(l.pts, x, y);
-    const d = Math.hypot(at.px - x, at.py - y);
+    // An offensive line runs along a border, maybe in several stretches: its nearest tile.
+    let d = Infinity;
+    if (l.kind === 1)
+      for (const t of l.tiles) d = Math.min(d, Math.hypot((t % w) + 0.5 - x, Math.floor(t / w) + 0.5 - y));
+    else {
+      const at = locate(l.pts, x, y);
+      d = Math.hypot(at.px - x, at.py - y);
+    }
     if (d <= bestD) [best, bestD] = [l, d];
   }
   return best;

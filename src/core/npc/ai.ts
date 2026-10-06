@@ -523,10 +523,21 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
   // 3. Defence: counter-attack, fortify the front, guard the capital, answer spent waves.
   if (underAttack) cost += defend(game, p, m, tac, nb, incoming, runaway);
   retireLines(game, p, underAttack);
-  // Offensive lines whose troops have waited long enough go over the top (1.20).
+  // Offensive lines whose troops have waited long enough go over the top (1.20), their
+  // arrow on the enemy's capital (1.22), else straight across the border.
   for (const l of linesOf(game, p.id))
-    if (l.kind === LineKind.Offensive && l.readyTick <= game.tick && l.troops >= 1)
-      applyCommand(game, p.id, { t: 'lineLaunch', id: l.id });
+    if (
+      l.kind === LineKind.Offensive &&
+      l.attack < 0 &&
+      l.aim < 0 &&
+      l.readyTick <= game.tick &&
+      l.troops >= 1
+    ) {
+      const q = game.players[l.target];
+      const aim =
+        q && q.capital >= 0 && game.owner[q.capital] === q.id ? q.capital : l.tiles[l.tiles.length >> 1];
+      if (aim !== undefined) applyCommand(game, p.id, { t: 'lineLaunch', id: l.id, aim });
+    }
   if (tac.counter) cost += answerSpentWaves(game, p, m, nb, incoming, cap);
 
   // 4. Expansion & offensive choice.
@@ -582,7 +593,7 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
         // Hard and up dig an offensive line in first against a country (it acts after 30 s:
         // the war's later waves push out from it).
         if (tac.lines >= 2 && q.kind !== 'tribe' && linesNear(game, p, target.tile, LineKind.Offensive) === 0)
-          layLine(game, p, m, target.tile, q.id, LineKind.Offensive, AI_OFFENSE_LINE_RATIO);
+          layOffensive(game, p, m, target.tile, q.id);
         applyCommand(game, p.id, { t: 'attack', tile: target.tile, ratio });
         m.lastAttack = game.tick;
         if (q.kind !== 'tribe') [m.lastWar, m.warOn] = [game.tick, q.id];
@@ -706,32 +717,30 @@ function linesNear(game: Game, p: Player, tile: number, kind: LineKind): number 
 }
 
 /**
- * Lays a line of `kind` across the way of `enemy` at `contact` (a tile on our common
+ * Lays a defensive line across the way of `enemy` at `contact` (a tile on our common
  * border): a few tiles inside our land, square to where its land lies, facing it, with
  * `ratio` of the army on it. True when laid.
  */
-function layLine(
-  game: Game,
-  p: Player,
-  m: Mem,
-  contact: number,
-  enemy: number,
-  kind: LineKind,
-  ratio: number,
-): boolean {
+function layLine(game: Game, p: Player, m: Mem, contact: number, enemy: number, ratio: number): boolean {
   if (linesOf(game, p.id).length >= LINE_MAX_PER_PLAYER) return false;
-  const across = lineAcross(
-    game,
-    p,
-    contact,
-    enemy,
-    kind === LineKind.Defensive ? AI_LINE_BACK : AI_LINE_BACK - 2,
-    AI_LINE_HALF,
-  );
+  const across = lineAcross(game, p, contact, enemy, AI_LINE_BACK, AI_LINE_HALF);
   if (!across) return false;
   const { pts, side } = across;
   const before = game.lines.length;
-  applyCommand(game, p.id, { t: 'line', kind, pts, side, ratio });
+  applyCommand(game, p.id, { t: 'line', kind: 0, pts, side, ratio });
+  if (game.lines.length === before) return false;
+  m.lastBuild = game.tick;
+  return true;
+}
+
+/**
+ * Lays an offensive line on our border with `enemy` (1.22), as much of it as its troops
+ * allow round `contact`. True when laid.
+ */
+function layOffensive(game: Game, p: Player, m: Mem, contact: number, enemy: number): boolean {
+  if (linesOf(game, p.id).length >= LINE_MAX_PER_PLAYER) return false;
+  const before = game.lines.length;
+  applyCommand(game, p.id, { t: 'lineBorder', target: enemy, at: contact, ratio: AI_OFFENSE_LINE_RATIO });
   if (game.lines.length === before) return false;
   m.lastBuild = game.tick;
   return true;
@@ -744,6 +753,8 @@ function layLine(
  */
 function retireLines(game: Game, p: Player, underAttack: boolean): void {
   for (const l of [...linesOf(game, p.id)]) {
+    // (A launched line is its attack's front.)
+    if (l.attack >= 0) continue;
     // An emptied line (it held a push to its last man) comes down at once.
     if (l.troops < 1) {
       applyCommand(game, p.id, { t: 'lineRemove', id: l.id });
@@ -812,7 +823,7 @@ function defend(
     const want = Math.min(tac.lines, Math.max(1, Math.ceil(share / 0.4)));
     if (
       linesNear(game, p, contact, LineKind.Defensive) < want &&
-      layLine(game, p, m, contact, worst, LineKind.Defensive, AI_LINE_RATIO)
+      layLine(game, p, m, contact, worst, AI_LINE_RATIO)
     )
       cost += 30;
   }
@@ -823,7 +834,7 @@ function defend(
     const d = frontDistance(game, p, p.capital, 12);
     if (d <= 6) {
       if (linesNear(game, p, p.capital, LineKind.Defensive) === 0 && game.tick - m.lastBuild > 30)
-        layLine(game, p, m, contact, worst, LineKind.Defensive, AI_LINE_RATIO);
+        layLine(game, p, m, contact, worst, AI_LINE_RATIO);
       // Moving a standing capital costs 1 M gold and a minute of disorganisation (1.18):
       // still cheaper than losing it (the same disorganisation, a tenth of the treasury).
       if (capitalCooldown(game, p) === 0 && p.gold >= CAPITAL_MOVE_COST * AI_CAPITAL_GOLD_MARGIN) {
@@ -944,7 +955,7 @@ function fortifyAgainst(
   runaway: number,
 ): number {
   if (linesNear(game, p, contact, LineKind.Defensive) >= tac.lines) return 0;
-  return layLine(game, p, m, contact, runaway, LineKind.Defensive, AI_LINE_RATIO) ? 60 : 0;
+  return layLine(game, p, m, contact, runaway, AI_LINE_RATIO) ? 60 : 0;
 }
 
 /**

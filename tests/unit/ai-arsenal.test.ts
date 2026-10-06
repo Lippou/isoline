@@ -4,7 +4,7 @@
 // a victory), generals and embargoes — scaled by difficulty.
 import { describe, expect, it } from 'vitest';
 import { asciiMap, makeGame, startWith, testGame } from '../helpers';
-import { LineKind, placeLine } from '../../src/core/rules/lines';
+import { placeLine } from '../../src/core/rules/lines';
 import type { Game } from '../../src/core/game/state';
 import type { Difficulty } from '../../src/core/game/config';
 import type { Player } from '../../src/core/game/player';
@@ -47,7 +47,7 @@ function build(g: Game, owner: number, type: B, x: number, y: number): Building 
 
 /** A defensive line of `owner` across (x, y), north to south (rules/lines.ts). */
 function wall(g: Game, owner: number, x: number, y: number): void {
-  const l = placeLine(g, g.players[owner]!, LineKind.Defensive, [x + 0.5, y - 6.5, x + 0.5, y + 6.5], 1, 0.1);
+  const l = placeLine(g, g.players[owner]!, [x + 0.5, y - 6.5, x + 0.5, y + 6.5], 1, 0.1);
   expect(typeof l, `line at ${x},${y}`).toBe('object');
 }
 

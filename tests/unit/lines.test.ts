@@ -27,11 +27,12 @@ import {
   lineFront,
   lineGarrison,
   lineMaxTiles,
-  lineTarget,
   lineStrength,
   lineTurned,
   locate,
   placeLine,
+  placeOffensive,
+  removeLine,
   sideOf,
   type FrontLine,
 } from '../../src/core/rules/lines';
@@ -66,7 +67,7 @@ function arena(): Game {
 function wall(g: Game, owner: number, kind: LineKind, x: number, faceWest: boolean, ratio = 0.2): FrontLine {
   const pts = [x + 0.5, 22.5, x + 0.5, 38.5];
   const side = sideOf(pts, faceWest ? x - 5 : x + 5, 30);
-  const l = placeLine(g, g.players[owner]!, kind, pts, side, ratio);
+  const l = placeLine(g, g.players[owner]!, pts, side, ratio);
   expect(typeof l).toBe('object');
   // (A defensive line is laid in 3 s: these tests start with it in place.)
   if (kind === LineKind.Defensive) (l as FrontLine).readyTick = g.tick;
@@ -118,65 +119,107 @@ describe('front lines', () => {
     expect(lineDefense(g, g.map.idx(145, 44), 2, 1)).toBeNull();
   });
 
-  it('an offensive line: its troops wait 30 s, then go over the top straight ahead, fewer losses and faster', () => {
+  it('an offensive line is laid on the border with a country: all of it, or the stretch swept, as long as its troops allow', () => {
+    const g = arena();
+    const p = g.players[1]!;
+    const w = g.map.width;
+    const l = placeOffensive(g, p, 2, g.map.idx(145, 30), null, 0.2) as FrontLine;
+    expect(typeof l).toBe('object');
+    expect(l.target).toBe(2);
+    expect(l.readyTick).toBe(g.tick + LINE_OFFENSE_SETUP);
+    // The whole border: our 60 tiles along x 144.
+    expect(l.tiles.length).toBe(60);
+    for (const t of l.tiles) expect(t % w).toBe(144);
+    removeLine(g, l, true);
+    // A stretch swept (player 2's tiles from y 40 to 44): only along it.
+    const sector = [40, 41, 42, 43, 44].map((y) => g.map.idx(145, y));
+    const m = placeOffensive(g, p, 2, sector[0]!, sector, 0.05) as FrontLine;
+    expect(m.tiles.map((t) => Math.floor(t / w))).toEqual([40, 41, 42, 43, 44]);
+    removeLine(g, m, true);
+    // Too long for its troops: the stretch nearest the click.
+    const max = lineMaxTiles(p.troops * 0.002, p.troops + p.lineTroops, p.tiles);
+    const n = placeOffensive(g, p, 2, g.map.idx(145, 10), null, 0.002) as FrontLine;
+    expect(n.tiles.length).toBe(max);
+    for (const t of n.tiles) expect(Math.abs(Math.floor(t / w) - 10)).toBeLessThanOrEqual(Math.ceil(max / 2));
+    // Never on ourselves, nor where we have no border with that country.
+    expect(placeOffensive(g, p, 1, 0, null, 0.1)).toBe('target');
+    expect(placeOffensive(g, p, 2, 0, [g.map.idx(190, 30)], 0.1)).toBe('border');
+  });
+
+  it('its arrow: once ready, the assault goes from the line only, fewer losses and faster; the line follows the front and goes with its last men', () => {
     const g = arena();
     const p1 = g.players[1]!;
-    const l = wall(g, 1, LineKind.Offensive, 140, false, 0.1); // facing east, at player 2
-    expect(l.readyTick).toBe(g.tick + LINE_OFFENSE_SETUP);
-    expect(lineTarget(g, l)?.target).toBe(2);
-    // Not ready yet: refused, the line stays.
-    g.step([cmd(1, { t: 'lineLaunch', id: l.id })]);
-    expect(g.lines).toContain(l);
-    expect(g.attacks.length).toBe(0);
-    // Ready: the line empties into an attack on player 2 carrying its preparation.
-    l.readyTick = g.tick;
+    const w = g.map.width;
+    const sector = Array.from({ length: 21 }, (_, k) => g.map.idx(145, 20 + k));
+    const l = placeOffensive(g, p1, 2, sector[0]!, sector, 0.1) as FrontLine;
     const troops = l.troops;
     const strength = lineStrength(g, l);
-    g.step([cmd(1, { t: 'lineLaunch', id: l.id })]);
-    expect(g.lines).not.toContain(l);
-    expect(p1.lineTroops).toBe(0);
+    // The arrow given while its troops get ready: nothing yet, the order kept.
+    const aim = g.map.idx(190, 60);
+    g.step([cmd(1, { t: 'lineLaunch', id: l.id, aim })]);
+    expect(l.aim).toBe(aim);
+    expect(g.attacks.length).toBe(0);
+    // Ready: it goes by itself, its troops off the line and into an attack.
+    l.readyTick = g.tick;
+    g.step([]);
     const a = g.attacks.find((x) => x.attacker === 1 && x.target === 2)!;
     expect(a).toBeTruthy();
+    expect(a.focused).toBe(true);
+    expect(a.aim).toBe(aim);
     expect(a.prepared).toBeCloseTo(strength);
     expect(a.troops).toBeGreaterThan(troops * 0.9);
+    expect(p1.lineTroops).toBe(0);
+    expect(l.attack).toBe(a.id);
+    // From the line only.
+    for (const t of a.border) expect(Math.abs(Math.floor(t / w) - 30)).toBeLessThanOrEqual(13);
     // The prepared troops lose LINE_OFFENSE_LOSS fewer and advance LINE_OFFENSE_SPEED faster.
     const front = [...a.border][0]!;
     const out = attackLogic(g, a, front, 60);
+    const prepared = a.prepared;
     a.prepared = 0;
     const plain = attackLogic(g, a, front, 60);
+    a.prepared = prepared;
     expect(out.attackerLoss).toBeCloseTo(plain.attackerLoss * (1 - LINE_OFFENSE_LOSS * strength));
     expect(out.tickFraction).toBeCloseTo(plain.tickFraction / (1 + (LINE_OFFENSE_SPEED - 1) * strength));
-    // Mixed into an attack already under way, the preparation is weighted by the troops.
-    const b = launchAttack(g, 1, 2, troops, undefined, 0)!;
-    expect(b).toBe(a);
+    // The line is the attack's front: our tiles on it, its troops the attack's.
+    for (let k = 0; k < 40; k++) g.step([]);
+    expect(g.lines).toContain(l);
+    expect(l.troops).toBeCloseTo(a.troops, 0);
+    expect(l.tiles.some((t) => t % w >= 145)).toBe(true);
+    for (const t of l.tiles) expect(g.owner[t]).toBe(1);
+    // A launched line is neither refilled nor taken down: it goes with its attack.
+    g.step([cmd(1, { t: 'lineRemove', id: l.id })]);
+    expect(g.lines).toContain(l);
+    a.troops = 0;
+    for (let k = 0; k < 6; k++) g.step([]);
+    expect(g.lines).not.toContain(l);
+    expect(p1.lineTroops).toBe(0);
   });
 
-  it('an assault aimed at a sector of the border: its own attack, starting there only, even on a country already attacked', () => {
-    const g = arena();
-    const l = wall(g, 1, LineKind.Offensive, 140, false, 0.1);
-    l.readyTick = g.tick;
-    // An attack already under way on player 2 along the whole border.
-    g.step([cmd(1, { t: 'attack', tile: g.map.idx(145, 30), ratio: 0.2 })]);
-    const whole = g.attacks.find((a) => a.attacker === 1 && a.target === 2)!;
-    // The sector: player 2's border tiles from y 40 to 44.
-    const sector = [40, 41, 42, 43, 44].map((y) => g.map.idx(145, y));
-    g.step([cmd(1, { t: 'lineLaunch', id: l.id, tiles: sector })]);
-    const mine = g.attacks.filter((a) => a.attacker === 1 && a.target === 2);
-    expect(mine.length).toBe(2);
-    const focused = mine.find((a) => a !== whole)!;
-    expect(focused.focused).toBe(true);
-    expect(focused.prepared).toBeGreaterThan(0);
-    // Its front: only round the sector.
-    for (const t of focused.border) {
-      const y = Math.floor(t / g.map.width);
-      expect(y).toBeGreaterThanOrEqual(38);
-      expect(y).toBeLessThanOrEqual(46);
-    }
-    // A left click aims at a country's whole border instead.
-    const m = wall(g, 1, LineKind.Offensive, 130, false, 0.05);
-    m.readyTick = g.tick;
-    g.step([cmd(1, { t: 'lineLaunch', id: m.id, target: 2 })]);
-    expect(g.lines).not.toContain(m);
+  it('the front heads for the arrow, at the same pace; a new arrow turns it', () => {
+    const conquest = (aimY: number, turnY = -1) => {
+      const g = arena();
+      g.players[1]!.troops = 300_000;
+      const w = g.map.width;
+      const l = placeOffensive(g, g.players[1]!, 2, g.map.idx(145, 35), null, 0.3) as FrontLine;
+      l.readyTick = g.tick;
+      g.step([cmd(1, { t: 'lineLaunch', id: l.id, aim: g.map.idx(190, aimY) })]);
+      for (let k = 0; k < 30; k++) g.step([]);
+      if (turnY >= 0) g.step([cmd(1, { t: 'lineLaunch', id: l.id, aim: g.map.idx(190, turnY) })]);
+      for (let k = 0; k < 30; k++) g.step([]);
+      let [n, sy] = [0, 0];
+      for (let y = 0; y < 70; y++)
+        for (let x = 145; x < 200; x++) if (g.owner[y * w + x] === 1) [n, sy] = [n + 1, sy + y];
+      return { n, y: sy / Math.max(1, n) };
+    };
+    const north = conquest(6);
+    const south = conquest(63);
+    expect(north.n).toBeGreaterThan(20);
+    expect(south.y).toBeGreaterThan(north.y + 6);
+    // Same pace either way.
+    expect(Math.abs(north.n - south.n)).toBeLessThan(0.25 * north.n);
+    // Turned south half way, it ends further south than kept north.
+    expect(conquest(6, 63).y).toBeGreaterThan(north.y + 2);
   });
 
   it('paid in troops: off the army and off the ceiling while it stands, back when taken down', () => {
@@ -202,12 +245,10 @@ describe('front lines', () => {
   it('only on your own land, LINE_MAX_PER_PLAYER at most', () => {
     const g = arena();
     const p = g.players[1]!;
-    expect(placeLine(g, p, LineKind.Defensive, [160.5, 22.5, 160.5, 38.5], 1, 0.1)).toBe('short');
+    expect(placeLine(g, p, [160.5, 22.5, 160.5, 38.5], 1, 0.1)).toBe('short');
     for (let k = 0; k < LINE_MAX_PER_PLAYER; k++)
-      expect(
-        typeof placeLine(g, p, LineKind.Defensive, [10.5 + 4 * k, 22.5, 10.5 + 4 * k, 38.5], 1, 0.05),
-      ).toBe('object');
-    expect(placeLine(g, p, LineKind.Defensive, [100.5, 22.5, 100.5, 38.5], 1, 0.05)).toBe('max');
+      expect(typeof placeLine(g, p, [10.5 + 4 * k, 22.5, 10.5 + 4 * k, 38.5], 1, 0.05)).toBe('object');
+    expect(placeLine(g, p, [100.5, 22.5, 100.5, 38.5], 1, 0.05)).toBe('max');
   });
 
   it('a tile of it taken loses its share of the troops and opens a breach; all taken, it is gone', () => {
@@ -231,7 +272,7 @@ describe('front lines', () => {
   it('survives a save: same lines, same index, same hash', () => {
     const g = arena();
     wall(g, 2, LineKind.Defensive, 150, true);
-    wall(g, 1, LineKind.Offensive, 140, false);
+    placeOffensive(g, g.players[1]!, 2, g.map.idx(145, 30), null, 0.1);
     const back = restoreSnapshot(g.map, snapshotFromJson(snapshotToJson(takeSnapshot(g))));
     expect(back.lines).toEqual(g.lines);
     expect([...back.lineAt]).toEqual([...g.lineAt]);
@@ -275,7 +316,7 @@ describe('front lines', () => {
       const w = g.map.width;
       // A line across the whole field: no way round it.
       const pts = [150.5, 0.5, 150.5, 69.5];
-      const l = placeLine(g, g.players[2]!, LineKind.Defensive, pts, sideOf(pts, 140, 30), 0.3) as FrontLine;
+      const l = placeLine(g, g.players[2]!, pts, sideOf(pts, 140, 30), 0.3) as FrontLine;
       l.readyTick = g.tick;
       const before = l.troops;
       g.players[1]!.troops = army;
@@ -342,15 +383,13 @@ describe('front lines', () => {
     const p = g.players[2]!;
     const max = lineMaxTiles(p.troops * 0.01, p.troops, p.tiles);
     const pts = [150.5, 0.5, 150.5, 69.5];
-    const l = placeLine(g, p, LineKind.Defensive, pts, sideOf(pts, 140, 30), 0.01) as FrontLine;
+    const l = placeLine(g, p, pts, sideOf(pts, 140, 30), 0.01) as FrontLine;
     expect(typeof l).toBe('object');
     expect(l.tiles.length).toBe(max);
     expect(lineGarrison(l)).toBeGreaterThanOrEqual((LINE_MIN_DENSITY * 100_000) / p.tiles - 1);
     // Too few troops for three tiles: refused.
     p.troops = 100;
-    expect(placeLine(g, p, LineKind.Defensive, [160.5, 22.5, 160.5, 38.5], sideOf(pts, 140, 30), 0.01)).toBe(
-      'troops',
-    );
+    expect(placeLine(g, p, [160.5, 22.5, 160.5, 38.5], sideOf(pts, 140, 30), 0.01)).toBe('troops');
   });
 
   it('its troops can be changed: more from the army (as many as it has), fewer back to it', () => {
