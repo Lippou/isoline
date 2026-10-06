@@ -334,8 +334,8 @@
     "modeHvnTip": "All humans together against the nations' coalition (they don't attack each other).",
     "groupFront": "Front",
     "onLines": "{n} on the lines",
-    "onLinesCap": "ceiling {cap} − {n}",
-    "onLinesTip": "{n} troops locked on your front lines: they are out of the army and your ceiling drops from {cap} to {left}. Lighten or take down a line (click it) to get them back."
+    "onLinesCap": "locked (greyed in the bar)",
+    "onLinesTip": "{n} troops locked on your front lines: they count in your total ({cap}) but are no longer available (greyed in the bar); {left} of room is left for the army. Lighten or take down a line (click it) to get them back."
   },
   "panel": {
     "diplomacy": "Diplomacy",
@@ -423,7 +423,9 @@
     "lineRemove": "Take the line down",
     "lineRemoveDesc": "Its troops return to the army.",
     "lineTroops": "Line troops…",
-    "lineTroopsDesc": "Add troops from the army, or send some back."
+    "lineTroopsDesc": "Add troops from the army, or send some back.",
+    "lineLaunch": "Launch the assault",
+    "lineLaunchDesc": "The line’s troops attack straight ahead: −50% losses, +50% speed the whole assault."
   },
   "confirm": {
     "betrayTitle": "Betray your ally?",
@@ -1428,7 +1430,7 @@
     "raidHitShip": "Raid on {player} — {ship} hit.",
     "raidHitShipSunk": "Raid on {player} — {ship} sunk.",
     "revolutionSpread": "The revolt spreads: {tiles} more tiles join {tribe}.",
-    "lineReady": "Your offensive line has dug in.",
+    "lineReady": "Your offensive line is ready: click it to launch the assault.",
     "lineEmpty": "One of your defensive lines has lost all its men: it no longer holds. Reinforce it or take it down.",
     "lineShattered": "One of your lines was turned: it shatters, {n} men lost."
   },
@@ -1519,7 +1521,9 @@
       "max": "{n} lines at most: take one down (right click on it).",
       "short": "A line is drawn on your own land.",
       "troops": "Not enough troops to hold this line.",
-      "points": "Invalid drawing."
+      "points": "Invalid drawing.",
+      "notReady": "The troops are still getting ready: ready in {s} s.",
+      "noTarget": "Nothing to attack in front of this line."
     }
   },
   "keys": {
@@ -2249,7 +2253,7 @@
       "economy": "Build three cities to sustain the war effort.",
       "weather": "Watch the sky: storms slow ships and aircraft down, and fog banks halve the range of radars.",
       "clock": "The clock is ticking: the dial at the top announces the next milestone. A peace summit or a Council vote turns it back; bombs hasten it.",
-      "offensive": "Before a big push, draw an offensive line (key Q) facing the enemy: after 30 seconds, your attacks pushing out from it lose half as many troops and advance faster.",
+      "offensive": "Before a big push, draw an offensive line (key Q) facing the enemy. Its troops get ready for thirty seconds; then click it to launch the assault: those soldiers lose half as many and advance faster.",
       "push": "Push towards forty percent. A vulnerable nation is marked on the map."
     },
     "hint": {
@@ -3037,25 +3041,25 @@
     "defensive": {
       "name": "Defensive line",
       "short": "Def. line",
-      "desc": "Draw it on your land, then click on the enemy's side; it is in place in 3 s. Its length depends on the troops put on it. Each tile holds with its garrison: head-on, the attacker loses 3 men for 1 at even forces and only breaks through beyond 3 to 1. In front of it (12 tiles) the enemy advances up to 3 times slower. Turned along a quarter of its length, it shatters and its troops are lost."
+      "desc": "Draw it on your land, then click on the enemy's side: it is in place at once. Its length depends on the troops put on it. Each tile holds with its garrison: head-on, the attacker loses 3 men for 1 at even forces and only breaks through beyond 3 to 1. In front of it (12 tiles) the enemy advances up to 3 times slower. Turned along a quarter of its length, it shatters and its troops are lost."
     },
     "offensive": {
       "name": "Offensive line",
       "short": "Off. line",
-      "desc": "Draw it on your land facing the enemy: after 30 s to prepare, your attacks pushing out from it lose half as many troops and advance 1.5 times faster in the 16 tiles in front of it. Its length depends on the troops put on it; turned, it shatters."
+      "desc": "Draw it on your land facing the enemy: its troops mass there for 30 s. Then launch the assault (click the line): the line empties into an attack straight ahead, and those prepared soldiers lose half as many and advance 1.5 times faster all the attack long. Its length depends on the troops put on it; turned, it shatters."
     },
     "costTroops": "{n} troops ({pct}% of the army)",
     "howTo": "Drag from one point to another, or click point by point (double click or Enter to finish), then click on the enemy’s side. Click one of your lines: set its troops or take it down.",
     "tip": {
       "start": "Click or drag to draw · {troops} troops ({pct}%)",
-      "next": "Click: next point · double click or Enter: finish · Backspace: undo point",
+      "next": "Click: next point · double click or Enter: finish · right click: take the last point back",
       "side": "Click on the enemy’s side to lay the line · {troops} troops",
       "tooLong": "Too long for {troops} troops: {max} tiles at most (the rest, in red, will not be held)"
     },
     "card": {
       "laying": "In place in {clock}",
       "holding": "Holding the front: head-on, it only gives way beyond 3 to 1",
-      "ready": "Dug in: your assaults push out from it",
+      "ready": "Ready: launch the assault",
       "empty": "Empty: it holds nothing any more",
       "emptyShort": "empty",
       "troops": "Troops on the line",
@@ -3068,7 +3072,10 @@
       "apply": "Apply",
       "remove": "Take down",
       "garrison": "Garrison per tile",
-      "breaks": "Broken head-on beyond (per tile)"
+      "breaks": "Broken head-on beyond (per tile)",
+      "launch": "Launch the assault ({n})",
+      "launchIn": "Ready in {clock}",
+      "preparing": "Troops getting ready: {clock}"
     }
   }
 }

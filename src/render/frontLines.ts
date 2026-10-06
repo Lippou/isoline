@@ -56,6 +56,8 @@ export interface FrontLineContext {
   visible: (l: LineView, x: number, y: number) => boolean;
   /** Whether the viewer owns this tile (the drawing's preview). */
   mine: (x: number, y: number) => boolean;
+  /** The camera's view, in tiles: [x0, y0, x1, y1]. */
+  bounds: [number, number, number, number];
 }
 
 /** A point along a polyline, with the unit normal pointing to the side faced. */
@@ -128,141 +130,236 @@ interface PionView {
   box: Graphics;
   flag: Sprite;
   text: BitmapText;
+  key: string;
+}
+
+/** One line's drawing, cached: rebuilt only when what it shows changes. */
+interface LineGfx {
+  root: Container;
+  zone: Graphics;
+  ink: Graphics;
+  arrows: Graphics;
+  /** What its static drawing shows (shape, held tiles, state, zoom step, zones). */
+  sig: string;
+  /** Its preparation step (the arrows' fill), redrawn on its own. */
+  arrowSig: string;
+  box: [number, number, number, number];
+  mid: [number, number];
+  pions: Pion[];
+  runs: Sample[][];
 }
 
 export class FrontLineLayer {
   readonly container = new Container();
-  private readonly zone = new Graphics();
-  private readonly ink = new Graphics();
+  private readonly lineLayer = new Container();
   private readonly draft = new Graphics();
   private readonly pions = new Container();
   private readonly pool: PionView[] = [];
-  private anchors: Pion[] = [];
-  private key = '';
+  private readonly gfx = new Map<number, LineGfx>();
 
   constructor() {
-    this.container.addChild(this.zone, this.ink, this.draft, this.pions);
+    this.container.addChild(this.lineLayer, this.draft, this.pions);
   }
 
   /** Map width (tile keys), set by the renderer. */
   width = 1;
 
-  update(lines: readonly LineView[], version: number, ctx: FrontLineContext, draft: LineDraft | null): void {
+  /**
+   * Every frame. Each line keeps its own drawing (no line's change redraws the others); a
+   * line off screen is neither drawn nor built; far out, other countries' lines are drawn
+   * plain (no teeth, no zone) — only ours carry their zone at every zoom.
+   */
+  update(lines: readonly LineView[], _version: number, ctx: FrontLineContext, draft: LineDraft | null): void {
     const z = ctx.zoom;
-    // Redrawn when the lines change, the zoom moves by a tenth, a line prepares, the fog changes.
-    const preparing = lines.some((l) => l.readyTick > ctx.tick);
-    const zb = Math.round(Math.log(z) * 10);
-    const key = `${version}|${zb}|${ctx.zones}|${ctx.viewer}|${preparing ? ctx.tick : 0}`;
-    if (key !== this.key) {
-      this.key = key;
-      this.redraw(lines, ctx);
+    const [x0, y0, x1, y1] = ctx.bounds;
+    // Zoom steps of ~40 %: line widths stay right without a rebuild at every wheel notch.
+    const step = Math.round(Math.log2(z) * 2);
+    const seen = new Set<number>();
+    for (const l of lines) {
+      seen.add(l.id);
+      let v = this.gfx.get(l.id);
+      if (!v) {
+        const root = new Container();
+        const zone = new Graphics();
+        const ink = new Graphics();
+        const arrows = new Graphics();
+        root.addChild(zone, ink, arrows);
+        this.lineLayer.addChild(root);
+        v = {
+          root,
+          zone,
+          ink,
+          arrows,
+          sig: '',
+          arrowSig: '',
+          box: lineBox(l),
+          mid: middle(l),
+          pions: [],
+          runs: [],
+        };
+        this.gfx.set(l.id, v);
+      }
+      const [bx0, by0, bx1, by1] = v.box;
+      const onScreen = bx1 >= x0 && bx0 <= x1 && by1 >= y0 && by0 <= y1;
+      v.root.visible = onScreen && ctx.visible(l, v.mid[0], v.mid[1]);
+      if (!v.root.visible) continue;
+      const mine = l.owner === ctx.viewer;
+      const lod = !mine && z < 1.6 ? 'far' : 'near';
+      const left = Math.max(0, l.readyTick - ctx.tick);
+      const empty = l.troops < 1;
+      const sig = `${step}|${lod}|${ctx.zones && mine}|${l.tiles.length}|${l.tiles[0]}|${empty}|${left > 0}`;
+      if (sig !== v.sig) {
+        v.sig = sig;
+        v.arrowSig = '';
+        this.build(v, l, ctx, lod, mine, left, empty);
+      }
+      if (l.kind === 1) {
+        const progress = left > 0 ? 1 - left / LINE_OFFENSE_SETUP : 1;
+        const arrowSig = `${step}|${empty}|${Math.floor(progress * 40)}`;
+        if (arrowSig !== v.arrowSig) {
+          v.arrowSig = arrowSig;
+          this.buildArrows(v, ctx, empty, progress);
+        }
+      }
+      for (const pn of v.pions) {
+        pn.troops = l.troops / Math.max(1, v.pions.length);
+        pn.strength = l.strength;
+        pn.left = left;
+        pn.empty = empty;
+      }
     }
+    for (const [id, v] of this.gfx)
+      if (!seen.has(id)) {
+        v.root.destroy({ children: true });
+        this.gfx.delete(id);
+      }
     this.placePions(ctx);
     this.drawDraft(draft, ctx);
   }
 
-  private redraw(lines: readonly LineView[], ctx: FrontLineContext): void {
+  /** A line's static drawing: its zone (ours), its body, its counters' places. */
+  private build(
+    v: LineGfx,
+    l: LineView,
+    ctx: FrontLineContext,
+    lod: 'far' | 'near',
+    mine: boolean,
+    left: number,
+    empty: boolean,
+  ): void {
     const z = ctx.zoom;
-    const px = (v: number) => Math.max(0.04, v / z);
-    this.zone.clear();
-    this.ink.clear();
-    this.anchors = [];
-    for (const l of lines) {
-      const mid = middle(l);
-      if (!ctx.visible(l, mid[0], mid[1])) continue;
-      const held = new Set(l.tiles);
-      const left = Math.max(0, l.readyTick - ctx.tick);
-      const empty = l.troops < 1;
-      const samples = sampleLine(smooth(l.pts), l.side, 0.35);
-      const isHeld = (p: Sample) => heldAt(held, p.x, p.y, this.width);
-      const reach = l.kind === 0 ? LINE_REACH : LINE_OFFENSE_REACH;
-      let heldRuns: Sample[][] = [];
-      runs(samples, isHeld, (run, on) => {
-        if (on) heldRuns.push(run);
-        else dotted(this.ink, run, px(5), px(1.3), CORE, 0.55);
-      });
-      heldRuns = heldRuns.filter((r) => r.length >= 3);
-      if (ctx.zones && !empty)
-        for (const run of heldRuns)
-          zoneShade(this.zone, run, reach, l.kind === 0 ? SHADE : WARM, px, left > 0);
-      for (const run of heldRuns) {
-        if (l.kind === 0) defensiveLine(this.ink, run, px, empty ? 'empty' : left > 0 ? 'laying' : 'held');
-        else jumpOffLine(this.ink, run, px, empty);
+    const px = (n: number) => Math.max(0.04, n / z);
+    v.zone.clear();
+    v.ink.clear();
+    v.pions = [];
+    const held = new Set(l.tiles);
+    const samples = sampleLine(smooth(l.pts), l.side, lod === 'far' ? 1 : 0.5);
+    const isHeld = (p: Sample) => heldAt(held, p.x, p.y, this.width);
+    const reach = l.kind === 0 ? LINE_REACH : LINE_OFFENSE_REACH;
+    let heldRuns: Sample[][] = [];
+    runs(samples, isHeld, (run, on) => {
+      if (on) heldRuns.push(run);
+      else if (lod === 'near') dotted(v.ink, run, px(5), px(1.3), CORE, 0.55);
+    });
+    heldRuns = heldRuns.filter((r) => r.length >= 2);
+    v.runs = heldRuns;
+    if (ctx.zones && mine && !empty)
+      for (const run of heldRuns) zoneShade(v.zone, run, reach, l.kind === 0 ? SHADE : WARM, px, left > 0);
+    for (const run of heldRuns) {
+      if (lod === 'far') {
+        polyline(v.ink, run, CORE, px(4), 0.9);
+        continue;
       }
-      if (l.kind === 1 && !empty)
-        for (const run of heldRuns) {
-          const len = run[run.length - 1]!.s - run[0]!.s;
-          const n = Math.max(1, Math.round(len / 20));
-          const progress = left > 0 ? 1 - left / LINE_OFFENSE_SETUP : 1;
-          for (let k = 0; k < n; k++) {
-            const base = pointAt(run, run[0]!.s + ((k + 0.5) / n) * len);
-            const width = Math.min(2.4, Math.max(1.1, (len / n) * 0.09));
-            battleArrow(this.ink, base, width, reach, (k % 2 ? 1 : -1) * 0.12, progress, px);
-          }
-        }
-      // Counters: one every ~22 tiles of held line, sharing its troops, just behind it.
-      const total = heldRuns.reduce((s, r) => s + (r[r.length - 1]!.s - r[0]!.s), 0);
-      const count = Math.max(1, Math.min(6, Math.round(total / 22)));
-      let k = 0;
-      for (const run of heldRuns) {
-        const len = run[run.length - 1]!.s - run[0]!.s;
-        const here = Math.max(1, Math.round((count * len) / Math.max(1e-6, total)));
-        for (let j = 0; j < here && k < count; j++, k++) {
-          const p = pointAt(run, run[0]!.s + ((j + 0.5) / here) * len);
-          this.anchors.push({
-            x: p.x - p.nx * px(17),
-            y: p.y - p.ny * px(17),
-            owner: l.owner,
-            troops: l.troops / count,
-            strength: l.strength,
-            color: ctx.color(l.owner),
-            left,
-            empty,
-          });
-        }
+      if (l.kind === 0) defensiveLine(v.ink, run, px, empty ? 'empty' : left > 0 ? 'laying' : 'held');
+      else jumpOffLine(v.ink, run, px, empty);
+    }
+    if (lod === 'far') return;
+    // Counters: one every ~22 tiles of held line, sharing its troops, just behind it.
+    const total = heldRuns.reduce((s, r) => s + (r[r.length - 1]!.s - r[0]!.s), 0);
+    const count = Math.max(1, Math.min(6, Math.round(total / 22)));
+    let k = 0;
+    for (const run of heldRuns) {
+      const len = run[run.length - 1]!.s - run[0]!.s;
+      const here = Math.max(1, Math.round((count * len) / Math.max(1e-6, total)));
+      for (let j = 0; j < here && k < count; j++, k++) {
+        const p = pointAt(run, run[0]!.s + ((j + 0.5) / here) * len);
+        v.pions.push({
+          x: p.x - p.nx * px(17),
+          y: p.y - p.ny * px(17),
+          owner: l.owner,
+          troops: l.troops / count,
+          strength: l.strength,
+          color: ctx.color(l.owner),
+          left,
+          empty,
+        });
       }
     }
   }
 
-  /** The counters, at a steady size on screen; hidden far out. */
+  /** An offensive line's planned assault: its arrows, filling while its troops wait. */
+  private buildArrows(v: LineGfx, ctx: FrontLineContext, empty: boolean, progress: number): void {
+    const px = (n: number) => Math.max(0.04, n / ctx.zoom);
+    v.arrows.clear();
+    if (empty || v.sig.includes('far')) return;
+    for (const run of v.runs) {
+      const len = run[run.length - 1]!.s - run[0]!.s;
+      const n = Math.max(1, Math.round(len / 20));
+      for (let k = 0; k < n; k++) {
+        const base = pointAt(run, run[0]!.s + ((k + 0.5) / n) * len);
+        const width = Math.min(2.4, Math.max(1.1, (len / n) * 0.09));
+        battleArrow(v.arrows, base, width, LINE_OFFENSE_REACH, (k % 2 ? 1 : -1) * 0.12, progress, px);
+      }
+    }
+  }
+
+  /** The counters of the lines on screen, at a steady size; hidden far out. */
   private placePions(ctx: FrontLineContext): void {
     const z = ctx.zoom;
     let used = 0;
     if (z >= 1.2)
-      for (const a of this.anchors) {
-        let v = this.pool[used];
-        if (!v) {
-          const root = new Container();
-          const box = new Graphics();
-          const flag = new Sprite();
-          flag.anchor.set(0, 0.5);
-          const text = new BitmapText({ text: '', style: PION_STYLE });
-          text.anchor.set(0, 0.5);
-          root.addChild(box, flag, text);
-          this.pions.addChild(root);
-          v = this.pool[used] = { root, box, flag, text };
+      for (const g of this.gfx.values()) {
+        if (!g.root.visible) continue;
+        for (const a of g.pions) {
+          let v = this.pool[used];
+          if (!v) {
+            const root = new Container();
+            const box = new Graphics();
+            const flag = new Sprite();
+            flag.anchor.set(0, 0.5);
+            const text = new BitmapText({ text: '', style: PION_STYLE });
+            text.anchor.set(0, 0.5);
+            root.addChild(box, flag, text);
+            this.pions.addChild(root);
+            v = this.pool[used] = { root, box, flag, text, key: '' };
+          }
+          used++;
+          const label =
+            a.left > 0
+              ? `${compact(a.troops)}  ${Math.floor(a.left / 600)}:${String(Math.ceil(a.left / 10) % 60).padStart(2, '0')}`
+              : compact(a.troops);
+          const tex = ctx.flag(a.owner);
+          // Rebuilt only when what it shows changes; moved with the camera every frame.
+          const key = `${label}|${!!tex}|${a.empty}|${Math.round(a.strength * 20)}|${a.left > 0}|${a.color}`;
+          if (key !== v.key) {
+            v.key = key;
+            if (v.text.text !== label) v.text.text = label;
+            v.text.scale.set(PION_TEXT / 30);
+            const flagW = tex ? Math.round((11 * tex.width) / tex.height) : 0;
+            if (tex && v.flag.texture !== tex) v.flag.texture = tex;
+            v.flag.visible = !!tex;
+            if (tex) v.flag.setSize(flagW, 11);
+            v.flag.position.set(6, -1.5);
+            const x0 = 6 + (tex ? flagW + 5 : 0);
+            v.text.position.set(x0, -1.5);
+            const w = x0 + v.text.width + 7;
+            drawPion(v.box, a, w);
+            v.root.pivot.set(w / 2, 0);
+          }
+          v.root.visible = true;
+          v.root.position.set(a.x, a.y);
+          v.root.scale.set(1 / z);
         }
-        used++;
-        const label =
-          a.left > 0
-            ? `${compact(a.troops)}  ${Math.floor(a.left / 600)}:${String(Math.ceil(a.left / 10) % 60).padStart(2, '0')}`
-            : compact(a.troops);
-        if (v.text.text !== label) v.text.text = label;
-        v.text.scale.set(PION_TEXT / 30);
-        const tex = ctx.flag(a.owner);
-        const flagW = tex ? Math.round((11 * tex.width) / tex.height) : 0;
-        if (tex && v.flag.texture !== tex) v.flag.texture = tex;
-        v.flag.visible = !!tex;
-        if (tex) v.flag.setSize(flagW, 11);
-        v.flag.position.set(6, -1.5);
-        const x0 = 6 + (tex ? flagW + 5 : 0);
-        v.text.position.set(x0, -1.5);
-        const w = x0 + v.text.width + 7;
-        drawPion(v.box, a, w);
-        v.root.visible = true;
-        v.root.position.set(a.x, a.y);
-        v.root.scale.set(1 / z);
-        v.root.pivot.set(w / 2, 0);
       }
     for (let k = used; k < this.pool.length; k++) this.pool[k]!.root.visible = false;
   }
@@ -509,6 +606,19 @@ function heldAt(held: Set<number>, x: number, y: number, w: number): boolean {
   for (let dy = -1; dy <= 1; dy++)
     for (let dx = -1; dx <= 1; dx++) if (held.has((fy + dy) * w + fx + dx)) return true;
   return false;
+}
+
+/** A line's bounding box with its reach and counters around it. */
+function lineBox(l: LineView): [number, number, number, number] {
+  let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < l.pts.length; i += 2) {
+    x0 = Math.min(x0, l.pts[i]!);
+    x1 = Math.max(x1, l.pts[i]!);
+    y0 = Math.min(y0, l.pts[i + 1]!);
+    y1 = Math.max(y1, l.pts[i + 1]!);
+  }
+  const m = Math.max(LINE_REACH, LINE_OFFENSE_REACH) + 4;
+  return [x0 - m, y0 - m, x1 + m, y1 + m];
 }
 
 function middle(l: LineView): [number, number] {

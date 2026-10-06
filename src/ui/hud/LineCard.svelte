@@ -38,7 +38,8 @@
   const left = $derived(line ? Math.max(0, line.readyTick - hud.tick) : 0);
   const status = $derived.by((): { key: string; icon: 'hourglass' | 'warning' | 'check' } => {
     if (!line) return { key: '', icon: 'check' };
-    if (left > 0) return { key: 'line.card.laying', icon: 'hourglass' };
+    if (left > 0)
+      return { key: line.kind === 1 ? 'line.card.preparing' : 'line.card.laying', icon: 'hourglass' };
     if (line.troops < 1) return { key: 'line.card.empty', icon: 'warning' };
     return { key: line.kind === 0 ? 'line.card.holding' : 'line.card.ready', icon: 'check' };
   });
@@ -46,6 +47,12 @@
   function apply(): void {
     if (!line) return;
     s.cmd({ t: 'lineTroops', id: line.id, troops: target });
+  }
+  /** An offensive line, ready: its troops go over the top (they carry its preparation). */
+  function launch(): void {
+    if (!line) return;
+    s.cmd({ t: 'lineLaunch', id: line.id });
+    hud.lineCard = null;
   }
   function remove(): void {
     if (!line) return;
@@ -132,6 +139,17 @@
           ? t('line.card.toArmy', { n: short(line.troops - target) })
           : ''}
     </p>
+    {#if line.kind === 1}
+      <button
+        class="np-btn ink launch"
+        onclick={launch}
+        disabled={left > 0 || line.troops < 1}
+        data-testid="line-card-launch"
+        ><Icon name="lineOffense" size={14} />{left > 0
+          ? t('line.card.launchIn', { clock: clock(left) })
+          : t('line.card.launch', { n: short(line.troops) })}</button
+      >
+    {/if}
     <div class="actions">
       <button
         class="np-btn ink"
@@ -206,6 +224,15 @@
     margin: 2px 0 8px;
     color: var(--np-ink-2);
     font-size: 0.9em;
+  }
+  .launch {
+    width: 100%;
+    justify-content: center;
+    margin: 0 0 8px;
+  }
+  .launch[disabled] {
+    opacity: 0.55;
+    cursor: default;
   }
   .actions {
     display: flex;

@@ -1296,6 +1296,7 @@ export class GameRenderer {
         },
         visible: (l, x, y) => this.revealed(l.owner, x, y),
         mine: (x, y) => s.owner[Math.floor(y) * s.width + Math.floor(x)] === s.viewer,
+        bounds: this.camera.bounds(),
       },
       ov.lineDraft,
     );

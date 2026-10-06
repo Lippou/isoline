@@ -56,7 +56,10 @@
     const max = Math.max(...history, 1);
     return history.map((v, k) => `${(k / 59) * 100},${22 - (v / max) * 20}`).join(' ');
   });
-  const capPct = $derived(L && L.popCap > 0 ? Math.min(100, (L.troops / L.popCap) * 100) : 0);
+  // The whole ceiling (1.20): the army in ink, the troops locked on front lines greyed after it.
+  const fullCap = $derived(L ? L.popCap + L.lineTroops : 0);
+  const capPct = $derived(L && fullCap > 0 ? Math.min(100, (L.troops / fullCap) * 100) : 0);
+  const linePct = $derived(L && fullCap > 0 ? Math.min(100 - capPct, (L.lineTroops / fullCap) * 100) : 0);
   // Trade and train payouts are decaying sums (×0.8 every 5 s ≈ the last 25 s): per second.
   const tradePs = $derived(L ? L.incomeBreakdown.trade / 25 : 0);
   const trainsPs = $derived(L ? L.incomeBreakdown.trains / 25 : 0);
@@ -91,7 +94,7 @@
       <FoldButton glyph folded name={t('fold.res')} dir="down" />
       <span class="fig"
         ><Icon name="troops" size={13} /><b class="mono">{short(L.troops)}</b><small class="mono"
-          >/{short(L.popCap)}</small
+          >/{short(L.popCap + L.lineTroops)}</small
         ></span
       >
       <span class="fig"><Icon name="gold" size={13} /><b class="mono brass">{short(L.gold)}</b></span>
@@ -124,13 +127,20 @@
       </div>
       <div class="troops-row">
         <span class="value mono" data-tip={t('hud.troopsTip')}
-          >{short(L.troops)}<small> / {short(L.popCap)}</small></span
+          >{short(L.troops)}<small> / {short(L.popCap + L.lineTroops)}</small></span
         >
         <span class="growth mono" class:neg={L.growth < 0} data-tip={t('hud.growthTip')}
           >{L.growth >= 0 ? '+' : ''}{short(L.growth * 10)}/s</span
         >
       </div>
-      <div class="cap" data-tip={t('hud.capTip')}><div style="width:{capPct}%"></div></div>
+      <div class="cap" data-tip={t('hud.capTip')}>
+        <div style="width:{capPct}%"></div>
+        {#if linePct > 0}<div
+            class="locked"
+            style="width:{linePct}%"
+            data-testid="troops-locked-bar"
+          ></div>{/if}
+      </div>
       <!-- Troops standing on front lines: locked out of the army and of its ceiling (1.17). -->
       {#if L.lineTroops >= 1}
         <p
@@ -143,8 +153,7 @@
           })}
         >
           <Icon name="lineDefense" size={13} />{t('hud.onLines', { n: short(L.lineTroops) })}
-          <small>{t('hud.onLinesCap', { cap: short(L.popCap + L.lineTroops), n: short(L.lineTroops) })}</small
-          >
+          <small>{t('hud.onLinesCap')}</small>
         </p>
       {/if}
     </div>
@@ -450,13 +459,18 @@
   }
   /* Troops against the population cap: a printed gauge. */
   .cap {
-    height: 4px;
+    display: flex;
+    height: 5px;
     background: var(--np-paper-2);
     box-shadow: inset 0 0 0 1px var(--np-rule);
   }
   .cap div {
     height: 100%;
     background: var(--np-ink);
+  }
+  /* Locked on front lines: grey, hatched (not a colour alone). */
+  .cap div.locked {
+    background: repeating-linear-gradient(135deg, #8c939b 0 3px, #b9bec4 3px 5px);
   }
   .on-lines {
     display: flex;

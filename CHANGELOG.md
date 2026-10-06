@@ -2,6 +2,15 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.20.0] — Assauts préparés, fluidité retrouvée
+### Modifié
+- **La ligne offensive devient un assaut préparé** : ses troupes s'y massent 30 s, puis « Lancer l'assaut » (clic sur la ligne, ou clic droit) la vide dans une attaque droit devant. Ce sont ces soldats préparés qui ont le bonus — pertes −50 %, vitesse +50 % — pendant toute leur attaque. Les nations lancent les leurs dès qu'elles sont prêtes.
+- **La ligne défensive est en place aussitôt** (plus de 3 s d'attente).
+- **Clic droit pendant un tracé** : retire le dernier point (ou revient au tracé si le côté était choisi) au lieu de tout annuler.
+- **Panneau des troupes** : le total affiché comprend les troupes des lignes, et la barre montre en gris hachuré la part bloquée sur les lignes.
+### Corrigé
+- **Grosse chute de FPS avec les lignes de tout le monde** (18–25 FPS dans une grande partie) : chaque ligne garde son dessin, n'est redessinée que si elle change, et rien n'est dessiné hors de l'écran ; loin, les lignes des autres pays sont simplifiées et leurs zones ne sont plus dessinées. Même partie : 180–335 FPS.
+
 ## [1.19.0] — Lignes de front façon Hearts of Iron, rapport de forces, encerclement
 ### Modifié
 - **Nouveau rendu des lignes, inspiré de Hearts of Iron IV** : tracés lissés ; la ligne défensive est un front sombre hérissé de petites dents vers l'ennemi, avec sa **zone d'action ombrée** en dégradé ; la ligne offensive lance des **flèches de plan de bataille** courbes qui se remplissent pendant les 30 s de préparation (ambre), puis passent au vert ; des **pions** le long des lignes avec le drapeau du pays, les troupes, le temps restant et une barre de force. Les zones d'action se voient désormais clairement.

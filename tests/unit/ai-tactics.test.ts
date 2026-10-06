@@ -261,25 +261,29 @@ describe('nations against a snowballing human', () => {
 
   it('an attack-only player does not sweep a hard Black Sea in 20 minutes (it did in 9 in 1.11)', () => {
     // scripts/versus.ts black-sea hard aggressive 42 with BOT_BOOST=1.25: WIN 9.1 min on the 1.11 AI.
-    // (Seed 13 since 1.18: over ten seeds this bot still wins 3 in 1.17 and 4 in 1.18, seed
-    // 42 among them since the lines hold head-on; one game guards against a collapse only.)
-    const g = makeGame('black-sea', {
-      seed: 13,
-      nations: 30,
-      tribes: 40,
-      difficulty: 'hard',
-      spawnSeconds: 30,
-      players: [{ slot: 0, name: 'Bot', kind: 'human', team: 0, general: 'blitz' }],
-    });
-    const bot = createBot('aggressive', 13);
-    bot.id = g.players.find((p) => p && p.kind === 'human')!.id;
-    while (g.phase !== 'ended' && (g.phase === 'spawn' || g.tick - g.startTick < 20 * 600)) {
-      g.step(bot.commands(g));
-      const me = g.players[bot.id]!;
-      if (g.phase === 'playing' && me.alive && me.lastGrowth > 0)
-        me.troops = Math.min(me.popCap, me.troops + me.lastGrowth * 0.25);
-      if (!me.alive) break;
+    // One game is a coin toss (over ten seeds this bot won 3 in 1.17, 4 in 1.18, 3 in 1.19,
+    // 2 in 1.20): three games, and it must lose most of them.
+    let wins = 0;
+    for (const seed of [42, 7, 23]) {
+      const g = makeGame('black-sea', {
+        seed,
+        nations: 30,
+        tribes: 40,
+        difficulty: 'hard',
+        spawnSeconds: 30,
+        players: [{ slot: 0, name: 'Bot', kind: 'human', team: 0, general: 'blitz' }],
+      });
+      const bot = createBot('aggressive', seed);
+      bot.id = g.players.find((p) => p && p.kind === 'human')!.id;
+      while (g.phase !== 'ended' && (g.phase === 'spawn' || g.tick - g.startTick < 20 * 600)) {
+        g.step(bot.commands(g));
+        const me = g.players[bot.id]!;
+        if (g.phase === 'playing' && me.alive && me.lastGrowth > 0)
+          me.troops = Math.min(me.popCap, me.troops + me.lastGrowth * 0.25);
+        if (!me.alive) break;
+      }
+      if (g.victory.winner === bot.id) wins++;
     }
-    expect(g.victory.winner).not.toBe(bot.id);
-  }, 60_000);
+    expect(wins).toBeLessThanOrEqual(1);
+  }, 180_000);
 });

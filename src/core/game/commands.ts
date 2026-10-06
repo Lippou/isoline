@@ -14,7 +14,7 @@ import {
   MAX_ATTACKS_PER_PLAYER,
   N,
 } from './constants';
-import { placeLine, removeLine, setLineTroops, type LineKind } from '../rules/lines';
+import { LineKind, lineStrength, lineTarget, placeLine, removeLine, setLineTroops } from '../rules/lines';
 import type { Refusal } from './state';
 import {
   cancelDemolition,
@@ -130,6 +130,43 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
     case 'lineRemove': {
       const l = game.lines.find((x) => x.id === c.id && x.owner === p.id);
       if (l) removeLine(game, l, true);
+      return;
+    }
+
+    case 'lineLaunch': {
+      // The troops that waited on an offensive line go over the top (1.20): the line empties
+      // into an attack straight ahead, and they carry its preparation (Attack.prepared).
+      const l = game.lines.find((x) => x.id === c.id && x.owner === p.id && x.kind === LineKind.Offensive);
+      if (!l || l.troops < 1 || game.phase !== 'playing') return;
+      if (l.readyTick > game.tick) {
+        game.notify(p.id, 'error.line.notReady', 'warn', { s: Math.ceil((l.readyTick - game.tick) / 10) });
+        return;
+      }
+      const aim = lineTarget(game, l);
+      if (!aim) {
+        game.notify(p.id, 'error.line.noTarget', 'warn');
+        return;
+      }
+      const why = aim.target > 0 ? game.attackRefusal(p.id, aim.target, true) : null;
+      if (why) {
+        game.refuse(p.id, 'attack', why);
+        return;
+      }
+      if (!attackSlotFree(game, p.id, aim.target)) {
+        game.notify(p.id, 'error.attackSlots', 'warn', { n: MAX_ATTACKS_PER_PLAYER });
+        return;
+      }
+      if (!hasFrontier(game, p, aim.target, aim.tile)) {
+        game.notify(p.id, 'error.noFrontier', 'warn');
+        return;
+      }
+      const troops = l.troops;
+      const prepared = lineStrength(game, l);
+      if (aim.target > 0) openHostilities(game, p, game.players[aim.target]!);
+      l.troops = 0;
+      p.lineTroops = Math.max(0, p.lineTroops - troops);
+      removeLine(game, l, false);
+      launchAttack(game, p.id, aim.target, troops, undefined, prepared);
       return;
     }
 

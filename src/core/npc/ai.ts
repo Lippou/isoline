@@ -211,7 +211,7 @@ const AI_CAPITAL_GOLD_MARGIN = 1.5;
 const AI_LINE_HALF = 14;
 const AI_LINE_BACK = 5;
 const AI_LINE_RATIO = 0.12;
-const AI_OFFENSE_LINE_RATIO = 0.06;
+const AI_OFFENSE_LINE_RATIO = 0.12;
 const AI_LINE_KEEP = 3000;
 /** A wave is spent once the troops still pressing fall under this share of its peak. */
 const AI_SPENT_WAVE = 0.3;
@@ -523,6 +523,10 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
   // 3. Defence: counter-attack, fortify the front, guard the capital, answer spent waves.
   if (underAttack) cost += defend(game, p, m, tac, nb, incoming, runaway);
   retireLines(game, p, underAttack);
+  // Offensive lines whose troops have waited long enough go over the top (1.20).
+  for (const l of linesOf(game, p.id))
+    if (l.kind === LineKind.Offensive && l.readyTick <= game.tick && l.troops >= 1)
+      applyCommand(game, p.id, { t: 'lineLaunch', id: l.id });
   if (tac.counter) cost += answerSpentWaves(game, p, m, nb, incoming, cap);
 
   // 4. Expansion & offensive choice.

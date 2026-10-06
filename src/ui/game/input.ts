@@ -296,6 +296,15 @@ export class InputController {
     const tile = this.r.tileAtScreen(x, y);
     if (tile < 0) return;
     if (d.button === 2) {
+      // Drawing a line: a right click takes the last point back (the side picked: back to
+      // tracing); with nothing left to take back, the drawing is dropped.
+      const line = this.draft;
+      if (line && (line.stage === 'side' || line.pts.length > 2)) {
+        if (line.stage === 'side') line.stage = 'trace';
+        else line.pts.length -= 2;
+        this.lineTip(line, x, y);
+        return;
+      }
       // Right click first drops whatever is selected (building, missile, ships…).
       if (hud.tool.k !== 'none' || hud.selection.length) {
         this.hooks.onKey('escape', new KeyboardEvent('keydown', { code: 'Escape' }));

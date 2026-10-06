@@ -450,6 +450,19 @@
     // One of our front lines here (within two tiles, on any land: a breached one too): its
     // card (troops), or taken down at once, its troops back in the army.
     const line = ownLineAt(s.state, s.viewer, tile, 2);
+    if (line && line.kind === 1) {
+      const wait = Math.max(0, line.readyTick - s.state.tick);
+      out.push({
+        id: 'lineLaunch',
+        group: 'main',
+        label: t('radial.lineLaunch'),
+        icon: 'lineOffense',
+        hint: wait > 0 ? clock(wait) : formatShort(line.troops),
+        desc: t('radial.lineLaunchDesc'),
+        disabled: wait > 0 || line.troops < 1,
+        run: act(() => s.cmd({ t: 'lineLaunch', id: line.id })),
+      });
+    }
     if (line) {
       out.push({
         id: 'lineTroops',

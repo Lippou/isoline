@@ -3,14 +3,17 @@
 // garrisons with troops — the attack ratio of the army, never gold. A line faces one side,
 // chosen after drawing; its back is bare.
 // - Defensive: what attacks the land in front of it (LINE_REACH tiles) from the front is
-//   slowed (tile cost up to ×LINE_DEFENSE_SPEED) and meets the line's troops too.
-// - Offensive: once dug in (LINE_OFFENSE_SETUP), the owner's attacks pushing out from it
-//   lose up to LINE_OFFENSE_LOSS fewer troops in front of it.
+//   slowed (tile cost up to ×LINE_DEFENSE_SPEED); its own tiles stand by the balance of
+//   forces (lineClash).
+// - Offensive (1.20, the player's design): its troops wait on it (LINE_OFFENSE_SETUP), then
+//   the assault is launched (lineTarget, the command 'lineLaunch'): the line empties into an
+//   attack straight ahead, and those troops — the ones that waited — lose fewer and advance
+//   faster all the attack long (combat.ts Attack.prepared).
 // Both act in full while the line holds LINE_FULL_DENSITY × the country's troops per tile,
 // proportionally below. Its troops leave the army and lower the troop ceiling as long as it
 // stands; taking it down brings them back. A tile of the line taken by anyone loses its
 // share of them, and the stretch round it stops covering (a breach).
-// 1.18: a defensive line is laid in 3 s; the troops on a line can be changed
+// 1.18: the troops on a line can be changed
 // (setLineTroops); an emptied line stays, holding nothing, until refilled or taken down.
 // 1.19 (the player's design): a line can be no longer than its troops allow
 // (LINE_MIN_DENSITY × the country's troops per tile on each tile); its tiles stand by the
@@ -32,10 +35,8 @@ import {
   LINE_MAX_TILES,
   LINE_MIN_TILES,
   LINE_MIN_DENSITY,
-  LINE_OFFENSE_LOSS,
   LINE_OFFENSE_REACH,
   LINE_OFFENSE_SETUP,
-  LINE_OFFENSE_SPEED,
   LINE_REACH,
   LINE_TURN_DEPTH,
   LINE_TURN_SHARE,
@@ -254,14 +255,41 @@ export function lineDefense(
 }
 
 /**
- * An attack of `attacker` taking `tile` (owned by someone) out of one of its offensive lines:
- * the share of its usual losses it loses and how much faster it advances (1, 1 elsewhere).
+ * Where an offensive line's assault goes (the command 'lineLaunch', 1.20): straight out in
+ * front of it, LINE_OFFENSE_REACH tiles at most, the first land that is not ours along each
+ * of its tiles; the country met most often (wilderness when nobody), and one of its tiles
+ * there. Allies and teammates are never aimed at. Null when nothing lies in front.
  */
-export function lineOffense(game: Game, tile: number, attacker: number): { loss: number; speed: number } {
-  const l = cover(game, attacker, LineKind.Offensive, tile, attacker);
-  if (!l) return { loss: 1, speed: 1 };
-  const s = lineStrength(game, l);
-  return { loss: 1 - LINE_OFFENSE_LOSS * s, speed: 1 + (LINE_OFFENSE_SPEED - 1) * s };
+export function lineTarget(game: Game, l: FrontLine): { target: number; tile: number } | null {
+  const map = game.map;
+  const w = map.width;
+  const seen = new Map<number, { n: number; tile: number }>();
+  for (let k = 0; k < l.tiles.length; k += 2) {
+    const t = l.tiles[k]!;
+    const [x, y] = [(t % w) + 0.5, ((t / w) | 0) + 0.5];
+    const [bx, by] = backNormal(l, x, y);
+    for (let d = 1; d <= LINE_OFFENSE_REACH; d++) {
+      const [ux, uy] = [Math.floor(x - bx * d), Math.floor(y - by * d)];
+      if (!map.inBounds(ux, uy)) break;
+      const v = uy * w + ux;
+      if (!IS_LAND[map.terrain[v]!] || game.isDead(v)) continue;
+      const o = game.owner[v]!;
+      if (o === l.owner) continue;
+      if (o > 0 && game.friendly(o, l.owner)) break;
+      const cur = seen.get(o);
+      if (cur) cur.n++;
+      else seen.set(o, { n: 1, tile: v });
+      break;
+    }
+  }
+  let best: { target: number; tile: number } | null = null;
+  let bestN = 0;
+  // A country before the wilderness: an assault is aimed at an enemy.
+  for (const [o, { n, tile }] of seen) {
+    const score = n + (o > 0 ? 1e6 : 0);
+    if (score > bestN) [best, bestN] = [{ target: o, tile }, score];
+  }
+  return best;
 }
 
 /** Whether a defensive line of the tile's owner covers it (the tile's hover card). */

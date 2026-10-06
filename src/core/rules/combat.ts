@@ -19,6 +19,8 @@ import {
   LARGE_ATTACKER_SPEED_DEPTH,
   LARGE_DEFENDER_DEPTH,
   LARGE_TERRITORY_MIDPOINT,
+  LINE_OFFENSE_LOSS,
+  LINE_OFFENSE_SPEED,
   LARGE_TERRITORY_STEEPNESS,
   LOSS_RATIO_MAX,
   LOSS_RATIO_MIN,
@@ -44,7 +46,7 @@ import { hash2 } from '../rng';
 import { addGold } from '../game/economy';
 import { capitalSpeedMult } from './capital';
 import { guerrilla } from './revolution';
-import { lineClash, lineDefense, lineFront, lineOffense } from './lines';
+import { lineClash, lineDefense, lineFront } from './lines';
 
 export class Attack {
   readonly id: number;
@@ -66,6 +68,12 @@ export class Attack {
   retreatAt = -1;
   conquered = 0;
   done = false;
+  /**
+   * Share of troops (0–1, weighted by the troops) that waited on an offensive line before
+   * this assault (rules/lines.ts, 1.20): they lose up to LINE_OFFENSE_LOSS fewer and advance
+   * up to LINE_OFFENSE_SPEED faster, all the attack long.
+   */
+  prepared = 0;
 
   constructor(id: number, attacker: number, target: number, troops: number, tick: number) {
     this.id = id;
@@ -196,12 +204,14 @@ export function attackLogic(game: Game, a: Attack, tile: number, borderSize: num
   let mag = MAG[t]! * game.techMagMult(a.attacker, t);
   // A harsh winter (world event) slows the conquest of cold land.
   let cost = SPEED[t]! * winterCost(game, t);
-  // Front lines (rules/lines.ts): a defensive one in the way slows the advance; pushing out
-  // of an offensive one costs fewer losses and goes faster.
+  // Troops prepared on an offensive line (rules/lines.ts, 1.20): fewer losses, faster.
+  if (a.prepared > 0) {
+    mag *= 1 - LINE_OFFENSE_LOSS * a.prepared;
+    cost /= 1 + (LINE_OFFENSE_SPEED - 1) * a.prepared;
+  }
+  // A defensive line in the way slows the advance.
   if (T) {
-    const off = lineOffense(game, tile, a.attacker);
-    mag *= game.reconLossMult(a.attacker, tile) * off.loss;
-    cost /= off.speed;
+    mag *= game.reconLossMult(a.attacker, tile);
     const line = lineDefense(game, tile, a.target, a.attacker);
     if (line) cost *= line.speed;
     // Revolutions (1.16): guerrilla in every street, barricades right after the outbreak.
@@ -409,6 +419,7 @@ export function launchAttack(
   targetId: number,
   troops: number,
   landing?: number,
+  prepared = 0,
 ): Attack | null {
   const p = game.players[attackerId]!;
   if (!p.alive) return null;
@@ -466,7 +477,10 @@ export function launchAttack(
     }
     if (troops < 1 && fresh) return null;
   }
-  a.troops += Math.max(0, troops);
+  // Troops from an offensive line bring their preparation (weighted into the attack's).
+  const add = Math.max(0, troops);
+  if (a.troops + add > 0) a.prepared = (a.prepared * a.troops + prepared * add) / (a.troops + add);
+  a.troops += add;
   a.seedClock = a.clock;
   const owner = game.owner;
   const map = game.map;
@@ -476,6 +490,8 @@ export function launchAttack(
     // A land attack absorbs the landings already pushing into the same target.
     for (const x of game.attacks) {
       if (x === a || x.done || x.attacker !== attackerId || x.target !== targetId) continue;
+      if (a.troops + x.troops > 0)
+        a.prepared = (a.prepared * a.troops + x.prepared * x.troops) / (a.troops + x.troops);
       a.troops += x.troops;
       x.troops = 0;
       finishAttack(game, x, false);

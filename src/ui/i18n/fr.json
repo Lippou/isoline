@@ -334,8 +334,8 @@
     "modeHvnTip": "Tous les humains ensemble contre la coalition des nations (elles ne s'attaquent pas entre elles).",
     "groupFront": "Front",
     "onLines": "{n} sur les lignes",
-    "onLinesCap": "plafond {cap} − {n}",
-    "onLinesTip": "{n} troupes bloquées sur vos lignes de front : elles ne sont plus dans l’armée et votre plafond passe de {cap} à {left}. Allégez ou démontez une ligne (clic dessus) pour les récupérer."
+    "onLinesCap": "bloquées (barre grisée)",
+    "onLinesTip": "{n} troupes bloquées sur vos lignes de front : elles comptent dans votre total ({cap}) mais ne sont plus disponibles (grisé dans la barre) ; il vous en reste {left} de place pour l’armée. Allégez ou démontez une ligne (clic dessus) pour les récupérer."
   },
   "panel": {
     "diplomacy": "Diplomatie",
@@ -423,7 +423,9 @@
     "lineRemove": "Démonter la ligne",
     "lineRemoveDesc": "Ses troupes reviennent dans l’armée.",
     "lineTroops": "Troupes de la ligne…",
-    "lineTroopsDesc": "Ajouter des troupes depuis l’armée, ou en rendre."
+    "lineTroopsDesc": "Ajouter des troupes depuis l’armée, ou en rendre.",
+    "lineLaunch": "Lancer l’assaut",
+    "lineLaunchDesc": "Les troupes de la ligne attaquent droit devant : pertes −50 %, vitesse +50 % tout l’assaut."
   },
   "confirm": {
     "betrayTitle": "Trahir votre allié ?",
@@ -1428,7 +1430,7 @@
     "raidHitShip": "Raid sur {player} — {ship} touché.",
     "raidHitShipSunk": "Raid sur {player} — {ship} coulé.",
     "revolutionSpread": "La révolte s'étend : {tiles} cases de plus rejoignent {tribe}.",
-    "lineReady": "Votre ligne offensive est installée.",
+    "lineReady": "Votre ligne offensive est prête : cliquez dessus pour lancer l’assaut.",
     "lineEmpty": "Une de vos lignes défensives a perdu tous ses hommes : elle ne tient plus. Renforcez-la ou démontez-la.",
     "lineShattered": "Une de vos lignes a été prise à revers : elle éclate, {n} hommes perdus."
   },
@@ -1519,7 +1521,9 @@
       "max": "{n} lignes au plus : démontez-en une (clic droit dessus).",
       "short": "Une ligne se trace sur vos propres terres.",
       "troops": "Pas assez de troupes pour tenir cette ligne.",
-      "points": "Tracé invalide."
+      "points": "Tracé invalide.",
+      "notReady": "Les troupes se préparent encore : prêtes dans {s} s.",
+      "noTarget": "Rien à attaquer devant cette ligne."
     }
   },
   "keys": {
@@ -2249,7 +2253,7 @@
       "economy": "Construisez trois villes pour soutenir l'effort de guerre.",
       "weather": "Surveillez le ciel : les orages ralentissent navires et avions, et les bancs de brouillard réduisent de moitié la portée des radars.",
       "clock": "L'horloge avance : le cadran en haut annonce le prochain palier. Une paix, un vote du Conseil la font reculer ; les bombes la précipitent.",
-      "offensive": "Avant une grande poussée, tracez une ligne offensive (touche A) face à l’ennemi : après 30 secondes, vos attaques qui en partent perdent deux fois moins de troupes et avancent plus vite.",
+      "offensive": "Avant une grande poussée, tracez une ligne offensive (touche A) face à l’ennemi. Ses troupes se préparent trente secondes ; cliquez ensuite dessus pour lancer l’assaut : ces soldats perdent deux fois moins et avancent plus vite.",
       "push": "Poussez vers quarante pour cent. Une nation vulnérable est signalée sur la carte."
     },
     "hint": {
@@ -3037,25 +3041,25 @@
     "defensive": {
       "name": "Ligne défensive",
       "short": "Ligne déf.",
-      "desc": "Tracez-la sur vos terres, puis cliquez du côté de l'ennemi ; elle est en place en 3 s. Sa longueur dépend des troupes posées. Chaque case tient avec sa garnison : de face, l'assaillant perd 3 hommes pour 1 à forces égales, et ne perce qu'à plus de 3 contre 1. Devant elle (12 cases), l'ennemi avance jusqu'à 3 fois moins vite. Prise à revers sur un quart de sa longueur, elle éclate et ses troupes sont perdues."
+      "desc": "Tracez-la sur vos terres, puis cliquez du côté de l'ennemi : elle est en place aussitôt. Sa longueur dépend des troupes posées. Chaque case tient avec sa garnison : de face, l'assaillant perd 3 hommes pour 1 à forces égales, et ne perce qu'à plus de 3 contre 1. Devant elle (12 cases), l'ennemi avance jusqu'à 3 fois moins vite. Prise à revers sur un quart de sa longueur, elle éclate et ses troupes sont perdues."
     },
     "offensive": {
       "name": "Ligne offensive",
       "short": "Ligne off.",
-      "desc": "Tracez-la sur vos terres face à l'ennemi : après 30 s de préparation, vos attaques qui en partent perdent deux fois moins de troupes et avancent 1,5 fois plus vite dans les 16 cases devant elle. Sa longueur dépend des troupes posées ; prise à revers, elle éclate."
+      "desc": "Tracez-la sur vos terres face à l'ennemi : ses troupes s'y massent pendant 30 s. Ensuite, lancez l'assaut (clic sur la ligne) : la ligne se vide dans une attaque droit devant, et ces soldats préparés perdent deux fois moins et avancent 1,5 fois plus vite pendant toute l'attaque. Sa longueur dépend des troupes posées ; prise à revers, elle éclate."
     },
     "costTroops": "{n} troupes ({pct} % de l’armée)",
     "howTo": "Glisser d’un point à un autre, ou cliquer point par point (double-clic ou Entrée pour finir), puis cliquer du côté de l’ennemi. Clic sur une de vos lignes : régler ses troupes ou la démonter.",
     "tip": {
       "start": "Cliquez ou glissez pour tracer · {troops} troupes ({pct} %)",
-      "next": "Clic : point suivant · double-clic ou Entrée : terminer · Retour : annuler le point",
+      "next": "Clic : point suivant · double-clic ou Entrée : terminer · clic droit : retirer le dernier point",
       "side": "Cliquez du côté de l’ennemi pour poser la ligne · {troops} troupes",
       "tooLong": "Trop longue pour {troops} troupes : {max} cases au plus (le reste, en rouge, ne sera pas tenu)"
     },
     "card": {
       "laying": "En place dans {clock}",
       "holding": "Tient le front : de face, ne cède qu’à plus de 3 contre 1",
-      "ready": "Installée : vos assauts en partent",
+      "ready": "Prête : lancez l’assaut",
       "empty": "Vide : elle ne tient plus rien",
       "emptyShort": "vide",
       "troops": "Troupes sur la ligne",
@@ -3068,7 +3072,10 @@
       "apply": "Appliquer",
       "remove": "Démonter",
       "garrison": "Garnison par case",
-      "breaks": "Percée de face au-delà de (par case)"
+      "breaks": "Percée de face au-delà de (par case)",
+      "launch": "Lancer l’assaut ({n})",
+      "launchIn": "Prête dans {clock}",
+      "preparing": "Troupes en préparation : {clock}"
     }
   }
 }
