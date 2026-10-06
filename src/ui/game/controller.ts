@@ -86,6 +86,7 @@ export class GameController {
     this.capitals = new CapitalWatch(this.session);
     this.session.sim.onError = (m) => {
       void bridge.storage.log(`[sim] ${m}`);
+      hud.bugErrors++;
       toast(t('error.simulation'), 'danger');
     };
     const ready = await this.session.start(mapsBase());
@@ -583,6 +584,10 @@ export class GameController {
         break;
       case 'fps':
         hud.showPerf = !hud.showPerf;
+        break;
+      case 'bugReport':
+        if (hud.panels.bugs) hud.panels.bugs = false;
+        else void bridge.bug.capture().finally(() => openPanel('bugs'));
         break;
       case 'hudFold':
         this.toggleHudFolds();

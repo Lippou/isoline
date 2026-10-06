@@ -516,6 +516,21 @@ export function updateNukes(game: Game): void {
   }
 }
 
+/**
+ * One of p's missiles blown up in flight (the command 'nukeAbort', 1.23; the player: « comme
+ * si on annulait l'attaque. Ça ne rembourse pas le joueur, c'est juste une bombe de perdu »):
+ * it bursts harmlessly where it is — no blast, no fallout, nothing back. One still in its silo
+ * (a salvo's later missiles) is lost the same way. False when it is not p's or already gone.
+ */
+export function abortNuke(game: Game, p: Player, id: number): boolean {
+  const u = game.units.find((v) => v.id === id);
+  if (!u || !u.alive || u.type !== U.Nuke || u.owner !== p.id) return false;
+  u.alive = false;
+  game.emit({ k: 'intercept', x: u.x, y: u.y, owner: p.id });
+  game.notify(p.id, 'notify.nukeAborted', 'info');
+  return true;
+}
+
 // ------------------------------------------------------------- detonation
 
 export function detonate(game: Game, kind: N, cx: number, cy: number, by: number): void {

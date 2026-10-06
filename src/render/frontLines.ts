@@ -23,7 +23,7 @@
 import { BitmapText, Container, Graphics, Sprite, TextStyle, type Texture } from 'pixi.js';
 import type { LineView } from '../engine/protocol';
 import { LINE_OFFENSE_REACH, LINE_OFFENSE_SETUP, LINE_REACH } from '../core/game/constants';
-import { borderChains, locate, traceTiles } from '../core/rules/lines';
+import { borderChains, isClosed, locate, traceTiles } from '../core/rules/lines';
 import type { AimDraft, BorderDraft, LineDraft } from '../ui/game/input';
 
 const CORE = 0x14202c;
@@ -79,8 +79,22 @@ interface Sample {
   s: number;
 }
 
-/** The drawing's corners rounded (Chaikin, three passes; its ends kept). */
+/** The drawing's corners rounded (Chaikin, three passes; its ends kept — a closed line has none). */
 export function smooth(pts: readonly number[]): number[] {
+  if (isClosed(pts)) {
+    let q = pts.slice(0, -2);
+    for (let pass = 0; pass < 3; pass++) {
+      const out: number[] = [];
+      const n = q.length / 2;
+      for (let i = 0; i < n; i++) {
+        const [ax, ay] = [q[2 * i]!, q[2 * i + 1]!];
+        const [bx, by] = [q[(2 * i + 2) % q.length]!, q[(2 * i + 3) % q.length]!];
+        out.push(ax * 0.75 + bx * 0.25, ay * 0.75 + by * 0.25, ax * 0.25 + bx * 0.75, ay * 0.25 + by * 0.75);
+      }
+      q = out;
+    }
+    return [...q, q[0]!, q[1]!];
+  }
   let p = pts.slice();
   for (let pass = 0; pass < 3 && p.length >= 6; pass++) {
     const out = [p[0]!, p[1]!];
@@ -110,7 +124,16 @@ export function sampleLine(pts: readonly number[], side: number, step: number): 
     }
     s += len;
   }
-  // Normals averaged over neighbours: no kink where two segments meet.
+  // Normals averaged over neighbours: no kink where two segments meet (nor where a closed
+  // line meets itself).
+  const n = out.length;
+  if (n > 3 && isClosed(pts)) {
+    const [a, b, c] = [out[n - 2]!, out[0]!, out[1]!];
+    const [nx, ny] = [a.nx + b.nx + c.nx, a.ny + b.ny + c.ny];
+    const len = Math.hypot(nx, ny) || 1;
+    out[0]!.nx = out[n - 1]!.nx = nx / len;
+    out[0]!.ny = out[n - 1]!.ny = ny / len;
+  }
   for (let k = 1; k + 1 < out.length; k++) {
     const [a, b, c] = [out[k - 1]!, out[k]!, out[k + 1]!];
     const [nx, ny] = [a.nx + b.nx + c.nx, a.ny + b.ny + c.ny];
@@ -512,6 +535,11 @@ export class FrontLineLayer {
       g.circle(d.pts[i]!, d.pts[i + 1]!, px(4))
         .fill({ color: BRASS })
         .stroke({ color: CORE, width: px(1.5) });
+    // Three points down: the first one rings, a click there closes the position.
+    if (d.stage === 'trace' && d.pts.length >= 6) {
+      g.circle(d.pts[0]!, d.pts[1]!, px(9)).stroke({ color: CORE, width: px(3), alpha: 0.8 });
+      g.circle(d.pts[0]!, d.pts[1]!, px(9)).stroke({ color: BRASS, width: px(1.6) });
+    }
   }
 
   destroy(): void {

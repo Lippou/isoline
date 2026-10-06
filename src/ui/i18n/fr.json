@@ -335,7 +335,10 @@
     "groupFront": "Front",
     "onLines": "{n} sur les lignes",
     "onLinesCap": "bloquées (barre grisée)",
-    "onLinesTip": "{n} troupes bloquées sur vos lignes de front : elles comptent dans votre total ({cap}) mais ne sont plus disponibles (grisé dans la barre) ; il vous en reste {left} de place pour l’armée. Allégez ou démontez une ligne (clic dessus) pour les récupérer."
+    "onLinesTip": "{n} troupes bloquées sur vos lignes de front : elles comptent dans votre total ({cap}) mais ne sont plus disponibles (grisé dans la barre) ; il vous en reste {left} de place pour l’armée. Allégez ou démontez une ligne (clic dessus) pour les récupérer.",
+    "missilesInFlight": "{n} missile(s) en vol",
+    "missileImpact": "impact dans {clock}",
+    "nukeAbort": "Faire exploser en vol (perdu, non remboursé)"
   },
   "panel": {
     "diplomacy": "Diplomatie",
@@ -344,7 +347,8 @@
     "log": "Journal",
     "chat": "Messages",
     "trade": "Commerce",
-    "front": "Front"
+    "front": "Front",
+    "bugs": "Bugs"
   },
   "chat": {
     "all": "Tous",
@@ -1433,7 +1437,8 @@
     "revolutionSpread": "La révolte s'étend : {tiles} cases de plus rejoignent {tribe}.",
     "lineReady": "Votre ligne offensive est prête : cliquez dessus, puis sur la carte pour donner la direction de l’assaut.",
     "lineEmpty": "Une de vos lignes défensives a perdu tous ses hommes : elle ne tient plus. Renforcez-la ou démontez-la.",
-    "lineShattered": "Une de vos lignes a été prise à revers : elle éclate, {n} hommes perdus."
+    "lineShattered": "Une de vos lignes a été prise à revers : elle éclate, {n} hommes perdus.",
+    "nukeAborted": "Missile détruit en vol, sur votre ordre."
   },
   "error": {
     "nukeSelfMirv": "Un MIRV ne peut pas viser votre propre pays : ses ogives tomberaient sur tout votre territoire.",
@@ -1573,7 +1578,8 @@
     "photoMode": "Mode photo",
     "hudFold": "Replier / déplier l'interface",
     "lineDefense": "Ligne défensive",
-    "lineOffense": "Ligne offensive"
+    "lineOffense": "Ligne offensive",
+    "bugReport": "Journal de bug"
   },
   "settings": {
     "tab": {
@@ -3081,7 +3087,9 @@
       "borderStart": "Cliquez sur un pays voisin : la ligne se pose sur toute votre frontière avec lui · clic droit maintenu : un tronçon",
       "border": "{name} : toute la frontière, {n} cases · {troops} troupes ({pct} %) · clic droit maintenu : un tronçon",
       "borderSector": "Tronçon face à {name} : {n} cases · relâchez pour poser la ligne",
-      "borderOver": "Trop longue pour {troops} troupes : les {max} cases les plus proches (le reste, en rouge, ne sera pas tenu)"
+      "borderOver": "Trop longue pour {troops} troupes : les {max} cases les plus proches (le reste, en rouge, ne sera pas tenu)",
+      "close": "Clic : refermer la position sur elle-même (tous les angles défendus)",
+      "nextClose": "Clic : point suivant · clic sur le premier point : refermer · double-clic ou Entrée : terminer · clic droit : retirer le dernier point"
     },
     "card": {
       "laying": "En place dans {clock}",
@@ -3109,5 +3117,19 @@
       "arrowSet": "donnée",
       "arrowNone": "à donner"
     }
+  },
+  "bugs": {
+    "beta": "Bêta fermée : chaque rapport aide à corriger le jeu",
+    "count": "{n} erreur(s) cette session",
+    "what": "Que s'est-il passé ?",
+    "placeholder": "Ce que vous faisiez, ce que vous attendiez, ce qui s'est passé…",
+    "withGame": "Joindre la partie (sauvegarde et replay, pour rejouer le bug)",
+    "save": "Enregistrer le rapport",
+    "folder": "Ouvrir le dossier",
+    "saved": "Rapport enregistré : {name}",
+    "errors": "Dernières erreurs notées",
+    "noErrors": "Aucune erreur notée.",
+    "reports": "{n} rapport(s) enregistré(s) dans le dossier bugs.",
+    "caught": "Une erreur vient d'être notée — {key} : journal de bug"
   }
 }

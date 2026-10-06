@@ -24,6 +24,8 @@ import {
   LineKind,
   lineClash,
   lineDefense,
+  lineDefended,
+  isClosed,
   lineFront,
   lineGarrison,
   lineMaxTiles,
@@ -277,6 +279,26 @@ describe('front lines', () => {
     expect(back.lines).toEqual(g.lines);
     expect([...back.lineAt]).toEqual([...g.lineAt]);
     expect(hashGame(back)).toBe(hashGame(g));
+  });
+
+  it('a position closed on itself holds its every corner, the one it started from too (1.23)', () => {
+    const square = (close: boolean) => {
+      const g = arena();
+      const end = close ? [160.5, 25.5] : [160.5, 27.5];
+      const pts = [160.5, 25.5, 180.5, 25.5, 180.5, 45.5, 160.5, 45.5, ...end];
+      expect(isClosed(pts)).toBe(close);
+      // Facing out.
+      const l = placeLine(g, g.players[2]!, pts, sideOf(pts, 170.5, 15.5), 0.3) as FrontLine;
+      expect(typeof l).toBe('object');
+      return g;
+    };
+    // Just off the starting corner, outside.
+    const corner = (g: Game) => lineDefended(g, g.map.idx(158, 23));
+    expect(corner(square(true))).toBe(true);
+    expect(corner(square(false))).toBe(false);
+    // The far corners were held either way.
+    const g = square(false);
+    expect(lineDefended(g, g.map.idx(183, 23))).toBe(true);
   });
 
   it('a defensive line is in place at once', () => {

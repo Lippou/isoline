@@ -8,6 +8,8 @@ export type Command =
   | { t: 'cancelAttack'; id: number }
   /** Turns one of your transports back (id = unit id): its troops come home, 25 % lost. */
   | { t: 'boatRetreat'; id: number }
+  /** Blows one of your missiles up in flight: lost, harmless, not refunded. */
+  | { t: 'nukeAbort'; id: number }
   | { t: 'build'; kind: number; tile: number }
   | { t: 'upgrade'; id: number }
   /** Orders one of your buildings down (timed); `cancel`: calls off a demolition under way. */
@@ -73,6 +75,15 @@ const isInt = (v: unknown): v is number => isNum(v) && Math.floor(v) === v;
 const isBool = (v: unknown): v is boolean => typeof v === 'boolean';
 const ratioOk = (v: unknown) => isNum(v) && v > 0 && v <= 1;
 
+/**
+ * The command as plain data (1.22.1): what the interface hands over may hold its reactive
+ * state (Svelte proxies, e.g. the ships selected), which a worker or the network cannot
+ * clone — one such order used to jam the turn queue, and the whole game with it.
+ */
+export function plainCommand(c: Command): Command {
+  return JSON.parse(JSON.stringify(c)) as Command;
+}
+
 /** Structural validation (types/ranges). Game-state validation happens in the simulation. */
 export function isWellFormed(c: unknown): c is Command {
   if (!c || typeof c !== 'object') return false;
@@ -88,6 +99,7 @@ export function isWellFormed(c: unknown): c is Command {
       return isInt(o.tile) && ratioOk(o.ratio);
     case 'cancelAttack':
     case 'boatRetreat':
+    case 'nukeAbort':
     case 'upgrade':
     case 'lineRemove':
       return isInt(o.id);

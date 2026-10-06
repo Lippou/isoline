@@ -507,7 +507,7 @@
           group: 'military',
           label: t('radial.moveShips', { n: hud.selection.length }),
           icon: 'next',
-          run: act(() => s.cmd({ t: 'shipMove', ids: hud.selection, tile, patrol: true })),
+          run: act(() => s.cmd({ t: 'shipMove', ids: [...hud.selection], tile, patrol: true })),
         });
     }
     if (cfg.features.air) {

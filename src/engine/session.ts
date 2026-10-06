@@ -5,7 +5,7 @@ import { LocalServer, type TurnSource } from './turns';
 import { ReplayRecorder, ReplayPlayer, type ReplayFile } from './replay';
 import type { MapSource, FinalStats, InitDone, TickUpdate } from './protocol';
 import type { GameConfig } from '../core/game/config';
-import type { Command, Turn } from '../core/net/commands';
+import { plainCommand, type Command, type Turn } from '../core/net/commands';
 import type { Snapshot } from '../core/net/snapshot';
 import type { MapMeta } from '../core/map/gamemap';
 import type { GameEvent } from '../core/game/events';
@@ -142,7 +142,7 @@ export class Session {
 
   cmd(c: Command): void {
     if (this.kind === 'replay') return;
-    this.source.submit(c);
+    this.source.submit(plainCommand(c));
   }
 
   setPaused(p: boolean): void {

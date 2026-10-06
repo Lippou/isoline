@@ -41,7 +41,7 @@ import {
   rleDecodeInto,
 } from '../../src/core/net/snapshot';
 import type { StampedCommand } from '../../src/core/net/commands';
-import { isWellFormed } from '../../src/core/net/commands';
+import { isWellFormed, plainCommand } from '../../src/core/net/commands';
 import { isNight, dayPhase } from '../../src/core/rules/features';
 import { mapFromDisk } from '../helpers';
 
@@ -187,6 +187,16 @@ describe('diplomacy', () => {
     expect(isWellFormed({ t: 'boatRetreat', id: 12 })).toBe(true);
     expect(isWellFormed({ t: 'boatRetreat', id: 1.5 })).toBe(false);
     expect(isWellFormed({ t: 'boatRetreat' })).toBe(false);
+  });
+
+  it('commands go to the simulation as plain data, even with reactive state in them (1.22.1)', () => {
+    // The ships selected are a reactive proxy in the interface: cloned as is for the worker,
+    // the order jammed every turn after it and the game froze.
+    const ids = new Proxy([3, 7], {});
+    const c = plainCommand({ t: 'shipMove', ids, tile: 4, patrol: true });
+    expect(() => structuredClone(c)).not.toThrow();
+    expect(c).toEqual({ t: 'shipMove', ids: [3, 7], tile: 4, patrol: true });
+    expect(isWellFormed(c)).toBe(true);
   });
 });
 

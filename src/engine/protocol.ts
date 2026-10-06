@@ -186,6 +186,8 @@ export interface LocalView {
     ty: number;
     retreating: boolean;
   }[];
+  /** My missiles in the air (or waiting in a silo for their salvo): where, where to, ticks to impact. */
+  missiles: { id: number; kind: number; x: number; y: number; tx: number; ty: number; left: number }[];
   /** Countries at war with me: fighting on our border, landing troops or launching missiles (lingers 10 s). */
   wars: number[];
   /** Countries sharing a land border with me (those a land attack can reach), refreshed every second. */

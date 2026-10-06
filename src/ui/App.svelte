@@ -1,9 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { app } from './stores/app.svelte';
-  import { loadSettings, settings } from './stores/settings.svelte';
+  import { keyLabel, loadSettings, settings } from './stores/settings.svelte';
   import { loadProfile } from './stores/profile.svelte';
   import { bridge } from './bridge';
+  import { hud, toast } from './stores/game.svelte';
+  import { t } from './i18n/i18n.svelte';
   import { audio } from '../audio/audio';
   import Splash from './screens/Splash.svelte';
   import Title from './screens/Title.svelte';
@@ -47,14 +49,19 @@
     const unlock = () => audio.ensure();
     window.addEventListener('pointerdown', unlock, { once: false });
     window.addEventListener('keydown', unlock, { once: true });
-    window.addEventListener(
-      'error',
-      (e) => void bridge.storage.log(`[renderer] ${e.message} ${e.filename}:${e.lineno}`),
-    );
-    window.addEventListener(
-      'unhandledrejection',
-      (e) => void bridge.storage.log(`[renderer] unhandled: ${String(e.reason)}`),
-    );
+    // Every error is logged; in a game, the bug journal counts it and says so (1.23: a
+    // jammed order once froze the game with nothing on screen).
+    let told = 0;
+    const caught = (line: string) => {
+      void bridge.storage.log(line);
+      hud.bugErrors++;
+      if (app.screen === 'game' && performance.now() - told > 20_000) {
+        told = performance.now();
+        toast(t('bugs.caught', { key: keyLabel(settings.keys.bugReport ?? 'F9') }), 'warn');
+      }
+    };
+    window.addEventListener('error', (e) => caught(`[renderer] ${e.message} ${e.filename}:${e.lineno}`));
+    window.addEventListener('unhandledrejection', (e) => caught(`[renderer] unhandled: ${String(e.reason)}`));
   });
 
   $effect(() => {

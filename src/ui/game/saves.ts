@@ -32,7 +32,13 @@ export interface SaveInfo {
 export const slotName = (slot: number) => (slot === 0 ? 'autosave.json' : `slot-${slot}.json`);
 
 export async function takeSnapshotSave(session: Session, slot: number): Promise<boolean> {
-  if (session.kind !== 'solo') return false;
+  const file = await saveFileOf(session, slot);
+  return file ? bridge.storage.write('saves', slotName(slot), JSON.stringify(file)) : false;
+}
+
+/** The game as a save file (solo only): its snapshot and the turns that led to it. */
+export async function saveFileOf(session: Session, slot = 0): Promise<SaveFile | null> {
+  if (session.kind !== 'solo') return null;
   const snapshot = await session.snapshot();
   const file: SaveFile = {
     format: 'isoline-save',
@@ -47,7 +53,7 @@ export async function takeSnapshotSave(session: Session, slot: number): Promise<
   };
   if (session.customMap) file.customMap = session.customMap;
   if (session.recorder.start) file.replayStart = session.recorder.start;
-  return bridge.storage.write('saves', slotName(slot), JSON.stringify(file));
+  return file;
 }
 
 /**

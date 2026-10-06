@@ -107,7 +107,7 @@
       ],
     ],
     ['time', ['speedDown', 'speedUp', 'pause']],
-    ['capture', ['screenshot', 'photoMode', 'fps']],
+    ['capture', ['screenshot', 'photoMode', 'fps', 'bugReport']],
   ]);
   const MOUSE = ['click', 'radial', 'drag', 'wheel'];
   /** Every panel folded (the minimal interface): the entry unfolds them all. */

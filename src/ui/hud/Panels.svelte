@@ -12,6 +12,8 @@
   import ChatPanel from './ChatPanel.svelte';
   import TradePanel from './TradePanel.svelte';
   import FrontPanel from './FrontPanel.svelte';
+  import BugPanel from './BugPanel.svelte';
+  import { bridge } from '../bridge';
   import Window from './Window.svelte';
   import { unreadOf } from './news';
   import { researchIdle } from './research';
@@ -28,9 +30,16 @@
     { id: 'stats', icon: 'stats' },
     { id: 'log', icon: 'log' },
     { id: 'chat', icon: 'chat' },
+    { id: 'bugs', icon: 'warning' },
   ];
   /** A closed window opens; one hidden behind another comes to the front; the front one closes. */
   function toggle(id: WinId): void {
+    // The bug journal: the screen captured as it is, then the journal over it.
+    if (id === 'bugs' && !hud.panels.bugs) {
+      audio.ui('open');
+      void bridge.bug.capture().finally(() => (hud.panels.bugs = true));
+      return;
+    }
     if (hud.panels[id] && wm.order.at(-1) !== id) {
       focusWindow(id);
       audio.ui('click');
@@ -116,6 +125,8 @@
         <Window id="trade" paper><TradePanel {ctl} /></Window>
       {:else if tb.id === 'front'}
         <Window id="front" paper><FrontPanel {ctl} /></Window>
+      {:else if tb.id === 'bugs'}
+        <Window id="bugs" paper><BugPanel {ctl} /></Window>
       {:else if tb.id === 'stats'}
         <Window id="stats" paper><StatsPanel {ctl} /></Window>
       {/if}

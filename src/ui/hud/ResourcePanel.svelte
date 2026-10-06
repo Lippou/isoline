@@ -12,6 +12,8 @@
 
   let { ctl }: { ctl: GameController } = $props();
   const L = $derived(hud.local);
+  /** Missile kinds (core N) to their names' keys. */
+  const NUKE_NAMES = ['nukeA', 'nukeH', 'nukeMirv', 'nukeMirv'];
   /** Where a boat is heading: the country (or empty land) of its landing point. */
   function boatLabel(b: { tx: number; ty: number; retreating: boolean }): string {
     if (b.retreating) return t('hud.boatHome');
@@ -312,6 +314,34 @@
                   onclick={() => ctl.session.cmd({ t: 'boatRetreat', id: b.id })}
                   ><Icon name="undo" size={13} /></button
                 >{/if}
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
+    {#if L.missiles?.length}
+      <div class="block">
+        <span class="section-title"
+          ><Icon name="nuke" size={14} />{t('hud.missilesInFlight', { n: L.missiles.length })}</span
+        >
+        <ul class="attacks" data-testid="missiles">
+          {#each L.missiles as m (m.id)}
+            <li>
+              <Icon name="nuke" size={13} />
+              <button
+                class="tgt link"
+                onclick={() => ctl.renderer.camera.goTo(m.x, m.y, Math.max(1.5, ctl.renderer.camera.zoom))}
+                >{t(`nuke.${NUKE_NAMES[m.kind] ?? 'nukeA'}.short`)}</button
+              >
+              <small class="mono">{t('hud.missileImpact', { clock: clock(m.left) })}</small>
+              <button
+                class="x"
+                title={t('hud.nukeAbort')}
+                aria-label={t('hud.nukeAbort')}
+                data-testid="nuke-abort"
+                onclick={() => ctl.session.cmd({ t: 'nukeAbort', id: m.id })}
+                ><Icon name="close" size={13} /></button
+              >
             </li>
           {/each}
         </ul>

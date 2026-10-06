@@ -335,7 +335,10 @@
     "groupFront": "Front",
     "onLines": "{n} on the lines",
     "onLinesCap": "locked (greyed in the bar)",
-    "onLinesTip": "{n} troops locked on your front lines: they count in your total ({cap}) but are no longer available (greyed in the bar); {left} of room is left for the army. Lighten or take down a line (click it) to get them back."
+    "onLinesTip": "{n} troops locked on your front lines: they count in your total ({cap}) but are no longer available (greyed in the bar); {left} of room is left for the army. Lighten or take down a line (click it) to get them back.",
+    "missilesInFlight": "{n} missile(s) in flight",
+    "missileImpact": "impact in {clock}",
+    "nukeAbort": "Blow it up in flight (lost, not refunded)"
   },
   "panel": {
     "diplomacy": "Diplomacy",
@@ -344,7 +347,8 @@
     "log": "News",
     "chat": "Messages",
     "trade": "Trade",
-    "front": "Front"
+    "front": "Front",
+    "bugs": "Bugs"
   },
   "chat": {
     "all": "All",
@@ -1433,7 +1437,8 @@
     "revolutionSpread": "The revolt spreads: {tiles} more tiles join {tribe}.",
     "lineReady": "Your offensive line is ready: click it, then the map, to give the assault its direction.",
     "lineEmpty": "One of your defensive lines has lost all its men: it no longer holds. Reinforce it or take it down.",
-    "lineShattered": "One of your lines was turned: it shatters, {n} men lost."
+    "lineShattered": "One of your lines was turned: it shatters, {n} men lost.",
+    "nukeAborted": "Missile blown up in flight, on your order."
   },
   "error": {
     "nukeSelfMirv": "A MIRV cannot target your own country: its warheads would fall all over your land.",
@@ -1573,7 +1578,8 @@
     "photoMode": "Photo mode",
     "hudFold": "Fold / unfold the interface",
     "lineDefense": "Defensive line",
-    "lineOffense": "Offensive line"
+    "lineOffense": "Offensive line",
+    "bugReport": "Bug journal"
   },
   "settings": {
     "tab": {
@@ -3081,7 +3087,9 @@
       "borderStart": "Click a neighbouring country: the line is laid along your whole border with it · hold right click: a stretch",
       "border": "{name}: the whole border, {n} tiles · {troops} troops ({pct} %) · hold right click: a stretch",
       "borderSector": "Stretch facing {name}: {n} tiles · release to lay the line",
-      "borderOver": "Too long for {troops} troops: the nearest {max} tiles (the rest, in red, will not be held)"
+      "borderOver": "Too long for {troops} troops: the nearest {max} tiles (the rest, in red, will not be held)",
+      "close": "Click: close the position on itself (every corner held)",
+      "nextClose": "Click: next point · click the first point: close it · double click or Enter: finish · right click: take the last point back"
     },
     "card": {
       "laying": "In place in {clock}",
@@ -3109,5 +3117,19 @@
       "arrowSet": "given",
       "arrowNone": "to give"
     }
+  },
+  "bugs": {
+    "beta": "Closed beta: every report helps fix the game",
+    "count": "{n} error(s) this session",
+    "what": "What happened?",
+    "placeholder": "What you were doing, what you expected, what happened…",
+    "withGame": "Attach the game (save and replay, to replay the bug)",
+    "save": "Save the report",
+    "folder": "Open the folder",
+    "saved": "Report saved: {name}",
+    "errors": "Latest errors logged",
+    "noErrors": "No error logged.",
+    "reports": "{n} report(s) saved in the bugs folder.",
+    "caught": "An error was just logged — {key}: bug journal"
   }
 }

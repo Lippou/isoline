@@ -38,6 +38,13 @@ const api = {
     importFile: (filterName: string, exts: string[]) =>
       ipcRenderer.invoke('storage:importFile', filterName, exts),
   },
+  bug: {
+    capture: () => ipcRenderer.invoke('bug:capture'),
+    errors: (n: number) => ipcRenderer.invoke('bug:errors', n),
+    save: (note: string, meta: unknown, save: string) => ipcRenderer.invoke('bug:save', note, meta, save),
+    list: () => ipcRenderer.invoke('bug:list'),
+    reveal: () => ipcRenderer.invoke('bug:reveal'),
+  },
   lan: {
     host: (opts: unknown) => ipcRenderer.invoke('lan:host', opts),
     stop: () => ipcRenderer.invoke('lan:stop'),

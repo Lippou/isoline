@@ -655,6 +655,17 @@ function localView(g: Game): LocalView | undefined {
         ty: u.target >= 0 ? Math.floor(u.target / g.map.width) + 0.5 : u.y,
         retreating: u.kind === TRANSPORT_RETREATING,
       })),
+    missiles: g.units
+      .filter((u) => u.alive && u.type === U.Nuke && u.owner === p.id)
+      .map((u) => ({
+        id: u.id,
+        kind: u.kind,
+        x: u.x,
+        y: u.y,
+        tx: u.tx,
+        ty: u.ty,
+        left: Math.max(0, u.t1 - t),
+      })),
     wars: warsOf(g, p),
     neighbors: neighborsOf(g, p),
     noTrade: g.players

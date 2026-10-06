@@ -44,6 +44,14 @@ export interface Bridge {
     ): Promise<string | null>;
     importFile(filterName: string, exts: string[]): Promise<{ name: string; data: Uint8Array } | null>;
   };
+  /** The bug journal (desktop/bugs.ts): reports saved under the app-data folder's bugs/. */
+  bug: {
+    capture(): Promise<boolean>;
+    errors(n: number): Promise<string[]>;
+    save(note: string, meta: unknown, save: string): Promise<string | null>;
+    list(): Promise<string[]>;
+    reveal(): Promise<boolean>;
+  };
   lan: {
     host(opts: unknown): Promise<{ port: number; code: string; addresses: string[] } | { error: string }>;
     stop(): Promise<boolean>;
@@ -148,6 +156,16 @@ const fallback: Bridge = {
         };
         input.click();
       }),
+  },
+  bug: {
+    capture: async () => false,
+    errors: async () => [],
+    save: async (note, meta) => {
+      console.warn('[bug report]', note, meta);
+      return null;
+    },
+    list: async () => [],
+    reveal: async () => false,
   },
   lan: {
     host: async () => ({ error: 'LAN hosting requires the desktop app' }),

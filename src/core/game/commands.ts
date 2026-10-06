@@ -24,7 +24,7 @@ import {
   upgradeBuilding,
 } from '../buildings/buildings';
 import { buildWarship, launchBoat, orderShips, retreatTransport, warshipError } from '../units/ships';
-import { launchNukes, nuclearHalt, nukeError } from '../units/nukes';
+import { abortNuke, launchNukes, nuclearHalt, nukeError } from '../units/nukes';
 import { bomberAim, launchAircraft, planAircraft } from '../units/air';
 import {
   answerAlliance,
@@ -119,6 +119,10 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
 
     case 'boatRetreat':
       retreatTransport(game, p, c.id);
+      return;
+
+    case 'nukeAbort':
+      abortNuke(game, p, c.id);
       return;
 
     case 'line': {

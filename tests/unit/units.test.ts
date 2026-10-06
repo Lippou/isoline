@@ -343,6 +343,26 @@ describe('naval rules (OpenFront)', () => {
     expect(boat.alive).toBe(false);
   });
 
+  it('a missile blown up in flight is lost: no blast, nothing refunded, only by its owner (1.23)', () => {
+    const g = sea();
+    const p1 = g.players[1]!;
+    p1.gold = 10_000_000;
+    placeBuilding(g, p1, B.Silo, g.map.idx(14, 11), true);
+    const boat = sail(g, U.Transport, 2, 160, 40, 20, 40);
+    g.step([cmd(1, { t: 'nuke', kind: N.Atom, tile: g.map.idx(160, 40), count: 1 })]);
+    const nuke = g.units.find((u) => u.type === U.Nuke)!;
+    const gold = p1.gold;
+    // Not someone else's to blow up.
+    g.step([cmd(2, { t: 'nukeAbort', id: nuke.id })]);
+    expect(nuke.alive).toBe(true);
+    g.step([cmd(1, { t: 'nukeAbort', id: nuke.id })]);
+    expect(nuke.alive).toBe(false);
+    for (let k = 0; k < nuke.t1 - nuke.t0 + 5; k++) g.step([]);
+    expect(boat.alive).toBe(true);
+    expect(p1.gold - gold).toBeLessThan(200_000); // (an A-bomb costs 750 000: nothing back)
+    expect(g.fallout.some((f) => f > 0)).toBe(false);
+  });
+
   it('a player may strike its own land with an A or H bomb, never with a MIRV', () => {
     const g = sea();
     const p1 = g.players[1]!;

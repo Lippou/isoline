@@ -95,6 +95,8 @@ export const hud = $state({
   fps: 0,
   tickMs: 0,
   showPerf: false,
+  /** Errors caught this session (the bug journal's count, 1.23). */
+  bugErrors: 0,
   attackRatio: 0.2,
   tool: { k: 'none' } as Tool,
   /** Missile arc: bowed towards the top of the map (default) or the bottom — flipped with U. */
@@ -183,6 +185,7 @@ export const hud = $state({
     trade: false,
     chat: false,
     front: false,
+    bugs: false,
     menu: false,
     help: false,
   },
@@ -375,7 +378,9 @@ export function nextPact(): void {
 }
 
 /** Opens a HUD window (the others stay open) and brings it to the front. */
-export function openPanel(id: 'diplomacy' | 'tech' | 'stats' | 'log' | 'trade' | 'chat' | 'front'): void {
+export function openPanel(
+  id: 'diplomacy' | 'tech' | 'stats' | 'log' | 'trade' | 'chat' | 'front' | 'bugs',
+): void {
   if (hud.panels[id]) focusWindow(id);
   else hud.panels[id] = true;
 }

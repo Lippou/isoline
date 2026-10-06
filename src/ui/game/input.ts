@@ -191,7 +191,11 @@ export class InputController {
           ? 'line.tip.side'
           : d.pts.length === 0
             ? 'line.tip.start'
-            : 'line.tip.next';
+            : this.closesAt(d, sx, sy)
+              ? 'line.tip.close'
+              : d.pts.length >= 6
+                ? 'line.tip.nextClose'
+                : 'line.tip.next';
     const text = t(key, { troops, pct: Math.round(hud.attackRatio * 100), max: d.maxTiles, n: own });
     hud.lineTip = { text, sx, sy, ok: take >= 1 && own <= d.maxTiles };
   }
@@ -420,6 +424,13 @@ export class InputController {
     this.lineClick = { t: now, x: sx, y: sy };
     const [lx, ly] = [d.pts.at(-2), d.pts.at(-1)];
     const fresh = lx !== x || ly !== y;
+    // A click back on the first point (three points down at least) closes the position.
+    if (!moved && this.closesAt(d, sx, sy)) {
+      d.pts.push(d.pts[0]!, d.pts[1]!);
+      this.endTrace(d);
+      this.lineTip(d, sx, sy);
+      return;
+    }
     if (moved) {
       // A drag from the first point: a straight line, ended on release.
       if (fresh) d.pts.push(x, y);
@@ -427,6 +438,13 @@ export class InputController {
     } else if (dbl && d.pts.length >= 4) this.endTrace(d);
     else if (fresh && d.pts.length < 2 * LINE_MAX_POINTS) d.pts.push(x, y);
     this.lineTip(d, sx, sy);
+  }
+
+  /** Whether the pointer (screen px) is on the drawing's first point, and it can close there. */
+  private closesAt(d: LineDraft, sx: number, sy: number): boolean {
+    if (d.stage !== 'trace' || d.pts.length < 6) return false;
+    const [fx, fy] = this.r.camera.worldToScreen(d.pts[0]!, d.pts[1]!);
+    return Math.hypot(fx - sx, fy - sy) <= 12;
   }
 
   /** Down with the left button: a drag starts the line from here. */
@@ -804,7 +822,7 @@ export class InputController {
       case 'shipMove':
         // Warships sail the sea and the navigable rivers (the sim checks the route).
         if (!IS_LAND[s.terrain[tile]!] || s.terrain[tile] === T.River) {
-          session.cmd({ t: 'shipMove', ids: hud.selection, tile, patrol: true });
+          session.cmd({ t: 'shipMove', ids: [...hud.selection], tile, patrol: true });
           return;
         }
         break;

@@ -41,6 +41,8 @@ export const DEFAULT_KEYS: Record<string, string> = {
   screenshot: 'F12',
   photoMode: 'F2',
   fps: 'F3',
+  /** The bug journal (1.23, closed beta). */
+  bugReport: 'F9',
   panUp: 'KeyW',
   panDown: 'KeyS',
   panLeft: 'KeyA',

@@ -128,6 +128,8 @@ export function locate(
   let best = Infinity;
   let out = { sd: 0, inside: false, px: pts[0]!, py: pts[1]! };
   const last = pts.length / 2 - 2;
+  // A closed line (1.23: back to its first point) has no ends.
+  const closed = isClosed(pts);
   for (let i = 0; i <= last; i++) {
     const ax = pts[2 * i]!;
     const ay = pts[2 * i + 1]!;
@@ -144,12 +146,23 @@ export function locate(
     best = d;
     out = {
       sd: ((x - ax) * dy - (y - ay) * dx) / Math.sqrt(len2),
-      inside: !((i === 0 && t < 0) || (i === last && t > 1)),
+      inside: closed || !((i === 0 && t < 0) || (i === last && t > 1)),
       px,
       py,
     };
   }
   return out;
+}
+
+/**
+ * Whether a drawn line closes on itself (its last point back on its first, three sides at
+ * least): a position closed all round, its corners covered like any other (1.23, the player:
+ * « il y a toujours un angle droit qui n'est pas défendu. Il faudrait pouvoir refermer une
+ * position sur elle-même »).
+ */
+export function isClosed(pts: readonly number[]): boolean {
+  const n = pts.length;
+  return n >= 8 && pts[0] === pts[n - 2] && pts[1] === pts[n - 1];
 }
 
 /** The side of the drawn line (x, y) is on: what the player picks after drawing. */

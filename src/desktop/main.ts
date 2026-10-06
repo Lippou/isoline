@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { registerStorageIpc, appendErrorLog } from './storage';
 import { registerLanIpc, shutdownLan } from './lan';
 import { registerUpdateIpc } from './updater';
+import { registerBugIpc } from './bugs';
 
 const SMOKE = process.argv.includes('--smoke-test');
 const DEV_URL = process.env.VITE_DEV_SERVER_URL ?? '';
@@ -151,6 +152,7 @@ app.whenReady().then(() => {
   registerStorageIpc();
   registerLanIpc();
   registerUpdateIpc();
+  registerBugIpc(() => mainWindow);
   buildMenu();
   app.setAboutPanelOptions({
     applicationName: 'Isoline',
