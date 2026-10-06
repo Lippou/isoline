@@ -343,7 +343,8 @@
     "stats": "Statistics",
     "log": "News",
     "chat": "Messages",
-    "trade": "Trade"
+    "trade": "Trade",
+    "front": "Front"
   },
   "chat": {
     "all": "All",
@@ -425,7 +426,7 @@
     "lineTroops": "Line troops…",
     "lineTroopsDesc": "Add troops from the army, or send some back.",
     "lineLaunch": "Launch the assault",
-    "lineLaunchDesc": "The line’s troops attack straight ahead: −50% losses, +50% speed the whole assault."
+    "lineLaunchDesc": "Then aim: left click a country (its whole border) or hold the right button along the border (a sector)."
   },
   "confirm": {
     "betrayTitle": "Betray your ally?",
@@ -1430,7 +1431,7 @@
     "raidHitShip": "Raid on {player} — {ship} hit.",
     "raidHitShipSunk": "Raid on {player} — {ship} sunk.",
     "revolutionSpread": "The revolt spreads: {tiles} more tiles join {tribe}.",
-    "lineReady": "Your offensive line is ready: click it to launch the assault.",
+    "lineReady": "Your offensive line is ready: open it (click it) and launch the assault.",
     "lineEmpty": "One of your defensive lines has lost all its men: it no longer holds. Reinforce it or take it down.",
     "lineShattered": "One of your lines was turned: it shatters, {n} men lost."
   },
@@ -2253,7 +2254,7 @@
       "economy": "Build three cities to sustain the war effort.",
       "weather": "Watch the sky: storms slow ships and aircraft down, and fog banks halve the range of radars.",
       "clock": "The clock is ticking: the dial at the top announces the next milestone. A peace summit or a Council vote turns it back; bombs hasten it.",
-      "offensive": "Before a big push, draw an offensive line (key Q) facing the enemy. Its troops get ready for thirty seconds; then click it to launch the assault: those soldiers lose half as many and advance faster.",
+      "offensive": "Before a big push, draw an offensive line (key Q) facing the enemy. Its troops get ready for thirty seconds. Then click it, launch the assault, and click the country to strike, or hold the right button along the border to hit only a sector.",
       "push": "Push towards forty percent. A vulnerable nation is marked on the map."
     },
     "hint": {
@@ -2520,7 +2521,26 @@
       "at": "{clock}",
       "with": "{name}, at {clock}",
       "num": "{n}"
-    }
+    },
+    "count": "{d} defensive · {o} offensive",
+    "locked": "{n} troops on the lines",
+    "none": "No line. Draw a defensive line (key {d}) or an offensive one (key {o}) on your land.",
+    "pick": "Click a line, here or on the map, to manage it.",
+    "defensiveN": "Defensive {n}",
+    "offensiveN": "Offensive {n}",
+    "state": {
+      "empty": "Empty: holds nothing any more",
+      "preparing": "Troops getting ready: {clock}",
+      "holding": "Holding the front",
+      "ready": "Ready to attack"
+    },
+    "aiming": "Aim on the map: left click a country = its whole border; right button held along the border = that sector only. Escape cancels.",
+    "aimTip": "Left click: this country’s whole border · right button held: trace the sector",
+    "aimSector": "Sector: {n} tiles — release to launch the assault",
+    "aimOwn": "Aim at another country’s border.",
+    "rules": "How it works",
+    "rulesDraw": "Defensive: head-on, the attacker loses 3 men for 1 and only breaks through beyond 3 to 1; turned, it shatters. Click a line to manage it, right click to take it down.",
+    "rulesAssault": "Offensive: its troops get ready for 30 s, then “Launch the assault”: left click a country for its whole border, or hold the right button along the border for a sector (even against a country already attacked). Those soldiers lose half as many and advance 1.5 times faster."
   },
   "news": {
     "masthead": "The Isoline Courier",

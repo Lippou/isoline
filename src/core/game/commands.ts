@@ -50,6 +50,54 @@ const eventLeft = (game: Game): { left: number } => ({
   left: Math.max(0, (game.features.event?.until ?? game.tick) - game.tick),
 });
 
+const NB4 = new Int32Array(4);
+
+/** Whether `tile` touches land of `pid` (4 neighbours). */
+function touches(game: Game, pid: number, tile: number): boolean {
+  const n = game.map.neighbors4(tile, NB4);
+  for (let k = 0; k < n; k++) if (game.owner[NB4[k]!] === pid) return true;
+  return false;
+}
+
+/**
+ * A traced stretch of border (an offensive line's assault, 1.21): of the tiles given, those
+ * of another owner touching our land; the owner most of them belong to, and its tiles there.
+ */
+function sectorAim(
+  game: Game,
+  pid: number,
+  tiles: readonly number[],
+): { target: number; tile: number; focus: number[] } | null {
+  const count = new Map<number, number[]>();
+  for (const t of tiles) {
+    if (t < 0 || t >= game.map.size || !IS_LAND[game.map.terrain[t]!] || game.isDead(t)) continue;
+    const o = game.owner[t]!;
+    if (o === pid || !touches(game, pid, t)) continue;
+    const list = count.get(o);
+    if (list) list.push(t);
+    else count.set(o, [t]);
+  }
+  let best: { target: number; tile: number; focus: number[] } | null = null;
+  for (const [o, list] of count)
+    if (!best || list.length > best.focus.length) best = { target: o, tile: list[0]!, focus: list };
+  return best;
+}
+
+/** A country's whole border with us (an offensive line's assault aimed by a click, 1.21). */
+function borderAim(game: Game, pid: number, target: number): { target: number; tile: number } | null {
+  const p = game.players[pid];
+  if (!p || target === pid) return null;
+  for (const b of p.border) {
+    const n = game.map.neighbors4(b, NB4);
+    for (let k = 0; k < n; k++) {
+      const v = NB4[k]!;
+      if (game.owner[v] === target && IS_LAND[game.map.terrain[v]!] && !game.isDead(v))
+        return { target, tile: v };
+    }
+  }
+  return null;
+}
+
 export function applyCommand(game: Game, pid: number, c: Command): void {
   if (!isWellFormed(c)) return;
   const p = game.player(pid);
@@ -135,14 +183,20 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
 
     case 'lineLaunch': {
       // The troops that waited on an offensive line go over the top (1.20): the line empties
-      // into an attack straight ahead, and they carry its preparation (Attack.prepared).
+      // into an attack, and they carry its preparation (Attack.prepared).
       const l = game.lines.find((x) => x.id === c.id && x.owner === p.id && x.kind === LineKind.Offensive);
       if (!l || l.troops < 1 || game.phase !== 'playing') return;
       if (l.readyTick > game.tick) {
         game.notify(p.id, 'error.line.notReady', 'warn', { s: Math.ceil((l.readyTick - game.tick) / 10) });
         return;
       }
-      const aim = lineTarget(game, l);
+      // Where (1.21): the stretch of border the player traced, a country's whole border with
+      // us, or (the nations) straight ahead of the line.
+      const aim = c.tiles?.length
+        ? sectorAim(game, p.id, c.tiles)
+        : c.target !== undefined
+          ? borderAim(game, p.id, c.target)
+          : lineTarget(game, l);
       if (!aim) {
         game.notify(p.id, 'error.line.noTarget', 'warn');
         return;
@@ -152,7 +206,8 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
         game.refuse(p.id, 'attack', why);
         return;
       }
-      if (!attackSlotFree(game, p.id, aim.target)) {
+      const focus = 'focus' in aim ? (aim.focus as number[]) : undefined;
+      if (!attackSlotFree(game, p.id, focus ? -1 : aim.target)) {
         game.notify(p.id, 'error.attackSlots', 'warn', { n: MAX_ATTACKS_PER_PLAYER });
         return;
       }
@@ -166,7 +221,7 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       l.troops = 0;
       p.lineTroops = Math.max(0, p.lineTroops - troops);
       removeLine(game, l, false);
-      launchAttack(game, p.id, aim.target, troops, undefined, prepared);
+      launchAttack(game, p.id, aim.target, troops, undefined, prepared, focus);
       return;
     }
 

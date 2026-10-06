@@ -343,7 +343,8 @@
     "stats": "Statistiques",
     "log": "Journal",
     "chat": "Messages",
-    "trade": "Commerce"
+    "trade": "Commerce",
+    "front": "Front"
   },
   "chat": {
     "all": "Tous",
@@ -425,7 +426,7 @@
     "lineTroops": "Troupes de la ligne…",
     "lineTroopsDesc": "Ajouter des troupes depuis l’armée, ou en rendre.",
     "lineLaunch": "Lancer l’assaut",
-    "lineLaunchDesc": "Les troupes de la ligne attaquent droit devant : pertes −50 %, vitesse +50 % tout l’assaut."
+    "lineLaunchDesc": "Puis visez : clic gauche sur un pays (toute sa frontière) ou clic droit maintenu le long de la frontière (un secteur)."
   },
   "confirm": {
     "betrayTitle": "Trahir votre allié ?",
@@ -1430,7 +1431,7 @@
     "raidHitShip": "Raid sur {player} — {ship} touché.",
     "raidHitShipSunk": "Raid sur {player} — {ship} coulé.",
     "revolutionSpread": "La révolte s'étend : {tiles} cases de plus rejoignent {tribe}.",
-    "lineReady": "Votre ligne offensive est prête : cliquez dessus pour lancer l’assaut.",
+    "lineReady": "Votre ligne offensive est prête : ouvrez-la (clic dessus) et lancez l’assaut.",
     "lineEmpty": "Une de vos lignes défensives a perdu tous ses hommes : elle ne tient plus. Renforcez-la ou démontez-la.",
     "lineShattered": "Une de vos lignes a été prise à revers : elle éclate, {n} hommes perdus."
   },
@@ -2253,7 +2254,7 @@
       "economy": "Construisez trois villes pour soutenir l'effort de guerre.",
       "weather": "Surveillez le ciel : les orages ralentissent navires et avions, et les bancs de brouillard réduisent de moitié la portée des radars.",
       "clock": "L'horloge avance : le cadran en haut annonce le prochain palier. Une paix, un vote du Conseil la font reculer ; les bombes la précipitent.",
-      "offensive": "Avant une grande poussée, tracez une ligne offensive (touche A) face à l’ennemi. Ses troupes se préparent trente secondes ; cliquez ensuite dessus pour lancer l’assaut : ces soldats perdent deux fois moins et avancent plus vite.",
+      "offensive": "Avant une grande poussée, tracez une ligne offensive (touche A) face à l’ennemi. Ses troupes se préparent trente secondes. Ensuite, cliquez dessus, lancez l’assaut, puis cliquez sur le pays visé, ou maintenez le clic droit le long de la frontière pour n’en frapper qu’un secteur.",
       "push": "Poussez vers quarante pour cent. Une nation vulnérable est signalée sur la carte."
     },
     "hint": {
@@ -2520,7 +2521,26 @@
       "at": "{clock}",
       "with": "{name}, à {clock}",
       "num": "{n}"
-    }
+    },
+    "count": "{d} défensive(s) · {o} offensive(s)",
+    "locked": "{n} troupes sur les lignes",
+    "none": "Aucune ligne. Tracez une ligne défensive (touche {d}) ou offensive (touche {o}) sur vos terres.",
+    "pick": "Cliquez sur une ligne, ici ou sur la carte, pour la gérer.",
+    "defensiveN": "Défensive {n}",
+    "offensiveN": "Offensive {n}",
+    "state": {
+      "empty": "Vide : ne tient plus rien",
+      "preparing": "Troupes en préparation : {clock}",
+      "holding": "Tient le front",
+      "ready": "Prête à l’assaut"
+    },
+    "aiming": "Visez sur la carte : clic gauche sur un pays = toute sa frontière ; clic droit maintenu le long de la frontière = ce secteur seulement. Échap annule.",
+    "aimTip": "Clic gauche : toute la frontière de ce pays · clic droit maintenu : tracer le secteur",
+    "aimSector": "Secteur : {n} cases — relâchez pour lancer l’assaut",
+    "aimOwn": "Visez la frontière d’un autre pays.",
+    "rules": "Comment ça marche",
+    "rulesDraw": "Défensive : de face, l’assaillant perd 3 hommes pour 1 et ne perce qu’au-delà de 3 contre 1 ; prise à revers, elle éclate. Clic sur une ligne pour la gérer, clic droit pour la démonter.",
+    "rulesAssault": "Offensive : ses troupes se préparent 30 s, puis « Lancer l’assaut » : clic gauche sur un pays pour toute sa frontière, ou clic droit maintenu le long de la frontière pour un secteur (même chez un pays déjà attaqué). Ces soldats perdent deux fois moins et avancent 1,5 fois plus vite."
   },
   "news": {
     "masthead": "Le Courrier des Isolignes",

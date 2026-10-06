@@ -15,6 +15,7 @@ import { note } from '../stores/note.svelte';
 import { short } from '../i18n/i18n.svelte';
 import { LINE_MAX_POINTS } from '../../core/game/constants';
 import { lineMaxTiles, sideOf, traceTiles } from '../../core/rules/lines';
+import { ownLineAt } from './lines';
 
 /**
  * A front line being drawn (core/rules/lines.ts): its points (tile centres, flat x, y…),
@@ -29,6 +30,14 @@ export interface LineDraft {
   side: 1 | -1;
   /** Our tiles the line can hold with the troops it would take (core/rules/lines.ts lineMaxTiles). */
   maxTiles: number;
+}
+
+/** An offensive line's assault being aimed (FrontPanel, the radial menu): the sector traced so far. */
+export interface AssaultDraft {
+  line: number;
+  tiles: Set<number>;
+  /** The brush under the pointer: x, y, radius (tiles). */
+  brush: [number, number, number] | null;
 }
 
 export interface InputHooks {
@@ -96,6 +105,14 @@ export class InputController {
     this.updateUnitHover();
     // The line tool put down (Escape, another tool, right click): the drawing goes with it.
     if (this.r.overlay.lineDraft && hud.tool.k !== 'line') this.clearLine();
+    // The assault tool put down: its sector goes with it.
+    if (
+      this.r.overlay.assault &&
+      (hud.tool.k !== 'assault' || hud.tool.line !== this.r.overlay.assault.line)
+    ) {
+      this.r.overlay.assault = null;
+      if (hud.tool.k !== 'line') hud.lineTip = null;
+    }
   }
 
   // ------------------------------------------------------------ front lines
@@ -164,6 +181,89 @@ export class InputController {
     hud.lineTip = { text, sx, sy, ok: take >= 1 && own <= d.maxTiles };
   }
 
+  // ---------------------------------------------------------- line hover & assault
+  /** One of my lines under the pointer (no tool in hand), lit on the map: a click opens it. */
+  private updateLineHover(tile: number): void {
+    const reach = Math.max(1.5, 14 / this.r.camera.zoom);
+    const l = hud.tool.k === 'none' ? ownLineAt(this.session.state, this.session.viewer, tile, reach) : null;
+    const id = l ? l.id : -1;
+    if (this.r.overlay.lineHover !== id) {
+      this.r.overlay.lineHover = id;
+      this.el.style.cursor = id >= 0 ? 'pointer' : '';
+    }
+  }
+
+  /** The assault being aimed (hud.tool 'assault'): its sector so far and the brush. */
+  private get assault(): AssaultDraft | null {
+    const tl = hud.tool;
+    if (tl.k !== 'assault') return null;
+    let a = this.r.overlay.assault;
+    if (!a || a.line !== tl.line)
+      a = this.r.overlay.assault = { line: tl.line, tiles: new Set(), brush: null };
+    return a;
+  }
+
+  private brushAt(sx: number, sy: number): [number, number, number] {
+    const [wx, wy] = this.r.camera.screenToWorld(sx, sy);
+    return [wx, wy, Math.max(1.5, 16 / this.r.camera.zoom)];
+  }
+
+  /** Paints the border under the brush: tiles of another owner touching our land. */
+  private paintSector(a: AssaultDraft, sx: number, sy: number): void {
+    const [wx, wy, r] = this.brushAt(sx, sy);
+    const s = this.session.state;
+    const w = s.width;
+    const me = this.session.viewer;
+    for (let y = Math.floor(wy - r); y <= Math.ceil(wy + r); y++)
+      for (let x = Math.floor(wx - r); x <= Math.ceil(wx + r); x++) {
+        if (x < 0 || y < 0 || x >= w || y >= s.height) continue;
+        if ((x + 0.5 - wx) ** 2 + (y + 0.5 - wy) ** 2 > r * r) continue;
+        const t = y * w + x;
+        const o = s.owner[t]!;
+        if (o === me || !IS_LAND[s.terrain[t]!]) continue;
+        const touches =
+          (x > 0 && s.owner[t - 1] === me) ||
+          (x < w - 1 && s.owner[t + 1] === me) ||
+          (y > 0 && s.owner[t - w] === me) ||
+          (y < s.height - 1 && s.owner[t + w] === me);
+        if (touches) a.tiles.add(t);
+      }
+  }
+
+  private assaultTip(a: AssaultDraft, sx: number, sy: number): void {
+    const text = a.tiles.size ? t('front.aimSector', { n: a.tiles.size }) : t('front.aimTip');
+    hud.lineTip = { text, sx, sy, ok: true };
+  }
+
+  /**
+   * The assault aimed: a left click on another country, its whole border with us; the right
+   * button released after a drag along the border, that sector; a plain right click drops it.
+   */
+  private assaultRelease(a: AssaultDraft, button: number, sx: number, sy: number, moved: boolean): void {
+    const send = (c: { target?: number; tiles?: number[] }) => {
+      this.session.cmd({ t: 'lineLaunch', id: a.line, ...c });
+      hud.tool = { k: 'none' };
+      this.r.overlay.assault = null;
+      hud.lineTip = null;
+    };
+    if (button === 2) {
+      if (moved && a.tiles.size) send({ tiles: [...a.tiles] });
+      else if (!moved) {
+        hud.tool = { k: 'none' };
+        this.r.overlay.assault = null;
+        hud.lineTip = null;
+      }
+      return;
+    }
+    const tile = this.r.tileAtScreen(sx, sy);
+    const owner = tile >= 0 ? (this.session.state.owner[tile] ?? 0) : -1;
+    if (tile < 0 || owner === this.session.viewer) {
+      note(t('front.aimOwn'), 'info');
+      return;
+    }
+    send({ target: owner });
+  }
+
   /** A press, then a release (a drag or a click) of the left button with the line tool. */
   private lineRelease(d: LineDraft, sx: number, sy: number, moved: boolean): void {
     const [x, y] = this.snap(sx, sy);
@@ -229,6 +329,9 @@ export class InputController {
     this.down = { x, y, button: e.button, shift: e.shiftKey, moved: false, t: performance.now() };
     const d = e.button === 0 ? this.draft : null;
     if (d) this.linePress(d, x, y);
+    // Aiming an assault: the right button held paints the sector along the border.
+    const as = e.button === 2 ? this.assault : null;
+    if (as) this.paintSector(as, x, y);
     this.last = { x, y };
     this.velocity = { x: 0, y: 0 };
     this.r.camera.vx = this.r.camera.vy = 0;
@@ -246,6 +349,16 @@ export class InputController {
       this.lastHoverTile = tile;
       this.r.overlay.hoverTile = tile;
       this.updateHover(tile, x, y);
+      this.updateLineHover(tile);
+    }
+    const as = this.pointer ? this.assault : null;
+    if (as) {
+      as.brush = this.brushAt(x, y);
+      if (this.down?.button === 2) {
+        if (Math.hypot(x - this.down.x, y - this.down.y) > 4) this.down.moved = true;
+        this.paintSector(as, x, y);
+      }
+      this.assaultTip(as, x, y);
     }
     const d = this.pointer ? this.draft : null;
     if (d) this.lineMove(d, x, y);
@@ -287,6 +400,11 @@ export class InputController {
     const line = d.button === 0 ? this.draft : null;
     if (line) {
       this.lineRelease(line, x, y, d.moved);
+      return;
+    }
+    const as = this.assault;
+    if (as && (d.button === 2 || (d.button === 0 && !d.moved))) {
+      this.assaultRelease(as, d.button, x, y, d.moved);
       return;
     }
     if (d.moved) {

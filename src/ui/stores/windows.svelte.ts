@@ -11,8 +11,8 @@ import { layout } from './layout.svelte';
 import { clampInto, placeInStage, readingRect, overlaps, type Rect } from './zones';
 
 export type { Rect } from './zones';
-export type WinId = 'diplomacy' | 'trade' | 'tech' | 'stats' | 'log' | 'chat';
-export const WIN_IDS: readonly WinId[] = ['diplomacy', 'trade', 'tech', 'stats', 'log', 'chat'];
+export type WinId = 'diplomacy' | 'trade' | 'tech' | 'stats' | 'log' | 'chat' | 'front';
+export const WIN_IDS: readonly WinId[] = ['diplomacy', 'trade', 'tech', 'stats', 'log', 'chat', 'front'];
 
 /**
  * Width of each window (CSS pixels; the page zoom scales them) — the journal is a newspaper
@@ -25,6 +25,7 @@ const BASE_W: Record<WinId, number> = {
   stats: 400,
   log: 468,
   chat: 400,
+  front: 380,
 };
 /** Tallest default height of each window (the tech tree takes the stage's height). */
 const BASE_H: Record<WinId, number> = {
@@ -34,6 +35,7 @@ const BASE_H: Record<WinId, number> = {
   stats: 820,
   log: 820,
   chat: 820,
+  front: 720,
 };
 /** Widest a window grows in reading mode (centred in the room beyond): the planche, a broadsheet. */
 const READ_W: Record<WinId, number> = {
@@ -43,6 +45,7 @@ const READ_W: Record<WinId, number> = {
   stats: 1280,
   log: 1120,
   chat: 1120,
+  front: 900,
 };
 /** Windows that open maximised (reading mode) until the player says otherwise. */
 const MAX_BY_DEFAULT: ReadonlySet<WinId> = new Set(['tech', 'log']);

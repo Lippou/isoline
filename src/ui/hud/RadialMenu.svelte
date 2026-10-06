@@ -1,7 +1,7 @@
 <script lang="ts">
   // Context menu (right click): what is under the cursor, then grouped actions
   // with their cost; sub-menus open in a side column.
-  import { hud } from '../stores/game.svelte';
+  import { hud, openPanel } from '../stores/game.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
   import { settings } from '../stores/settings.svelte';
   import Icon from '../icons/Icon.svelte';
@@ -460,7 +460,11 @@
         hint: wait > 0 ? clock(wait) : formatShort(line.troops),
         desc: t('radial.lineLaunchDesc'),
         disabled: wait > 0 || line.troops < 1,
-        run: act(() => s.cmd({ t: 'lineLaunch', id: line.id })),
+        // Aimed on the map next: a click a whole border, a right drag a sector of it.
+        run: act(() => {
+          hud.frontSel = line.id;
+          hud.tool = { k: 'assault', line: line.id };
+        }),
       });
     }
     if (line) {
@@ -471,7 +475,10 @@
         icon: line.kind === 0 ? 'lineDefense' : 'lineOffense',
         hint: line.troops < 1 ? t('line.card.emptyShort') : formatShort(line.troops),
         desc: t('radial.lineTroopsDesc'),
-        run: act(() => (hud.lineCard = { id: line.id, x: r.x + 40, y: r.y + 40 })),
+        run: act(() => {
+          hud.frontSel = line.id;
+          openPanel('front');
+        }),
       });
       out.push({
         id: 'lineRemove',

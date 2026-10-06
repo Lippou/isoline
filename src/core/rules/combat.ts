@@ -74,6 +74,12 @@ export class Attack {
    * up to LINE_OFFENSE_SPEED faster, all the attack long.
    */
   prepared = 0;
+  /**
+   * Aimed at one stretch of the border (an offensive line's assault on a sector the player
+   * traced, 1.21): it starts from those tiles only, never merges with another attack on the
+   * same country and absorbs none.
+   */
+  focused = false;
 
   constructor(id: number, attacker: number, target: number, troops: number, tick: number) {
     this.id = id;
@@ -420,6 +426,7 @@ export function launchAttack(
   troops: number,
   landing?: number,
   prepared = 0,
+  focus?: readonly number[],
 ): Attack | null {
   const p = game.players[attackerId]!;
   if (!p.alive) return null;
@@ -435,10 +442,12 @@ export function launchAttack(
     p.troops += troops - keep;
     troops = keep;
   }
-  let a = boat
-    ? null
-    : (game.attacks.find((x) => !x.done && x.attacker === attackerId && x.target === targetId && !x.boat) ??
-      null);
+  let a =
+    boat || focus
+      ? null
+      : (game.attacks.find(
+          (x) => !x.done && x.attacker === attackerId && x.target === targetId && !x.boat && !x.focused,
+        ) ?? null);
   const fresh = !a;
   if (!a) {
     if (!attackSlotFree(game, attackerId, boat ? -1 : targetId)) {
@@ -447,6 +456,7 @@ export function launchAttack(
     }
     a = new Attack(game.nextId(), attackerId, targetId, 0, game.tick);
     a.boat = boat;
+    a.focused = !!focus;
   }
   // A riposte: the target was already attacking us when this attack began (the clash below
   // may end its attack, so this is read first). The wave is the target's defence answered,
@@ -486,10 +496,21 @@ export function launchAttack(
   const map = game.map;
   if (boat) {
     enqueueNeighbors(game, a, landing);
+  } else if (focus) {
+    // A sector: only the traced stretch of the border; the front grows from what it takes.
+    for (const j of focus) {
+      if (owner[j] !== targetId || !IS_LAND[map.terrain[j]!] || game.isDead(j)) continue;
+      const n = map.neighbors4(j, NB);
+      for (let k = 0; k < n; k++)
+        if (owner[NB[k]!] === attackerId) {
+          pushFrontier(game, a, j);
+          break;
+        }
+    }
   } else {
     // A land attack absorbs the landings already pushing into the same target.
     for (const x of game.attacks) {
-      if (x === a || x.done || x.attacker !== attackerId || x.target !== targetId) continue;
+      if (x === a || x.done || x.attacker !== attackerId || x.target !== targetId || x.focused) continue;
       if (a.troops + x.troops > 0)
         a.prepared = (a.prepared * a.troops + x.prepared * x.troops) / (a.troops + x.troops);
       a.troops += x.troops;

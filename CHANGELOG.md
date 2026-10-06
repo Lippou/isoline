@@ -2,6 +2,13 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.21.0] — Fenêtre Front, assauts ciblés
+### Ajouté
+- **Fenêtre « Front »** (bouton du dock, ou clic sur une de vos lignes) : toutes vos lignes avec leur état, leurs troupes et leur force ; un clic en sélectionne une et y amène la caméra ; sa fiche donne garnison, seuil de percée, règle les troupes, la démonte (Suppr) et lance l'assaut d'une offensive.
+- **Assauts ciblés** : une fois « Lancer l'assaut » choisi, **clic gauche** sur un pays = toute sa frontière ; **clic droit maintenu le long de la frontière** = ce secteur seulement (tracé en laiton, une flèche relie la ligne au secteur) — une attaque à part, même contre un pays déjà attaqué. Un simple clic droit annule.
+### Corrigé
+- **Le clic sur une ligne ouvre toujours sa gestion** : la ligne est détectée à ~14 pixels près à tout zoom (avant : 1,5 case, quelques pixels de loin) et s'éclaire au survol.
+
 ## [1.20.0] — Assauts préparés, fluidité retrouvée
 ### Modifié
 - **La ligne offensive devient un assaut préparé** : ses troupes s'y massent 30 s, puis « Lancer l'assaut » (clic sur la ligne, ou clic droit) la vide dans une attaque droit devant. Ce sont ces soldats préparés qui ont le bonus — pertes −50 %, vitesse +50 % — pendant toute leur attaque. Les nations lancent les leurs dès qu'elles sont prêtes.

@@ -415,14 +415,18 @@ export class GameController {
   // ------------------------------------------------------------- actions
   action(tile: number, ev?: PointerEvent): void {
     if (this.session.kind === 'replay' || hud.photo) return;
-    // A click on one of my front lines, no tool in hand: its card (troops, take it down).
-    const line = hud.tool.k === 'none' ? ownLineAt(this.session.state, this.session.viewer, tile, 1.5) : null;
+    // A click on one of my front lines, no tool in hand: the Front window, on that line
+    // (within ~14 screen pixels of it, at any zoom).
+    void ev;
+    const reach = Math.max(1.5, 14 / this.renderer.camera.zoom);
+    const line =
+      hud.tool.k === 'none' ? ownLineAt(this.session.state, this.session.viewer, tile, reach) : null;
     if (line) {
-      hud.lineCard = { id: line.id, x: ev?.clientX ?? 0, y: ev?.clientY ?? 0 };
+      hud.frontSel = line.id;
+      openPanel('front');
       audio.ui('click');
       return;
     }
-    hud.lineCard = null;
     InputController.defaultAction(this.session, tile, hud.attackRatio);
     if (
       hud.tool.k === 'build' ||
@@ -469,8 +473,7 @@ export class GameController {
       return;
     }
     if (action === 'escape') {
-      if (hud.lineCard) hud.lineCard = null;
-      else if (hud.tool.k !== 'none' || hud.radial || hud.selection.length) {
+      if (hud.tool.k !== 'none' || hud.radial || hud.selection.length) {
         hud.tool = { k: 'none' };
         hud.radial = null;
         this.input.setSelection([]);

@@ -151,6 +151,34 @@ describe('front lines', () => {
     expect(b).toBe(a);
   });
 
+  it('an assault aimed at a sector of the border: its own attack, starting there only, even on a country already attacked', () => {
+    const g = arena();
+    const l = wall(g, 1, LineKind.Offensive, 140, false, 0.1);
+    l.readyTick = g.tick;
+    // An attack already under way on player 2 along the whole border.
+    g.step([cmd(1, { t: 'attack', tile: g.map.idx(145, 30), ratio: 0.2 })]);
+    const whole = g.attacks.find((a) => a.attacker === 1 && a.target === 2)!;
+    // The sector: player 2's border tiles from y 40 to 44.
+    const sector = [40, 41, 42, 43, 44].map((y) => g.map.idx(145, y));
+    g.step([cmd(1, { t: 'lineLaunch', id: l.id, tiles: sector })]);
+    const mine = g.attacks.filter((a) => a.attacker === 1 && a.target === 2);
+    expect(mine.length).toBe(2);
+    const focused = mine.find((a) => a !== whole)!;
+    expect(focused.focused).toBe(true);
+    expect(focused.prepared).toBeGreaterThan(0);
+    // Its front: only round the sector.
+    for (const t of focused.border) {
+      const y = Math.floor(t / g.map.width);
+      expect(y).toBeGreaterThanOrEqual(38);
+      expect(y).toBeLessThanOrEqual(46);
+    }
+    // A left click aims at a country's whole border instead.
+    const m = wall(g, 1, LineKind.Offensive, 130, false, 0.05);
+    m.readyTick = g.tick;
+    g.step([cmd(1, { t: 'lineLaunch', id: m.id, target: 2 })]);
+    expect(g.lines).not.toContain(m);
+  });
+
   it('paid in troops: off the army and off the ceiling while it stands, back when taken down', () => {
     const g = arena();
     const p = g.players[2]!;

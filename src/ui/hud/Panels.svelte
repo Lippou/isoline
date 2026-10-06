@@ -11,6 +11,7 @@
   import LogPanel from './LogPanel.svelte';
   import ChatPanel from './ChatPanel.svelte';
   import TradePanel from './TradePanel.svelte';
+  import FrontPanel from './FrontPanel.svelte';
   import Window from './Window.svelte';
   import { unreadOf } from './news';
   import { researchIdle } from './research';
@@ -22,6 +23,7 @@
   const tabs: { id: WinId; icon: IconName; hidden?: boolean }[] = [
     { id: 'diplomacy', icon: 'diplomacy' },
     { id: 'trade', icon: 'trade' },
+    { id: 'front', icon: 'lineDefense' },
     { id: 'tech', icon: 'tech', hidden: !ctl.session.config.features.tech },
     { id: 'stats', icon: 'stats' },
     { id: 'log', icon: 'log' },
@@ -112,6 +114,8 @@
         <Window id="chat" paper><ChatPanel {ctl} /></Window>
       {:else if tb.id === 'trade'}
         <Window id="trade" paper><TradePanel {ctl} /></Window>
+      {:else if tb.id === 'front'}
+        <Window id="front" paper><FrontPanel {ctl} /></Window>
       {:else if tb.id === 'stats'}
         <Window id="stats" paper><StatsPanel {ctl} /></Window>
       {/if}

@@ -21,7 +21,7 @@ import { BitmapText, Container, Graphics, Sprite, TextStyle, type Texture } from
 import type { LineView } from '../engine/protocol';
 import { LINE_OFFENSE_REACH, LINE_OFFENSE_SETUP, LINE_REACH } from '../core/game/constants';
 import { traceTiles } from '../core/rules/lines';
-import type { LineDraft } from '../ui/game/input';
+import type { AssaultDraft, LineDraft } from '../ui/game/input';
 
 const CORE = 0x14202c;
 const RIM = 0xf3ead6;
@@ -58,6 +58,10 @@ export interface FrontLineContext {
   mine: (x: number, y: number) => boolean;
   /** The camera's view, in tiles: [x0, y0, x1, y1]. */
   bounds: [number, number, number, number];
+  /** My line under the pointer (lit), -1 none. */
+  hover: number;
+  /** An offensive line's assault being aimed: its sector and the brush. */
+  assault: AssaultDraft | null;
 }
 
 /** A point along a polyline, with the unit normal pointing to the side faced. */
@@ -153,12 +157,13 @@ export class FrontLineLayer {
   readonly container = new Container();
   private readonly lineLayer = new Container();
   private readonly draft = new Graphics();
+  private readonly lit = new Graphics();
   private readonly pions = new Container();
   private readonly pool: PionView[] = [];
   private readonly gfx = new Map<number, LineGfx>();
 
   constructor() {
-    this.container.addChild(this.lineLayer, this.draft, this.pions);
+    this.container.addChild(this.lineLayer, this.lit, this.draft, this.pions);
   }
 
   /** Map width (tile keys), set by the renderer. */
@@ -235,6 +240,55 @@ export class FrontLineLayer {
       }
     this.placePions(ctx);
     this.drawDraft(draft, ctx);
+    this.drawLit(lines, ctx);
+  }
+
+  /**
+   * Lit on top: the line under the pointer (a brass glow along it: a click opens it), and an
+   * assault being aimed — its line, the sector traced (brass tiles), the brush, and an arrow
+   * from the line to the sector.
+   */
+  private drawLit(lines: readonly LineView[], ctx: FrontLineContext): void {
+    const g = this.lit;
+    g.clear();
+    const px = (n: number) => Math.max(0.04, n / ctx.zoom);
+    const glow = (id: number) => {
+      const v = this.gfx.get(id);
+      if (!v || !v.root.visible) return;
+      for (const run of v.runs) {
+        polyline(g, run, BRASS, px(14), 0.35);
+        polyline(g, run, BRASS, px(3), 0.9);
+      }
+    };
+    if (ctx.hover >= 0) glow(ctx.hover);
+    const a = ctx.assault;
+    if (!a) return;
+    glow(a.line);
+    const w = this.width;
+    let [cx, cy, n] = [0, 0, 0];
+    for (const t of a.tiles) {
+      const [x, y] = [t % w, Math.floor(t / w)];
+      g.rect(x, y, 1, 1);
+      [cx, cy, n] = [cx + x + 0.5, cy + y + 0.5, n + 1];
+    }
+    if (n) g.fill({ color: BRASS, alpha: 0.7 });
+    if (a.brush) {
+      const [bx, by, r] = a.brush;
+      g.circle(bx, by, r).stroke({ color: CORE, width: px(2.5), alpha: 0.8 });
+      g.circle(bx, by, r).stroke({ color: BRASS, width: px(1.2), alpha: 1 });
+    }
+    // From the line to the sector (or to the brush, before anything is traced).
+    const line = lines.find((l) => l.id === a.line);
+    const v = this.gfx.get(a.line);
+    const run = v?.runs[0];
+    if (!line || !run || run.length < 2) return;
+    const from = pointAt(run, (run[0]!.s + run[run.length - 1]!.s) / 2);
+    const to: [number, number] | null = n ? [cx / n, cy / n] : a.brush ? [a.brush[0], a.brush[1]] : null;
+    if (!to) return;
+    const d = Math.hypot(to[0] - from.x, to[1] - from.y);
+    if (d < 2) return;
+    const [nx, ny] = [(to[0] - from.x) / d, (to[1] - from.y) / d];
+    battleArrow(g, { x: from.x, y: from.y, nx, ny, s: 0 }, 1.6, d, 0, 1, px, BRASS);
   }
 
   /** A line's static drawing: its zone (ours), its body, its counters' places. */

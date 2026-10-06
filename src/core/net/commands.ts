@@ -22,8 +22,12 @@ export type Command =
   | { t: 'lineRemove'; id: number }
   /** Sets the troops on one of your lines (more from the army, fewer back to it; 0: empty). */
   | { t: 'lineTroops'; id: number; troops: number }
-  /** Launches the assault of one of your offensive lines, once ready: it empties into an attack ahead. */
-  | { t: 'lineLaunch'; id: number }
+  /**
+   * Launches the assault of one of your offensive lines, once ready: it empties into an
+   * attack on `target`'s whole border with you, or on the stretch of border `tiles` (its
+   * tiles), or (neither) straight ahead of the line.
+   */
+  | { t: 'lineLaunch'; id: number; target?: number; tiles?: number[] }
   | { t: 'shipMove'; ids: number[]; tile: number; patrol: boolean }
   /** `up`: arc towards the top of the map (default) or the bottom (A and H bombs). */
   | { t: 'nuke'; kind: number; tile: number; count: number; up?: boolean }
@@ -80,8 +84,13 @@ export function isWellFormed(c: unknown): c is Command {
     case 'boatRetreat':
     case 'upgrade':
     case 'lineRemove':
-    case 'lineLaunch':
       return isInt(o.id);
+    case 'lineLaunch':
+      return (
+        isInt(o.id) &&
+        (o.target === undefined || (isInt(o.target) && o.target >= 0)) &&
+        (o.tiles === undefined || (Array.isArray(o.tiles) && o.tiles.length <= 2000 && o.tiles.every(isInt)))
+      );
     case 'lineTroops':
       return isInt(o.id) && isNum(o.troops) && o.troops >= 0 && o.troops < 1e12;
     case 'line':

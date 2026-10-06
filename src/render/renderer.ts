@@ -31,7 +31,7 @@ import { TradeRouteLayer } from './tradeRoutes';
 import { RailLayer } from './railLayer';
 import { CapitalLayer } from './capitals';
 import { FrontLineLayer } from './frontLines';
-import type { LineDraft } from '../ui/game/input';
+import type { AssaultDraft, LineDraft } from '../ui/game/input';
 import { FlagTextures } from './flagTextures';
 import { MINOR_BADGE_ZOOM, badgePriority, badgePx, badgeSpacing, majorBuilding } from './badgeSize';
 import { flagAspect } from './flags';
@@ -94,6 +94,10 @@ export interface Overlay {
   defenceZones: boolean;
   /** A front line being drawn (input.ts). */
   lineDraft: LineDraft | null;
+  /** My front line under the pointer (lit: a click opens it), -1 none. */
+  lineHover: number;
+  /** An offensive line's assault being aimed: the sector traced (input.ts). */
+  assault: AssaultDraft | null;
   /** Build-bar filter: these building types light up, the others fade (null: no filter). */
   buildingFilter: number[] | null;
   /**
@@ -334,6 +338,8 @@ export class GameRenderer {
     samCoverage: false,
     defenceZones: true,
     lineDraft: null,
+    lineHover: -1,
+    assault: null,
     buildingFilter: null,
     aimTargets: false,
     selection: new Set(),
@@ -1297,6 +1303,8 @@ export class GameRenderer {
         visible: (l, x, y) => this.revealed(l.owner, x, y),
         mine: (x, y) => s.owner[Math.floor(y) * s.width + Math.floor(x)] === s.viewer,
         bounds: this.camera.bounds(),
+        hover: ov.lineHover,
+        assault: ov.assault,
       },
       ov.lineDraft,
     );

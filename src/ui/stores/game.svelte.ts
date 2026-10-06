@@ -30,6 +30,8 @@ export type Tool =
   | { k: 'shipMove' }
   /** Choosing the tile of a new capital (rules/capital.ts). */
   | { k: 'capital' }
+  /** Aiming an offensive line's assault: a click a country's whole border, a right drag a stretch of it. */
+  | { k: 'assault'; line: number }
   /** Drawing a front line (core/rules/lines.ts): kind 0 defensive, 1 offensive. */
   | { k: 'line'; kind: number };
 
@@ -180,6 +182,7 @@ export const hud = $state({
     log: false,
     trade: false,
     chat: false,
+    front: false,
     menu: false,
     help: false,
   },
@@ -190,8 +193,8 @@ export const hud = $state({
   /** Last time the journal was read (tick): newer news light its dock button. */
   journalSeen: 0,
   radial: null as null | { x: number; y: number; tile: number },
-  /** One of my front lines opened (LineCard.svelte): its id, and where it was clicked (window px). */
-  lineCard: null as null | { id: number; x: number; y: number },
+  /** The front line selected in the Front window (FrontPanel.svelte), -1 none. */
+  frontSel: -1,
   hover: null as null | {
     tile: number;
     owner: number;
@@ -372,7 +375,7 @@ export function nextPact(): void {
 }
 
 /** Opens a HUD window (the others stay open) and brings it to the front. */
-export function openPanel(id: 'diplomacy' | 'tech' | 'stats' | 'log' | 'trade' | 'chat'): void {
+export function openPanel(id: 'diplomacy' | 'tech' | 'stats' | 'log' | 'trade' | 'chat' | 'front'): void {
   if (hud.panels[id]) focusWindow(id);
   else hud.panels[id] = true;
 }
