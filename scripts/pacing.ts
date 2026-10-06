@@ -314,7 +314,7 @@ function airCounter() {
 /**
  * The nations' whole toolbox over one game (what a human can do, GAME_DESIGN.md §13.2):
  * buildings completed and upgraded by type, bombs by kind, planes by role, warships and
- * transports, alliances, betrayals, gifts, embargoes, capital moves, generals, offensives,
+ * transports, alliances, betrayals, gifts, embargoes, capital moves, offensives,
  * and at the end the share of the surviving nations with each unlock researched.
  */
 function toolCounter() {
@@ -334,7 +334,6 @@ function toolCounter() {
         else if (e.k === 'alliance' && e.on && nation(g, e.a) && nation(g, e.b)) add('d.alliance');
         else if (e.k === 'betrayal' && nation(g, e.traitor)) add('d.betrayal');
         else if (e.k === 'capitalMoved' && nation(g, e.player)) add('capitalMoved');
-        else if (e.k === 'general' && nation(g, e.player)) add(`g.${e.ability}`);
         else if (e.k === 'attackWave' && nation(g, e.attacker) && e.target > 0)
           add(g.players[e.target]!.kind === 'tribe' ? 'w.tribe' : 'w.country');
         else if (e.k === 'notify' && e.key === 'notify.donation' && nation(g, Number(e.params?.from))) {

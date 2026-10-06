@@ -98,7 +98,6 @@ export type GameEvent =
     }
   /** A demolition came to its end (buildings.ts): `refund` gold back to `owner`. */
   | { k: 'demolished'; owner: number; kind: number; tile: number; refund: number }
-  | { k: 'general'; player: number; ability: string; tile: number }
   | { k: 'trainPay'; x: number; y: number; owner: number; amount: number }
   | { k: 'tradePay'; x: number; y: number; owner: number; amount: number }
   | { k: 'loot'; x: number; y: number; owner: number; amount: number }

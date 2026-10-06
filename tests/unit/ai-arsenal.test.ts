@@ -1,10 +1,9 @@
 // The nations' whole toolbox (1.12.1, GAME_DESIGN.md §13.2): the war chest (airfield, SAMs,
 // radar saved for), raids with reconnaissance and escort, fighters against bombers seen
 // coming, bombs (reconnaissance before the strike, salvoes sized to the SAMs, MIRVs denying
-// a victory), generals and embargoes — scaled by difficulty.
+// a victory) and embargoes — scaled by difficulty.
 import { describe, expect, it } from 'vitest';
 import { asciiMap, makeGame, startWith, testGame } from '../helpers';
-import { placeLine } from '../../src/core/rules/lines';
 import type { Game } from '../../src/core/game/state';
 import type { Difficulty } from '../../src/core/game/config';
 import type { Player } from '../../src/core/game/player';
@@ -17,9 +16,7 @@ import { AIR_OUTBOUND } from '../../src/core/units/air';
 import { applyCommand } from '../../src/core/game/commands';
 import { thinkAir, type AirContext } from '../../src/core/npc/airpower';
 import { denialTarget, tryNuke, warWish, type ArsenalMem, type WarState } from '../../src/core/npc/arsenal';
-import { thinkGeneral } from '../../src/core/npc/generals';
 import { embargoes } from '../../src/core/npc/ai';
-import { TACTICS } from '../../src/core/npc/tactics';
 
 const PLAIN = Array.from({ length: 12 }, () => '.'.repeat(40));
 
@@ -43,12 +40,6 @@ function build(g: Game, owner: number, type: B, x: number, y: number): Building 
   expect(b, `${type} at ${x},${y}`).toBeTruthy();
   b.buildLeft = 0;
   return b;
-}
-
-/** A defensive line of `owner` across (x, y), north to south (rules/lines.ts). */
-function wall(g: Game, owner: number, x: number, y: number): void {
-  const l = placeLine(g, g.players[owner]!, [x + 0.5, y - 6.5, x + 0.5, y + 6.5], 1, 0.1);
-  expect(typeof l, `line at ${x},${y}`).toBe('object');
 }
 
 const war = (enemies: number[]): WarState => ({
@@ -279,49 +270,7 @@ describe('bombs', () => {
   });
 });
 
-describe('generals and embargoes', () => {
-  it('Rampart (from hard) when an attack that could break it presses near its capital, on a front held by a defensive line', () => {
-    for (const d of ['easy', 'normal', 'hard'] as const) {
-      const g = plain(d);
-      const p2 = g.players[2]!;
-      p2.general = 'rampart';
-      p2.generalReadyTick = 0;
-      p2.capital = g.map.idx(95, 24);
-      wall(g, 2, 90, 24);
-      thinkGeneral(g, p2, {
-        offensive: -1,
-        incoming: p2.troops,
-        contact: g.map.idx(80, 24),
-        enemies: new Set([1]),
-      });
-      expect(p2.rampartUntil > g.tick, d).toBe(d === 'hard');
-    }
-    // Far from the capital: kept for when it matters.
-    const g = plain('hard');
-    const p2 = g.players[2]!;
-    p2.general = 'rampart';
-    p2.generalReadyTick = 0;
-    p2.capital = g.map.idx(150, 24);
-    wall(g, 2, 90, 24);
-    thinkGeneral(g, p2, {
-      offensive: -1,
-      incoming: p2.troops,
-      contact: g.map.idx(80, 24),
-      enemies: new Set([1]),
-    });
-    expect(p2.rampartUntil > g.tick).toBe(false);
-  });
-
-  it('Blitz with a new offensive; Sabotage on the enemy’s trains from hard only', () => {
-    const g = plain('normal');
-    const p2 = g.players[2]!;
-    p2.general = 'blitz';
-    p2.generalReadyTick = 0;
-    thinkGeneral(g, p2, { offensive: p2.spawnTile, incoming: 0, contact: -1, enemies: new Set([1]) });
-    expect(p2.blitzUntil).toBeGreaterThan(g.tick);
-    expect(TACTICS.normal.generals).toBeLessThan(2);
-  });
-
+describe('embargoes', () => {
   it('embargo hostile countries (OpenFront); lifted once back to neutral, never on impossible', () => {
     for (const [d, liftAt10, liftAt60] of [
       ['easy', true, true],

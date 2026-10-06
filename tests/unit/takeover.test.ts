@@ -12,7 +12,7 @@ function game(): Game {
   const g = makeGame('black-sea', {
     nations: 6,
     tribes: 6,
-    players: [{ slot: 0, name: 'P1', kind: 'human', team: 0, general: 'blitz' }],
+    players: [{ slot: 0, name: 'P1', kind: 'human', team: 0 }],
   });
   run(g, 400);
   expect(g.phase).toBe('playing');

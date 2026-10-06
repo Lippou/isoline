@@ -35,7 +35,7 @@ import {
   setEmbargo,
   setEmbargoAll,
 } from '../rules/diplomacy';
-import { castVote, generalError, useGeneral } from '../rules/features';
+import { castVote } from '../rules/features';
 import { continueAfterVictory } from '../rules/victory';
 import { airLock, nukeLock, setResearch, techKey } from '../rules/tech';
 import { capitalCooldown, moveCapital } from '../rules/capital';
@@ -306,17 +306,6 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
     case 'research':
       setResearch(p, c.tech, c.op);
       return;
-    case 'general': {
-      if (!inMap(c.tile)) return;
-      const why = generalError(game, p, c.tile);
-      if (why === 'ok') useGeneral(game, p, c.tile);
-      else if (isRefusal(why)) game.refuse(p.id, 'sabotage', why);
-      else
-        game.notify(p.id, `error.generalWhy.${why}`, 'warn', {
-          s: Math.ceil(Math.max(0, p.generalReadyTick - game.tick) / 10),
-        });
-      return;
-    }
     case 'vote':
       castVote(game, p, c.option);
       return;

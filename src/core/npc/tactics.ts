@@ -72,8 +72,6 @@ export interface Tactics {
   mirvDenial: number;
   /** A MIRV decision is dropped one time in this many (OpenFront's hesitation: hard 8, impossible 16). */
   mirvHesitation: number;
-  /** Generals (§15.7): 0 never; 1 Blitz with an offensive; 2 + Rampart near a threatened capital, Sabotage, Propaganda. */
-  generals: number;
   /** Embargoes on hostile countries (OpenFront: every difficulty; lifted at neutral, friendly or never). */
   embargoes: boolean;
 }
@@ -99,7 +97,6 @@ export const TACTICS: Record<Difficulty, Tactics> = {
     bombs: 0,
     mirvDenial: 0,
     mirvHesitation: 0,
-    generals: 0,
     embargoes: true,
   },
   normal: {
@@ -122,7 +119,6 @@ export const TACTICS: Record<Difficulty, Tactics> = {
     bombs: 1,
     mirvDenial: 0,
     mirvHesitation: 0,
-    generals: 1,
     embargoes: true,
   },
   hard: {
@@ -145,7 +141,6 @@ export const TACTICS: Record<Difficulty, Tactics> = {
     bombs: 2,
     mirvDenial: 0.55,
     mirvHesitation: 8,
-    generals: 2,
     embargoes: true,
   },
   impossible: {
@@ -168,7 +163,6 @@ export const TACTICS: Record<Difficulty, Tactics> = {
     bombs: 2,
     mirvDenial: 0.4,
     mirvHesitation: 16,
-    generals: 2,
     embargoes: true,
   },
 };

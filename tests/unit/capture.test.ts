@@ -8,7 +8,6 @@ import { inService, type Building } from '../../src/core/buildings/building';
 import { completedCityLevels, maxTroops } from '../../src/core/game/economy';
 import { restoreSnapshot, snapshotFromJson, snapshotToJson, takeSnapshot } from '../../src/core/net/snapshot';
 import { hashGame } from '../../src/core/net/hash';
-import { useGeneral } from '../../src/core/rules/features';
 import { defaultConfig, defaultFeatures } from '../../src/core/game/config';
 import type { Game } from '../../src/core/game/state';
 
@@ -139,20 +138,6 @@ describe('captured buildings are looted and occupied', () => {
     expect(g.players[1]!.cityLevels).toBe(4);
   });
 
-  it('General Propaganda rallies the occupied buildings at once', () => {
-    const g = duel();
-    const p1 = g.players[1]!;
-    const city = raise(g, 2, B.City, 100, 30, 4);
-    g.setOwner(city.tile, 1);
-    expect(city.occupiedLeft).toBeGreaterThan(0);
-    p1.general = 'propaganda';
-    p1.generalReadyTick = 0;
-    expect(useGeneral(g, p1, city.tile)).toBe(true);
-    expect(city.occupiedLeft).toBe(0);
-    g.step([]);
-    expect(completedCityLevels(g, p1)).toBe(2);
-  });
-
   it('journal: the captor reads what it took, the loot and the occupation; the loser what it lost', () => {
     const g = duel();
     const city = raise(g, 2, B.City, 100, 30, 3);
@@ -193,6 +178,6 @@ describe('loyalty is off by default (1.12.0)', () => {
     expect(defaultFeatures().loyalty).toBe(false);
     expect(defaultConfig(1).features.loyalty).toBe(false);
     // The other features stay on.
-    expect(defaultFeatures().generals).toBe(true);
+    expect(defaultFeatures().events).toBe(true);
   });
 });

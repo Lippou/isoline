@@ -37,7 +37,6 @@ export const DEFAULT_KEYS: Record<string, string> = {
   /** Solo and replays: Space (1.14.0, before: the terrain view), and P as well (pauseAlt). */
   pause: 'Space',
   pauseAlt: 'KeyP',
-  general: 'KeyE',
   screenshot: 'F12',
   photoMode: 'F2',
   fps: 'F3',
@@ -163,6 +162,8 @@ export function migrateSettings(raw: Partial<Settings> & { version?: number }): 
     if (raw.keys?.buildDefense) oldKeys.lineDefense = raw.keys.buildDefense;
     delete oldKeys.buildDefense;
   }
+  // 1.23: the generals are gone, and with them the key of their order.
+  delete oldKeys.general;
   // The separate tutorial is gone (the campaign teaches the game): its flag goes too.
   delete (s.game as Partial<Record<string, unknown>>).tutorialDone;
   return s;

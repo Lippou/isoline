@@ -415,7 +415,6 @@ function view(id: number, o: Partial<PlayerView> = {}): PlayerView {
     immune: false,
     allies: [],
     personality: 'expansionist',
-    general: 'blitz',
     label: [10, 10, 5],
     bigMalus: 0,
     samBonus: 0,

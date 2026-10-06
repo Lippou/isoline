@@ -93,7 +93,7 @@ export function playOne(
     mode: gameMode,
     nations,
     tribes: 40,
-    players: [{ slot: 0, name: 'Bot', kind: 'human', team: 0, general: 'blitz' }],
+    players: [{ slot: 0, name: 'Bot', kind: 'human', team: 0 }],
     spawnSeconds: 30,
     difficulty,
     // Secession is off by default from 1.12 (LOYALTY=1 to measure with it); revolutions are on

@@ -93,7 +93,7 @@
       ],
     ],
     ['nukes', ['nukeA', 'nukeH', 'nukeMirv', 'flipArc']],
-    ['command', ['selectWarships', 'general', 'home']],
+    ['command', ['selectWarships', 'home']],
     ['diplomacy', ['allyAccept', 'allyRefuse', 'chat']],
     [
       'views',

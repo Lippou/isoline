@@ -268,9 +268,7 @@ export function lineDefense(
   const l = cover(game, target, LineKind.Defensive, tile, attacker);
   if (!l) return null;
   const s = lineStrength(game, l);
-  // The Rampart general doubles what its lines hold back for 30 s (rules/features.ts).
-  const rampart = game.players[target]!.rampartUntil > game.tick ? 2 : 1;
-  return { speed: 1 + (LINE_DEFENSE_SPEED - 1) * s * rampart };
+  return { speed: 1 + (LINE_DEFENSE_SPEED - 1) * s };
 }
 
 /** Whether a defensive line of the tile's owner covers it (the tile's hover card). */

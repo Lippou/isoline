@@ -1,6 +1,6 @@
 // The peace summit (world event, GAME_DESIGN.md §12): a forced 60-second truce between all
 // countries. Nobody launches a nuclear weapon while it lasts (players and nations alike, at a
-// country or a tribe), and the truce holds for sabotage and fighters too.
+// country or a tribe), and the truce holds for fighters too.
 import { describe, expect, it } from 'vitest';
 import { asciiMap, cmd, startWith, testGame } from '../helpers';
 import type { Game } from '../../src/core/game/state';
@@ -9,9 +9,7 @@ import { B, N, sec } from '../../src/core/game/constants';
 import { placeBuilding } from '../../src/core/buildings/buildings';
 import { maxLaunchable, nuclearHalt } from '../../src/core/units/nukes';
 import { tryNuke, type ArsenalMem } from '../../src/core/npc/arsenal';
-import { sabotageNear } from '../../src/core/units/trains';
-import { U, makeUnit } from '../../src/core/units/unit';
-import { addUnit } from '../../src/core/units/ships';
+import { U } from '../../src/core/units/unit';
 
 const PLAIN = Array.from({ length: 12 }, () => '.'.repeat(40));
 
@@ -132,21 +130,6 @@ describe('peace summit', () => {
     expect(missiles(g)).toHaveLength(0);
   });
 
-  it('no sabotage between countries during the truce; tribes stay fair game', () => {
-    const g = world();
-    const train = makeUnit(g.nextId(), U.Train, 2, 120.5, 30.5);
-    addUnit(g, train);
-    summit(g);
-    expect(sabotageNear(g, 1, g.map.idx(120, 30))).toBe(false);
-    expect(train.alive).toBe(true);
-    const tribal = makeUnit(g.nextId(), U.Train, 3, 100.5, 8.5);
-    addUnit(g, tribal);
-    expect(sabotageNear(g, 1, g.map.idx(100, 8))).toBe(true);
-    expect(tribal.alive).toBe(false);
-    g.features.ceasefireUntil = -1;
-    expect(sabotageNear(g, 1, g.map.idx(120, 30))).toBe(true);
-  });
-
   it('the truce covers countries, never tribes', () => {
     const g = world();
     summit(g);
@@ -216,26 +199,6 @@ describe('refusals name their real reason (1.16)', () => {
     for (const b of g.buildings.values()) if (b.owner === 1 && b.type === B.Silo) b.tubes[0] = 50;
     g.step([cmd(1, { t: 'nuke', kind: N.Atom, tile: g.map.idx(140, 30), count: 1 })]);
     expect(said(g, 1)[0]!.key).toBe('error.nukeWhy.reloading');
-  });
-
-  it('a sabotage during the summit names the truce; with nothing around, says so', () => {
-    const g = testGame(asciiMap(PLAIN, 4), 3, { difficulty: 'hard', features: { generals: true } as never });
-    startWith(g, [
-      [20, 24],
-      [140, 24],
-      [100, 10],
-    ]);
-    const p1 = g.players[1]!;
-    p1.general = 'sabotage';
-    p1.generalReadyTick = 0;
-    g.step([cmd(1, { t: 'general', tile: g.map.idx(120, 30) })]);
-    expect(said(g, 1)[0]!.key).toBe('error.generalWhy.noTarget');
-    addUnit(g, makeUnit(g.nextId(), U.Train, 2, 120.5, 30.5));
-    summit(g);
-    g.step([cmd(1, { t: 'general', tile: g.map.idx(120, 30) })]);
-    const n = said(g, 1)[0]!;
-    expect(n.key).toBe('error.refused.summit');
-    expect(n.params).toMatchObject({ act: 'sabotage' });
   });
 
   it('a warship order says which: no port, out of reach, or the gold', () => {

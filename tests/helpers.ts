@@ -122,7 +122,6 @@ export function testGame(map: GM, humans: number, patch: Partial<GameConfig> = {
       name: `P${k + 1}`,
       kind: 'human' as const,
       team: 0,
-      general: 'blitz' as const,
     })),
     ...patch,
   };

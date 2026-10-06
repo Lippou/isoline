@@ -5,7 +5,7 @@
 
 ![Isoline — partie en cours](docs/media/03-gameplay.png)
 
-Isoline est un jeu de stratégie de bureau (macOS, Windows) au rythme posé : on part d'un point sur une carte du monde réaliste et on étend son territoire face à jusqu'à 100 nations autonomes (avec leur vrai drapeau) et des tribus. Une partie dure de 25 minutes à une heure ; la gestion, les alliances et les trahisons comptent autant que la guerre. Le jeu inclut économie, villes, ports, rail, flottes, aviation, armes nucléaires et diplomatie. Il ajoute une couche originale : météo, brouillard de guerre, technologies, ressources, loyauté et sécessions, généraux, conseil mondial, campagne, éditeur de cartes, replays et multijoueur en réseau local.
+Isoline est un jeu de stratégie de bureau (macOS, Windows) au rythme posé : on part d'un point sur une carte du monde réaliste et on étend son territoire face à jusqu'à 100 nations autonomes (avec leur vrai drapeau) et des tribus. Une partie dure de 25 minutes à une heure ; la gestion, les alliances et les trahisons comptent autant que la guerre. Le jeu inclut économie, villes, ports, rail, flottes, aviation, armes nucléaires et diplomatie. Il ajoute une couche originale : météo, brouillard de guerre, technologies, ressources, loyauté et sécessions, conseil mondial, campagne, éditeur de cartes, replays et multijoueur en réseau local.
 
 - Règles complètes et valeurs chiffrées : [`GAME_DESIGN.md`](GAME_DESIGN.md)
 - Identité visuelle : [`BRAND.md`](BRAND.md)

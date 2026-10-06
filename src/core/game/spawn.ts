@@ -8,7 +8,6 @@ import { HABITABLE, IS_LAND } from '../map/terrain';
 import { pickNations } from '../map/nationPick';
 import { inventTribeName } from '../names';
 import { hashString } from '../rng';
-import { GENERALS } from './config';
 import { assignCapitals } from '../rules/capital';
 
 export function setupPlayers(game: Game): void {
@@ -23,7 +22,6 @@ export function setupPlayers(game: Game): void {
     if (slot.kind !== 'human') continue;
     const p = game.addPlayer({ fr: slot.name, en: slot.name }, 'human');
     p.slot = slot.slot;
-    p.general = slot.general;
     p.team =
       cfg.mode === 'teams'
         ? Math.max(1, Math.min(teams, slot.team || 1))
@@ -53,7 +51,6 @@ export function setupPlayers(game: Game): void {
     const national = p.iso ? nationalColorIndex(p.iso) : -1;
     p.color = national >= 0 ? national : colorIdx++;
     p.personality = PERSONALITIES[spec.flagSeed % PERSONALITIES.length]!;
-    p.general = GENERALS[(spec.flagSeed >>> 8) % GENERALS.length]!;
     if (cfg.mode === 'teams') p.team = (teamRR++ % teams) + 1;
     else if (cfg.mode === 'humansVsNations') p.team = 2;
     p.troops = START_TROOPS.nation * game.difficulty().troops;
@@ -184,7 +181,6 @@ export function updateSpawnPhase(game: Game): void {
       continue;
     }
     if (p.kind === 'human') p.immuneUntil = game.tick + SPAWN_IMMUNITY_TICKS;
-    p.generalReadyTick = game.tick + 600;
   }
   // Every human and nation governs from its spawn tile (rules/capital.ts).
   assignCapitals(game);

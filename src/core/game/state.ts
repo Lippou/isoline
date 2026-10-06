@@ -45,7 +45,7 @@ import { lineTileLost, updateLines, type FrontLine } from '../rules/lines';
 export type Phase = 'spawn' | 'playing' | 'ended';
 
 /**
- * Why a hostile order (attack, landing, bombing, sabotage…) is refused (1.16: every refusal
+ * Why a hostile order (attack, landing, bombing…) is refused (1.16: every refusal
  * names its real cause). 'summit' and 'ceasefire' are the world's truces (Game.truce):
  * a peace summit, or the World Council's ceasefire.
  */
@@ -526,7 +526,7 @@ export class Game {
   }
 
   /**
-   * Tells p why its order (`act`: attack, boat, bomber, sabotage…) was refused, the truce
+   * Tells p why its order (`act`: attack, boat, bomber…) was refused, the truce
    * named with its time left (error.refused.<reason>, the interface words `act`).
    */
   refuse(pid: number, act: string, why: Refusal): void {

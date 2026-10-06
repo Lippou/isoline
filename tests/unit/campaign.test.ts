@@ -44,7 +44,6 @@ function player(id: number, kind: PlayerView['kind'], over: Partial<PlayerView> 
     immune: false,
     allies: [],
     personality: 'balanced' as PlayerView['personality'],
-    general: 'blitz',
     label: [10 * id, 10 * id, 5],
     bigMalus: 0,
     samBonus: 0,

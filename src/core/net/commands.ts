@@ -48,7 +48,6 @@ export type Command =
   | { t: 'quick'; target: number; msg: number }
   | { t: 'ping'; tile: number; kind: number }
   | { t: 'research'; tech: number; op?: 'queue' | 'unqueue' }
-  | { t: 'general'; tile: number }
   /** Establish (or move) the capital on one of your tiles (rules/capital.ts). */
   | { t: 'moveCapital'; tile: number }
   | { t: 'vote'; option: number }
@@ -80,7 +79,6 @@ export function isWellFormed(c: unknown): c is Command {
   switch (o.t) {
     case 'spawn':
     case 'warship':
-    case 'general':
     case 'moveCapital':
       return isInt(o.tile);
     case 'attack':

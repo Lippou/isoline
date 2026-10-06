@@ -234,7 +234,6 @@ export const ICONS = {
   storm: CloudLightning,
   fogBank: CloudFog,
   tradeRoutes: Route,
-  general: Star,
   oil: Droplet,
   fertile: Wheat,
   metals: Gem,
