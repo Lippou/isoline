@@ -8,6 +8,7 @@
   import { t, short, clock } from '../i18n/i18n.svelte';
   import Icon from '../icons/Icon.svelte';
   import type { GameController } from '../game/controller';
+  import { LINE_BREAK_RATIO } from '../../core/game/constants';
 
   let { ctl }: { ctl: GameController } = $props();
   const s = ctl.session;
@@ -104,6 +105,13 @@
       <dd>{Math.round(line.strength * 100)} %</dd>
       <dt>{t('line.card.length')}</dt>
       <dd>{t('line.card.tiles', { n: line.tiles.length })}</dd>
+      {#if line.kind === 0}
+        <!-- The balance of forces (1.19): a push breaks a tile past 3 to 1 against its garrison. -->
+        <dt>{t('line.card.garrison')}</dt>
+        <dd>{short(line.tiles.length ? line.troops / line.tiles.length : 0)}</dd>
+        <dt>{t('line.card.breaks')}</dt>
+        <dd>{short((LINE_BREAK_RATIO * line.troops) / Math.max(1, line.tiles.length))}</dd>
+      {/if}
     </dl>
     <label class="slider">
       <span>{t('line.card.set')}</span>

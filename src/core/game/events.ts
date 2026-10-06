@@ -105,6 +105,8 @@ export type GameEvent =
   /** `player`'s capital fell to `by` (0: razed by a nuke or the zone); `gold`: treasury seized or burnt. */
   | { k: 'capitalLost'; player: number; by: number; tile: number; gold: number }
   | { k: 'capitalMoved'; player: number; tile: number }
+  /** A front line turned and shattered (rules/lines.ts): its troops lost. */
+  | { k: 'lineShattered'; owner: number; tile: number; troops: number }
   | { k: 'gameOver'; winner: number; team: number; reason: string }
   /** A human resumed the match after its end (sandbox, no further victory). */
   | { k: 'gameContinued'; by: number };

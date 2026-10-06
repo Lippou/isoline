@@ -1,17 +1,21 @@
 // Front lines (1.17, rules/lines.ts): drawn on your own land, paid in troops, facing one side.
-// A defensive line (laid in 3 s) slows what attacks it head-on, its troops stand in the clash
-// and (1.18) nothing gets through it head-on while it holds troops; an offensive one, dug in
-// after 30 s, cuts the losses of the attacks pushing out from it.
+// A defensive line (laid in 3 s) slows what attacks it head-on; its tiles stand by the balance
+// of forces (1.19) and it shatters once turned; an offensive one, dug in after 30 s, spares
+// and speeds up the attacks pushing out from it.
 import { describe, expect, it } from 'vitest';
 import { asciiMap, cmd, startWith, testGame } from '../helpers';
 import {
   CAPITAL_DISORG_TICKS,
   CAPITAL_MOVE_COOLDOWN,
   CAPITAL_MOVE_COST,
+  LINE_BREAK_RATIO,
+  LINE_CLASH,
   LINE_DEFENSE_SETUP,
   LINE_DEFENSE_SPEED,
-  LINE_HOLD_TRADE,
   LINE_MAX_PER_PLAYER,
+  LINE_MIN_DENSITY,
+  LINE_OFFENSE_REACH,
+  LINE_OFFENSE_SPEED,
   LINE_OFFENSE_LOSS,
   LINE_OFFENSE_SETUP,
   LINE_REACH,
@@ -19,9 +23,14 @@ import {
 import { attackLogic, launchAttack } from '../../src/core/rules/combat';
 import {
   LineKind,
+  lineClash,
   lineDefense,
-  lineHolds,
+  lineFront,
+  lineGarrison,
+  lineMaxTiles,
+  lineOffense,
   lineStrength,
+  lineTurned,
   locate,
   placeLine,
   sideOf,
@@ -74,7 +83,7 @@ describe('front lines', () => {
     expect(locate(pts, 10, 25).inside).toBe(false); // past the end
   });
 
-  it('a defensive line slows a head-on attack ×3 at full strength, its troops in the clash', () => {
+  it('a defensive line slows a head-on attack ×3 at full strength (its troops stay on the line)', () => {
     const g = arena();
     const d = g.players[2]!;
     const a = launchAttack(g, 1, 2, 50_000)!;
@@ -83,14 +92,14 @@ describe('front lines', () => {
     expect(d.troops).toBeCloseTo(80_000);
     expect(lineStrength(g, l)).toBe(1);
     const on = attackLogic(g, a, front, 60);
-    // The same state with the line not yet in force: the slowdown, and the line's 20k back in the clash.
+    // The same state with the line not yet in force: only the slowdown differs.
     l.readyTick = g.tick + 1;
     const off = attackLogic(g, a, front, 60);
     expect(lineDefense(g, front, 2, 1)).toBeNull();
     l.readyTick = g.tick;
-    expect(lineDefense(g, front, 2, 1)).toEqual({ speed: LINE_DEFENSE_SPEED, troops: 20_000 });
-    expect(on.tickFraction).toBeGreaterThan(off.tickFraction * LINE_DEFENSE_SPEED);
-    expect(on.attackerLoss).toBeGreaterThan(off.attackerLoss);
+    expect(lineDefense(g, front, 2, 1)).toEqual({ speed: LINE_DEFENSE_SPEED });
+    expect(on.tickFraction).toBeCloseTo(off.tickFraction * LINE_DEFENSE_SPEED);
+    expect(on.attackerLoss).toBeCloseTo(off.attackerLoss);
   });
 
   it('its back is bare, its reach LINE_REACH tiles, its ends square', () => {
@@ -110,17 +119,24 @@ describe('front lines', () => {
     expect(lineDefense(g, g.map.idx(145, 44), 2, 1)).toBeNull();
   });
 
-  it('an offensive line digs in for 30 s, then halves the losses of attacks pushing out from it', () => {
+  it('an offensive line digs in for 30 s, then halves the losses of attacks pushing out from it and speeds them up', () => {
     const g = arena();
     const a = launchAttack(g, 1, 2, 50_000)!;
     const front = g.map.idx(145, 30);
-    const before = attackLogic(g, a, front, 60).attackerLoss;
+    const base = attackLogic(g, a, front, 60);
+    const before = base.attackerLoss;
     const l = wall(g, 1, LineKind.Offensive, 140, false, 0.1);
     expect(l.readyTick).toBe(g.tick + LINE_OFFENSE_SETUP);
     expect(attackLogic(g, a, front, 60).attackerLoss).toBeCloseTo(before);
     l.readyTick = g.tick;
     expect(lineStrength(g, l)).toBe(1);
-    expect(attackLogic(g, a, front, 60).attackerLoss).toBeCloseTo(before * (1 - LINE_OFFENSE_LOSS));
+    const out = attackLogic(g, a, front, 60);
+    expect(out.attackerLoss).toBeCloseTo(before * (1 - LINE_OFFENSE_LOSS));
+    expect(out.tickFraction).toBeCloseTo(base.tickFraction / LINE_OFFENSE_SPEED);
+    // Its zone reaches LINE_OFFENSE_REACH tiles out.
+    const far = 140 + LINE_OFFENSE_REACH - 1;
+    for (let x = 145; x < far; x++) g.setOwner(g.map.idx(x, 30), 1);
+    expect(lineOffense(g, g.map.idx(far, 30), 1).loss).toBeLessThan(1);
   });
 
   it('paid in troops: off the army and off the ceiling while it stands, back when taken down', () => {
@@ -188,35 +204,54 @@ describe('front lines', () => {
     expect(g.lines[0]!.readyTick).toBe(g.tick - 1 + LINE_DEFENSE_SETUP);
   });
 
-  it('lets nothing through head-on while it holds troops; emptied, it stays and gives way', () => {
+  it('balance of forces head-on: 3 to 1 against the attacker at even forces, 1 to 1 at 3 to 1, falls past it', () => {
     const g = arena();
-    const w = g.map.width;
-    // A line across the whole field: no way round it.
-    const pts = [150.5, 0.5, 150.5, 69.5];
-    const l = placeLine(g, g.players[2]!, LineKind.Defensive, pts, sideOf(pts, 140, 30), 0.3) as FrontLine;
-    l.readyTick = g.tick;
-    const before = l.troops;
-    g.players[1]!.troops = 400_000;
-    g.step([cmd(1, { t: 'attack', tile: g.map.idx(145, 30), ratio: 0.5 })]);
-    const beyond = () => {
-      let n = 0;
-      for (let y = 0; y < 70; y++) for (let x = 150; x < 200; x++) if (g.owner[y * w + x] === 1) n++;
-      return n;
+    const l = wall(g, 2, LineKind.Defensive, 150, true);
+    const garrison = lineGarrison(l);
+    const p2 = g.players[2]!;
+    // Even forces: thrown back; the line loses LINE_CLASH × the push, the attacker 3 times that.
+    let [troops, onLines] = [l.troops, p2.lineTroops];
+    let c = lineClash(g, l, garrison);
+    expect(c.holds).toBe(true);
+    expect(troops - l.troops).toBeCloseTo(LINE_CLASH * garrison);
+    expect(c.attackerLoss).toBeCloseTo(3 * LINE_CLASH * garrison);
+    expect(p2.lineTroops).toBeCloseTo(onLines - (troops - l.troops));
+    // Just under 3 to 1: still thrown back, about one for one.
+    troops = l.troops;
+    const g2 = lineGarrison(l);
+    c = lineClash(g, l, 2.9 * g2);
+    expect(c.holds).toBe(true);
+    expect(c.attackerLoss / (troops - l.troops)).toBeCloseTo(LINE_BREAK_RATIO / 2.9);
+    // 3 to 1 and over: the tile falls.
+    onLines = p2.lineTroops;
+    expect(lineClash(g, l, LINE_BREAK_RATIO * lineGarrison(l)).holds).toBe(false);
+    expect(p2.lineTroops).toBe(onLines);
+  });
+
+  it('in a real attack its counter goes down; a big enough push breaks through', () => {
+    const run = (army: number, ratio: number) => {
+      const g = arena();
+      const w = g.map.width;
+      // A line across the whole field: no way round it.
+      const pts = [150.5, 0.5, 150.5, 69.5];
+      const l = placeLine(g, g.players[2]!, LineKind.Defensive, pts, sideOf(pts, 140, 30), 0.3) as FrontLine;
+      l.readyTick = g.tick;
+      const before = l.troops;
+      g.players[1]!.troops = army;
+      g.step([cmd(1, { t: 'attack', tile: g.map.idx(145, 30), ratio })]);
+      for (let k = 0; k < 400; k++) g.step([]);
+      let beyond = 0;
+      for (let y = 0; y < 70; y++) for (let x = 151; x < 200; x++) if (g.owner[y * w + x] === 1) beyond++;
+      return { lost: before - l.troops, beyond, line: l, g };
     };
-    let emptied = false;
-    for (let k = 0; k < 3000 && g.attacks.length > 0 && !emptied; k++) {
-      g.step([]);
-      if (l.troops >= 1) expect(beyond()).toBe(0);
-      else emptied = true;
-    }
-    // 200k against 30k dug in (about 20 s at 3 to 1): the line bled out, still there (to be refilled or taken
-    // down), its owner told; no longer a wall, the attack goes through.
-    expect(l.troops).toBeLessThan(before);
-    expect(emptied).toBe(true);
-    expect(g.lines).toContain(l);
-    expect(g.events.some((e) => e.k === 'notify' && e.key === 'notify.lineEmpty' && e.to === 2)).toBe(true);
-    for (let k = 0; k < 600 && g.attacks.length > 0; k++) g.step([]);
-    expect(beyond()).toBeGreaterThan(0);
+    // 30k on 60 tiles (500 a tile) against 75k (worn down crossing the slowed ground first):
+    // thrown back, the line's counter goes down by thousands, nothing beyond.
+    const weak = run(150_000, 0.5);
+    expect(weak.lost).toBeGreaterThan(5_000);
+    expect(weak.beyond).toBe(0);
+    // Against 150k: past 3 to 1 at the front, the attack goes through.
+    const strong = run(300_000, 0.5);
+    expect(strong.beyond).toBeGreaterThan(0);
   });
 
   it('only head-on: along the line or from behind, its tiles fall like any other', () => {
@@ -225,35 +260,56 @@ describe('front lines', () => {
     const t = g.map.idx(150, 30);
     expect(g.lineAt.get(t)).toBe(l.id);
     g.setOwner(g.map.idx(149, 30), 1); // in front of it
-    expect(lineHolds(g, t, 2, 1)).toBe(l);
+    expect(lineFront(g, t, 2, 1)).toBe(l);
     g.setOwner(g.map.idx(149, 30), 2);
     g.setOwner(g.map.idx(150, 29), 1); // along it (a breach next door)
-    expect(lineHolds(g, t, 2, 1)).toBeNull();
+    expect(lineFront(g, t, 2, 1)).toBeNull();
     g.setOwner(g.map.idx(150, 29), 2);
     g.setOwner(g.map.idx(151, 30), 1); // behind it
-    expect(lineHolds(g, t, 2, 1)).toBeNull();
+    expect(lineFront(g, t, 2, 1)).toBeNull();
     // An empty line holds nothing.
     g.setOwner(g.map.idx(151, 30), 2);
     g.setOwner(g.map.idx(149, 30), 1);
     g.step([cmd(2, { t: 'lineTroops', id: l.id, troops: 0 })]);
     expect(l.troops).toBe(0);
-    expect(lineHolds(g, t, 2, 1)).toBeNull();
+    expect(lineFront(g, t, 2, 1)).toBeNull();
   });
 
-  it('a push it stands costs the attacker its losses and the line 1 / LINE_HOLD_TRADE of them', () => {
+  it('turned, it shatters and its troops are lost; a narrow pass on one end is not enough', () => {
     const g = arena();
-    const l = wall(g, 2, LineKind.Defensive, 150, true);
+    const l = wall(g, 2, LineKind.Defensive, 150, true); // y 22–38, facing west, its back east
     const p2 = g.players[2]!;
-    const [troops, onLines] = [l.troops, p2.lineTroops];
-    for (let x = 145; x < 150; x++) g.setOwner(g.map.idx(x, 30), 1);
-    g.players[1]!.troops = 200_000;
-    g.step([cmd(1, { t: 'attack', tile: g.map.idx(150, 30), ratio: 0.5 })]);
+    // The enemy 3 tiles behind its two southern tiles: under a quarter, it holds.
+    for (const y of [37, 38]) for (let x = 151; x <= 154; x++) g.setOwner(g.map.idx(x, y), 1);
     for (let k = 0; k < 20; k++) g.step([]);
-    const lost = troops - l.troops;
-    expect(lost).toBeGreaterThan(0);
-    expect(p2.lineTroops).toBeCloseTo(onLines - lost);
-    expect(g.owner[g.map.idx(150, 30)]).toBe(2);
-    expect(LINE_HOLD_TRADE).toBe(3);
+    expect(lineTurned(g, l)).toBe(false);
+    expect(g.lines).toContain(l);
+    // Behind a third of it: it shatters.
+    for (let y = 29; y <= 38; y++) for (let x = 151; x <= 154; x++) g.setOwner(g.map.idx(x, y), 1);
+    let told = false;
+    for (let k = 0; k < 20; k++) {
+      g.step([]);
+      told ||= g.events.some((e) => e.k === 'notify' && e.key === 'notify.lineShattered' && e.to === 2);
+    }
+    expect(g.lines).not.toContain(l);
+    expect(p2.lineTroops).toBe(0);
+    expect(told).toBe(true);
+  });
+
+  it("no longer than its troops allow: LINE_MIN_DENSITY × the country's density on each tile", () => {
+    const g = arena();
+    const p = g.players[2]!;
+    const max = lineMaxTiles(p.troops * 0.01, p.troops, p.tiles);
+    const pts = [150.5, 0.5, 150.5, 69.5];
+    const l = placeLine(g, p, LineKind.Defensive, pts, sideOf(pts, 140, 30), 0.01) as FrontLine;
+    expect(typeof l).toBe('object');
+    expect(l.tiles.length).toBe(max);
+    expect(lineGarrison(l)).toBeGreaterThanOrEqual((LINE_MIN_DENSITY * 100_000) / p.tiles - 1);
+    // Too few troops for three tiles: refused.
+    p.troops = 100;
+    expect(placeLine(g, p, LineKind.Defensive, [160.5, 22.5, 160.5, 38.5], sideOf(pts, 140, 30), 0.01)).toBe(
+      'troops',
+    );
   });
 
   it('its troops can be changed: more from the army (as many as it has), fewer back to it', () => {

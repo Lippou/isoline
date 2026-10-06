@@ -125,27 +125,37 @@ export const ATTACK_RELATION = { easy: -60, normal: -70, hard: -80, impossible: 
 
 // ------------------------------------------------------------ front lines
 /**
- * Front lines (1.17, rules/lines.ts) replace the defence post, at the player's request: a
- * line drawn on your own land and garrisoned with troops (the attack ratio), never gold.
- * It faces one side (chosen after drawing) and leaves its back bare. Within LINE_REACH tiles
- * in front of it, a defensive line slows what comes at it from the front (tile cost up to
- * ×LINE_DEFENSE_SPEED, OpenFront's defence-post slowdown, and its troops stand in the
- * clash); an offensive line cuts the losses of your attacks pushing out from it (×(1 −
- * LINE_OFFENSE_LOSS)) once dug in, LINE_OFFENSE_SETUP ticks after it is laid. Both act
- * in full while their troops per tile reach LINE_FULL_DENSITY × the country's own,
- * proportionally below. Troops on lines come off the troop ceiling until taken down.
- * 1.18: a defensive line takes LINE_DEFENSE_SETUP ticks to lay, and lets nothing through
- * head-on while it has troops: each push at one of its tiles from the front costs the
- * attacker its losses and the line 1 / LINE_HOLD_TRADE of them; emptied, it holds no more
- * (an empty line stays, to be refilled or taken down).
+ * Front lines (rules/lines.ts, GAME_DESIGN.md §6.6) replace the defence post, at the
+ * player's request: a line drawn on your own land and garrisoned with troops (the attack
+ * ratio), never gold, facing one side (its back bare). Troops on lines come off the troop
+ * ceiling until taken down.
+ * - Length (1.19): a line needs LINE_MIN_DENSITY × the country's troops per tile on each of
+ *   its tiles; drawn longer than its troops allow, it stops there.
+ * - Defensive: laid in LINE_DEFENSE_SETUP ticks. Within LINE_REACH tiles in front, attacks
+ *   coming head-on are slowed (tile cost up to ×LINE_DEFENSE_SPEED). Its own tiles stand
+ *   by the balance of forces (1.19): the attack's troops per front tile against the line's
+ *   garrison per tile (R); a head-on push loses the attacker LINE_CLASH × 3 / R of the
+ *   garrison's worth for every LINE_CLASH × the push's force the line loses (3 to 1 at even
+ *   forces, 1 to 1 at 3 to 1); past LINE_BREAK_RATIO to 1 the tile falls. Turned — the
+ *   enemy holding land LINE_TURN_DEPTH tiles behind LINE_TURN_SHARE of it — it shatters,
+ *   its troops lost.
+ * - Offensive: dug in after LINE_OFFENSE_SETUP ticks; attacks pushing out from it within
+ *   LINE_OFFENSE_REACH tiles lose ×(1 − LINE_OFFENSE_LOSS) and advance ×LINE_OFFENSE_SPEED.
+ * Both act in full while their troops per tile reach LINE_FULL_DENSITY × the country's.
  */
 export const LINE_REACH = 12;
+export const LINE_OFFENSE_REACH = 16;
 export const LINE_DEFENSE_SPEED = 3;
 export const LINE_OFFENSE_LOSS = 0.5;
+export const LINE_OFFENSE_SPEED = 1.5;
 export const LINE_OFFENSE_SETUP = 300;
 export const LINE_DEFENSE_SETUP = 30;
-export const LINE_HOLD_TRADE = 3;
-export const LINE_FULL_DENSITY = 8;
+export const LINE_BREAK_RATIO = 3;
+export const LINE_CLASH = 0.1;
+export const LINE_MIN_DENSITY = 2;
+export const LINE_FULL_DENSITY = 4;
+export const LINE_TURN_SHARE = 0.25;
+export const LINE_TURN_DEPTH = 3;
 /** Lines a player may hold at once; tiles of one line; points a drawing may have. */
 export const LINE_MAX_PER_PLAYER = 8;
 export const LINE_MAX_TILES = 400;

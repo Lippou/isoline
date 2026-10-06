@@ -44,7 +44,7 @@ import { hash2 } from '../rng';
 import { addGold } from '../game/economy';
 import { capitalSpeedMult } from './capital';
 import { guerrilla } from './revolution';
-import { lineDefense, lineHolds, lineOffenseMult, lineTakesHit } from './lines';
+import { lineClash, lineDefense, lineFront, lineOffense } from './lines';
 
 export class Attack {
   readonly id: number;
@@ -196,15 +196,14 @@ export function attackLogic(game: Game, a: Attack, tile: number, borderSize: num
   let mag = MAG[t]! * game.techMagMult(a.attacker, t);
   // A harsh winter (world event) slows the conquest of cold land.
   let cost = SPEED[t]! * winterCost(game, t);
-  // A defensive line in the way (rules/lines.ts): slower, and its troops stand in the clash.
-  let lineTroops = 0;
+  // Front lines (rules/lines.ts): a defensive one in the way slows the advance; pushing out
+  // of an offensive one costs fewer losses and goes faster.
   if (T) {
-    mag *= game.reconLossMult(a.attacker, tile) * lineOffenseMult(game, tile, a.attacker);
+    const off = lineOffense(game, tile, a.attacker);
+    mag *= game.reconLossMult(a.attacker, tile) * off.loss;
+    cost /= off.speed;
     const line = lineDefense(game, tile, a.target, a.attacker);
-    if (line) {
-      cost *= line.speed;
-      lineTroops = line.troops;
-    }
+    if (line) cost *= line.speed;
     // Revolutions (1.16): guerrilla in every street, barricades right after the outbreak.
     if (T.revolution) {
       const g = guerrilla(game, T, a.attacker);
@@ -239,7 +238,7 @@ export function attackLogic(game: Game, a: Attack, tile: number, borderSize: num
   const traitor = T.debuffUntil > game.tick;
   const bonusD = largeTerritoryBonus(T.tiles, LARGE_DEFENDER_DEPTH);
   const defenderLoss = T.troops / Math.max(1, T.tiles);
-  const r = (T.troops + lineTroops) / troops;
+  const r = T.troops / troops;
   const attackerLoss =
     mag *
     (traitor ? TRAITOR_DEFENSE_MULT : 1) *
@@ -625,11 +624,17 @@ function advance(game: Game, a: Attack, p: Player, T: Player | null): void {
     const loss = Math.min(a.troops, o.attackerLoss);
     a.troops -= loss;
     p.stats.troopsLost += loss;
-    // A defensive line holding troops lets nothing through head-on (rules/lines.ts, 1.18):
-    // the push is paid for, the line bleeds, the tile stays and is pressed again later.
-    const wall = T ? lineHolds(game, tile, a.target, a.attacker) : null;
-    if (wall) {
-      p.stats.enemiesKilled += lineTakesHit(game, wall, loss);
+    // A tile of a defensive line, pushed head-on (rules/lines.ts, 1.19): the balance of
+    // forces — the attack's troops per front tile against the garrison per tile. Thrown
+    // back, the tile stays and is pressed again later; both sides bleed.
+    const wall = T ? lineFront(game, tile, a.target, a.attacker) : null;
+    const clash = wall ? lineClash(game, wall, a.troops / Math.max(1, borderSize)) : null;
+    if (clash) {
+      const extra = Math.min(a.troops, clash.attackerLoss);
+      a.troops -= extra;
+      p.stats.troopsLost += extra;
+    }
+    if (wall && clash?.holds) {
       const t = Math.fround(a.clock + tileCost(game, tile, a.target, a.attacker));
       game.queuedBy[tile] = a.id;
       game.frontTime[tile] = t;

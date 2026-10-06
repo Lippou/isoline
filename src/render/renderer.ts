@@ -283,7 +283,7 @@ export class GameRenderer {
   private weather!: WeatherLayer;
   private routes!: TradeRouteLayer;
   private capitals!: CapitalLayer;
-  private frontLines = new FrontLineLayer(TROOPS_STYLE);
+  private frontLines = new FrontLineLayer();
   private unitSprites = new Map<number, UnitSprite>();
   private buildingSprites = new Map<number, Container>();
   private labelPool = new Map<number, MapLabel>();
@@ -1289,6 +1289,11 @@ export class GameRenderer {
         viewer: s.viewer,
         zones: ov.defenceZones,
         reducedMotion: this.settings.reducedMotion,
+        color: (id) => this.inkOf(id),
+        flag: (id) => {
+          const p = s.players.get(id);
+          return p && p.kind !== 'tribe' ? this.flagTex.get(this.flagTex.key(p), p) : null;
+        },
         visible: (l, x, y) => this.revealed(l.owner, x, y),
         mine: (x, y) => s.owner[Math.floor(y) * s.width + Math.floor(x)] === s.viewer,
       },

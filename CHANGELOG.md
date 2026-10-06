@@ -2,6 +2,16 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.19.0] — Lignes de front façon Hearts of Iron, rapport de forces, encerclement
+### Modifié
+- **Nouveau rendu des lignes, inspiré de Hearts of Iron IV** : tracés lissés ; la ligne défensive est un front sombre hérissé de petites dents vers l'ennemi, avec sa **zone d'action ombrée** en dégradé ; la ligne offensive lance des **flèches de plan de bataille** courbes qui se remplissent pendant les 30 s de préparation (ambre), puis passent au vert ; des **pions** le long des lignes avec le drapeau du pays, les troupes, le temps restant et une barre de force. Les zones d'action se voient désormais clairement.
+- **Fini les murs invincibles : rapport de forces de face.** Chaque case de la ligne tient avec sa garnison (troupes ÷ longueur). À forces égales l'assaillant perd 3 hommes pour 1 ; à 3 contre 1, c'est 1 pour 1 ; au-delà, la ligne cède case par case. Le compteur de la ligne descend à chaque assaut. Ses troupes ne gonflent plus la défense du pays tout entier.
+- **Une ligne prise à revers éclate** : si l'ennemi tient des terres 3 cases derrière un quart de sa longueur, elle disparaît et ses troupes sont perdues (un passage étroit sur un bout ne suffit pas).
+- **Longueur selon les troupes** : chaque case doit porter au moins 2 fois la densité moyenne de troupes du pays ; trop longue, la ligne s'arrête là où ses troupes ne suffisent plus — l'aperçu montre l'excédent en rouge barré.
+- **La ligne offensive aide vraiment** : pertes −50 % **et vitesse +50 %** pour les attaques qui en partent, sur **16 cases** (12 avant).
+- Fiche de la ligne : garnison par case et seuil de percée (3 contre 1).
+- Campagne : textes et voix mis à jour (mission 2, mission 6).
+
 ## [1.18.0] — Lignes qui tiennent, fiche de ligne, capitale à 1 M
 ### Ajouté
 - **La ligne défensive ne laisse rien passer de face tant qu'elle a des troupes** (« ça doit être pris dans le bon angle ») : une poussée de face sur la ligne ne prend pas la case ; l'assaillant paie ses pertes et la ligne en perd le tiers (3 contre 1 face à une position retranchée). Prise de côté (par un bout, par une brèche) ou par derrière, elle cède. Mesure : 30 000 hommes tiennent une vingtaine de secondes face à 200 000.

@@ -13,8 +13,8 @@ import { capitalPx } from '../../render/badgeSize';
 import { isTeammate } from './team';
 import { note } from '../stores/note.svelte';
 import { short } from '../i18n/i18n.svelte';
-import { LINE_MAX_POINTS, LINE_OFFENSE_SETUP } from '../../core/game/constants';
-import { sideOf } from '../../core/rules/lines';
+import { LINE_MAX_POINTS } from '../../core/game/constants';
+import { lineMaxTiles, sideOf, traceTiles } from '../../core/rules/lines';
 
 /**
  * A front line being drawn (core/rules/lines.ts): its points (tile centres, flat x, y…),
@@ -27,6 +27,8 @@ export interface LineDraft {
   cursor: [number, number];
   stage: 'trace' | 'side';
   side: 1 | -1;
+  /** Our tiles the line can hold with the troops it would take (core/rules/lines.ts lineMaxTiles). */
+  maxTiles: number;
 }
 
 export interface InputHooks {
@@ -102,7 +104,14 @@ export class InputController {
     if (tl.k !== 'line') return null;
     let d = this.r.overlay.lineDraft;
     if (!d || d.kind !== tl.kind)
-      d = this.r.overlay.lineDraft = { kind: tl.kind, pts: [], cursor: [0, 0], stage: 'trace', side: 1 };
+      d = this.r.overlay.lineDraft = {
+        kind: tl.kind,
+        pts: [],
+        cursor: [0, 0],
+        stage: 'trace',
+        side: 1,
+        maxTiles: 0,
+      };
     return d;
   }
 
@@ -130,11 +139,29 @@ export class InputController {
   /** The note beside the pointer: what the next click does, the troops it will take. */
   private lineTip(d: LineDraft, sx: number, sy: number): void {
     const L = hud.local;
-    const troops = short(Math.floor((L?.troops ?? 0) * hud.attackRatio));
+    const s = this.session.state;
+    const army = L?.troops ?? 0;
+    const take = army * hud.attackRatio;
+    const tiles = s.players.get(this.session.viewer)?.tiles ?? 1;
+    d.maxTiles = lineMaxTiles(take, army + (L?.lineTroops ?? 0), tiles);
+    // Our tiles along the drawing so far: past the length its troops allow, the tip says so.
+    const pts = d.stage === 'trace' && d.pts.length ? [...d.pts, d.cursor[0], d.cursor[1]] : d.pts;
+    const w = s.width;
+    const own =
+      pts.length >= 4
+        ? traceTiles(w, s.height, pts).filter((t) => s.owner[t] === this.session.viewer).length
+        : 0;
+    const troops = short(Math.floor(take));
     const key =
-      d.stage === 'side' ? 'line.tip.side' : d.pts.length === 0 ? 'line.tip.start' : 'line.tip.next';
-    const text = t(key, { troops, pct: Math.round(hud.attackRatio * 100), s: LINE_OFFENSE_SETUP / 10 });
-    hud.lineTip = { text, sx, sy, ok: (L?.troops ?? 0) * hud.attackRatio >= 1 };
+      own > d.maxTiles
+        ? 'line.tip.tooLong'
+        : d.stage === 'side'
+          ? 'line.tip.side'
+          : d.pts.length === 0
+            ? 'line.tip.start'
+            : 'line.tip.next';
+    const text = t(key, { troops, pct: Math.round(hud.attackRatio * 100), max: d.maxTiles, n: own });
+    hud.lineTip = { text, sx, sy, ok: take >= 1 && own <= d.maxTiles };
   }
 
   /** A press, then a release (a drag or a click) of the left button with the line tool. */

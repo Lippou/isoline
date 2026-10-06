@@ -1429,7 +1429,8 @@
     "raidHitShipSunk": "Raid sur {player} — {ship} coulé.",
     "revolutionSpread": "La révolte s'étend : {tiles} cases de plus rejoignent {tribe}.",
     "lineReady": "Votre ligne offensive est installée.",
-    "lineEmpty": "Une de vos lignes défensives a perdu tous ses hommes : elle ne tient plus. Renforcez-la ou démontez-la."
+    "lineEmpty": "Une de vos lignes défensives a perdu tous ses hommes : elle ne tient plus. Renforcez-la ou démontez-la.",
+    "lineShattered": "Une de vos lignes a été prise à revers : elle éclate, {n} hommes perdus."
   },
   "error": {
     "nukeSelfMirv": "Un MIRV ne peut pas viser votre propre pays : ses ogives tomberaient sur tout votre territoire.",
@@ -1709,7 +1710,7 @@
       "outro": "Vos lignes ont tenu. Les assaillants se sont brisés sur vos remparts.",
       "brief": "L'Europe est une poudrière. Trente nations s'y disputent chaque vallée, et la difficulté est réglée sur difficile. Vous ne gagnerez pas cette guerre ; il s'agit de ne pas la perdre. Tenez vingt minutes sans être rayé de la carte.",
       "tip1": "Les montagnes, les collines et les forêts coûtent plus cher à l'attaquant : appuyez-vous dessus.",
-      "tip2": "Une ligne défensive ne laisse rien passer de face tant qu'elle a des troupes ; prise de côté ou par derrière, elle cède. Cliquez dessus pour la renforcer."
+      "tip2": "Une ligne défensive tient de face : l'assaillant y perd 3 hommes pour 1 et ne perce qu'à plus de 3 contre 1. Mais prise à revers, elle éclate."
     },
     "m3": {
       "title": "L'île",
@@ -2208,7 +2209,7 @@
     "m2": {
       "spawn": "Placez votre capitale. Un relief accidenté, comme les Alpes ou les Carpates, sera plus facile à défendre.",
       "expand": "Prenez vite des terres libres avant que les nations voisines ne vous encerclent.",
-      "line": "Tracez une ligne défensive (touche 4) face à votre frontière la plus exposée, puis cliquez du côté de l’ennemi. Tant qu’elle a des troupes, rien ne la traverse de face.",
+      "line": "Tracez une ligne défensive (touche 4) face à votre frontière la plus exposée, puis cliquez du côté de l’ennemi. De face, l’assaillant y perd trois hommes pour un.",
       "reinforce": "Cliquez sur votre ligne : sa fiche règle les troupes qu’elle porte. Plus elle en a, plus elle tient longtemps ; elles sont retirées de votre plafond.",
       "threats": "Quand un voisin masse une armée bien plus forte que la vôtre à votre frontière, une alerte « frontière menacée » s'affiche et le journal la consigne. Renforcez ce front, ou faites de ce voisin un allié.",
       "alliance": "Proposez une alliance à un voisin : clic droit sur son territoire, ou fenêtre Diplomatie dans le rail de gauche. Les offres que vous recevez s'affichent en bas à droite : K pour accepter, L pour refuser.",
@@ -2248,7 +2249,7 @@
       "economy": "Construisez trois villes pour soutenir l'effort de guerre.",
       "weather": "Surveillez le ciel : les orages ralentissent navires et avions, et les bancs de brouillard réduisent de moitié la portée des radars.",
       "clock": "L'horloge avance : le cadran en haut annonce le prochain palier. Une paix, un vote du Conseil la font reculer ; les bombes la précipitent.",
-      "offensive": "Avant une grande poussée, tracez une ligne offensive (touche A) face à l’ennemi : après 30 s, vos attaques qui en partent perdent deux fois moins de troupes.",
+      "offensive": "Avant une grande poussée, tracez une ligne offensive (touche A) face à l’ennemi : après 30 secondes, vos attaques qui en partent perdent deux fois moins de troupes et avancent plus vite.",
       "push": "Poussez vers quarante pour cent. Une nation vulnérable est signalée sur la carte."
     },
     "hint": {
@@ -3036,23 +3037,24 @@
     "defensive": {
       "name": "Ligne défensive",
       "short": "Ligne déf.",
-      "desc": "Tracez-la sur vos terres, puis cliquez du côté de l'ennemi ; elle est en place en 3 s. Tant qu'elle a des troupes, rien ne la traverse de face : chaque assaut lui coûte un tiers de ce qu'il coûte à l'assaillant. Devant elle (12 cases), l'ennemi avance jusqu'à trois fois moins vite. Son dos et ses bouts sont nus : prise de côté ou par derrière, elle cède. Payée en troupes, bloquées sur la ligne et retirées de votre plafond jusqu'au démontage."
+      "desc": "Tracez-la sur vos terres, puis cliquez du côté de l'ennemi ; elle est en place en 3 s. Sa longueur dépend des troupes posées. Chaque case tient avec sa garnison : de face, l'assaillant perd 3 hommes pour 1 à forces égales, et ne perce qu'à plus de 3 contre 1. Devant elle (12 cases), l'ennemi avance jusqu'à 3 fois moins vite. Prise à revers sur un quart de sa longueur, elle éclate et ses troupes sont perdues."
     },
     "offensive": {
       "name": "Ligne offensive",
       "short": "Ligne off.",
-      "desc": "Tracez-la sur vos terres face à l'ennemi : après 30 s d'installation, vos attaques qui en partent perdent jusqu'à deux fois moins de troupes dans les 12 cases devant elle. Dos nu ; payée en troupes, bloquées sur la ligne et retirées de votre plafond jusqu'au démontage."
+      "desc": "Tracez-la sur vos terres face à l'ennemi : après 30 s de préparation, vos attaques qui en partent perdent deux fois moins de troupes et avancent 1,5 fois plus vite dans les 16 cases devant elle. Sa longueur dépend des troupes posées ; prise à revers, elle éclate."
     },
     "costTroops": "{n} troupes ({pct} % de l’armée)",
     "howTo": "Glisser d’un point à un autre, ou cliquer point par point (double-clic ou Entrée pour finir), puis cliquer du côté de l’ennemi. Clic sur une de vos lignes : régler ses troupes ou la démonter.",
     "tip": {
       "start": "Cliquez ou glissez pour tracer · {troops} troupes ({pct} %)",
       "next": "Clic : point suivant · double-clic ou Entrée : terminer · Retour : annuler le point",
-      "side": "Cliquez du côté de l’ennemi pour poser la ligne · {troops} troupes"
+      "side": "Cliquez du côté de l’ennemi pour poser la ligne · {troops} troupes",
+      "tooLong": "Trop longue pour {troops} troupes : {max} cases au plus (le reste, en rouge, ne sera pas tenu)"
     },
     "card": {
       "laying": "En place dans {clock}",
-      "holding": "Tient le front : rien ne passe de face",
+      "holding": "Tient le front : de face, ne cède qu’à plus de 3 contre 1",
       "ready": "Installée : vos assauts en partent",
       "empty": "Vide : elle ne tient plus rien",
       "emptyShort": "vide",
@@ -3064,7 +3066,9 @@
       "fromArmy": "+{n} prises à l’armée",
       "toArmy": "{n} rendues à l’armée",
       "apply": "Appliquer",
-      "remove": "Démonter"
+      "remove": "Démonter",
+      "garrison": "Garnison par case",
+      "breaks": "Percée de face au-delà de (par case)"
     }
   }
 }

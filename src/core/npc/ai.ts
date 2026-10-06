@@ -10,7 +10,7 @@ import {
   CAPITAL_MOVE_COST,
   LINE_MAX_PER_PLAYER,
   LINE_DEFENSE_SETUP,
-  LINE_HOLD_TRADE,
+  LINE_BREAK_RATIO,
   LINE_OFFENSE_SETUP,
   LINE_REACH,
   MIN_BUILDING_SPACING,
@@ -459,11 +459,11 @@ export function revoltToll(game: Game, p: Player, q: Player): number {
 
 /**
  * What it takes to beat q's army: its troops, and those on its front lines counted at the
- * price of breaking them (LINE_HOLD_TRADE to 1 head-on, 1.18) — a country dug in behind
+ * price of breaking them (LINE_BREAK_RATIO to 1 head-on) — a country dug in behind
  * its lines is no soft target, whatever its free army.
  */
 function defenders(q: Player): number {
-  return q.troops + q.lineTroops * LINE_HOLD_TRADE;
+  return q.troops + q.lineTroops * LINE_BREAK_RATIO;
 }
 
 // ----------------------------------------------------------------- nations

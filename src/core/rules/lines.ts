@@ -10,25 +10,35 @@
 // proportionally below. Its troops leave the army and lower the troop ceiling as long as it
 // stands; taking it down brings them back. A tile of the line taken by anyone loses its
 // share of them, and the stretch round it stops covering (a breach).
-// 1.18: a defensive line is laid in 3 s and lets nothing through head-on while it holds
-// troops (lineHolds: each push at it costs the attacker its losses and the line a third
-// of them, the attacker's 3-to-1 against a dug-in position); the troops on a line can be changed (setLineTroops); an emptied line stays,
-// holding nothing, until it is refilled or taken down.
+// 1.18: a defensive line is laid in 3 s; the troops on a line can be changed
+// (setLineTroops); an emptied line stays, holding nothing, until refilled or taken down.
+// 1.19 (the player's design): a line can be no longer than its troops allow
+// (LINE_MIN_DENSITY × the country's troops per tile on each tile); its tiles stand by the
+// balance of forces (lineClash: the attack's troops per front tile against the garrison
+// per tile — 3 to 1 against the attacker at even forces, the tile falls past 3 to 1);
+// turned (lineTurned: the enemy LINE_TURN_DEPTH tiles behind a quarter of it) it shatters,
+// its troops lost; an offensive line speeds its attacks up as well as sparing them.
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import { IS_LAND } from '../map/terrain';
 import {
   LINE_DEFENSE_SETUP,
+  LINE_BREAK_RATIO,
+  LINE_CLASH,
   LINE_DEFENSE_SPEED,
-  LINE_HOLD_TRADE,
   LINE_FULL_DENSITY,
   LINE_MAX_PER_PLAYER,
   LINE_MAX_POINTS,
   LINE_MAX_TILES,
   LINE_MIN_TILES,
+  LINE_MIN_DENSITY,
   LINE_OFFENSE_LOSS,
+  LINE_OFFENSE_REACH,
   LINE_OFFENSE_SETUP,
+  LINE_OFFENSE_SPEED,
   LINE_REACH,
+  LINE_TURN_DEPTH,
+  LINE_TURN_SHARE,
 } from '../game/constants';
 
 export const enum LineKind {
@@ -75,7 +85,7 @@ function index(game: Game): Index {
       y0 = Math.min(y0, l.pts[i + 1]!);
       y1 = Math.max(y1, l.pts[i + 1]!);
     }
-    const m = LINE_REACH + 2;
+    const m = Math.max(LINE_REACH, LINE_OFFENSE_REACH) + 2;
     box.set(l.id, [x0 - m, y0 - m, x1 + m, y1 + m]);
   }
   const ix = { version: game.linesVersion, byOwner, box };
@@ -172,7 +182,7 @@ export function lineStrength(game: Game, l: FrontLine): number {
 
 /**
  * The line of `owner` of `kind` that covers `tile` for an attack by `attacker`, with where
- * the tile sits in front of it — or null. A tile is covered within LINE_REACH tiles in front
+ * the tile sits in front of it — or null. A tile is covered within LINE_REACH (offensive: LINE_OFFENSE_REACH) tiles in front
  * of a stretch of the line still held (a defensive line also covers its own tiles, sd −1).
  * `from`: the attacker comes from the front (defence: a neighbour of the attacker farther
  * out) or pushes out from behind (offence: a neighbour of the attacker nearer the line);
@@ -191,7 +201,8 @@ function cover(game: Game, owner: number, kind: LineKind, tile: number, attacker
     if (x < x0 || x > x1 || y < y0 || y > y1) continue;
     const at = locate(l.pts, x, y);
     const sd = at.sd * l.side;
-    if (!at.inside || sd > LINE_REACH || sd < (kind === LineKind.Defensive ? -1 : 0)) continue;
+    const reach = kind === LineKind.Defensive ? LINE_REACH : LINE_OFFENSE_REACH;
+    if (!at.inside || sd > reach || sd < (kind === LineKind.Defensive ? -1 : 0)) continue;
     if (!heldNear(game, l, at.px, at.py)) continue;
     if (attacker < 0 || attackerSide(game, l, tile, attacker, sd)) return l;
   }
@@ -225,27 +236,32 @@ const NB = new Int32Array(4);
 
 /**
  * A defensive line of `target` in the way of `attacker` taking `tile`: the slowdown on the
- * tile's cost and the line's troops (they stand in the clash), or null.
+ * tile's cost, or null. (Its troops stand on its own tiles, lineClash, not in the field.)
  */
 export function lineDefense(
   game: Game,
   tile: number,
   target: number,
   attacker: number,
-): { speed: number; troops: number } | null {
+): { speed: number } | null {
   if (target <= 0) return null;
   const l = cover(game, target, LineKind.Defensive, tile, attacker);
   if (!l) return null;
   const s = lineStrength(game, l);
   // The Rampart general doubles what its lines hold back for 30 s (rules/features.ts).
   const rampart = game.players[target]!.rampartUntil > game.tick ? 2 : 1;
-  return { speed: 1 + (LINE_DEFENSE_SPEED - 1) * s * rampart, troops: l.troops };
+  return { speed: 1 + (LINE_DEFENSE_SPEED - 1) * s * rampart };
 }
 
-/** The share of its usual losses `attacker` loses taking `tile` (owned by someone) out of its offensive lines. */
-export function lineOffenseMult(game: Game, tile: number, attacker: number): number {
+/**
+ * An attack of `attacker` taking `tile` (owned by someone) out of one of its offensive lines:
+ * the share of its usual losses it loses and how much faster it advances (1, 1 elsewhere).
+ */
+export function lineOffense(game: Game, tile: number, attacker: number): { loss: number; speed: number } {
   const l = cover(game, attacker, LineKind.Offensive, tile, attacker);
-  return l ? 1 - LINE_OFFENSE_LOSS * lineStrength(game, l) : 1;
+  if (!l) return { loss: 1, speed: 1 };
+  const s = lineStrength(game, l);
+  return { loss: 1 - LINE_OFFENSE_LOSS * s, speed: 1 + (LINE_OFFENSE_SPEED - 1) * s };
 }
 
 /** Whether a defensive line of the tile's owner covers it (the tile's hover card). */
@@ -296,11 +312,11 @@ export function lineAcross(
 
 /**
  * A head-on push of `attacker` at `tile`, a tile of a defensive line of `target` that is laid
- * and holds troops: the line that stops it, or null (taken from the side, from behind, or
- * once the line is empty, the tile falls as any other). "Head-on": a neighbour of the
- * attacker LINE_HEAD_ON tiles or more out in front of it (a push within ~70° of square on).
+ * and holds troops: that line, or null (taken from the side, from behind, or once the line
+ * is empty, the tile falls as any other). "Head-on": a neighbour of the attacker
+ * LINE_HEAD_ON tiles or more out in front of it (a push within ~70° of square on).
  */
-export function lineHolds(game: Game, tile: number, target: number, attacker: number): FrontLine | null {
+export function lineFront(game: Game, tile: number, target: number, attacker: number): FrontLine | null {
   const id = game.lineAt.get(tile);
   if (id === undefined) return null;
   const l = game.lines.find((x) => x.id === id);
@@ -312,9 +328,24 @@ export function lineHolds(game: Game, tile: number, target: number, attacker: nu
 }
 const LINE_HEAD_ON = 0.35;
 
-/** The line stood a push that cost the attacker `loss`: it loses 1 / LINE_HOLD_TRADE of it. */
-export function lineTakesHit(game: Game, l: FrontLine, loss: number): number {
-  const hit = Math.min(l.troops, loss / LINE_HOLD_TRADE);
+/** A line's garrison per tile. */
+export function lineGarrison(l: FrontLine): number {
+  return l.tiles.length > 0 ? l.troops / l.tiles.length : 0;
+}
+
+/**
+ * A head-on push of `force` troops (the attack's troops per front tile) at a tile of line l:
+ * the balance of forces R = force / garrison per tile decides (the player's rule, 1.19).
+ * Past LINE_BREAK_RATIO to 1 the tile falls (`holds` false): the attacker pays the garrison
+ * at that rate (3 / R of it), the line loses the tile's share when it changes hands.
+ * Below, the push is thrown back: the line loses LINE_CLASH × force and the attacker 3 / R
+ * as much (3 to 1 at even forces, 1 to 1 at 3 to 1). Returns the attacker's extra losses.
+ */
+export function lineClash(game: Game, l: FrontLine, force: number): { holds: boolean; attackerLoss: number } {
+  const g = Math.max(1, lineGarrison(l));
+  const ratio = Math.max(1e-6, force / g);
+  if (ratio >= LINE_BREAK_RATIO) return { holds: false, attackerLoss: (g * LINE_BREAK_RATIO) / ratio };
+  const hit = Math.min(l.troops, LINE_CLASH * force);
   l.troops -= hit;
   const p = game.players[l.owner];
   if (p) {
@@ -327,7 +358,56 @@ export function lineTakesHit(game: Game, l: FrontLine, loss: number): number {
     game.notify(l.owner, 'notify.lineEmpty', 'warn', {}, l.tiles[l.tiles.length >> 1]);
   }
   game.linesVersion++;
-  return hit;
+  return { holds: true, attackerLoss: (hit * LINE_BREAK_RATIO) / ratio };
+}
+
+/**
+ * Whether line l is turned: hostile land LINE_TURN_DEPTH tiles straight behind at least
+ * LINE_TURN_SHARE of its held tiles (a breach on one end is not enough: it needs depth and
+ * breadth). Wilderness and friends do not turn a line.
+ */
+export function lineTurned(game: Game, l: FrontLine): boolean {
+  const n = l.tiles.length;
+  if (n === 0) return false;
+  const map = game.map;
+  const w = map.width;
+  let turned = 0;
+  for (const t of l.tiles) {
+    const [x, y] = [(t % w) + 0.5, ((t / w) | 0) + 0.5];
+    const [bx, by] = backNormal(l, x, y);
+    const ux = Math.floor(x + bx * LINE_TURN_DEPTH);
+    const uy = Math.floor(y + by * LINE_TURN_DEPTH);
+    if (!map.inBounds(ux, uy)) continue;
+    const o = game.owner[uy * w + ux]!;
+    if (o > 0 && o !== l.owner && !game.friendly(o, l.owner)) turned++;
+    if (turned >= n * LINE_TURN_SHARE) return true;
+  }
+  return false;
+}
+
+/** The unit normal pointing behind line l at the segment nearest to (x, y). */
+function backNormal(l: FrontLine, x: number, y: number): [number, number] {
+  const pts = l.pts;
+  let best: [number, number] = [0, 0];
+  let bestD = Infinity;
+  for (let i = 0; i + 3 < pts.length; i += 2) {
+    const [ax, ay, cx, cy] = [pts[i]!, pts[i + 1]!, pts[i + 2]!, pts[i + 3]!];
+    const len = Math.hypot(cx - ax, cy - ay);
+    if (len === 0) continue;
+    const t = Math.max(0, Math.min(1, ((x - ax) * (cx - ax) + (y - ay) * (cy - ay)) / (len * len)));
+    const d = Math.hypot(ax + (cx - ax) * t - x, ay + (cy - ay) * t - y);
+    if (d >= bestD) continue;
+    bestD = d;
+    // locate's sd > 0 lies along (dy, -dx); the front is side × that, the back its opposite.
+    best = [(-l.side * (cy - ay)) / len, (l.side * (cx - ax)) / len];
+  }
+  return best;
+}
+
+/** The most tiles a line can hold with `troops` on it: LINE_MIN_DENSITY × the country's density each. */
+export function lineMaxTiles(troops: number, countryTroops: number, countryTiles: number): number {
+  const density = countryTroops / Math.max(1, countryTiles);
+  return Math.max(0, Math.floor(troops / Math.max(1e-6, LINE_MIN_DENSITY * density)));
 }
 
 /**
@@ -359,15 +439,18 @@ export function placeLine(
   if (pts.length < 4 || pts.length > 2 * LINE_MAX_POINTS || pts.length % 2) return 'points';
   if (linesOf(game, p.id).length >= LINE_MAX_PER_PLAYER) return 'max';
   const map = game.map;
+  const troops = p.troops * ratio;
+  // As long as its troops allow (1.19): the drawing stops at the last tile they can hold.
+  const most = Math.min(LINE_MAX_TILES, lineMaxTiles(troops, p.troops + p.lineTroops, p.tiles));
   const tiles: number[] = [];
+  let own = 0;
   for (const t of traceTiles(map.width, map.height, pts)) {
     if (game.owner[t] !== p.id || !IS_LAND[map.terrain[t]!] || game.lineAt.has(t)) continue;
-    tiles.push(t);
-    if (tiles.length >= LINE_MAX_TILES) break;
+    own++;
+    if (tiles.length < most) tiles.push(t);
   }
-  if (tiles.length < LINE_MIN_TILES) return 'short';
-  const troops = p.troops * ratio;
-  if (troops < tiles.length) return 'troops';
+  if (own < LINE_MIN_TILES) return 'short';
+  if (tiles.length < LINE_MIN_TILES || troops < tiles.length) return 'troops';
   p.troops -= troops;
   p.lineTroops += troops;
   const l: FrontLine = {
@@ -416,11 +499,24 @@ export function lineTileLost(game: Game, tile: number): void {
   if (l.tiles.length === 0) removeLine(game, l, false);
 }
 
-/** Every tick: an offensive line that has dug in tells its owner (a defensive one is laid in 3 s: no news). */
+/**
+ * Every tick: an offensive line that has dug in tells its owner (a defensive one is laid in
+ * 3 s: no news); every second, a turned line shatters (lineTurned), its troops lost.
+ */
 export function updateLines(game: Game): void {
   for (const l of game.lines)
     if (l.kind === LineKind.Offensive && l.readyTick === game.tick)
       game.notify(l.owner, 'notify.lineReady', 'good', {}, l.tiles[l.tiles.length >> 1]);
+  if (game.tick % 10 !== 0) return;
+  for (const l of [...game.lines]) {
+    if (!lineTurned(game, l)) continue;
+    const at = l.tiles[l.tiles.length >> 1] ?? -1;
+    const p = game.players[l.owner];
+    if (p) p.stats.troopsLost += l.troops;
+    game.notify(l.owner, 'notify.lineShattered', 'danger', { n: Math.round(l.troops) }, at);
+    game.emit({ k: 'lineShattered', owner: l.owner, tile: at, troops: Math.round(l.troops) });
+    removeLine(game, l, false);
+  }
 }
 
 /** After a save is restored: the tile index of the lines. */

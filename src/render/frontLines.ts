@@ -1,30 +1,46 @@
-// Front lines on the map (core/rules/lines.ts), drawn as on a staff map, in ink (1.18:
-// « plus réaliste et plus soigné »):
-//   - a defensive line: a crenellated trench (its traverses jut towards the front) behind a
-//     belt of barbed wire, the wire paler as the line weakens; laid in 3 s (dashed, no wire
-//     yet); emptied, a grey dotted trench with no wire;
-//   - an offensive line: a jump-off line with broad assault arrows pointing where it pushes;
-//     while it digs in (30 s) it is dashed and its arrows hollow, the time left on its label;
-//   - a stretch lost to the enemy (a breach): dotted, no wire, no arrows;
-//   - its reach (settings: front-line zones), shaded in front of the stretches held, the far
-//     edge dashed; the back stays bare.
-// The kinds differ by shape, not by colour (the player is colour-blind). Drawn in the
-// Courier's ink on a paper edge, readable on any country's colour (a line in its owner's
-// colour vanished on its own land); its reach is shaded in ink too. Its troops
-// ride a small label just behind its middle. The line being drawn (input.ts LineDraft)
-// is previewed in brass: solid over our land, dotted elsewhere; then, picking the side,
-// as the trench and wire or the arrows it will be, with its reach.
-// Built lines are redrawn only when they change or the zoom moves on (many lines, long
-// ones: not every frame); the drawing and the countdowns are cheap and redrawn each frame.
-import { BitmapText, Container, Graphics, type TextStyle } from 'pixi.js';
+// Front lines on the map (core/rules/lines.ts) — battle plans in the spirit of Hearts of
+// Iron IV (1.19), drawn for Isoline: smooth lines (the drawing's corners rounded), readable
+// on any country's colour, the kinds told apart by their shapes (the player is colour-blind).
+//   - Defensive: a dark front line with a fine light rim, bristling towards the enemy with a
+//     close fringe of small teeth (a held front); in front of it its zone, a soft ink shade
+//     fading out over LINE_REACH tiles, its far edge a fine dotted line. Being laid (3 s):
+//     dashed, no teeth; emptied: grey, dashed.
+//   - Offensive: a jump-off line (dark, a dashed light rail along it) and sweeping
+//     battle-plan arrows out of it across its zone (LINE_OFFENSE_REACH): tapered, curved,
+//     with a flared head; while it prepares (30 s) they are amber and fill from tail to head
+//     as the time runs, then turn green: ready. Its zone is a warm shade.
+//   - Unit counters along each line, as in HOI4: a dark tab with the owner's flag, the
+//     troops it holds (and the time left while it prepares) and a strength bar.
+//   - A stretch lost to the enemy (a breach): a faint dotted trace, no shade, no counter.
+// The line being drawn (input.ts LineDraft) is previewed in brass the same way: solid over
+// our land within the length its troops allow, dotted elsewhere, red and crossed out past
+// that length; then, picking the side, with its zone and teeth or arrow.
+// Lines and zones are redrawn when they change or the zoom moves on; counters keep their
+// size on screen and follow the camera every frame.
+import { BitmapText, Container, Graphics, Sprite, TextStyle, type Texture } from 'pixi.js';
 import type { LineView } from '../engine/protocol';
-import { LINE_REACH } from '../core/game/constants';
+import { LINE_OFFENSE_REACH, LINE_OFFENSE_SETUP, LINE_REACH } from '../core/game/constants';
+import { traceTiles } from '../core/rules/lines';
 import type { LineDraft } from '../ui/game/input';
 
-const INK_DARK = 0x0b1824;
-const INK = 0x172a3c;
-const PAPER = 0xf6f1e4;
+const CORE = 0x14202c;
+const RIM = 0xf3ead6;
+const SHADE = 0x0b1824;
+const WARM = 0xe0a23a;
 const BRASS = 0xf2b84b;
+const READY = 0x5fbf6a;
+const PREPARING = 0xf0b43c;
+const OVER = 0xd2453a;
+const GREY = 0x9aa1a8;
+
+const PION_STYLE = new TextStyle({
+  fontFamily: '"IBM Plex Sans", sans-serif',
+  fontSize: 30,
+  fontWeight: '600',
+  fill: 0xffffff,
+});
+/** Counter text size on screen (px). */
+const PION_TEXT = 11;
 
 export interface FrontLineContext {
   zoom: number;
@@ -32,13 +48,17 @@ export interface FrontLineContext {
   viewer: number;
   zones: boolean;
   reducedMotion: boolean;
+  /** The owner's colour on the map. */
+  color: (owner: number) => number;
+  /** The owner's flag (null: none, or still loading). */
+  flag: (owner: number) => Texture | null;
   /** Whether the viewer sees this line (fog of war). */
   visible: (l: LineView, x: number, y: number) => boolean;
   /** Whether the viewer owns this tile (the drawing's preview). */
   mine: (x: number, y: number) => boolean;
 }
 
-/** A point along a polyline, with the unit normal of its segment pointing to the side faced. */
+/** A point along a polyline, with the unit normal pointing to the side faced. */
 interface Sample {
   x: number;
   y: number;
@@ -46,6 +66,21 @@ interface Sample {
   ny: number;
   /** Along the line (tiles). */
   s: number;
+}
+
+/** The drawing's corners rounded (Chaikin, three passes; its ends kept). */
+export function smooth(pts: readonly number[]): number[] {
+  let p = pts.slice();
+  for (let pass = 0; pass < 3 && p.length >= 6; pass++) {
+    const out = [p[0]!, p[1]!];
+    for (let i = 0; i + 3 < p.length; i += 2) {
+      const [ax, ay, bx, by] = [p[i]!, p[i + 1]!, p[i + 2]!, p[i + 3]!];
+      out.push(ax * 0.75 + bx * 0.25, ay * 0.75 + by * 0.25, ax * 0.25 + bx * 0.75, ay * 0.25 + by * 0.75);
+    }
+    out.push(p[p.length - 2]!, p[p.length - 1]!);
+    p = out;
+  }
+  return p;
 }
 
 /** Points every `step` tiles along `pts`, normals towards `side` (core/rules/lines.ts locate's sign). */
@@ -58,13 +93,41 @@ export function sampleLine(pts: readonly number[], side: number, step: number): 
     if (len === 0) continue;
     const [dx, dy] = [(bx - ax) / len, (by - ay) / len];
     const n = Math.max(1, Math.ceil(len / step));
-    for (let k = i === 0 ? 0 : 1; k <= n; k++) {
+    for (let k = out.length ? 1 : 0; k <= n; k++) {
       const u = (k / n) * len;
       out.push({ x: ax + dx * u, y: ay + dy * u, nx: side * dy, ny: -side * dx, s: s + u });
     }
     s += len;
   }
+  // Normals averaged over neighbours: no kink where two segments meet.
+  for (let k = 1; k + 1 < out.length; k++) {
+    const [a, b, c] = [out[k - 1]!, out[k]!, out[k + 1]!];
+    const [nx, ny] = [a.nx + b.nx + c.nx, a.ny + b.ny + c.ny];
+    const len = Math.hypot(nx, ny) || 1;
+    b.nx = nx / len;
+    b.ny = ny / len;
+  }
   return out;
+}
+
+/** A unit counter: where, what it holds, how strong. */
+interface Pion {
+  x: number;
+  y: number;
+  owner: number;
+  troops: number;
+  strength: number;
+  color: number;
+  /** Time left to dig in (ticks), 0 when ready. */
+  left: number;
+  empty: boolean;
+}
+
+interface PionView {
+  root: Container;
+  box: Graphics;
+  flag: Sprite;
+  text: BitmapText;
 }
 
 export class FrontLineLayer {
@@ -72,26 +135,29 @@ export class FrontLineLayer {
   private readonly zone = new Graphics();
   private readonly ink = new Graphics();
   private readonly draft = new Graphics();
-  private readonly labels = new Container();
-  private readonly pool = new Map<number, BitmapText>();
+  private readonly pions = new Container();
+  private readonly pool: PionView[] = [];
+  private anchors: Pion[] = [];
   private key = '';
 
-  constructor(private readonly style: TextStyle) {
-    this.zone.alpha = 0.9;
-    this.container.addChild(this.zone, this.ink, this.draft, this.labels);
+  constructor() {
+    this.container.addChild(this.zone, this.ink, this.draft, this.pions);
   }
+
+  /** Map width (tile keys), set by the renderer. */
+  width = 1;
 
   update(lines: readonly LineView[], version: number, ctx: FrontLineContext, draft: LineDraft | null): void {
     const z = ctx.zoom;
-    // Redrawn when the lines change, the zoom moves by a tenth, a line digs in, the fog changes.
-    const digging = lines.some((l) => l.readyTick > ctx.tick);
+    // Redrawn when the lines change, the zoom moves by a tenth, a line prepares, the fog changes.
+    const preparing = lines.some((l) => l.readyTick > ctx.tick);
     const zb = Math.round(Math.log(z) * 10);
-    const key = `${version}|${zb}|${ctx.zones}|${ctx.viewer}|${digging ? ctx.tick : 0}`;
+    const key = `${version}|${zb}|${ctx.zones}|${ctx.viewer}|${preparing ? ctx.tick : 0}`;
     if (key !== this.key) {
       this.key = key;
       this.redraw(lines, ctx);
     }
-    this.place(lines, ctx);
+    this.placePions(ctx);
     this.drawDraft(draft, ctx);
   }
 
@@ -100,105 +166,105 @@ export class FrontLineLayer {
     const px = (v: number) => Math.max(0.04, v / z);
     this.zone.clear();
     this.ink.clear();
+    this.anchors = [];
     for (const l of lines) {
       const mid = middle(l);
       if (!ctx.visible(l, mid[0], mid[1])) continue;
       const held = new Set(l.tiles);
-      const ready = l.readyTick <= ctx.tick;
-      const samples = sampleLine(l.pts, l.side, 0.5);
+      const left = Math.max(0, l.readyTick - ctx.tick);
+      const empty = l.troops < 1;
+      const samples = sampleLine(smooth(l.pts), l.side, 0.35);
       const isHeld = (p: Sample) => heldAt(held, p.x, p.y, this.width);
-      // The reach in front of what is held, faint, its far edge dashed.
-      if (ctx.zones && ready) {
-        for (let k = 1; k < samples.length; k++) {
-          const [a, b] = [samples[k - 1]!, samples[k]!];
-          if (!isHeld(a) || !isHeld(b)) continue;
-          this.zone
-            .poly([
-              a.x,
-              a.y,
-              b.x,
-              b.y,
-              b.x + b.nx * LINE_REACH,
-              b.y + b.ny * LINE_REACH,
-              a.x + a.nx * LINE_REACH,
-              a.y + a.ny * LINE_REACH,
-            ])
-            .fill({ color: INK, alpha: 0.08 });
-        }
-        dashed(
-          this.zone,
-          samples.map((p) => [p.x + p.nx * LINE_REACH, p.y + p.ny * LINE_REACH]),
-          px(5),
-          px(4),
-          INK,
-          px(1.2),
-          0.55,
-        );
-      }
-      // The line: held stretches as trench and wire, or jump-off line and arrows; breaches dotted.
-      const look: Look = {
-        ink: INK,
-        edge: PAPER,
-        ready,
-        empty: l.troops < 1,
-        strength: l.strength,
-      };
+      const reach = l.kind === 0 ? LINE_REACH : LINE_OFFENSE_REACH;
+      let heldRuns: Sample[][] = [];
       runs(samples, isHeld, (run, on) => {
-        if (!on) {
-          dashed(
-            this.ink,
-            run.map((p) => [p.x, p.y]),
-            px(1.5),
-            px(4),
-            INK,
-            px(1.6),
-            0.7,
-          );
-          return;
-        }
-        if (l.kind === 0) trench(this.ink, run, px, look);
-        else jumpOff(this.ink, run, px, look);
+        if (on) heldRuns.push(run);
+        else dotted(this.ink, run, px(5), px(1.3), CORE, 0.55);
       });
+      heldRuns = heldRuns.filter((r) => r.length >= 3);
+      if (ctx.zones && !empty)
+        for (const run of heldRuns)
+          zoneShade(this.zone, run, reach, l.kind === 0 ? SHADE : WARM, px, left > 0);
+      for (const run of heldRuns) {
+        if (l.kind === 0) defensiveLine(this.ink, run, px, empty ? 'empty' : left > 0 ? 'laying' : 'held');
+        else jumpOffLine(this.ink, run, px, empty);
+      }
+      if (l.kind === 1 && !empty)
+        for (const run of heldRuns) {
+          const len = run[run.length - 1]!.s - run[0]!.s;
+          const n = Math.max(1, Math.round(len / 20));
+          const progress = left > 0 ? 1 - left / LINE_OFFENSE_SETUP : 1;
+          for (let k = 0; k < n; k++) {
+            const base = pointAt(run, run[0]!.s + ((k + 0.5) / n) * len);
+            const width = Math.min(2.4, Math.max(1.1, (len / n) * 0.09));
+            battleArrow(this.ink, base, width, reach, (k % 2 ? 1 : -1) * 0.12, progress, px);
+          }
+        }
+      // Counters: one every ~22 tiles of held line, sharing its troops, just behind it.
+      const total = heldRuns.reduce((s, r) => s + (r[r.length - 1]!.s - r[0]!.s), 0);
+      const count = Math.max(1, Math.min(6, Math.round(total / 22)));
+      let k = 0;
+      for (const run of heldRuns) {
+        const len = run[run.length - 1]!.s - run[0]!.s;
+        const here = Math.max(1, Math.round((count * len) / Math.max(1e-6, total)));
+        for (let j = 0; j < here && k < count; j++, k++) {
+          const p = pointAt(run, run[0]!.s + ((j + 0.5) / here) * len);
+          this.anchors.push({
+            x: p.x - p.nx * px(17),
+            y: p.y - p.ny * px(17),
+            owner: l.owner,
+            troops: l.troops / count,
+            strength: l.strength,
+            color: ctx.color(l.owner),
+            left,
+            empty,
+          });
+        }
+      }
     }
   }
 
-  /** Map width (tile keys), set by the renderer. */
-  width = 1;
-
-  /** Labels: the troops at the middle of each line seen, and the time left while it digs in. */
-  private place(lines: readonly LineView[], ctx: FrontLineContext): void {
-    const seen = new Set<number>();
+  /** The counters, at a steady size on screen; hidden far out. */
+  private placePions(ctx: FrontLineContext): void {
     const z = ctx.zoom;
-    for (const l of lines) {
-      const [x, y] = middle(l);
-      if (z < 1.5 || !ctx.visible(l, x, y)) continue;
-      seen.add(l.id);
-      let t = this.pool.get(l.id);
-      if (!t) {
-        t = new BitmapText({ text: '', style: this.style });
-        t.anchor.set(0.5);
-        this.pool.set(l.id, t);
-        this.labels.addChild(t);
+    let used = 0;
+    if (z >= 1.2)
+      for (const a of this.anchors) {
+        let v = this.pool[used];
+        if (!v) {
+          const root = new Container();
+          const box = new Graphics();
+          const flag = new Sprite();
+          flag.anchor.set(0, 0.5);
+          const text = new BitmapText({ text: '', style: PION_STYLE });
+          text.anchor.set(0, 0.5);
+          root.addChild(box, flag, text);
+          this.pions.addChild(root);
+          v = this.pool[used] = { root, box, flag, text };
+        }
+        used++;
+        const label =
+          a.left > 0
+            ? `${compact(a.troops)}  ${Math.floor(a.left / 600)}:${String(Math.ceil(a.left / 10) % 60).padStart(2, '0')}`
+            : compact(a.troops);
+        if (v.text.text !== label) v.text.text = label;
+        v.text.scale.set(PION_TEXT / 30);
+        const tex = ctx.flag(a.owner);
+        const flagW = tex ? Math.round((11 * tex.width) / tex.height) : 0;
+        if (tex && v.flag.texture !== tex) v.flag.texture = tex;
+        v.flag.visible = !!tex;
+        if (tex) v.flag.setSize(flagW, 11);
+        v.flag.position.set(6, -1.5);
+        const x0 = 6 + (tex ? flagW + 5 : 0);
+        v.text.position.set(x0, -1.5);
+        const w = x0 + v.text.width + 7;
+        drawPion(v.box, a, w);
+        v.root.visible = true;
+        v.root.position.set(a.x, a.y);
+        v.root.scale.set(1 / z);
+        v.root.pivot.set(w / 2, 0);
       }
-      const left = l.readyTick - ctx.tick;
-      const text =
-        (l.kind === 0 ? '▲ ' : '» ') +
-        compact(l.troops) +
-        (left > 0
-          ? ` · ${Math.floor(left / 600)}:${String(Math.ceil(left / 10) % 60).padStart(2, '0')}`
-          : '');
-      if (t.text !== text) t.text = text;
-      t.tint = INK;
-      // Just behind the line (its front stays clear), small and steady on screen.
-      const [nx, ny] = backward(l);
-      t.position.set(x - (nx * 16) / z, y - (ny * 16) / z);
-      t.scale.set(0.27 / z);
-    }
-    for (const [id, t] of this.pool)
-      if (!seen.has(id)) {
-        t.destroy();
-        this.pool.delete(id);
-      }
+    for (let k = used; k < this.pool.length; k++) this.pool[k]!.root.visible = false;
   }
 
   private drawDraft(d: LineDraft | null, ctx: FrontLineContext): void {
@@ -208,48 +274,232 @@ export class FrontLineLayer {
     const z = ctx.zoom;
     const px = (v: number) => Math.max(0.04, v / z);
     const pts = d.stage === 'trace' ? [...d.pts, d.cursor[0], d.cursor[1]] : d.pts;
-    const samples = sampleLine(pts, d.side, 0.5);
-    // Tracing: over our land solid, elsewhere dotted (a line stands only on our own tiles).
-    if (d.stage !== 'side') {
-      runs(
-        samples,
-        (p) => ctx.mine(p.x, p.y),
-        (run, on) => {
-          const xy = run.map((p): [number, number] => [p.x, p.y]);
-          if (on) {
-            polyline(g, xy, INK_DARK, px(5), 0.5);
-            polyline(g, xy, BRASS, px(2.6), 1);
-          } else dashed(g, xy, px(2), px(4), BRASS, px(2), 0.9);
-        },
-      );
-    } else {
-      // The side picked: its reach shaded, and the line as it will stand.
-      for (let k = 1; k < samples.length; k++) {
-        const [a, b] = [samples[k - 1]!, samples[k]!];
-        g.poly([
-          a.x,
-          a.y,
-          b.x,
-          b.y,
-          b.x + b.nx * LINE_REACH,
-          b.y + b.ny * LINE_REACH,
-          a.x + a.nx * LINE_REACH,
-          a.y + a.ny * LINE_REACH,
-        ]).fill({ color: BRASS, alpha: 0.1 });
+    const samples = sampleLine(smooth(pts), d.side, 0.35);
+    // Our tiles along the drawing, in order: past the length its troops allow, over.
+    const w = this.width;
+    const order = traceTiles(w, 1e9, pts).filter((t) => ctx.mine((t % w) + 0.5, Math.floor(t / w) + 0.5));
+    const within = new Set(order.slice(0, Math.max(0, d.maxTiles)));
+    const over = new Set(order.slice(Math.max(0, d.maxTiles)));
+    const state = (p: Sample): number => {
+      const fx = Math.floor(p.x);
+      const fy = Math.floor(p.y);
+      let best = 0;
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++) {
+          const t = (fy + dy) * w + fx + dx;
+          if (within.has(t)) return 1;
+          if (over.has(t)) best = 2;
+        }
+      return best;
+    };
+    const ok: Sample[][] = [];
+    let start = 0;
+    for (let k = 1; k <= samples.length; k++) {
+      if (k < samples.length && state(samples[k]!) === state(samples[start]!)) continue;
+      const run = samples.slice(start, Math.min(samples.length, k + 1));
+      const kind = state(samples[start]!);
+      if (run.length >= 2) {
+        if (kind === 1) ok.push(run);
+        else if (kind === 2) {
+          // Too long for its troops: red, dashed, crossed out.
+          dashed(g, run, px(7), px(5), OVER, px(3.5), 0.95);
+          for (let i = 0; i < run.length; i += 14) {
+            const p = run[i]!;
+            const s = px(4);
+            g.moveTo(p.x - s, p.y - s)
+              .lineTo(p.x + s, p.y + s)
+              .moveTo(p.x + s, p.y - s)
+              .lineTo(p.x - s, p.y + s)
+              .stroke({ width: px(1.8), color: OVER });
+          }
+        } else dotted(g, run, px(6), px(1.8), BRASS, 0.95);
       }
-      const look: Look = { ink: BRASS, edge: INK_DARK, ready: true, empty: false, strength: 1 };
-      if (d.kind === 0) trench(g, samples, px, look);
-      else jumpOff(g, samples, px, look);
+      start = k;
+    }
+    for (const run of ok) {
+      if (d.stage === 'side') {
+        const reach = d.kind === 0 ? LINE_REACH : LINE_OFFENSE_REACH;
+        zoneShade(g, run, reach, BRASS, px, false);
+        if (d.kind === 0) teeth(g, run, px, BRASS);
+        else {
+          const mid = pointAt(run, (run[0]!.s + run[run.length - 1]!.s) / 2);
+          battleArrow(g, mid, 1.8, reach, 0.12, 1, px, BRASS);
+        }
+      }
+      polyline(g, run, CORE, px(7), 0.9);
+      polyline(g, run, BRASS, px(4), 1);
     }
     for (let i = 0; i < d.pts.length; i += 2)
-      g.circle(d.pts[i]!, d.pts[i + 1]!, px(3.5))
+      g.circle(d.pts[i]!, d.pts[i + 1]!, px(4))
         .fill({ color: BRASS })
-        .stroke({ color: INK_DARK, width: px(1.2) });
+        .stroke({ color: CORE, width: px(1.5) });
   }
 
   destroy(): void {
     this.container.destroy({ children: true });
   }
+}
+
+/** A HOI4 counter: a dark tab rimmed in the owner's colour (its flag and troops on it), a strength bar. */
+function drawPion(g: Graphics, a: Pion, w: number): void {
+  const h = 21;
+  g.clear();
+  g.roundRect(0, -h / 2 + 1.5, w, h, 3).fill({ color: 0x000000, alpha: 0.35 }); // drop shadow
+  g.roundRect(0, -h / 2, w, h, 3).fill({ color: 0x1b2734, alpha: 0.95 });
+  g.roundRect(0, -h / 2, w, h, 3).stroke({ color: a.empty ? GREY : a.color, width: 1.5, alpha: 0.95 });
+  // Strength: the bar's length (green while it holds, amber while it prepares).
+  const bar = Math.max(0, Math.min(1, a.empty ? 0 : a.strength));
+  g.rect(4, h / 2 - 4.5, w - 8, 2.5).fill({ color: 0x000000, alpha: 0.6 });
+  if (bar > 0) g.rect(4, h / 2 - 4.5, (w - 8) * bar, 2.5).fill({ color: a.left > 0 ? PREPARING : READY });
+}
+
+/** The zone in front of a held stretch: a soft shade fading out, its far edge a fine dotted line. */
+function zoneShade(
+  g: Graphics,
+  run: Sample[],
+  reach: number,
+  color: number,
+  px: (v: number) => number,
+  faint: boolean,
+): void {
+  const steps = 18;
+  for (let k = 0; k < steps; k++) {
+    const [d0, d1] = [(k / steps) * reach, ((k + 1) / steps) * reach];
+    const alpha = 0.26 * Math.pow(1 - k / steps, 1.4) * (faint ? 0.5 : 1);
+    const poly: number[] = [];
+    for (const p of run) poly.push(p.x + p.nx * d0, p.y + p.ny * d0);
+    for (let i = run.length - 1; i >= 0; i--) {
+      const p = run[i]!;
+      poly.push(p.x + p.nx * d1, p.y + p.ny * d1);
+    }
+    g.poly(poly).fill({ color, alpha });
+  }
+  const edge = run.map((p) => ({ ...p, x: p.x + p.nx * reach, y: p.y + p.ny * reach }));
+  dotted(g, edge, px(6), px(1.2), color === SHADE ? RIM : color, 0.55);
+}
+
+/** A defensive stretch: dark core, light rim, a close fringe of teeth towards the enemy. */
+function defensiveLine(
+  g: Graphics,
+  run: Sample[],
+  px: (v: number) => number,
+  state: 'held' | 'laying' | 'empty',
+): void {
+  if (state !== 'held') {
+    dashed(g, run, px(9), px(6), CORE, px(6), 0.85);
+    dashed(g, run, px(9), px(6), state === 'empty' ? GREY : RIM, px(2.2), 0.9);
+    return;
+  }
+  teeth(g, run, px, CORE);
+  polyline(g, run, CORE, px(6.5), 0.95);
+  // The rim on the back side: the line reads as an edge, not a stroke.
+  polyline(
+    g,
+    run.map((p) => ({ ...p, x: p.x - p.nx * px(1.6), y: p.y - p.ny * px(1.6) })),
+    RIM,
+    px(1.6),
+    0.85,
+  );
+}
+
+/** A close fringe of small teeth on the front side. */
+function teeth(g: Graphics, run: Sample[], px: (v: number) => number, color: number): void {
+  const len = run[run.length - 1]!.s - run[0]!.s;
+  const every = px(9);
+  const [b, h] = [px(3.4), px(6.5)];
+  for (let at = every / 2; at < len; at += every) {
+    const p = pointAt(run, run[0]!.s + at);
+    const [tx, ty] = [-p.ny, p.nx];
+    g.poly([p.x + tx * b, p.y + ty * b, p.x + p.nx * h, p.y + p.ny * h, p.x - tx * b, p.y - ty * b]).fill({
+      color,
+      alpha: 0.95,
+    });
+  }
+}
+
+/** An offensive stretch: a dark jump-off line with a dashed light rail along it. */
+function jumpOffLine(g: Graphics, run: Sample[], px: (v: number) => number, empty: boolean): void {
+  polyline(g, run, CORE, px(6), empty ? 0.5 : 0.95);
+  dashed(g, run, px(7), px(5), empty ? GREY : RIM, px(1.8), 0.9);
+}
+
+/**
+ * A battle-plan arrow out of `base` across the zone (`reach` tiles), `width` tiles half-wide
+ * at its tail, sweeping sideways by `bend` × reach: a tapered curved shaft with a rounded
+ * tail and a flared head; translucent, edged dark with a light inner line, filled from the
+ * tail to `progress` (amber while it prepares, green once ready).
+ */
+function battleArrow(
+  g: Graphics,
+  base: Sample,
+  width: number,
+  reach: number,
+  bend: number,
+  progress: number,
+  px: (v: number) => number,
+  tint?: number,
+): void {
+  const [tx, ty] = [-base.ny, base.nx];
+  const L = reach * 0.95;
+  // Centreline: a quadratic curve from the line out to the tip, bowed sideways.
+  const p0 = [base.x + base.nx * 0.8, base.y + base.ny * 0.8];
+  const p2 = [base.x + base.nx * L + tx * bend * L * 0.6, base.y + base.ny * L + ty * bend * L * 0.6];
+  const p1 = [base.x + base.nx * L * 0.5 + tx * bend * L, base.y + base.ny * L * 0.5 + ty * bend * L];
+  const at = (u: number): [number, number, number, number] => {
+    const x = (1 - u) * (1 - u) * p0[0]! + 2 * (1 - u) * u * p1[0]! + u * u * p2[0]!;
+    const y = (1 - u) * (1 - u) * p0[1]! + 2 * (1 - u) * u * p1[1]! + u * u * p2[1]!;
+    const dx = 2 * (1 - u) * (p1[0]! - p0[0]!) + 2 * u * (p2[0]! - p1[0]!);
+    const dy = 2 * (1 - u) * (p1[1]! - p0[1]!) + 2 * u * (p2[1]! - p1[1]!);
+    const len = Math.hypot(dx, dy) || 1;
+    return [x, y, -dy / len, dx / len];
+  };
+  const neck = 0.74;
+  const shape = (upTo: number, scale = 1): number[] => {
+    const end = Math.min(1, upTo);
+    const steps = 18;
+    const leftSide: number[] = [];
+    const rightSide: number[] = [];
+    const shaftEnd = Math.min(end, neck);
+    for (let i = 0; i <= steps; i++) {
+      const u = (i / steps) * shaftEnd;
+      const [x, y, nx, ny] = at(u);
+      const w = width * scale * (1 - 0.25 * (u / neck));
+      leftSide.push(x + nx * w, y + ny * w);
+      rightSide.unshift(x - nx * w, y - ny * w);
+    }
+    const head: number[] = [];
+    if (end > neck) {
+      const [hx, hy, hnx, hny] = at(neck);
+      const barb = width * scale * 2.3;
+      const [ex, ey, enx, eny] = at(end);
+      const tip = end >= 1;
+      const wEnd = tip ? 0 : barb * (1 - (end - neck) / (1 - neck));
+      head.push(hx + hnx * barb, hy + hny * barb);
+      if (tip) head.push(ex, ey);
+      else head.push(ex + enx * wEnd, ey + eny * wEnd, ex - enx * wEnd, ey - eny * wEnd);
+      head.push(hx - hnx * barb, hy - hny * barb);
+    }
+    // The rounded tail.
+    const [sx, sy, snx, sny] = at(0);
+    const [bx, by] = [-(p1[0]! - p0[0]!), -(p1[1]! - p0[1]!)];
+    const bl = Math.hypot(bx, by) || 1;
+    const tail: number[] = [];
+    for (let i = 1; i < 8; i++) {
+      const a = Math.PI * (i / 8);
+      const w = width * scale;
+      tail.push(
+        sx - snx * Math.cos(a) * w + (bx / bl) * Math.sin(a) * w * 0.8,
+        sy - sny * Math.cos(a) * w + (by / bl) * Math.sin(a) * w * 0.8,
+      );
+    }
+    return [...leftSide, ...head, ...rightSide, ...tail];
+  };
+  const color = tint ?? (progress >= 1 ? READY : PREPARING);
+  g.poly(shape(1)).fill({ color, alpha: 0.2 });
+  if (progress > 0) g.poly(shape(progress)).fill({ color, alpha: 0.5 });
+  g.poly(shape(1, 0.45)).fill({ color: 0xffffff, alpha: 0.12 });
+  g.poly(shape(1)).stroke({ color: CORE, width: px(2.4), alpha: 0.9, join: 'round' });
+  g.poly(shape(1, 0.86)).stroke({ color: RIM, width: px(1), alpha: 0.45, join: 'round' });
 }
 
 /** Whether a tile of the line is held within a tile of (x, y). */
@@ -261,19 +511,20 @@ function heldAt(held: Set<number>, x: number, y: number, w: number): boolean {
   return false;
 }
 
-/** The unit normal at the middle of a line, towards the side it faces. */
-function backward(l: LineView): [number, number] {
-  const s = sampleLine(l.pts, l.side, 1);
-  const total = s.at(-1)?.s ?? 0;
-  const m = s.find((p) => p.s >= total / 2) ?? s[0];
-  return m ? [m.nx, m.ny] : [0, 0];
-}
-
 function middle(l: LineView): [number, number] {
   const s = sampleLine(l.pts, l.side, 1);
   const total = s.at(-1)?.s ?? 0;
   const m = s.find((p) => p.s >= total / 2) ?? s[0];
   return m ? [m.x, m.y] : [l.pts[0]!, l.pts[1]!];
+}
+
+/** The point at arc length `at` along a run of samples (clamped), with its normal. */
+function pointAt(run: Sample[], at: number): Sample {
+  let k = 1;
+  while (k < run.length - 1 && run[k]!.s < at) k++;
+  const [a, b] = [run[k - 1]!, run[k]!];
+  const u = b.s > a.s ? Math.min(1, Math.max(0, (at - a.s) / (b.s - a.s))) : 0;
+  return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, nx: b.nx, ny: b.ny, s: at };
 }
 
 /** Consecutive samples split into runs where `on` holds or not. */
@@ -284,25 +535,29 @@ function runs(
 ): void {
   let start = 0;
   for (let k = 1; k <= samples.length; k++) {
-    const cur = k < samples.length ? on(samples[k]!) : !on(samples[k - 1]!);
-    if (k === samples.length || cur !== on(samples[start]!)) {
-      const run = samples.slice(start, Math.min(samples.length, k + 1));
-      if (run.length >= 2) draw(run, on(samples[start]!));
-      start = k;
-    }
+    if (k < samples.length && on(samples[k]!) === on(samples[start]!)) continue;
+    const run = samples.slice(start, Math.min(samples.length, k + 1));
+    if (run.length >= 2) draw(run, on(samples[start]!));
+    start = k;
   }
 }
 
-function polyline(g: Graphics, xy: [number, number][], color: number, width: number, alpha: number): void {
-  if (xy.length < 2) return;
-  g.moveTo(xy[0]![0], xy[0]![1]);
-  for (let k = 1; k < xy.length; k++) g.lineTo(xy[k]![0], xy[k]![1]);
+function polyline(
+  g: Graphics,
+  run: { x: number; y: number }[],
+  color: number,
+  width: number,
+  alpha: number,
+): void {
+  if (run.length < 2) return;
+  g.moveTo(run[0]!.x, run[0]!.y);
+  for (let k = 1; k < run.length; k++) g.lineTo(run[k]!.x, run[k]!.y);
   g.stroke({ width, color, alpha, cap: 'round', join: 'round' });
 }
 
 function dashed(
   g: Graphics,
-  xy: number[][],
+  run: { x: number; y: number }[],
   dash: number,
   gap: number,
   color: number,
@@ -311,9 +566,9 @@ function dashed(
 ): void {
   let on = true;
   let left = dash;
-  for (let k = 1; k < xy.length; k++) {
-    let [ax, ay] = [xy[k - 1]![0]!, xy[k - 1]![1]!];
-    const [bx, by] = [xy[k]![0]!, xy[k]![1]!];
+  for (let k = 1; k < run.length; k++) {
+    let [ax, ay] = [run[k - 1]!.x, run[k - 1]!.y];
+    const [bx, by] = [run[k]!.x, run[k]!.y];
     let len = Math.hypot(bx - ax, by - ay);
     while (len > 0) {
       const step = Math.min(left, len);
@@ -328,126 +583,17 @@ function dashed(
       }
     }
   }
-  g.stroke({ width, color, alpha, cap: 'butt' });
+  g.stroke({ width, color, alpha, cap: 'round' });
 }
 
-/** How a line is inked: its ink and paper edge, laid or not, emptied, its strength (0–1). */
-interface Look {
-  ink: number;
-  edge: number;
-  ready: boolean;
-  empty: boolean;
-  strength: number;
-}
-
-/** The point at arc length `at` along a run of samples (clamped), with its normal. */
-function pointAt(run: Sample[], at: number): Sample {
-  let k = 1;
-  while (k < run.length - 1 && run[k]!.s < at) k++;
-  const [a, b] = [run[k - 1]!, run[k]!];
-  const u = b.s > a.s ? Math.min(1, Math.max(0, (at - a.s) / (b.s - a.s))) : 0;
-  return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, nx: b.nx, ny: b.ny, s: at };
-}
-
-/**
- * A defensive stretch: a crenellated trench (traverses jutting towards the front every
- * few pixels) in ink on a paper edge, and in front of it a belt of barbed wire — a strand
- * crossed by small x's. Being laid: the trench dashed, no wire; emptied: a grey dotted trench.
- */
-function trench(g: Graphics, run: Sample[], px: (v: number) => number, look: Look): void {
-  const s0 = run[0]!.s;
-  const len = run[run.length - 1]!.s - s0;
-  if (len <= 0) return;
-  const step = px(7);
-  const amp = px(4);
-  const n = Math.max(1, Math.round(len / step));
-  const path: number[][] = [];
-  let level = 0;
-  for (let k = 0; k <= n; k++) {
-    const p = pointAt(run, s0 + (k / n) * len);
-    path.push([p.x + p.nx * level, p.y + p.ny * level]);
-    if (k === n) break;
-    level = k % 2 === 0 ? amp : 0;
-    path.push([p.x + p.nx * level, p.y + p.ny * level]);
+/** Round dots every `every` along a run. */
+function dotted(g: Graphics, run: Sample[], every: number, r: number, color: number, alpha: number): void {
+  const len = run[run.length - 1]!.s - run[0]!.s;
+  for (let at = 0; at <= len; at += every) {
+    const p = pointAt(run, run[0]!.s + at);
+    g.circle(p.x, p.y, r);
   }
-  if (look.empty) {
-    dashed(g, path, px(1.6), px(3), look.ink, px(1.8), 0.45);
-    return;
-  }
-  if (!look.ready) {
-    dashed(g, path, px(5), px(4), look.edge, px(4.6), 0.6);
-    dashed(g, path, px(5), px(4), look.ink, px(2.2), 0.9);
-    return;
-  }
-  polyline(g, path as [number, number][], look.edge, px(5), 0.75);
-  polyline(g, path as [number, number][], look.ink, px(2.2), 1);
-  // The wire, paler as the line weakens.
-  const off = px(13);
-  const alpha = 0.45 + 0.55 * look.strength;
-  const strand: [number, number][] = [];
-  const m = Math.max(1, Math.round(len / px(2)));
-  for (let k = 0; k <= m; k++) {
-    const p = pointAt(run, s0 + (k / m) * len);
-    strand.push([p.x + p.nx * off, p.y + p.ny * off]);
-  }
-  polyline(g, strand, look.edge, px(3), 0.5 * alpha);
-  polyline(g, strand, look.ink, px(1), alpha);
-  const every = px(12);
-  const x = px(2.6);
-  for (let at = every / 2; at < len; at += every) {
-    const p = pointAt(run, s0 + at);
-    const [cx, cy] = [p.x + p.nx * off, p.y + p.ny * off];
-    const [tx, ty] = [-p.ny, p.nx];
-    g.moveTo(cx + (tx + p.nx) * x, cy + (ty + p.ny) * x)
-      .lineTo(cx - (tx + p.nx) * x, cy - (ty + p.ny) * x)
-      .moveTo(cx + (tx - p.nx) * x, cy + (ty - p.ny) * x)
-      .lineTo(cx - (tx - p.nx) * x, cy - (ty - p.ny) * x)
-      .stroke({ width: px(1.1), color: look.ink, alpha, cap: 'round' });
-  }
-}
-
-/**
- * An offensive stretch: a jump-off line in ink on a paper edge, and every so often a broad
- * assault arrow (shaft and head) pointing where it pushes, filled, paler as the line
- * weakens. Digging in: the line dashed, the arrows hollow.
- */
-function jumpOff(g: Graphics, run: Sample[], px: (v: number) => number, look: Look): void {
-  const s0 = run[0]!.s;
-  const len = run[run.length - 1]!.s - s0;
-  if (len <= 0) return;
-  const xy = run.map((p): [number, number] => [p.x, p.y]);
-  if (look.ready && !look.empty) {
-    polyline(g, xy, look.edge, px(5.4), 0.75);
-    polyline(g, xy, look.ink, px(2.6), 1);
-  } else {
-    dashed(g, xy, px(8), px(5), look.edge, px(5), 0.6);
-    dashed(g, xy, px(8), px(5), look.ink, px(2.4), look.empty ? 0.45 : 0.9);
-  }
-  if (look.empty) return;
-  const every = Math.max(px(40), len / Math.max(1, Math.floor(len / px(40))));
-  const alpha = look.ready ? 0.5 + 0.5 * look.strength : 0.9;
-  for (let at = Math.min(len / 2, every / 2); at < len; at += every) {
-    const p = pointAt(run, s0 + at);
-    const [tx, ty] = [-p.ny, p.nx];
-    const at2 = (d: number, w: number): [number, number] => [
-      p.x + p.nx * d + tx * w,
-      p.y + p.ny * d + ty * w,
-    ];
-    const shape = [
-      at2(px(2), px(2.4)),
-      at2(px(11), px(2.4)),
-      at2(px(11), px(6.5)),
-      at2(px(19), 0),
-      at2(px(11), -px(6.5)),
-      at2(px(11), -px(2.4)),
-      at2(px(2), -px(2.4)),
-    ].flat();
-    if (look.ready)
-      g.poly(shape)
-        .fill({ color: look.ink, alpha })
-        .stroke({ color: look.edge, width: px(1.2), alpha: 0.8, join: 'miter' });
-    else g.poly(shape).stroke({ color: look.ink, width: px(1.4), alpha, join: 'miter' });
-  }
+  g.fill({ color, alpha });
 }
 
 function compact(n: number): string {
