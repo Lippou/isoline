@@ -16,6 +16,7 @@
   import HoverCard from '../hud/HoverCard.svelte';
   import PlacementTip from '../hud/PlacementTip.svelte';
   import LineTip from '../hud/LineTip.svelte';
+  import LineCard from '../hud/LineCard.svelte';
   import NukeAlerts from '../hud/NukeAlerts.svelte';
   import NukePanel from '../hud/NukePanel.svelte';
   import AirPanel from '../hud/AirPanel.svelte';
@@ -166,6 +167,7 @@
     {/if}
     <Panels {ctl} />
     <RadialMenu {ctl} />
+    <LineCard {ctl} />
     <Dialogue {ctl} />
     {#if hud.replay && !reading}<ReplayBar {ctl} />{/if}
     {#if hud.panels.menu}<GameMenu {ctl} />{/if}

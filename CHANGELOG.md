@@ -2,6 +2,19 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.18.0] — Lignes qui tiennent, fiche de ligne, capitale à 1 M
+### Ajouté
+- **La ligne défensive ne laisse rien passer de face tant qu'elle a des troupes** (« ça doit être pris dans le bon angle ») : une poussée de face sur la ligne ne prend pas la case ; l'assaillant paie ses pertes et la ligne en perd le tiers (3 contre 1 face à une position retranchée). Prise de côté (par un bout, par une brèche) ou par derrière, elle cède. Mesure : 30 000 hommes tiennent une vingtaine de secondes face à 200 000.
+- **Fiche de la ligne** : un clic sur une de vos lignes (ou clic droit « Troupes de la ligne… ») montre son état (en place dans…, tient le front, vide), ses troupes, sa force et sa longueur ; un curseur **règle les troupes posées** (prises à l'armée ou rendues), « Démonter » (ou Suppr / ⌫) la retire.
+- **Lignes vides** : une ligne défensive vidée au combat reste sur la carte (grise, en pointillé), ne tient plus rien et vous prévient ; renforcez-la ou démontez-la. Clic droit près d'une de vos lignes, même sur une brèche ou en terre perdue : « Démonter la ligne ».
+- **Panneau des troupes** : « N sur les lignes · plafond P − N » quand des troupes sont bloquées sur vos lignes (elles ne sont plus dans l'armée et votre plafond baisse d'autant).
+- Campagne : mission 2, une étape « renforcez votre ligne » (voix incluse) et l'astuce sur la ligne qui tient ; mission 6, une étape « ligne offensive » avant la grande poussée ; l'alerte « frontière menacée » conseille une ligne défensive.
+### Modifié
+- **La ligne défensive est en place en 3 s** (elle agissait aussitôt).
+- **Nouveau dessin des lignes**, façon carte d'état-major : la défensive est une **tranchée crénelée derrière des barbelés**, l'offensive une **ligne de départ avec de larges flèches d'assaut** ; en tirets pendant leur mise en place. **Nouvelles icônes** : un bouclier posé sur sa ligne (défensive), une flèche qui part de sa ligne (offensive).
+- **Déplacer sa capitale coûte 1 000 000 d'or** et entraîne la même désorganisation d'une minute que sa chute (croissance, revenus et attaques ralentis). Rétablir une capitale perdue reste gratuit. Le menu radial affiche le prix et grise l'action faute d'or ; les nations ne déplacent la leur qu'avec 1,5 M en caisse.
+- IA : un voisin s'évalue à ses troupes plus trois fois celles de ses lignes (le prix de les percer) ; une ligne vidée est démontée aussitôt.
+
 ## [1.17.0] — Lignes de front, révolutions réalistes, missile à l'échelle, carte plus fluide
 ### Ajouté
 - **Lignes de front, à la place du poste de défense** (« retirer la défense et mettre en place une ligne offensive et une ligne défensive ») — GAME_DESIGN.md §6.6 :

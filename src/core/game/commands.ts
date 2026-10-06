@@ -6,8 +6,15 @@ import { isWellFormed } from '../net/commands';
 import { handleSpawnCommand } from './spawn';
 import { attackSlotFree, cancelAttack, hasFrontier, launchAttack } from '../rules/combat';
 import { IS_LAND } from '../map/terrain';
-import { B, BUILDING_COUNT, LINE_MAX_PER_PLAYER, MAX_ATTACKS_PER_PLAYER, N } from './constants';
-import { placeLine, removeLine, type LineKind } from '../rules/lines';
+import {
+  B,
+  BUILDING_COUNT,
+  CAPITAL_MOVE_COST,
+  LINE_MAX_PER_PLAYER,
+  MAX_ATTACKS_PER_PLAYER,
+  N,
+} from './constants';
+import { placeLine, removeLine, setLineTroops, type LineKind } from '../rules/lines';
 import type { Refusal } from './state';
 import {
   cancelDemolition,
@@ -123,6 +130,12 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
     case 'lineRemove': {
       const l = game.lines.find((x) => x.id === c.id && x.owner === p.id);
       if (l) removeLine(game, l, true);
+      return;
+    }
+
+    case 'lineTroops': {
+      const l = game.lines.find((x) => x.id === c.id && x.owner === p.id);
+      if (l) setLineTroops(game, p, l, c.troops);
       return;
     }
 
@@ -297,6 +310,7 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       const res = moveCapital(game, p, c.tile);
       if (res === 'notOwned' || res === 'fallout' || res === 'front')
         game.notify(p.id, `error.capital.${res}`, 'warn');
+      else if (res === 'gold') game.notify(p.id, 'error.capital.gold', 'warn', { n: CAPITAL_MOVE_COST });
       else if (res === 'cooldown')
         game.notify(p.id, 'error.capital.cooldown', 'warn', {
           s: Math.ceil(capitalCooldown(game, p) / 10),

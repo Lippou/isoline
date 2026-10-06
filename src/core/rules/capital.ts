@@ -17,6 +17,7 @@ import {
   CAPITAL_FRONT_GAP,
   CAPITAL_LOOT,
   CAPITAL_MOVE_COOLDOWN,
+  CAPITAL_MOVE_COST,
   CAPITAL_NONE_GOLD,
   LOYALTY_MAX,
   sec,
@@ -27,7 +28,7 @@ import { addGold } from '../game/economy';
 /** Why a tile cannot host the capital ('ok' when it can). */
 export type CapitalSpotError = 'ok' | 'notOwned' | 'fallout' | 'front';
 /** Outcome of a 'moveCapital' order. */
-export type CapitalMoveResult = CapitalSpotError | 'cooldown' | 'same' | 'phase';
+export type CapitalMoveResult = CapitalSpotError | 'cooldown' | 'same' | 'phase' | 'gold';
 
 /** What the placement check reads: the simulation's arrays, or the client's mirror of them. */
 export interface CapitalSpotView {
@@ -239,6 +240,13 @@ export function moveCapital(game: Game, p: Player, tile: number): CapitalMoveRes
   const err = spotError(game, p, tile);
   if (err !== 'ok') return err;
   if (capitalCooldown(game, p) > 0) return 'cooldown';
+  // Moving a standing government costs gold and a moment of disorganisation (1.18).
+  const moving = p.capital >= 0;
+  if (moving && p.gold < CAPITAL_MOVE_COST) return 'gold';
+  if (moving) {
+    p.gold -= CAPITAL_MOVE_COST;
+    p.disorgUntil = Math.max(p.disorgUntil, game.tick + CAPITAL_DISORG_TICKS);
+  }
   establish(game, p, tile, true);
   game.emit({ k: 'capitalMoved', player: p.id, tile });
   game.notify(p.id, 'notify.capitalMoved', 'good', {}, tile);

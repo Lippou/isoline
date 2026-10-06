@@ -612,8 +612,8 @@ function localView(g: Game): LocalView | undefined {
     troops: p.troops,
     popCap: p.popCap,
     lineCount: [
-      g.lines.filter((l) => l.owner === p.id && l.kind === 0).length,
-      g.lines.filter((l) => l.owner === p.id && l.kind === 1).length,
+      g.lines.filter((l) => l.owner === p.id && l.kind === 0 && l.troops >= 1).length,
+      g.lines.filter((l) => l.owner === p.id && l.kind === 1 && l.troops >= 1).length,
     ],
     lineTroops: p.lineTroops,
     growth: p.lastGrowth,

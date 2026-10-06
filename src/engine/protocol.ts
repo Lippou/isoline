@@ -136,7 +136,7 @@ export interface LocalView {
   troops: number;
   /** Troop ceiling (maxTroops), lowered by the troops on front lines. */
   popCap: number;
-  /** My front lines standing: [defensive, offensive], and the troops on them. */
+  /** My front lines holding troops: [defensive, offensive], and the troops on all my lines. */
   lineCount: [number, number];
   lineTroops: number;
   /** Troops gained per tick (negative above the ceiling). */

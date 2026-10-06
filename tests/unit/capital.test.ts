@@ -5,6 +5,7 @@ import {
   CAPITAL_AI_DELAY,
   CAPITAL_DISORG_TICKS,
   CAPITAL_MOVE_COOLDOWN,
+  CAPITAL_MOVE_COST,
   GOLD_PER_TICK,
 } from '../../src/core/game/constants';
 import type { Game } from '../../src/core/game/state';
@@ -161,8 +162,15 @@ describe('capital', () => {
     g.step([cmd(1, { t: 'moveCapital', tile: at(20, 20) })]);
     expect(refused('error.capital.fallout')).toBe(true);
     expect(a.capital).toBe(start);
+    // 1 M gold a move (1.18): refused without it.
+    a.gold = CAPITAL_MOVE_COST - 1;
+    g.step([cmd(1, { t: 'moveCapital', tile: at(54, 20) })]);
+    expect(refused('error.capital.gold')).toBe(true);
+    expect(a.capital).toBe(start);
+    a.gold = 3 * CAPITAL_MOVE_COST;
     g.step([cmd(1, { t: 'moveCapital', tile: at(54, 20) })]);
     expect(a.capital).toBe(at(54, 20));
+    expect(a.disorgUntil).toBeGreaterThan(g.tick);
     expect(notices(g, 1).some((e) => e.key === 'notify.capitalMoved')).toBe(true);
     expect(g.events.some((e) => e.k === 'capitalMoved' && e.player === 1)).toBe(true);
     // A second move must wait 5 minutes.
@@ -184,6 +192,7 @@ describe('capital', () => {
     expect(notices(g, 2).some((e) => e.key === 'error.capital.front')).toBe(true);
     g.step([cmd(1, { t: 'allyRequest', target: 2 }), cmd(2, { t: 'allyRequest', target: 1 })]);
     expect(b.allies.has(1)).toBe(true);
+    b.gold = CAPITAL_MOVE_COST;
     g.step([cmd(2, { t: 'moveCapital', tile: at(63, 20) })]);
     expect(b.capital).toBe(at(63, 20));
     // Tribes never hold one; malformed orders are dropped.

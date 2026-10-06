@@ -332,7 +332,10 @@
     "modeHvnSolo": "Seul contre les nations",
     "modeHvnSoloTip": "Vous seul contre une coalition de toutes les nations (elles ne s'attaquent pas entre elles).",
     "modeHvnTip": "Tous les humains ensemble contre la coalition des nations (elles ne s'attaquent pas entre elles).",
-    "groupFront": "Front"
+    "groupFront": "Front",
+    "onLines": "{n} sur les lignes",
+    "onLinesCap": "plafond {cap} − {n}",
+    "onLinesTip": "{n} troupes bloquées sur vos lignes de front : elles ne sont plus dans l’armée et votre plafond passe de {cap} à {left}. Allégez ou démontez une ligne (clic dessus) pour les récupérer."
   },
   "panel": {
     "diplomacy": "Diplomatie",
@@ -408,7 +411,7 @@
     "sea": "Mer",
     "capitalHere": "Établir la capitale ici",
     "capitalMove": "Déplacer la capitale ici",
-    "capitalDesc": "Siège du gouvernement : le perdre désorganise le pays pendant une minute. Un transfert toutes les 5 minutes au plus.",
+    "capitalDesc": "Siège du gouvernement. Le déplacer coûte {n} d'or et désorganise le pays pendant une minute (comme sa chute : croissance, revenus et attaques ralentis). Un transfert toutes les 5 minutes au plus.",
     "capitalNeeded": "Votre pays n'a plus de capitale",
     "capitalFront": "trop près du front",
     "capitalFallout": "irradié",
@@ -418,7 +421,9 @@
     "demolishCancel": "Annuler la démolition",
     "demolishCancelDesc": "Le bâtiment reprend du service aussitôt, rien n'est perdu.",
     "lineRemove": "Démonter la ligne",
-    "lineRemoveDesc": "Ses troupes reviennent dans l’armée."
+    "lineRemoveDesc": "Ses troupes reviennent dans l’armée.",
+    "lineTroops": "Troupes de la ligne…",
+    "lineTroopsDesc": "Ajouter des troupes depuis l’armée, ou en rendre."
   },
   "confirm": {
     "betrayTitle": "Trahir votre allié ?",
@@ -1423,7 +1428,8 @@
     "raidHitShip": "Raid sur {player} — {ship} touché.",
     "raidHitShipSunk": "Raid sur {player} — {ship} coulé.",
     "revolutionSpread": "La révolte s'étend : {tiles} cases de plus rejoignent {tribe}.",
-    "lineReady": "Votre ligne offensive est installée."
+    "lineReady": "Votre ligne offensive est installée.",
+    "lineEmpty": "Une de vos lignes défensives a perdu tous ses hommes : elle ne tient plus. Renforcez-la ou démontez-la."
   },
   "error": {
     "nukeSelfMirv": "Un MIRV ne peut pas viser votre propre pays : ses ogives tomberaient sur tout votre territoire.",
@@ -1463,7 +1469,8 @@
       "notOwned": "La capitale doit être sur vos terres.",
       "fallout": "Terre irradiée : la capitale ne peut pas s'y installer.",
       "front": "Trop près d'une frontière : la capitale doit être à plus de 5 tuiles de toute terre étrangère (alliés exceptés).",
-      "cooldown": "Capitale déplacée récemment : nouveau transfert possible dans {s} s."
+      "cooldown": "Capitale déplacée récemment : nouveau transfert possible dans {s} s.",
+      "gold": "Déplacer la capitale coûte {n} d’or."
     },
     "pactsFrozen": "Dernière minute avant minuit : plus aucune alliance ne peut être signée.",
     "refused": {
@@ -1702,7 +1709,7 @@
       "outro": "Vos lignes ont tenu. Les assaillants se sont brisés sur vos remparts.",
       "brief": "L'Europe est une poudrière. Trente nations s'y disputent chaque vallée, et la difficulté est réglée sur difficile. Vous ne gagnerez pas cette guerre ; il s'agit de ne pas la perdre. Tenez vingt minutes sans être rayé de la carte.",
       "tip1": "Les montagnes, les collines et les forêts coûtent plus cher à l'attaquant : appuyez-vous dessus.",
-      "tip2": "Une ligne défensive ralentit jusqu'à trois fois l'assaillant qui arrive de face, mais son dos est nu."
+      "tip2": "Une ligne défensive ne laisse rien passer de face tant qu'elle a des troupes ; prise de côté ou par derrière, elle cède. Cliquez dessus pour la renforcer."
     },
     "m3": {
       "title": "L'île",
@@ -2201,7 +2208,8 @@
     "m2": {
       "spawn": "Placez votre capitale. Un relief accidenté, comme les Alpes ou les Carpates, sera plus facile à défendre.",
       "expand": "Prenez vite des terres libres avant que les nations voisines ne vous encerclent.",
-      "line": "Tracez une ligne défensive (touche 4) face à votre frontière la plus exposée, puis cliquez du côté de l’ennemi.",
+      "line": "Tracez une ligne défensive (touche 4) face à votre frontière la plus exposée, puis cliquez du côté de l’ennemi. Tant qu’elle a des troupes, rien ne la traverse de face.",
+      "reinforce": "Cliquez sur votre ligne : sa fiche règle les troupes qu’elle porte. Plus elle en a, plus elle tient longtemps ; elles sont retirées de votre plafond.",
       "threats": "Quand un voisin masse une armée bien plus forte que la vôtre à votre frontière, une alerte « frontière menacée » s'affiche et le journal la consigne. Renforcez ce front, ou faites de ce voisin un allié.",
       "alliance": "Proposez une alliance à un voisin : clic droit sur son territoire, ou fenêtre Diplomatie dans le rail de gauche. Les offres que vous recevez s'affichent en bas à droite : K pour accepter, L pour refuser.",
       "troops": "Laissez votre armée se reconstituer avant de repartir à l'attaque : atteignez la moitié de votre plafond de troupes.",
@@ -2240,11 +2248,12 @@
       "economy": "Construisez trois villes pour soutenir l'effort de guerre.",
       "weather": "Surveillez le ciel : les orages ralentissent navires et avions, et les bancs de brouillard réduisent de moitié la portée des radars.",
       "clock": "L'horloge avance : le cadran en haut annonce le prochain palier. Une paix, un vote du Conseil la font reculer ; les bombes la précipitent.",
+      "offensive": "Avant une grande poussée, tracez une ligne offensive (touche A) face à l’ennemi : après 30 s, vos attaques qui en partent perdent deux fois moins de troupes.",
       "push": "Poussez vers quarante pour cent. Une nation vulnérable est signalée sur la carte."
     },
     "hint": {
       "capital": "Notre capitale est tombée ! Le pays est désorganisé pendant une minute. Désignez-en une nouvelle depuis la dépêche, à gauche : « Choisir sur la carte », ou « Au plus sûr ».",
-      "threat": "Frontière menacée : un voisin masse ses troupes contre nous. Renforcez ce front, ou proposez-lui une alliance.",
+      "threat": "Frontière menacée : un voisin masse ses troupes contre nous. Tracez une ligne défensive face à lui (touche 4), ou proposez-lui une alliance.",
       "allyOffer": "Une nation nous propose une alliance : sa carte est en bas à droite. K pour accepter, L pour refuser. Un allié ne peut pas nous attaquer.",
       "boats": "Trois transports sont en mer : c'est le maximum. Attendez qu'un débarque, ou rappelez-en un depuis le panneau en bas à gauche.",
       "storm": "Un orage sur la route de nos transports : les navires y avancent moins vite. Mieux vaut le contourner, ou attendre qu'il passe.",
@@ -3027,19 +3036,35 @@
     "defensive": {
       "name": "Ligne défensive",
       "short": "Ligne déf.",
-      "desc": "Tracez-la sur vos terres : elle ralentit jusqu'à trois fois l'ennemi qui attaque de face les 12 cases devant elle, et ses troupes se battent avec vous. Son dos est nu : elle ne protège qu'un côté. Payée en troupes (la part d'armée choisie), rendues au démontage ; tant qu'elle tient, votre plafond de troupes baisse d'autant."
+      "desc": "Tracez-la sur vos terres, puis cliquez du côté de l'ennemi ; elle est en place en 3 s. Tant qu'elle a des troupes, rien ne la traverse de face : chaque assaut lui coûte un tiers de ce qu'il coûte à l'assaillant. Devant elle (12 cases), l'ennemi avance jusqu'à trois fois moins vite. Son dos et ses bouts sont nus : prise de côté ou par derrière, elle cède. Payée en troupes, bloquées sur la ligne et retirées de votre plafond jusqu'au démontage."
     },
     "offensive": {
       "name": "Ligne offensive",
       "short": "Ligne off.",
-      "desc": "Tracez-la sur vos terres face à l'ennemi : après 30 s d'installation, vos attaques qui en partent perdent jusqu'à deux fois moins de troupes dans les 12 cases devant elle. Dos nu, payée en troupes comme la ligne défensive."
+      "desc": "Tracez-la sur vos terres face à l'ennemi : après 30 s d'installation, vos attaques qui en partent perdent jusqu'à deux fois moins de troupes dans les 12 cases devant elle. Dos nu ; payée en troupes, bloquées sur la ligne et retirées de votre plafond jusqu'au démontage."
     },
     "costTroops": "{n} troupes ({pct} % de l’armée)",
-    "howTo": "Glisser d’un point à un autre, ou cliquer point par point (double-clic ou Entrée pour finir), puis cliquer du côté de l’ennemi.",
+    "howTo": "Glisser d’un point à un autre, ou cliquer point par point (double-clic ou Entrée pour finir), puis cliquer du côté de l’ennemi. Clic sur une de vos lignes : régler ses troupes ou la démonter.",
     "tip": {
       "start": "Cliquez ou glissez pour tracer · {troops} troupes ({pct} %)",
       "next": "Clic : point suivant · double-clic ou Entrée : terminer · Retour : annuler le point",
       "side": "Cliquez du côté de l’ennemi pour poser la ligne · {troops} troupes"
+    },
+    "card": {
+      "laying": "En place dans {clock}",
+      "holding": "Tient le front : rien ne passe de face",
+      "ready": "Installée : vos assauts en partent",
+      "empty": "Vide : elle ne tient plus rien",
+      "emptyShort": "vide",
+      "troops": "Troupes sur la ligne",
+      "strength": "Force",
+      "length": "Longueur tenue",
+      "tiles": "{n} cases",
+      "set": "Régler les troupes",
+      "fromArmy": "+{n} prises à l’armée",
+      "toArmy": "{n} rendues à l’armée",
+      "apply": "Appliquer",
+      "remove": "Démonter"
     }
   }
 }

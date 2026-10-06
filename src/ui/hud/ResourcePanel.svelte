@@ -131,6 +131,22 @@
         >
       </div>
       <div class="cap" data-tip={t('hud.capTip')}><div style="width:{capPct}%"></div></div>
+      <!-- Troops standing on front lines: locked out of the army and of its ceiling (1.17). -->
+      {#if L.lineTroops >= 1}
+        <p
+          class="on-lines mono"
+          data-testid="troops-on-lines"
+          data-tip={t('hud.onLinesTip', {
+            n: short(L.lineTroops),
+            cap: short(L.popCap + L.lineTroops),
+            left: short(L.popCap),
+          })}
+        >
+          <Icon name="lineDefense" size={13} />{t('hud.onLines', { n: short(L.lineTroops) })}
+          <small>{t('hud.onLinesCap', { cap: short(L.popCap + L.lineTroops), n: short(L.lineTroops) })}</small
+          >
+        </p>
+      {/if}
     </div>
 
     <div
@@ -441,6 +457,18 @@
   .cap div {
     height: 100%;
     background: var(--np-ink);
+  }
+  .on-lines {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 5px 0 0;
+    font-size: 0.78em;
+    color: var(--np-ink-2);
+  }
+  .on-lines small {
+    margin-left: auto;
+    opacity: 0.8;
   }
   .troops-row {
     display: flex;

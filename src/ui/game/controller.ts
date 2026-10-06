@@ -2,6 +2,7 @@
 import { Session, loadMapSource } from '../../engine/session';
 import { GameRenderer, type RenderSettings } from '../../render/renderer';
 import { InputController, BUILD_KEYS, LINE_KEYS, NUKE_KEYS, guardBetrayal } from './input';
+import { ownLineAt } from './lines';
 import { hud, resetHud, toast, subtitle, reportFall, showPact, openPanel } from '../stores/game.svelte';
 import { note } from '../stores/note.svelte';
 import { isTeammate } from './team';
@@ -109,7 +110,7 @@ export class GameController {
     });
     await this.renderer.init(host);
     this.input = new InputController(this.renderer.app.canvas, this.renderer, this.session, {
-      onAction: (tile) => this.action(tile),
+      onAction: (tile, ev) => this.action(tile, ev),
       // (Photo mode: the map only moves, nothing opens.)
       onRadial: (tile, sx, sy) => {
         if (!hud.photo) hud.radial = { x: sx, y: sy, tile };
@@ -412,8 +413,16 @@ export class GameController {
   }
 
   // ------------------------------------------------------------- actions
-  action(tile: number): void {
+  action(tile: number, ev?: PointerEvent): void {
     if (this.session.kind === 'replay' || hud.photo) return;
+    // A click on one of my front lines, no tool in hand: its card (troops, take it down).
+    const line = hud.tool.k === 'none' ? ownLineAt(this.session.state, this.session.viewer, tile, 1.5) : null;
+    if (line) {
+      hud.lineCard = { id: line.id, x: ev?.clientX ?? 0, y: ev?.clientY ?? 0 };
+      audio.ui('click');
+      return;
+    }
+    hud.lineCard = null;
     InputController.defaultAction(this.session, tile, hud.attackRatio);
     if (
       hud.tool.k === 'build' ||
@@ -460,7 +469,8 @@ export class GameController {
       return;
     }
     if (action === 'escape') {
-      if (hud.tool.k !== 'none' || hud.radial || hud.selection.length) {
+      if (hud.lineCard) hud.lineCard = null;
+      else if (hud.tool.k !== 'none' || hud.radial || hud.selection.length) {
         hud.tool = { k: 'none' };
         hud.radial = null;
         this.input.setSelection([]);

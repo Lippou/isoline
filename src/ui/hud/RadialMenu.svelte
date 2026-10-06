@@ -11,6 +11,7 @@
     B,
     BUILD_TICKS,
     BUILDING_KEYS,
+    CAPITAL_MOVE_COST,
     DEMOLISH_MIN_TICKS,
     DEMOLISH_REFUND,
     N,
@@ -22,7 +23,7 @@
   import { formatShort } from '../../render/renderer';
   import { clientSpotError } from '../game/capitalWatch';
   import { isTeammate } from '../game/team';
-  import { locate } from '../../core/rules/lines';
+  import { ownLineAt } from '../game/lines';
   import { haltShort, haltTip, nukeHalt, truceText } from './nukeHalt';
   import { truceCovers, truceOf } from '../game/truce';
 
@@ -272,6 +273,8 @@
     const none = L.capital < 0;
     const err = clientSpotError(s.state, s.viewer, tile);
     const wait = none ? 0 : L.capitalCooldown;
+    // Moving a standing capital costs CAPITAL_MOVE_COST and a minute of disorganisation (1.18).
+    const poor = !none && L.gold < CAPITAL_MOVE_COST;
     const hint =
       err === 'front'
         ? t('radial.capitalFront')
@@ -279,7 +282,9 @@
           ? t('radial.capitalFallout')
           : wait > 0
             ? clock(wait)
-            : '';
+            : none
+              ? ''
+              : formatShort(CAPITAL_MOVE_COST);
     return [
       {
         id: 'capital',
@@ -288,8 +293,8 @@
         label: t(none ? 'radial.capitalHere' : 'radial.capitalMove'),
         icon: 'capital',
         hint,
-        desc: t(none ? 'radial.capitalNeeded' : 'radial.capitalDesc'),
-        disabled: err !== 'ok' || wait > 0,
+        desc: t(none ? 'radial.capitalNeeded' : 'radial.capitalDesc', { n: formatShort(CAPITAL_MOVE_COST) }),
+        disabled: err !== 'ok' || wait > 0 || poor,
         run: act(() => s.cmd({ t: 'moveCapital', tile })),
       },
     ];
@@ -440,25 +445,30 @@
               },
         );
       }
-      // One of our front lines here (within two tiles): taken down, its troops come back.
-      const w = s.state.width;
-      const [tx, ty] = [(tile % w) + 0.5, ((tile / w) | 0) + 0.5];
-      const line = s.state.lines.find((l) => {
-        if (l.owner !== s.viewer) return false;
-        const at = locate(l.pts, tx, ty);
-        return Math.hypot(at.px - tx, at.py - ty) <= 2;
-      });
-      if (line)
-        out.push({
-          id: 'lineRemove',
-          group: 'main',
-          label: t('radial.lineRemove'),
-          icon: line.kind === 0 ? 'lineDefense' : 'lineOffense',
-          hint: formatShort(line.troops),
-          desc: t('radial.lineRemoveDesc'),
-          run: act(() => s.cmd({ t: 'lineRemove', id: line.id })),
-        });
       out.push(...capitalItems(tile));
+    }
+    // One of our front lines here (within two tiles, on any land: a breached one too): its
+    // card (troops), or taken down at once, its troops back in the army.
+    const line = ownLineAt(s.state, s.viewer, tile, 2);
+    if (line) {
+      out.push({
+        id: 'lineTroops',
+        group: 'main',
+        label: t('radial.lineTroops'),
+        icon: line.kind === 0 ? 'lineDefense' : 'lineOffense',
+        hint: line.troops < 1 ? t('line.card.emptyShort') : formatShort(line.troops),
+        desc: t('radial.lineTroopsDesc'),
+        run: act(() => (hud.lineCard = { id: line.id, x: r.x + 40, y: r.y + 40 })),
+      });
+      out.push({
+        id: 'lineRemove',
+        group: 'main',
+        label: t('radial.lineRemove'),
+        icon: 'trash',
+        desc: t('radial.lineRemoveDesc'),
+        danger: true,
+        run: act(() => s.cmd({ t: 'lineRemove', id: line.id })),
+      });
     }
     // Warships also sail up navigable rivers (river tiles are land, owned like any other).
     const river = TERRAIN[s.state.terrain[tile] ?? 0]?.key === 'river';

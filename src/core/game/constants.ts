@@ -134,11 +134,17 @@ export const ATTACK_RELATION = { easy: -60, normal: -70, hard: -80, impossible: 
  * LINE_OFFENSE_LOSS)) once dug in, LINE_OFFENSE_SETUP ticks after it is laid. Both act
  * in full while their troops per tile reach LINE_FULL_DENSITY × the country's own,
  * proportionally below. Troops on lines come off the troop ceiling until taken down.
+ * 1.18: a defensive line takes LINE_DEFENSE_SETUP ticks to lay, and lets nothing through
+ * head-on while it has troops: each push at one of its tiles from the front costs the
+ * attacker its losses and the line 1 / LINE_HOLD_TRADE of them; emptied, it holds no more
+ * (an empty line stays, to be refilled or taken down).
  */
 export const LINE_REACH = 12;
 export const LINE_DEFENSE_SPEED = 3;
 export const LINE_OFFENSE_LOSS = 0.5;
 export const LINE_OFFENSE_SETUP = 300;
+export const LINE_DEFENSE_SETUP = 30;
+export const LINE_HOLD_TRADE = 3;
 export const LINE_FULL_DENSITY = 8;
 /** Lines a player may hold at once; tiles of one line; points a drawing may have. */
 export const LINE_MAX_PER_PLAYER = 8;
@@ -604,6 +610,11 @@ export const CAPITAL_LOOT = 0.1;
 export const CAPITAL_FRONT_GAP = 5;
 /** Moving a capital one still holds: once per this delay (re-establishing a lost one is immediate). */
 export const CAPITAL_MOVE_COOLDOWN = min(5);
+/**
+ * Moving a capital one still holds (1.18, the player's request): 1 M gold, and the same
+ * disorganisation as losing it (CAPITAL_DISORG_TICKS). Re-establishing a lost one is free.
+ */
+export const CAPITAL_MOVE_COST = 1_000_000;
 /** Nations re-establish a lost capital this long after the fall (then retry every 5 s if no spot fits). */
 export const CAPITAL_AI_DELAY = sec(10);
 

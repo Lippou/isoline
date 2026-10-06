@@ -132,7 +132,7 @@ const READ = 150;
 /**
  * Remembers what the objectives count across ticks, from this tick's events and views:
  * countries (nations, humans) and tribes eliminated by me, loot, bombs launched,
- * transports launched and landed. Mutates c.memory.
+ * transports launched and landed, troops added to a standing line. Mutates c.memory.
  */
 export function observe(c: MissionCtx): void {
   const m = c.memory;
@@ -145,6 +145,14 @@ export function observe(c: MissionCtx): void {
       inc(e.kind === N.Hydrogen ? 'hbomb' : e.kind === N.Atom ? 'abomb' : 'mirv');
     else if (e.k === 'loot' && e.owner === c.me) inc('loot', e.amount);
     else if (e.k === 'shipSunk' && e.owner === c.me) sunkMine++;
+  }
+  // Front lines: troops added to standing lines (the line card), not just new lines laid.
+  const L = c.local;
+  if (L) {
+    const lines = (L.lineCount?.[0] ?? 0) + (L.lineCount?.[1] ?? 0);
+    if (lines === m.linesSeen && L.lineTroops > (m.lineTroopsSeen ?? 0) + 1) inc('lineTroops');
+    m.linesSeen = lines;
+    m.lineTroopsSeen = L.lineTroops;
   }
   // Transports: one that leaves the sea without turning back nor being sunk has landed.
   const now = c.local?.transports ?? [];
@@ -242,6 +250,7 @@ export const MISSIONS: Mission[] = [
       { key: 'guide.m2.spawn', done: placed },
       { key: 'guide.m2.expand', done: (c) => share(c) >= 0.015 },
       { key: 'guide.m2.line', done: (c) => defLines(c) >= 1 },
+      { key: 'guide.m2.reinforce', done: (c) => mem(c, 'lineTroops') > 0 || read(READ * 2)(c) },
       { key: 'guide.m2.threats', done: read(READ * 1.5) },
       { key: 'guide.m2.alliance', done: (c) => (c.local?.allies.length ?? 0) >= 1 },
       { key: 'guide.m2.troops', done: (c) => !!c.local && c.local.troops >= c.local.popCap * 0.5 },
@@ -396,6 +405,7 @@ export const MISSIONS: Mission[] = [
       { key: 'guide.m6.economy', done: (c) => built(c, B.City) >= 3, cost: buildCost(B.City) },
       { key: 'guide.m6.weather', done: read(READ) },
       { key: 'guide.m6.clock', done: (c) => c.tick >= 6000 },
+      { key: 'guide.m6.offensive', done: (c) => (c.local?.lineCount?.[1] ?? 0) >= 1 },
       { key: 'guide.m6.push', done: () => false, marker: weakest },
     ],
     parTicks: 27000,

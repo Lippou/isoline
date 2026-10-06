@@ -1,8 +1,11 @@
-// Front lines on the map (core/rules/lines.ts, 1.17), drawn as on a staff map, in ink:
-//   - a defensive line: a solid line with teeth on the side it faces (a fortified line);
-//   - an offensive line: a solid line with chevrons pointing where it pushes; while it
-//     digs in (30 s) it is dashed, its chevrons faint, with the time left on its label;
-//   - a stretch lost to the enemy (a breach): dotted, no teeth;
+// Front lines on the map (core/rules/lines.ts), drawn as on a staff map, in ink (1.18:
+// « plus réaliste et plus soigné »):
+//   - a defensive line: a crenellated trench (its traverses jut towards the front) behind a
+//     belt of barbed wire, the wire paler as the line weakens; laid in 3 s (dashed, no wire
+//     yet); emptied, a grey dotted trench with no wire;
+//   - an offensive line: a jump-off line with broad assault arrows pointing where it pushes;
+//     while it digs in (30 s) it is dashed and its arrows hollow, the time left on its label;
+//   - a stretch lost to the enemy (a breach): dotted, no wire, no arrows;
 //   - its reach (settings: front-line zones), shaded in front of the stretches held, the far
 //     edge dashed; the back stays bare.
 // The kinds differ by shape, not by colour (the player is colour-blind). Drawn in the
@@ -10,7 +13,7 @@
 // colour vanished on its own land); its reach is shaded in ink too. Its troops
 // ride a small label just behind its middle. The line being drawn (input.ts LineDraft)
 // is previewed in brass: solid over our land, dotted elsewhere; then, picking the side,
-// with its teeth or chevrons and its reach.
+// as the trench and wire or the arrows it will be, with its reach.
 // Built lines are redrawn only when they change or the zoom moves on (many lines, long
 // ones: not every frame); the drawing and the countdowns are cheap and redrawn each frame.
 import { BitmapText, Container, Graphics, type TextStyle } from 'pixi.js';
@@ -132,32 +135,30 @@ export class FrontLineLayer {
           0.55,
         );
       }
-      // The line: held stretches solid (dashed while digging in), breaches dotted.
+      // The line: held stretches as trench and wire, or jump-off line and arrows; breaches dotted.
+      const look: Look = {
+        ink: INK,
+        edge: PAPER,
+        ready,
+        empty: l.troops < 1,
+        strength: l.strength,
+      };
       runs(samples, isHeld, (run, on) => {
-        const xy = run.map((p): [number, number] => [p.x, p.y]);
         if (!on) {
-          dashed(this.ink, xy, px(1.5), px(4), INK, px(1.6), 0.7);
+          dashed(
+            this.ink,
+            run.map((p) => [p.x, p.y]),
+            px(1.5),
+            px(4),
+            INK,
+            px(1.6),
+            0.7,
+          );
           return;
         }
-        if (ready) {
-          polyline(this.ink, xy, PAPER, px(5), 0.75);
-          polyline(this.ink, xy, INK, px(2.4), 1);
-        } else {
-          dashed(this.ink, xy, px(7), px(5), PAPER, px(5), 0.7);
-          dashed(this.ink, xy, px(7), px(5), INK, px(2.4), 1);
-        }
+        if (l.kind === 0) trench(this.ink, run, px, look);
+        else jumpOff(this.ink, run, px, look);
       });
-      // Its mark every so many pixels: teeth (defensive) or chevrons (offensive), on held stretches.
-      const every = Math.max(0.6, 15 / z);
-      const alpha = ready ? 0.45 + 0.55 * l.strength : 0.35;
-      let next = every / 2;
-      for (const p of samples) {
-        if (p.s < next) continue;
-        next = p.s + every;
-        if (!isHeld(p)) continue;
-        if (l.kind === 0) tooth(this.ink, p, px(7), px(6), INK, alpha, PAPER, px(1.2));
-        else chevron(this.ink, p, px(5.5), px(6), INK, px(2), alpha, PAPER);
-      }
     }
   }
 
@@ -208,48 +209,42 @@ export class FrontLineLayer {
     const px = (v: number) => Math.max(0.04, v / z);
     const pts = d.stage === 'trace' ? [...d.pts, d.cursor[0], d.cursor[1]] : d.pts;
     const samples = sampleLine(pts, d.side, 0.5);
-    // Over our land solid, elsewhere dotted: a line stands only on our own tiles.
-    runs(
-      samples,
-      (p) => ctx.mine(p.x, p.y),
-      (run, on) => {
-        const xy = run.map((p): [number, number] => [p.x, p.y]);
-        if (on) {
-          polyline(g, xy, INK_DARK, px(5), 0.5);
-          polyline(g, xy, BRASS, px(2.6), 1);
-        } else dashed(g, xy, px(2), px(4), BRASS, px(2), 0.9);
-      },
-    );
+    // Tracing: over our land solid, elsewhere dotted (a line stands only on our own tiles).
+    if (d.stage !== 'side') {
+      runs(
+        samples,
+        (p) => ctx.mine(p.x, p.y),
+        (run, on) => {
+          const xy = run.map((p): [number, number] => [p.x, p.y]);
+          if (on) {
+            polyline(g, xy, INK_DARK, px(5), 0.5);
+            polyline(g, xy, BRASS, px(2.6), 1);
+          } else dashed(g, xy, px(2), px(4), BRASS, px(2), 0.9);
+        },
+      );
+    } else {
+      // The side picked: its reach shaded, and the line as it will stand.
+      for (let k = 1; k < samples.length; k++) {
+        const [a, b] = [samples[k - 1]!, samples[k]!];
+        g.poly([
+          a.x,
+          a.y,
+          b.x,
+          b.y,
+          b.x + b.nx * LINE_REACH,
+          b.y + b.ny * LINE_REACH,
+          a.x + a.nx * LINE_REACH,
+          a.y + a.ny * LINE_REACH,
+        ]).fill({ color: BRASS, alpha: 0.1 });
+      }
+      const look: Look = { ink: BRASS, edge: INK_DARK, ready: true, empty: false, strength: 1 };
+      if (d.kind === 0) trench(g, samples, px, look);
+      else jumpOff(g, samples, px, look);
+    }
     for (let i = 0; i < d.pts.length; i += 2)
       g.circle(d.pts[i]!, d.pts[i + 1]!, px(3.5))
         .fill({ color: BRASS })
         .stroke({ color: INK_DARK, width: px(1.2) });
-    if (d.stage !== 'side') return;
-    // The side picked: the reach shaded, and the line's marks pointing there.
-    for (let k = 1; k < samples.length; k++) {
-      const [a, b] = [samples[k - 1]!, samples[k]!];
-      g.poly([
-        a.x,
-        a.y,
-        b.x,
-        b.y,
-        b.x + b.nx * LINE_REACH,
-        b.y + b.ny * LINE_REACH,
-        a.x + a.nx * LINE_REACH,
-        a.y + a.ny * LINE_REACH,
-      ]).fill({
-        color: BRASS,
-        alpha: 0.1,
-      });
-    }
-    const every = Math.max(0.6, 15 / z);
-    let next = every / 2;
-    for (const p of samples) {
-      if (p.s < next) continue;
-      next = p.s + every;
-      if (d.kind === 0) tooth(g, p, px(7), px(6), BRASS, 1, INK_DARK, px(1));
-      else chevron(g, p, px(5.5), px(6), BRASS, px(2), 1, INK_DARK);
-    }
   }
 
   destroy(): void {
@@ -336,51 +331,123 @@ function dashed(
   g.stroke({ width, color, alpha, cap: 'butt' });
 }
 
-/** A tooth: a small triangle standing on the line, pointing to the side faced, edged. */
-function tooth(
-  g: Graphics,
-  p: Sample,
-  base: number,
-  height: number,
-  color: number,
-  alpha: number,
-  edge: number,
-  edgeW: number,
-): void {
-  const [tx, ty] = [-p.ny, p.nx];
-  g.poly([
-    p.x + tx * base * 0.5,
-    p.y + ty * base * 0.5,
-    p.x - tx * base * 0.5,
-    p.y - ty * base * 0.5,
-    p.x + p.nx * height,
-    p.y + p.ny * height,
-  ])
-    .fill({ color, alpha })
-    .stroke({ color: edge, width: edgeW, alpha: alpha * 0.8, join: 'miter' });
+/** How a line is inked: its ink and paper edge, laid or not, emptied, its strength (0–1). */
+interface Look {
+  ink: number;
+  edge: number;
+  ready: boolean;
+  empty: boolean;
+  strength: number;
 }
 
-/** A chevron ahead of the line, pointing to the side it pushes towards (on a paper edge). */
-function chevron(
-  g: Graphics,
-  p: Sample,
-  half: number,
-  depth: number,
-  color: number,
-  width: number,
-  alpha: number,
-  edge: number,
-): void {
-  const [tx, ty] = [-p.ny, p.nx];
-  const [cx, cy] = [p.x + p.nx * depth * 0.4, p.y + p.ny * depth * 0.4];
-  for (const [c, w, a] of [
-    [edge, width * 2.2, alpha * 0.7],
-    [color, width, alpha],
-  ] as const)
-    g.moveTo(cx + tx * half, cy + ty * half)
-      .lineTo(cx + p.nx * depth, cy + p.ny * depth)
-      .lineTo(cx - tx * half, cy - ty * half)
-      .stroke({ width: w, color: c, alpha: a, cap: 'round', join: 'miter' });
+/** The point at arc length `at` along a run of samples (clamped), with its normal. */
+function pointAt(run: Sample[], at: number): Sample {
+  let k = 1;
+  while (k < run.length - 1 && run[k]!.s < at) k++;
+  const [a, b] = [run[k - 1]!, run[k]!];
+  const u = b.s > a.s ? Math.min(1, Math.max(0, (at - a.s) / (b.s - a.s))) : 0;
+  return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, nx: b.nx, ny: b.ny, s: at };
+}
+
+/**
+ * A defensive stretch: a crenellated trench (traverses jutting towards the front every
+ * few pixels) in ink on a paper edge, and in front of it a belt of barbed wire — a strand
+ * crossed by small x's. Being laid: the trench dashed, no wire; emptied: a grey dotted trench.
+ */
+function trench(g: Graphics, run: Sample[], px: (v: number) => number, look: Look): void {
+  const s0 = run[0]!.s;
+  const len = run[run.length - 1]!.s - s0;
+  if (len <= 0) return;
+  const step = px(7);
+  const amp = px(4);
+  const n = Math.max(1, Math.round(len / step));
+  const path: number[][] = [];
+  let level = 0;
+  for (let k = 0; k <= n; k++) {
+    const p = pointAt(run, s0 + (k / n) * len);
+    path.push([p.x + p.nx * level, p.y + p.ny * level]);
+    if (k === n) break;
+    level = k % 2 === 0 ? amp : 0;
+    path.push([p.x + p.nx * level, p.y + p.ny * level]);
+  }
+  if (look.empty) {
+    dashed(g, path, px(1.6), px(3), look.ink, px(1.8), 0.45);
+    return;
+  }
+  if (!look.ready) {
+    dashed(g, path, px(5), px(4), look.edge, px(4.6), 0.6);
+    dashed(g, path, px(5), px(4), look.ink, px(2.2), 0.9);
+    return;
+  }
+  polyline(g, path as [number, number][], look.edge, px(5), 0.75);
+  polyline(g, path as [number, number][], look.ink, px(2.2), 1);
+  // The wire, paler as the line weakens.
+  const off = px(13);
+  const alpha = 0.45 + 0.55 * look.strength;
+  const strand: [number, number][] = [];
+  const m = Math.max(1, Math.round(len / px(2)));
+  for (let k = 0; k <= m; k++) {
+    const p = pointAt(run, s0 + (k / m) * len);
+    strand.push([p.x + p.nx * off, p.y + p.ny * off]);
+  }
+  polyline(g, strand, look.edge, px(3), 0.5 * alpha);
+  polyline(g, strand, look.ink, px(1), alpha);
+  const every = px(12);
+  const x = px(2.6);
+  for (let at = every / 2; at < len; at += every) {
+    const p = pointAt(run, s0 + at);
+    const [cx, cy] = [p.x + p.nx * off, p.y + p.ny * off];
+    const [tx, ty] = [-p.ny, p.nx];
+    g.moveTo(cx + (tx + p.nx) * x, cy + (ty + p.ny) * x)
+      .lineTo(cx - (tx + p.nx) * x, cy - (ty + p.ny) * x)
+      .moveTo(cx + (tx - p.nx) * x, cy + (ty - p.ny) * x)
+      .lineTo(cx - (tx - p.nx) * x, cy - (ty - p.ny) * x)
+      .stroke({ width: px(1.1), color: look.ink, alpha, cap: 'round' });
+  }
+}
+
+/**
+ * An offensive stretch: a jump-off line in ink on a paper edge, and every so often a broad
+ * assault arrow (shaft and head) pointing where it pushes, filled, paler as the line
+ * weakens. Digging in: the line dashed, the arrows hollow.
+ */
+function jumpOff(g: Graphics, run: Sample[], px: (v: number) => number, look: Look): void {
+  const s0 = run[0]!.s;
+  const len = run[run.length - 1]!.s - s0;
+  if (len <= 0) return;
+  const xy = run.map((p): [number, number] => [p.x, p.y]);
+  if (look.ready && !look.empty) {
+    polyline(g, xy, look.edge, px(5.4), 0.75);
+    polyline(g, xy, look.ink, px(2.6), 1);
+  } else {
+    dashed(g, xy, px(8), px(5), look.edge, px(5), 0.6);
+    dashed(g, xy, px(8), px(5), look.ink, px(2.4), look.empty ? 0.45 : 0.9);
+  }
+  if (look.empty) return;
+  const every = Math.max(px(40), len / Math.max(1, Math.floor(len / px(40))));
+  const alpha = look.ready ? 0.5 + 0.5 * look.strength : 0.9;
+  for (let at = Math.min(len / 2, every / 2); at < len; at += every) {
+    const p = pointAt(run, s0 + at);
+    const [tx, ty] = [-p.ny, p.nx];
+    const at2 = (d: number, w: number): [number, number] => [
+      p.x + p.nx * d + tx * w,
+      p.y + p.ny * d + ty * w,
+    ];
+    const shape = [
+      at2(px(2), px(2.4)),
+      at2(px(11), px(2.4)),
+      at2(px(11), px(6.5)),
+      at2(px(19), 0),
+      at2(px(11), -px(6.5)),
+      at2(px(11), -px(2.4)),
+      at2(px(2), -px(2.4)),
+    ].flat();
+    if (look.ready)
+      g.poly(shape)
+        .fill({ color: look.ink, alpha })
+        .stroke({ color: look.edge, width: px(1.2), alpha: 0.8, join: 'miter' });
+    else g.poly(shape).stroke({ color: look.ink, width: px(1.4), alpha, join: 'miter' });
+  }
 }
 
 function compact(n: number): string {

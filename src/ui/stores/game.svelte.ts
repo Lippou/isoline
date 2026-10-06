@@ -190,6 +190,8 @@ export const hud = $state({
   /** Last time the journal was read (tick): newer news light its dock button. */
   journalSeen: 0,
   radial: null as null | { x: number; y: number; tile: number },
+  /** One of my front lines opened (LineCard.svelte): its id, and where it was clicked (window px). */
+  lineCard: null as null | { id: number; x: number; y: number },
   hover: null as null | {
     tile: number;
     owner: number;

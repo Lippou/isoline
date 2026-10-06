@@ -20,6 +20,8 @@ export type Command =
   | { t: 'line'; kind: number; pts: number[]; side: number; ratio: number }
   /** Takes one of your lines down: its troops come back. */
   | { t: 'lineRemove'; id: number }
+  /** Sets the troops on one of your lines (more from the army, fewer back to it; 0: empty). */
+  | { t: 'lineTroops'; id: number; troops: number }
   | { t: 'shipMove'; ids: number[]; tile: number; patrol: boolean }
   /** `up`: arc towards the top of the map (default) or the bottom (A and H bombs). */
   | { t: 'nuke'; kind: number; tile: number; count: number; up?: boolean }
@@ -77,6 +79,8 @@ export function isWellFormed(c: unknown): c is Command {
     case 'upgrade':
     case 'lineRemove':
       return isInt(o.id);
+    case 'lineTroops':
+      return isInt(o.id) && isNum(o.troops) && o.troops >= 0 && o.troops < 1e12;
     case 'line':
       return (
         (o.kind === 0 || o.kind === 1) &&

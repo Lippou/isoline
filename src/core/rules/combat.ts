@@ -44,7 +44,7 @@ import { hash2 } from '../rng';
 import { addGold } from '../game/economy';
 import { capitalSpeedMult } from './capital';
 import { guerrilla } from './revolution';
-import { lineDefense, lineOffenseMult } from './lines';
+import { lineDefense, lineHolds, lineOffenseMult, lineTakesHit } from './lines';
 
 export class Attack {
   readonly id: number;
@@ -620,12 +620,24 @@ function advance(game: Game, a: Attack, p: Player, T: Player | null): void {
     const n = map.neighbors4(tile, NB);
     for (let k = 0; k < n; k++) if (owner[NB[k]!] === a.attacker) touches = true;
     if (!touches) continue;
-    enqueueNeighbors(game, a, tile);
     const o = attackLogic(game, a, tile, borderSize);
     budget -= o.tickFraction;
     const loss = Math.min(a.troops, o.attackerLoss);
     a.troops -= loss;
     p.stats.troopsLost += loss;
+    // A defensive line holding troops lets nothing through head-on (rules/lines.ts, 1.18):
+    // the push is paid for, the line bleeds, the tile stays and is pressed again later.
+    const wall = T ? lineHolds(game, tile, a.target, a.attacker) : null;
+    if (wall) {
+      p.stats.enemiesKilled += lineTakesHit(game, wall, loss);
+      const t = Math.fround(a.clock + tileCost(game, tile, a.target, a.attacker));
+      game.queuedBy[tile] = a.id;
+      game.frontTime[tile] = t;
+      a.border.add(tile);
+      a.push(tile, t);
+      continue;
+    }
+    enqueueNeighbors(game, a, tile);
     if (T) {
       // The defender loses its troops per tile.
       const kill = Math.min(T.troops, o.defenderLoss);

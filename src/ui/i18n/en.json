@@ -332,7 +332,10 @@
     "modeHvnSolo": "Alone vs the nations",
     "modeHvnSoloTip": "You alone against a coalition of every nation (they don't attack each other).",
     "modeHvnTip": "All humans together against the nations' coalition (they don't attack each other).",
-    "groupFront": "Front"
+    "groupFront": "Front",
+    "onLines": "{n} on the lines",
+    "onLinesCap": "ceiling {cap} − {n}",
+    "onLinesTip": "{n} troops locked on your front lines: they are out of the army and your ceiling drops from {cap} to {left}. Lighten or take down a line (click it) to get them back."
   },
   "panel": {
     "diplomacy": "Diplomacy",
@@ -408,7 +411,7 @@
     "sea": "Sea",
     "capitalHere": "Establish the capital here",
     "capitalMove": "Move the capital here",
-    "capitalDesc": "Seat of government: losing it disorganises the country for a minute. At most one move every 5 minutes.",
+    "capitalDesc": "Seat of government. Moving it costs {n} gold and disorganises the country for a minute (as its fall does: growth, income and attacks slowed). One move every 5 minutes at most.",
     "capitalNeeded": "Your country has no capital",
     "capitalFront": "too close to a border",
     "capitalFallout": "irradiated",
@@ -418,7 +421,9 @@
     "demolishCancel": "Cancel demolition",
     "demolishCancelDesc": "The building is back in service at once, nothing lost.",
     "lineRemove": "Take the line down",
-    "lineRemoveDesc": "Its troops return to the army."
+    "lineRemoveDesc": "Its troops return to the army.",
+    "lineTroops": "Line troops…",
+    "lineTroopsDesc": "Add troops from the army, or send some back."
   },
   "confirm": {
     "betrayTitle": "Betray your ally?",
@@ -1423,7 +1428,8 @@
     "raidHitShip": "Raid on {player} — {ship} hit.",
     "raidHitShipSunk": "Raid on {player} — {ship} sunk.",
     "revolutionSpread": "The revolt spreads: {tiles} more tiles join {tribe}.",
-    "lineReady": "Your offensive line has dug in."
+    "lineReady": "Your offensive line has dug in.",
+    "lineEmpty": "One of your defensive lines has lost all its men: it no longer holds. Reinforce it or take it down."
   },
   "error": {
     "nukeSelfMirv": "A MIRV cannot target your own country: its warheads would fall all over your land.",
@@ -1463,7 +1469,8 @@
       "notOwned": "The capital must be on your own land.",
       "fallout": "Irradiated land: the capital cannot sit there.",
       "front": "Too close to a border: the capital must stand more than 5 tiles from any foreign land (allies excepted).",
-      "cooldown": "Capital moved recently: it can move again in {s} s."
+      "cooldown": "Capital moved recently: it can move again in {s} s.",
+      "gold": "Moving the capital costs {n} gold."
     },
     "pactsFrozen": "The last minute before midnight: no alliance can be signed any more.",
     "refused": {
@@ -1702,7 +1709,7 @@
       "outro": "Your lines held. The attackers broke against your ramparts.",
       "brief": "Europe is a powder keg. Thirty nations fight over every valley, and the difficulty is set to hard. You will not win this war; the task is not to lose it. Hold out for twenty minutes without being wiped off the map.",
       "tip1": "Mountains, hills and forests cost the attacker more: lean on them.",
-      "tip2": "A defensive line slows an attacker coming head-on up to three times, but its back is bare."
+      "tip2": "A defensive line lets nothing through head-on while it has troops; taken from the side or from behind, it gives way. Click it to reinforce it."
     },
     "m3": {
       "title": "The Island",
@@ -2201,7 +2208,8 @@
     "m2": {
       "spawn": "Place your capital. Rugged terrain, such as the Alps or the Carpathians, will be easier to defend.",
       "expand": "Take unclaimed land quickly, before neighbouring nations surround you.",
-      "line": "Draw a defensive line (key 4) facing your most exposed border, then click on the enemy’s side.",
+      "line": "Draw a defensive line (key 4) facing your most exposed border, then click on the enemy’s side. While it has troops, nothing crosses it head-on.",
+      "reinforce": "Click your line: its card sets the troops it holds. The more it has, the longer it holds; they are taken off your ceiling.",
       "threats": "When a neighbour masses a much bigger army on your border, a “threatened border” alert appears and the journal records it. Reinforce that front, or make that neighbour an ally.",
       "alliance": "Propose an alliance to a neighbour: right click its territory, or use the Diplomacy window in the left rail. Offers you receive appear at the bottom right: K to accept, L to refuse.",
       "troops": "Let your army regrow before attacking again: reach half of your troop ceiling.",
@@ -2240,11 +2248,12 @@
       "economy": "Build three cities to sustain the war effort.",
       "weather": "Watch the sky: storms slow ships and aircraft down, and fog banks halve the range of radars.",
       "clock": "The clock is ticking: the dial at the top announces the next milestone. A peace summit or a Council vote turns it back; bombs hasten it.",
+      "offensive": "Before a big push, draw an offensive line (key Q) facing the enemy: after 30 s, your attacks pushing out from it lose half as many troops.",
       "push": "Push towards forty percent. A vulnerable nation is marked on the map."
     },
     "hint": {
       "capital": "Our capital has fallen! The country is disorganised for a minute. Choose a new one from the dispatch on the left: “Pick on the map”, or “Safest spot”.",
-      "threat": "Threatened border: a neighbour is massing troops against us. Reinforce that front, or offer it an alliance.",
+      "threat": "Threatened border: a neighbour is massing troops against us. Draw a defensive line facing it (key 4), or offer it an alliance.",
       "allyOffer": "A nation is offering us an alliance: its card is at the bottom right. K to accept, L to refuse. An ally cannot attack us.",
       "boats": "Three transports are at sea: that is the limit. Wait for one to land, or recall one from the panel at the bottom left.",
       "storm": "A storm lies on our transports' route: ships sail slower inside it. Better to go around it, or wait for it to pass.",
@@ -3027,19 +3036,35 @@
     "defensive": {
       "name": "Defensive line",
       "short": "Def. line",
-      "desc": "Draw it on your own land: it slows the enemy attacking the 12 tiles in front of it head-on, up to three times, and its troops fight alongside yours. Its back is bare: it guards one side only. Paid in troops (the share of the army chosen), returned when taken down; while it stands, your troop ceiling drops by as much."
+      "desc": "Draw it on your land, then click on the enemy's side; it is in place in 3 s. While it has troops, nothing crosses it head-on: each assault costs it a third of what it costs the attacker. In front of it (12 tiles) the enemy advances up to three times slower. Its back and ends are bare: taken from the side or from behind, it gives way. Paid in troops, locked on the line and taken off your ceiling until it comes down."
     },
     "offensive": {
       "name": "Offensive line",
       "short": "Off. line",
-      "desc": "Draw it on your own land facing the enemy: after 30 s to dig in, your attacks pushing out from it lose up to half fewer troops in the 12 tiles in front of it. Bare back, paid in troops like the defensive line."
+      "desc": "Draw it on your land facing the enemy: after 30 s to dig in, your attacks pushing out from it lose up to half fewer troops in the 12 tiles in front of it. Bare back; paid in troops, locked on the line and taken off your ceiling until it comes down."
     },
     "costTroops": "{n} troops ({pct}% of the army)",
-    "howTo": "Drag from one point to another, or click point by point (double click or Enter to finish), then click on the enemy’s side.",
+    "howTo": "Drag from one point to another, or click point by point (double click or Enter to finish), then click on the enemy’s side. Click one of your lines: set its troops or take it down.",
     "tip": {
       "start": "Click or drag to draw · {troops} troops ({pct}%)",
       "next": "Click: next point · double click or Enter: finish · Backspace: undo point",
       "side": "Click on the enemy’s side to lay the line · {troops} troops"
+    },
+    "card": {
+      "laying": "In place in {clock}",
+      "holding": "Holding the front: nothing gets through head-on",
+      "ready": "Dug in: your assaults push out from it",
+      "empty": "Empty: it holds nothing any more",
+      "emptyShort": "empty",
+      "troops": "Troops on the line",
+      "strength": "Strength",
+      "length": "Length held",
+      "tiles": "{n} tiles",
+      "set": "Set the troops",
+      "fromArmy": "+{n} taken from the army",
+      "toArmy": "{n} back to the army",
+      "apply": "Apply",
+      "remove": "Take down"
     }
   }
 }

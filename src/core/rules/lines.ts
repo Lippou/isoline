@@ -10,11 +10,17 @@
 // proportionally below. Its troops leave the army and lower the troop ceiling as long as it
 // stands; taking it down brings them back. A tile of the line taken by anyone loses its
 // share of them, and the stretch round it stops covering (a breach).
+// 1.18: a defensive line is laid in 3 s and lets nothing through head-on while it holds
+// troops (lineHolds: each push at it costs the attacker its losses and the line a third
+// of them, the attacker's 3-to-1 against a dug-in position); the troops on a line can be changed (setLineTroops); an emptied line stays,
+// holding nothing, until it is refilled or taken down.
 import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import { IS_LAND } from '../map/terrain';
 import {
+  LINE_DEFENSE_SETUP,
   LINE_DEFENSE_SPEED,
+  LINE_HOLD_TRADE,
   LINE_FULL_DENSITY,
   LINE_MAX_PER_PLAYER,
   LINE_MAX_POINTS,
@@ -192,8 +198,18 @@ function cover(game: Game, owner: number, kind: LineKind, tile: number, attacker
   return null;
 }
 
-/** Whether the attacker reaches `tile` (at sd in front of l) from the side the line expects. */
-function attackerSide(game: Game, l: FrontLine, tile: number, attacker: number, sd: number): boolean {
+/**
+ * Whether the attacker reaches `tile` (at sd in front of l) from the side the line expects,
+ * by at least `margin` tiles across it (a push along the line is not head-on).
+ */
+function attackerSide(
+  game: Game,
+  l: FrontLine,
+  tile: number,
+  attacker: number,
+  sd: number,
+  margin = 0,
+): boolean {
   const map = game.map;
   const w = map.width;
   const n = map.neighbors4(tile, NB);
@@ -201,7 +217,7 @@ function attackerSide(game: Game, l: FrontLine, tile: number, attacker: number, 
     const v = NB[j]!;
     if (game.owner[v] !== attacker) continue;
     const vsd = locate(l.pts, (v % w) + 0.5, ((v / w) | 0) + 0.5).sd * l.side;
-    if (l.kind === LineKind.Defensive ? vsd > sd : vsd < sd) return true;
+    if (l.kind === LineKind.Defensive ? vsd > sd + margin : vsd < sd - margin) return true;
   }
   return false;
 }
@@ -278,6 +294,56 @@ export function lineAcross(
   return { pts, side: sideOf(pts, mx + dx * 4, my + dy * 4) };
 }
 
+/**
+ * A head-on push of `attacker` at `tile`, a tile of a defensive line of `target` that is laid
+ * and holds troops: the line that stops it, or null (taken from the side, from behind, or
+ * once the line is empty, the tile falls as any other). "Head-on": a neighbour of the
+ * attacker LINE_HEAD_ON tiles or more out in front of it (a push within ~70° of square on).
+ */
+export function lineHolds(game: Game, tile: number, target: number, attacker: number): FrontLine | null {
+  const id = game.lineAt.get(tile);
+  if (id === undefined) return null;
+  const l = game.lines.find((x) => x.id === id);
+  if (!l || l.owner !== target || l.kind !== LineKind.Defensive || l.readyTick > game.tick || l.troops < 1)
+    return null;
+  const w = game.map.width;
+  const sd = locate(l.pts, (tile % w) + 0.5, ((tile / w) | 0) + 0.5).sd * l.side;
+  return attackerSide(game, l, tile, attacker, sd, LINE_HEAD_ON) ? l : null;
+}
+const LINE_HEAD_ON = 0.35;
+
+/** The line stood a push that cost the attacker `loss`: it loses 1 / LINE_HOLD_TRADE of it. */
+export function lineTakesHit(game: Game, l: FrontLine, loss: number): number {
+  const hit = Math.min(l.troops, loss / LINE_HOLD_TRADE);
+  l.troops -= hit;
+  const p = game.players[l.owner];
+  if (p) {
+    p.lineTroops = Math.max(0, p.lineTroops - hit);
+    p.stats.troopsLost += hit;
+  }
+  if (l.troops < 1) {
+    if (p) p.lineTroops = Math.max(0, p.lineTroops - l.troops);
+    l.troops = 0;
+    game.notify(l.owner, 'notify.lineEmpty', 'warn', {}, l.tiles[l.tiles.length >> 1]);
+  }
+  game.linesVersion++;
+  return hit;
+}
+
+/**
+ * Sets the troops on one of p's lines (the command 'lineTroops'): more come from the army
+ * (as many as it has), fewer go back to it. 0 leaves an empty line.
+ */
+export function setLineTroops(game: Game, p: Player, l: FrontLine, troops: number): void {
+  const want = Math.max(0, troops);
+  const delta = want > l.troops ? Math.min(want - l.troops, p.troops) : want - l.troops;
+  if (Math.abs(delta) < 1e-9) return;
+  l.troops += delta;
+  p.troops -= delta;
+  p.lineTroops = Math.max(0, p.lineTroops + delta);
+  game.linesVersion++;
+}
+
 export type LineError = 'phase' | 'max' | 'short' | 'troops' | 'points';
 
 /** Lays a line for p (the command 'line'); its troops: `ratio` of the army. */
@@ -312,7 +378,7 @@ export function placeLine(
     side,
     troops,
     tiles,
-    readyTick: game.tick + (kind === LineKind.Offensive ? LINE_OFFENSE_SETUP : 0),
+    readyTick: game.tick + (kind === LineKind.Offensive ? LINE_OFFENSE_SETUP : LINE_DEFENSE_SETUP),
   };
   game.lines.push(l);
   for (const t of tiles) game.lineAt.set(t, l.id);
@@ -347,10 +413,10 @@ export function lineTileLost(game: Game, tile: number): void {
   const p = game.players[l.owner];
   if (p) p.lineTroops = Math.max(0, p.lineTroops - share);
   game.linesVersion++;
-  if (l.tiles.length === 0 || l.troops < 1) removeLine(game, l, false);
+  if (l.tiles.length === 0) removeLine(game, l, false);
 }
 
-/** Every tick: an offensive line that has dug in tells its owner. */
+/** Every tick: an offensive line that has dug in tells its owner (a defensive one is laid in 3 s: no news). */
 export function updateLines(game: Game): void {
   for (const l of game.lines)
     if (l.kind === LineKind.Offensive && l.readyTick === game.tick)

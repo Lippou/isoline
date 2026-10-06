@@ -7,7 +7,10 @@ import type { Player, Personality } from '../game/player';
 import { applyCommand } from '../game/commands';
 import {
   B,
+  CAPITAL_MOVE_COST,
   LINE_MAX_PER_PLAYER,
+  LINE_DEFENSE_SETUP,
+  LINE_HOLD_TRADE,
   LINE_OFFENSE_SETUP,
   LINE_REACH,
   MIN_BUILDING_SPACING,
@@ -198,6 +201,8 @@ const AI_RETAKE_MEMORY = 3000;
 const AI_COALITION_ODDS = 0.3;
 /** Ticks between two looks at the capital's safety. */
 const AI_CAPITAL_CHECK = 300;
+/** A nation moves its capital only with this many times the price in its treasury. */
+const AI_CAPITAL_GOLD_MARGIN = 1.5;
 /**
  * Front lines (rules/lines.ts): half-length and depth behind the border of a line laid
  * across an enemy's way, the army's share on a defensive (offensive) line, and how long one
@@ -450,6 +455,15 @@ export function revoltToll(game: Game, p: Player, q: Player): number {
   const density = q.troops / Math.max(1, q.tiles);
   const perTile = 90 * 0.6 * (0.463 + 0.0039 * density) * g.mag;
   return 1.3 * (q.troops + q.tiles * perTile) + 2000;
+}
+
+/**
+ * What it takes to beat q's army: its troops, and those on its front lines counted at the
+ * price of breaking them (LINE_HOLD_TRADE to 1 head-on, 1.18) — a country dug in behind
+ * its lines is no soft target, whatever its free army.
+ */
+function defenders(q: Player): number {
+  return q.troops + q.lineTroops * LINE_HOLD_TRADE;
 }
 
 // ----------------------------------------------------------------- nations
@@ -721,11 +735,17 @@ function layLine(
 
 /**
  * Lines no longer needed come down, their troops back in the army: after AI_LINE_KEEP, a
- * defensive line once nobody attacks us, an offensive one once we attack nobody.
+ * defensive line once nobody attacks us, an offensive one once we attack nobody; an
+ * emptied one at once.
  */
 function retireLines(game: Game, p: Player, underAttack: boolean): void {
   for (const l of [...linesOf(game, p.id)]) {
-    const laid = l.readyTick - (l.kind === LineKind.Offensive ? LINE_OFFENSE_SETUP : 0);
+    // An emptied line (it held a push to its last man) comes down at once.
+    if (l.troops < 1) {
+      applyCommand(game, p.id, { t: 'lineRemove', id: l.id });
+      continue;
+    }
+    const laid = l.readyTick - (l.kind === LineKind.Offensive ? LINE_OFFENSE_SETUP : LINE_DEFENSE_SETUP);
     if (game.tick - laid < AI_LINE_KEEP) continue;
     const idle =
       l.kind === LineKind.Defensive
@@ -800,7 +820,9 @@ function defend(
     if (d <= 6) {
       if (linesNear(game, p, p.capital, LineKind.Defensive) === 0 && game.tick - m.lastBuild > 30)
         layLine(game, p, m, contact, worst, LineKind.Defensive, AI_LINE_RATIO);
-      if (capitalCooldown(game, p) === 0) {
+      // Moving a standing capital costs 1 M gold and a minute of disorganisation (1.18):
+      // still cheaper than losing it (the same disorganisation, a tenth of the treasury).
+      if (capitalCooldown(game, p) === 0 && p.gold >= CAPITAL_MOVE_COST * AI_CAPITAL_GOLD_MARGIN) {
         cost += 80;
         const spot = bestCapitalSpot(game, p);
         if (spot >= 0 && spot !== p.capital && frontDistance(game, p, spot, 20) >= d + 6)
@@ -999,7 +1021,7 @@ function counterRatio(p: Player, enemy: Player, incoming: number): number {
  * lowered, when late-game wars between large empires stalled).
  */
 function offensiveRatio(p: Player, q: Player, t: Traits): number {
-  const need = (q.troops * AI_BITE) / Math.max(1, p.troops);
+  const need = (defenders(q) * AI_BITE) / Math.max(1, p.troops);
   return Math.min(0.55, Math.max(0.12, Math.min(0.5, need)) * Math.min(1.2, t.aggression));
 }
 
@@ -1079,7 +1101,7 @@ function pickTarget(
       if (p.relation(q.id) >= AI_FRIENDLY) continue;
       if (!(game.rng.chance(diff.betrayal * 0.1 * t.aggression) && q.troops < p.troops * 0.35)) continue;
     }
-    const strength = p.troops / Math.max(1, q.troops);
+    const strength = p.troops / Math.max(1, defenders(q));
     // A country that took our cities is fought sooner (1.12, normal and up).
     const took = m.took?.get(q.id);
     const avenge =
