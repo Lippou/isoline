@@ -926,14 +926,24 @@ export class GameController {
       IS_LAND[st.terrain[hover]!] === 1 &&
       st.owner[hover]! > 0 &&
       this.renderer.relation(st.owner[hover]!) === 'foe';
-    const cur =
-      tool.k === 'nuke' || (tool.k === 'air' && tool.kind === A.Bomber)
-        ? 'var(--cursor-aim)'
-        : enemy
-          ? 'var(--cursor-attack)'
-          : tool.k === 'none' || tool.k === 'shipMove'
-            ? 'var(--cursor-map)'
-            : 'var(--cursor-build)';
+    // Over my arrow (a click launches it), my grip (drag it), or one of my lines: a hand, not
+    // the sword of the country beneath (1.24.1).
+    const ah = this.renderer.overlay.aimHover;
+    const cur = ah
+      ? ah.kind === 'arrow'
+        ? 'pointer'
+        : ah.kind === 'drag'
+          ? 'grabbing'
+          : 'grab'
+      : tool.k === 'none' && this.renderer.overlay.lineHover >= 0
+        ? 'pointer'
+        : tool.k === 'nuke' || (tool.k === 'air' && tool.kind === A.Bomber)
+          ? 'var(--cursor-aim)'
+          : enemy
+            ? 'var(--cursor-attack)'
+            : tool.k === 'none' || tool.k === 'shipMove'
+              ? 'var(--cursor-map)'
+              : 'var(--cursor-build)';
     const canvas = this.renderer.app.canvas;
     if (canvas.style.cursor !== cur) canvas.style.cursor = cur;
     // Build-bar filter: the hovered button (or the active tool) lights up the matching buildings.

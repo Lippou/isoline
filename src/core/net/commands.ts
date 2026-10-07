@@ -38,6 +38,8 @@ export type Command =
   | { t: 'lineAim'; id: number; aim: number }
   /** Launches one of your offensive lines along its arrow, with the charge it has (1.24). */
   | { t: 'lineLaunch'; id: number }
+  /** Organises one of your defensive lines: its bonus once LINE_DEFENSE_PREP is done (1.24.1). */
+  | { t: 'lineOrganize'; id: number }
   | { t: 'shipMove'; ids: number[]; tile: number; patrol: boolean }
   /** `up`: arc towards the top of the map (default) or the bottom (A and H bombs). */
   | { t: 'nuke'; kind: number; tile: number; count: number; up?: boolean }
@@ -106,6 +108,7 @@ export function isWellFormed(c: unknown): c is Command {
     case 'lineAim':
       return isInt(o.id) && isInt(o.aim) && o.aim >= -1;
     case 'lineLaunch':
+    case 'lineOrganize':
       return isInt(o.id);
     case 'lineBorder':
       return (

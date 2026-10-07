@@ -18,6 +18,7 @@ import {
   LineKind,
   aimLine,
   launchLine,
+  organizeLine,
   placeLine,
   placeOffensive,
   removeLine,
@@ -157,6 +158,12 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       const l = game.lines.find((x) => x.id === c.id && x.owner === p.id && x.kind === LineKind.Offensive);
       if (!l || game.phase !== 'playing' || (c.aim >= 0 && !inMap(c.aim))) return;
       aimLine(game, l, c.aim);
+      return;
+    }
+
+    case 'lineOrganize': {
+      const l = game.lines.find((x) => x.id === c.id && x.owner === p.id && x.kind === LineKind.Defensive);
+      if (l && game.phase === 'playing') organizeLine(game, l);
       return;
     }
 

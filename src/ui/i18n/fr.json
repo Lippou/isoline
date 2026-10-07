@@ -430,7 +430,9 @@
     "lineTroops": "Troupes de la ligne…",
     "lineTroopsDesc": "Ajouter des troupes depuis l’armée, ou en rendre.",
     "lineLaunch": "Donner la direction",
-    "lineLaunchDesc": "Puis cliquez sur la carte : l’assaut part vers ce point (une capitale, une ville, un port). Clic droit : retirer la flèche."
+    "lineLaunchDesc": "Puis cliquez sur la carte : l’assaut part vers ce point (une capitale, une ville, un port). Clic droit : retirer la flèche.",
+    "lineOrganize": "Organiser la défense",
+    "lineOrganizeDesc": "10 s de travail ; ensuite, elle ralentit l'ennemi deux fois plus."
   },
   "confirm": {
     "betrayTitle": "Trahir votre allié ?",
@@ -1414,7 +1416,8 @@
     "lineReady": "Votre ligne offensive est prête : cliquez sur sa flèche pour lancer l'assaut.",
     "lineEmpty": "Une de vos lignes défensives a perdu tous ses hommes : elle ne tient plus. Renforcez-la ou démontez-la.",
     "lineShattered": "Une de vos lignes a été prise à revers : elle éclate, {n} hommes perdus.",
-    "nukeAborted": "Missile détruit en vol, sur votre ordre."
+    "nukeAborted": "Missile détruit en vol, sur votre ordre.",
+    "arrowReached": "L'assaut a atteint la pointe de sa flèche : la percée s'arrête, les troupes rentrent."
   },
   "error": {
     "nukeSelfMirv": "Un MIRV ne peut pas viser votre propre pays : ses ogives tomberaient sur tout votre territoire.",
@@ -2512,15 +2515,16 @@
       "ready": "Prête : donnez la direction",
       "ordered": "Direction donnée : part dans {clock}",
       "attacking": "À l’assaut",
-      "digging": "Se retranche : {clock}"
+      "digging": "S'organise : {clock}",
+      "placed": "En place : à organiser (bonus)"
     },
     "aiming": "Cliquez sur la carte : l’assaut part vers ce point. Clic droit : retirer la flèche.",
     "aimTip": "Clic : l’assaut part vers ce point · clic droit : retirer la flèche",
     "rules": "Comment ça marche",
-    "rulesDraw": "Défensive : de face, l’assaillant perd 3 hommes pour 1 et ne perce qu’au-delà de 3 contre 1 ; retranchée (10 s après sa pose), elle ralentit deux fois plus ; prise à revers, elle éclate. Clic sur une ligne pour la gérer, clic droit pour la démonter.",
-    "rulesAssault": "Offensive : cliquez sur un pays voisin pour la poser sur votre frontière (clic droit maintenu : un tronçon). Tirez sa poignée jusqu'à l'objectif : c'est la flèche, que vous seul voyez. Elle se charge en 30 s ; un clic dessus lance l'assaut, même avant la fin, avec les bonus de la charge. Sous la flèche, pertes −50 % et vitesse +50 % ; sur le reste du front, pertes −20 %.",
+    "rulesDraw": "Défensive : en place aussitôt ; « Organiser » (10 s) double son ralentissement. De face, l’assaillant perd 3 hommes pour 1 et ne perce qu’au-delà de 3 contre 1 ; prise à revers, elle éclate. Clic sur une ligne pour la gérer, clic droit pour la démonter.",
+    "rulesAssault": "Offensive : cliquez sur un pays voisin pour la poser sur votre frontière (clic droit maintenu : un tronçon). Tirez sa poignée jusqu'où la percée doit s'arrêter : c'est la flèche, que vous seul voyez. Elle se charge en 30 s ; un clic dessus lance l'assaut, même avant la fin, avec les bonus de la charge. Sous la flèche, pertes −50 % et vitesse +50 % ; sur le reste du front, pertes −20 %. Arrivé à la pointe, l'assaut s'arrête et ses troupes rentrent.",
     "aimOwn": "Pointez la flèche vers les terres ennemies.",
-    "dragTip": "Relâchez sur l'objectif (capitale, ville…) · clic droit : annuler",
+    "dragTip": "Relâchez où la percée doit s'arrêter (capitale, ville…) · clic droit : annuler",
     "gripTip": "Tirez la poignée vers l'objectif pour dessiner la flèche",
     "arrowTip": "Clic sur la flèche : lancer l'assaut (bonus selon la charge)",
     "arrowReady": "ATTAQUE PRÊTE · CLIC",
@@ -3044,7 +3048,7 @@
     "defensive": {
       "name": "Ligne défensive",
       "short": "Ligne déf.",
-      "desc": "Tracez-la sur vos terres (un clic sur le premier point la referme), puis cliquez du côté de l'ennemi : elle est en place aussitôt et se retranche en 10 s. Sa longueur dépend des troupes posées. Chaque case tient avec sa garnison : de face, l'assaillant perd 3 hommes pour 1 à forces égales, et ne perce qu'à plus de 3 contre 1. Devant elle (12 cases), l'ennemi avance jusqu'à 3 fois moins vite, 6 fois une fois retranchée. Prise à revers sur un quart de sa longueur, elle éclate et ses troupes sont perdues."
+      "desc": "Tracez-la sur vos terres (un clic sur le premier point la referme), puis cliquez du côté de l'ennemi : elle est en place aussitôt. Organisez-la ensuite (10 s de travail, fenêtre Front ou clic droit) : elle ralentit alors l'ennemi deux fois plus. Sa longueur dépend des troupes posées. Chaque case tient avec sa garnison : de face, l'assaillant perd 3 hommes pour 1 à forces égales, et ne perce qu'à plus de 3 contre 1. Devant elle (12 cases), l'ennemi avance jusqu'à 3 fois moins vite, 6 fois une fois organisée. Prise à revers sur un quart de sa longueur, elle éclate et ses troupes sont perdues."
     },
     "offensive": {
       "name": "Ligne offensive",
@@ -3091,7 +3095,8 @@
       "arrowSet": "donnée",
       "arrowNone": "à donner",
       "give": "Donner la direction",
-      "launchNow": "Lancer l'assaut ({n}, charge {pct} %)"
+      "launchNow": "Lancer l'assaut ({n}, charge {pct} %)",
+      "organize": "Organiser la défense ({s} s : ralentissement ×2)"
     }
   },
   "bugs": {

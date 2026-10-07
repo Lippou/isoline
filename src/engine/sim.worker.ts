@@ -341,6 +341,7 @@ function sendUpdate(
       aim: l.owner === viewer ? l.aim : -1,
       attack: l.attack,
       laidTick: l.laidTick,
+      organizeTick: l.organizeTick,
     }));
     lastLinesVersion = g.linesVersion;
   }

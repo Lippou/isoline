@@ -321,6 +321,13 @@ function aimBias(game: Game, a: Attack, j: number): number {
   return LINE_AIM_PULL * Math.hypot((j % w) - (a.aim % w), ((j / w) | 0) - ((a.aim / w) | 0));
 }
 
+/** Whether taking `tile` brings attack `a` to its arrow's head (within 1.5 tiles, or the head ours). */
+function reachedAim(game: Game, a: Attack, tile: number): boolean {
+  const w = game.map.width;
+  if (game.owner[a.aim] === a.attacker) return true;
+  return ((tile % w) - (a.aim % w)) ** 2 + (((tile / w) | 0) - ((a.aim / w) | 0)) ** 2 <= 2.25;
+}
+
 /** Turns attack `a` towards `aim` (an offensive line's new arrow): its front re-ordered. */
 export function aimAttack(game: Game, a: Attack, aim: number): void {
   a.aim = aim;
@@ -745,6 +752,14 @@ function advance(game: Game, a: Attack, p: Player, T: Player | null): void {
     }
     game.setOwner(tile, a.attacker);
     a.conquered++;
+    // The arrow's head reached (1.24.1, the player: « une fois que la flèche est finie, la
+    // percée s'arrête. C'est pour ça qu'on choisit la taille de la flèche »): the assault halts,
+    // its troops come home.
+    if (a.aim >= 0 && reachedAim(game, a, tile)) {
+      game.notify(a.attacker, 'notify.arrowReached', 'good', {}, a.aim);
+      finishAttack(game, a);
+      break;
+    }
     // Revolutionaries hold out to the last street: never annexed in one go.
     if (T && T.alive && T.tiles < ANNEX_TILES && !T.revolution) annex(game, p, T);
   }

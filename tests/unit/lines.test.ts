@@ -223,19 +223,49 @@ describe('front lines', () => {
     expect(a.prepared).toBeCloseTo(strength * 0.5, 2);
   });
 
-  it('a defensive line digs in: LINE_DEFENSE_PREP after it is laid, it slows twice as much (1.24)', () => {
+  it('a defensive line, organised on order, slows twice as much once its LINE_DEFENSE_PREP is done (1.24.1)', () => {
     const g = arena();
     const l = wall(g, 2, LineKind.Defensive, 150, true);
     for (let x = 0; x < 145; x++) g.setOwner(g.map.idx(x, 30), 1);
     const tile = g.map.idx(145, 30);
     const s = lineStrength(g, l);
+    const base = 1 + (LINE_DEFENSE_SPEED - 1) * s;
+    // Laid: in place at once, not organised — however long it stands.
+    for (let k = 0; k < LINE_DEFENSE_PREP + 5; k++) g.step([]);
     expect(linePrepared(g, l)).toBe(false);
-    expect(lineDefense(g, tile, 2, 1)!.speed).toBeCloseTo(1 + (LINE_DEFENSE_SPEED - 1) * s);
-    l.laidTick = g.tick - LINE_DEFENSE_PREP;
+    expect(lineDefense(g, tile, 2, 1)!.speed).toBeCloseTo(base);
+    // Organised: LINE_DEFENSE_PREP of work, then the bonus.
+    g.step([cmd(2, { t: 'lineOrganize', id: l.id })]);
+    expect(linePrepared(g, l)).toBe(false);
+    for (let k = 0; k < LINE_DEFENSE_PREP; k++) g.step([]);
     expect(linePrepared(g, l)).toBe(true);
     expect(lineDefense(g, tile, 2, 1)!.speed).toBeCloseTo(
       1 + (LINE_DEFENSE_SPEED * LINE_DEFENSE_PREP_MULT - 1) * s,
     );
+  });
+
+  it("the breakthrough stops at the arrow's head: the assault ends there, its troops back home (1.24.1)", () => {
+    const g = arena();
+    const p1 = g.players[1]!;
+    p1.troops = 400_000;
+    const sector = [28, 29, 30, 31, 32].map((y) => g.map.idx(145, y));
+    const l = placeOffensive(g, p1, 2, sector[2]!, sector, 0.5) as FrontLine;
+    const aim = g.map.idx(151, 30);
+    g.step([cmd(1, { t: 'lineAim', id: l.id, aim })]);
+    l.laidTick = g.tick - LINE_OFFENSE_SETUP;
+    g.step([cmd(1, { t: 'lineLaunch', id: l.id })]);
+    const a = g.attacks.find((x) => x.attacker === 1 && x.target === 2)!;
+    for (let k = 0; k < 400 && !a.done; k++) g.step([]);
+    expect(a.done).toBe(true);
+    // The head reached (it or a tile next to it taken), the troops back home.
+    const near = [-1, 0, 1].some((dy) => [-1, 0, 1].some((dx) => g.owner[aim + dy * g.map.width + dx] === 1));
+    expect(near).toBe(true);
+    expect(p1.troops).toBeGreaterThan(100_000);
+    // It went no further than its head (a few tiles of front round it at most).
+    let far = 0;
+    for (let y = 0; y < 70; y++) for (let x = 156; x < 200; x++) if (g.owner[g.map.idx(x, y)] === 1) far++;
+    expect(far).toBe(0);
+    expect(g.lines).not.toContain(l);
   });
 
   it('the front heads for the arrow, at the same pace; a new arrow turns it', () => {

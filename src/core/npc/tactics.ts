@@ -35,6 +35,12 @@ export interface Tactics {
    */
   lines: number;
   /**
+   * Organises its defensive lines (1.24.1: their slowdown doubled after 10 s): 'always' once
+   * laid; 'capital' only the line guarding its capital (easy, normal: every line organised
+   * froze the fronts of normal world games, a leader stuck under 30 % for half an hour).
+   */
+  organize: 'always' | 'capital';
+  /**
    * Naval play: 0 spawns warships and leaves them where they are (before 1.12); 1 hunts the
    * transports sailing at it; 2 also concentrates its fleet where enemy warships are and
    * guards its ports; 3 also raids the ports and merchants of the enemy it fights.
@@ -87,6 +93,7 @@ export const TACTICS: Record<Difficulty, Tactics> = {
     crownNukes: false,
     reserve: 0,
     lines: 1,
+    organize: 'capital',
     navy: 0,
     counter: false,
     adaptiveResearch: false,
@@ -106,9 +113,12 @@ export const TACTICS: Record<Difficulty, Tactics> = {
     strikeEvery: 150,
     strikeReserve: 0.4,
     harass: false,
-    crownNukes: false,
+    // Normal too (1.24.1, the player: « les IA doivent remplacer un joueur »): a player
+    // facing a runaway goes nuclear.
+    crownNukes: true,
     reserve: 0.5,
     lines: 1,
+    organize: 'capital',
     navy: 1,
     counter: true,
     adaptiveResearch: true,
@@ -131,6 +141,7 @@ export const TACTICS: Record<Difficulty, Tactics> = {
     crownNukes: true,
     reserve: 0.75,
     lines: 2,
+    organize: 'always',
     navy: 2,
     counter: true,
     adaptiveResearch: true,
@@ -153,6 +164,7 @@ export const TACTICS: Record<Difficulty, Tactics> = {
     crownNukes: true,
     reserve: 0.9,
     lines: 3,
+    organize: 'always',
     navy: 3,
     counter: true,
     adaptiveResearch: true,

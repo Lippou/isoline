@@ -430,7 +430,9 @@
     "lineTroops": "Line troops…",
     "lineTroopsDesc": "Add troops from the army, or send some back.",
     "lineLaunch": "Give the direction",
-    "lineLaunchDesc": "Then click the map: the assault heads for that point (a capital, a city, a port). Right click: take the arrow back."
+    "lineLaunchDesc": "Then click the map: the assault heads for that point (a capital, a city, a port). Right click: take the arrow back.",
+    "lineOrganize": "Organise the defence",
+    "lineOrganizeDesc": "10 s of work; then it slows the enemy twice as much."
   },
   "confirm": {
     "betrayTitle": "Betray your ally?",
@@ -1414,7 +1416,8 @@
     "lineReady": "Your offensive line is ready: click its arrow to launch the assault.",
     "lineEmpty": "One of your defensive lines has lost all its men: it no longer holds. Reinforce it or take it down.",
     "lineShattered": "One of your lines was turned: it shatters, {n} men lost.",
-    "nukeAborted": "Missile blown up in flight, on your order."
+    "nukeAborted": "Missile blown up in flight, on your order.",
+    "arrowReached": "The assault reached its arrow's head: the breakthrough stops, the troops come home."
   },
   "error": {
     "nukeSelfMirv": "A MIRV cannot target your own country: its warheads would fall all over your land.",
@@ -2512,15 +2515,16 @@
       "ready": "Ready: give the direction",
       "ordered": "Direction given: goes in {clock}",
       "attacking": "On the assault",
-      "digging": "Digging in: {clock}"
+      "digging": "Organising: {clock}",
+      "placed": "In place: organise it (bonus)"
     },
     "aiming": "Click the map: the assault heads for that point. Right click: take the arrow back.",
     "aimTip": "Click: the assault heads here · right click: take the arrow back",
     "rules": "How it works",
-    "rulesDraw": "Defensive: head-on, the attacker loses 3 men for 1 and only breaks through past 3 to 1; dug in (10 s after it is laid), it slows twice as much; turned, it shatters. Click a line to manage it, right click to take it down.",
-    "rulesAssault": "Offensive: click a neighbouring country to lay it on your border (hold right click: a stretch). Drag its grip to the objective: that is the arrow, which only you see. It charges in 30 s; a click on it launches the assault, even before, with the bonuses of its charge. Under the arrow, losses −50 % and speed +50 %; along the rest of the front, losses −20 %.",
+    "rulesDraw": "Defensive: in place at once; “Organise” (10 s) doubles its slowdown. Head-on, the attacker loses 3 men for 1 and only breaks through past 3 to 1; turned, it shatters. Click a line to manage it, right click to take it down.",
+    "rulesAssault": "Offensive: click a neighbouring country to lay it on your border (hold right click: a stretch). Drag its grip to where the breakthrough should stop: that is the arrow, which only you see. It charges in 30 s; a click on it launches the assault, even before, with the bonuses of its charge. Under the arrow, losses −50 % and speed +50 %; along the rest of the front, losses −20 %. At the arrow's head, the assault stops and its troops come home.",
     "aimOwn": "Point the arrow into enemy land.",
-    "dragTip": "Release on the objective (capital, city…) · right click: cancel",
+    "dragTip": "Release where the breakthrough should stop (capital, city…) · right click: cancel",
     "gripTip": "Drag the grip to the objective to draw the arrow",
     "arrowTip": "Click the arrow: launch the assault (bonuses by its charge)",
     "arrowReady": "ATTACK READY · CLICK",
@@ -3044,7 +3048,7 @@
     "defensive": {
       "name": "Defensive line",
       "short": "Def. line",
-      "desc": "Draw it on your land (a click on the first point closes it), then click the enemy's side: it is in place at once and digs in within 10 s. Its length depends on the troops on it. Each tile holds with its garrison: head-on, the attacker loses 3 men for 1 at even forces and only breaks through past 3 to 1. In front of it (12 tiles), the enemy advances up to 3 times slower, 6 times once it has dug in. Turned on a quarter of its length, it shatters and its troops are lost."
+      "desc": "Draw it on your land (a click on the first point closes it), then click the enemy's side: it is in place at once. Then organise it (10 s of work, Front window or right click): it slows the enemy twice as much. Its length depends on the troops on it. Each tile holds with its garrison: head-on, the attacker loses 3 men for 1 at even forces and only breaks through past 3 to 1. In front of it (12 tiles), the enemy advances up to 3 times slower, 6 times once organised. Turned on a quarter of its length, it shatters and its troops are lost."
     },
     "offensive": {
       "name": "Offensive line",
@@ -3091,7 +3095,8 @@
       "arrowSet": "given",
       "arrowNone": "to give",
       "give": "Give the direction",
-      "launchNow": "Launch the assault ({n}, charge {pct} %)"
+      "launchNow": "Launch the assault ({n}, charge {pct} %)",
+      "organize": "Organise the defence ({s} s: slowdown ×2)"
     }
   },
   "bugs": {

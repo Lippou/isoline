@@ -79,8 +79,13 @@ export interface FrontLine {
   aim: number;
   /** Offensive, launched: the attack it became (the line follows its front), -1 before. */
   attack: number;
-  /** Tick it was laid (1.24): an offensive line's charge, a defensive line's digging in. */
+  /** Tick it was laid (1.24): an offensive line's charge. */
   laidTick: number;
+  /**
+   * A defensive line organised (1.24.1, on the player's order, 'lineOrganize'): the tick its
+   * LINE_DEFENSE_PREP of work is done (its bonus from then on); -1 not ordered.
+   */
+  organizeTick: number;
 }
 
 /** Derived (never saved): bounding boxes (with the reach) and the lines of each owner. */
@@ -290,9 +295,20 @@ export function lineDefense(
   return { speed: 1 + (slow - 1) * s };
 }
 
-/** Whether a defensive line has dug in (LINE_DEFENSE_PREP after it was laid, 1.24). */
+/**
+ * Whether a defensive line is organised (1.24.1, the player: « pour mettre une défense, c'est
+ * immédiat. Mais une fois mise, on peut l'organiser, et là ça prend 10 secondes, et donc là, il
+ * prend ses bonus en plus »): ordered ('lineOrganize'), its LINE_DEFENSE_PREP done.
+ */
 export function linePrepared(game: Game, l: FrontLine): boolean {
-  return game.tick >= l.laidTick + LINE_DEFENSE_PREP;
+  return l.organizeTick >= 0 && game.tick >= l.organizeTick;
+}
+
+/** Orders a defensive line organised (the command 'lineOrganize'): done LINE_DEFENSE_PREP later. */
+export function organizeLine(game: Game, l: FrontLine): void {
+  if (l.kind !== LineKind.Defensive || l.organizeTick >= 0) return;
+  l.organizeTick = game.tick + LINE_DEFENSE_PREP;
+  game.linesVersion++;
 }
 
 /** An offensive line's charge, 0–1 (1.24): the share of LINE_OFFENSE_SETUP its troops have waited. */
@@ -516,6 +532,7 @@ function lay(
     aim: -1,
     attack: -1,
     laidTick: game.tick,
+    organizeTick: -1,
   };
   game.lines.push(l);
   for (const t of tiles) game.lineAt.set(t, l.id);
@@ -821,7 +838,9 @@ export function rebuildLineIndex(game: Game): void {
     l.aim ??= -1;
     l.attack ??= -1;
     // (Before 1.24: a line's charge counted from its ready tick; defensive ones were dug in.)
-    l.laidTick ??= l.readyTick - (l.kind === LineKind.Offensive ? LINE_OFFENSE_SETUP : LINE_DEFENSE_PREP);
+    l.laidTick ??= l.readyTick - (l.kind === LineKind.Offensive ? LINE_OFFENSE_SETUP : 0);
+    // (1.24 lines dug in by themselves: organised.)
+    l.organizeTick ??= l.kind === LineKind.Defensive ? l.laidTick + LINE_DEFENSE_PREP : -1;
     if (l.attack < 0) for (const t of l.tiles) game.lineAt.set(t, l.id);
   }
   game.linesVersion++;

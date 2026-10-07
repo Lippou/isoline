@@ -34,7 +34,7 @@
     l.attack >= 0
       ? 0
       : l.kind === 0
-        ? Math.max(0, l.laidTick + LINE_DEFENSE_PREP - hud.tick)
+        ? Math.max(0, l.organizeTick - hud.tick)
         : Math.max(0, l.readyTick - hud.tick);
   /** An offensive line's charge, 0–1: its bonuses if launched now. */
   const chargeOf = (l: LineView) => Math.max(0, Math.min(1, (hud.tick - l.laidTick) / LINE_OFFENSE_SETUP));
@@ -47,6 +47,7 @@
     if (l.attack >= 0) return { key: 'front.state.attacking', icon: 'lineOffense' };
     if (l.troops < 1) return { key: 'front.state.empty', icon: 'warning' };
     if (l.kind === 1 && leftOf(l) > 0 && l.aim >= 0) return { key: 'front.state.ordered', icon: 'hourglass' };
+    if (l.kind === 0 && l.organizeTick < 0) return { key: 'front.state.placed', icon: 'warning' };
     if (leftOf(l) > 0)
       return { key: l.kind === 0 ? 'front.state.digging' : 'front.state.preparing', icon: 'hourglass' };
     return l.kind === 0
@@ -196,6 +197,17 @@
           {/if}
         </dl>
 
+        {#if sel.kind === 0 && sel.organizeTick < 0}
+          <button
+            class="np-btn ink launch"
+            onclick={() => s.cmd({ t: 'lineOrganize', id: sel.id })}
+            disabled={sel.troops < 1}
+            data-testid="front-organize"
+            ><Icon name="lineDefense" size={14} />{t('line.card.organize', {
+              s: LINE_DEFENSE_PREP / 10,
+            })}</button
+          >
+        {/if}
         {#if sel.kind === 1}
           <button class="np-btn ink launch" onclick={aim} disabled={sel.troops < 1} data-testid="front-launch"
             ><Icon name="lineOffense" size={14} />{sel.attack >= 0

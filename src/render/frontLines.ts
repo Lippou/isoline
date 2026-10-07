@@ -74,6 +74,8 @@ export interface FrontLineContext {
   aim: AimDraft | null;
   /** The words on an offensive line's arrow (1.24): its charge, or ready — a click launches it. */
   arrowText: (charge: number) => string;
+  /** My arrow or grip under the pointer: lit in brass (1.24.1). */
+  aimHover: { line: number; kind: 'grip' | 'arrow' | 'drag' } | null;
 }
 
 /** A point along a polyline, with the unit normal pointing to the side faced. */
@@ -257,16 +259,17 @@ export class FrontLineLayer {
       const mine = l.owner === ctx.viewer;
       const lod = !mine && z < 1.6 ? 'far' : 'near';
       const launched = l.attack >= 0;
-      // Time left: an offensive line's charge; a defensive line's digging in (1.24).
+      // Time left: an offensive line's charge; a defensive line's organisation (1.24.1).
+      const bare = l.kind === 0 && l.organizeTick < 0;
       const left =
         l.kind === 0
-          ? Math.max(0, l.laidTick + LINE_DEFENSE_PREP - ctx.tick)
+          ? Math.max(0, l.organizeTick - ctx.tick)
           : launched
             ? 0
             : Math.max(0, l.readyTick - ctx.tick);
       const empty = l.troops < 1;
       const dig = l.kind === 0 && left > 0 ? Math.ceil((left / LINE_DEFENSE_PREP) * 8) : 0;
-      const sig = `${step}|${lod}|${ctx.zones && mine}|${l.tiles.length}|${l.tiles[0]}|${l.tiles.at(-1)}|${empty}|${left > 0}|${launched}|${dig}`;
+      const sig = `${step}|${lod}|${ctx.zones && mine}|${l.tiles.length}|${l.tiles[0]}|${l.tiles.at(-1)}|${empty}|${left > 0}|${launched}|${dig}|${bare}`;
       if (sig !== v.sig) {
         v.sig = sig;
         v.arrowSig = '';
@@ -336,6 +339,18 @@ export class FrontLineLayer {
       }
     };
     if (ctx.hover >= 0) glow(ctx.hover);
+    // The arrow under the pointer lights up in brass (a click launches it); a grip, a ring.
+    const ah = ctx.aimHover;
+    const hv = ah ? this.gfx.get(ah.line) : undefined;
+    if (ah && hv?.root.visible) {
+      if (ah.kind === 'arrow' && hv.arrow) {
+        const a = hv.arrow;
+        planArrow(g, hv.runs, [a.x1, a.y1], 1, ctx.zoom, BRASS);
+      } else if (ah.kind === 'grip' && hv.grip) {
+        g.circle(hv.grip[0], hv.grip[1], px(15)).stroke({ color: CORE, width: px(4), alpha: 0.7 });
+        g.circle(hv.grip[0], hv.grip[1], px(15)).stroke({ color: BRASS, width: px(2.2) });
+      }
+    }
     const bd = ctx.border;
     if (bd?.brush) {
       const [bx, by, r] = bd.brush;
@@ -431,7 +446,7 @@ export class FrontLineLayer {
           v.ink,
           run,
           px,
-          empty ? 'empty' : left > 0 ? 'laying' : 'held',
+          empty ? 'empty' : l.organizeTick < 0 ? 'bare' : left > 0 ? 'laying' : 'held',
           1 - left / LINE_DEFENSE_PREP,
         );
       else if (launched) attackFront(v.ink, run, px);
@@ -692,15 +707,16 @@ function zoneShade(
 }
 
 /**
- * A defensive stretch (1.24, the player's choice: barbed wire): a thin trench, and in front of
- * it a belt of concertina coils on pickets. Digging in (its first 10 s), the coils run out
- * along it as the work goes on (`done`, 0–1), dotted beyond; emptied, a grey dashed trace.
+ * A defensive stretch (1.24, the player's choice: barbed wire): a thin trench, and — once
+ * organised (1.24.1) — in front of it a belt of concertina coils on pickets. Not organised:
+ * the trench alone, its wire to come dotted; organising (10 s), the coils run out along it as
+ * the work goes on (`done`, 0–1); emptied, a grey dashed trace.
  */
 function barbedWire(
   g: Graphics,
   run: Sample[],
   px: (v: number) => number,
-  state: 'held' | 'laying' | 'empty',
+  state: 'held' | 'laying' | 'bare' | 'empty',
   done: number,
 ): void {
   if (state === 'empty') {
@@ -712,7 +728,7 @@ function barbedWire(
   polyline(g, run, RIM, px(4.6), 0.55);
   polyline(g, run, CORE, px(2.4), 0.95);
   const len = run[run.length - 1]!.s - run[0]!.s;
-  const upTo = state === 'laying' ? len * Math.max(0, Math.min(1, done)) : len;
+  const upTo = state === 'bare' ? 0 : state === 'laying' ? len * Math.max(0, Math.min(1, done)) : len;
   const out = px(9);
   const r = px(3.2);
   for (let at = 0; at <= upTo; at += px(6)) {

@@ -467,6 +467,16 @@
         }),
       });
     }
+    if (line && line.kind === 0 && line.organizeTick < 0 && line.troops >= 1)
+      out.push({
+        id: 'lineOrganize',
+        group: 'main',
+        label: t('radial.lineOrganize'),
+        icon: 'lineDefense',
+        hint: '10 s',
+        desc: t('radial.lineOrganizeDesc'),
+        run: act(() => s.cmd({ t: 'lineOrganize', id: line.id })),
+      });
     if (line && line.attack < 0) {
       out.push({
         id: 'lineTroops',

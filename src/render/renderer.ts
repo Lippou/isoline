@@ -99,6 +99,8 @@ export interface Overlay {
   /** An offensive line being laid on a border, and one's arrow being aimed (input.ts). */
   border: BorderDraft | null;
   aim: AimDraft | null;
+  /** My arrow or grip under the pointer (1.24.1: lit, its own cursor), or one being dragged. */
+  aimHover: { line: number; kind: 'grip' | 'arrow' | 'drag' } | null;
   /** The words on an offensive line's arrow for its charge (set by the interface, i18n). */
   arrowText: (charge: number) => string;
   /** Build-bar filter: these building types light up, the others fade (null: no filter). */
@@ -345,6 +347,7 @@ export class GameRenderer {
     border: null,
     aim: null,
     arrowText: (c: number) => `${Math.round(c * 100)} %`,
+    aimHover: null,
     buildingFilter: null,
     aimTargets: false,
     selection: new Set(),
@@ -1313,6 +1316,7 @@ export class GameRenderer {
         border: ov.border,
         aim: ov.aim,
         arrowText: ov.arrowText,
+        aimHover: ov.aimHover,
       },
       ov.lineDraft,
     );

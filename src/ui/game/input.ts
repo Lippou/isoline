@@ -391,6 +391,7 @@ export class InputController {
     if (k !== this.aimHover) {
       if (!k && this.aimHover) hud.lineTip = null;
       this.aimHover = k;
+      this.r.overlay.aimHover = k ? { line: grip >= 0 ? grip : arrow, kind: k } : null;
       this.el.style.cursor =
         k === 'grip' ? 'grab' : k === 'arrow' ? 'pointer' : this.r.overlay.lineHover >= 0 ? 'pointer' : '';
     }
@@ -399,6 +400,8 @@ export class InputController {
 
   private endGripDrag(): void {
     this.gripDrag = -1;
+    this.r.overlay.aimHover = null;
+    this.aimHover = '';
     this.r.overlay.aim = null;
     hud.lineTip = null;
     this.el.style.cursor = '';
@@ -550,6 +553,7 @@ export class InputController {
         this.gripDrag = id;
         this.r.overlay.aim = { line: id, to: this.r.camera.screenToWorld(x, y) };
         this.el.style.cursor = 'grabbing';
+        this.r.overlay.aimHover = { line: id, kind: 'drag' };
         hud.lineTip = { text: t('front.dragTip'), sx: x, sy: y, ok: true };
         return;
       }

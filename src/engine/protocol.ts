@@ -331,8 +331,10 @@ export interface LineView {
   aim: number;
   /** Offensive, launched: its attack's id (the line is that attack's front), -1 before. */
   attack: number;
-  /** Tick it was laid (1.24): an offensive line's charge, a defensive line's digging in. */
+  /** Tick it was laid (1.24): an offensive line's charge. */
   laidTick: number;
+  /** Defensive: the tick its organisation is done (1.24.1), -1 not ordered. */
+  organizeTick: number;
 }
 
 export interface RailView {

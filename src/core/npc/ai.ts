@@ -24,7 +24,15 @@ import { planBoat } from '../units/ships';
 import { samRangeOf } from '../units/nukes';
 import { pathLength } from '../map/nav';
 import { castVote } from '../rules/features';
-import { NATION_RESEARCH, isResearched, lockFor, planGoal, techId, techSam } from '../rules/tech';
+import {
+  NATION_RESEARCH,
+  buildingUnlock,
+  isResearched,
+  lockFor,
+  planGoal,
+  techId,
+  techSam,
+} from '../rules/tech';
 import { maxTroops } from '../game/economy';
 import type { Building } from '../buildings/building';
 import { doomStage, doomSurvivalShare, outsideNextZone, shares } from '../rules/victory';
@@ -43,7 +51,7 @@ import { thinkNavy } from './navy';
 import { AI_RAID_MEMORY, raider, thinkAir } from './airpower';
 import { skyThreat, tryNuke, warWish, type ArsenalMem, type WarState, type Wish } from './arsenal';
 import { barricadesUp, guerrilla, nextSpread } from '../rules/revolution';
-import { LineKind, lineAcross, linesOf, locate } from '../rules/lines';
+import { LineKind, lineAcross, linesOf, locate, type FrontLine } from '../rules/lines';
 
 /** A nation's memory (part of the AI state, hence of saves; the air force's and the arsenal's included). */
 interface Mem extends ArsenalMem {
@@ -509,7 +517,13 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
       sam < 0 && air < 0 && raided && game.config.features.radar && p.buildingCount[B.Airfield]! > 0
         ? lockFor(p.tech, 'radar')
         : -1;
-    const urgent = sam >= 0 ? sam : air >= 0 ? air : radar;
+    // A runaway on the map (normal and up, 1.24.1): the silo's technology, to strike it as a
+    // player would.
+    const crownTech =
+      tac.crownNukes && game.config.allowNukes && runaway > 0 && runaway !== p.id && !p.allies.has(runaway)
+        ? lockFor(p.tech, buildingUnlock(B.Silo))
+        : -1;
+    const urgent = sam >= 0 ? sam : air >= 0 ? air : radar >= 0 ? radar : crownTech;
     let goal = urgent;
     if (goal < 0 && p.researching < 0) {
       const atWar = tac.adaptiveResearch && (underAttack || front || game.tick - m.lastWar < 1500);
@@ -524,7 +538,15 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
   retireLines(game, p, underAttack);
   // Offensive lines whose troops have waited long enough go over the top (1.20), their
   // arrow on the enemy's capital (1.22), else straight across the border.
-  for (const l of linesOf(game, p.id))
+  for (const l of [...linesOf(game, p.id)]) {
+    // Defensive lines are organised at once (1.24.1: the bonus a player orders the same way).
+    if (
+      (tac.organize === 'always' || linesNearCapital(game, p, l)) &&
+      l.kind === LineKind.Defensive &&
+      l.organizeTick < 0 &&
+      l.troops >= 1
+    )
+      applyCommand(game, p.id, { t: 'lineOrganize', id: l.id });
     if (l.kind === LineKind.Offensive && l.attack < 0 && l.troops >= 1) {
       // The arrow at once (on the capital, else straight across), the assault fully charged.
       if (l.aim < 0) {
@@ -535,6 +557,7 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
       }
       if (l.aim >= 0 && l.readyTick <= game.tick) applyCommand(game, p.id, { t: 'lineLaunch', id: l.id });
     }
+  }
   if (tac.counter) cost += answerSpentWaves(game, p, m, nb, incoming, cap);
 
   // 4. Expansion & offensive choice.
@@ -683,6 +706,14 @@ function warGoal(p: Player, plan: 'normal' | 'hard'): number {
     if (id >= 0 && !isResearched(p.tech, id)) return id;
   }
   return -1;
+}
+
+/** Whether line l stands within LINE_REACH + 6 tiles of p's capital (the line guarding it). */
+function linesNearCapital(game: Game, p: Player, l: FrontLine): boolean {
+  if (p.capital < 0) return false;
+  const w = game.map.width;
+  const at = locate(l.pts, (p.capital % w) + 0.5, ((p.capital / w) | 0) + 0.5);
+  return Math.hypot(at.px - (p.capital % w) - 0.5, at.py - ((p.capital / w) | 0) - 0.5) <= LINE_REACH + 6;
 }
 
 /** p's lines of `kind` standing within reach of `tile` (rules/lines.ts). */

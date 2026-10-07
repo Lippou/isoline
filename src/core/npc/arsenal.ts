@@ -109,7 +109,8 @@ export function airfieldsWanted(game: Game, p: Player, war: WarState): number {
  */
 export function silosWanted(game: Game, p: Player, war: WarState): number {
   const tac = TACTICS[game.config.difficulty];
-  if (tac.bombs < 2 || p.buildingCount[B.City]! < 3) return 0;
+  // (Normal too since 1.24.1: against the runaway, or once nuked.)
+  if (tac.bombs < 1 || p.buildingCount[B.City]! < 3) return 0;
   const runaway = runawayOf(game);
   const crown = runaway > 0 && runaway !== p.id && tac.crownNukes && war.enemies.has(runaway);
   if (crown || game.ai.nukedBy.has(p.id)) return war.nukes > 1 ? 2 : 1;
@@ -287,7 +288,16 @@ export function tryNuke(game: Game, p: Player, m: ArsenalMem, ctx: NukeContext):
   const revenge = enemy > 0;
   // Hard and up: the runaway leader (OpenFront nukes its crown), before old grudges.
   const runaway = runawayOf(game);
-  if (enemy < 0 && runaway > 0 && runaway !== p.id && !p.allies.has(runaway) && tac.crownNukes)
+  // (Normal, 1.24.1: only a runaway that has attacked us — a calm player strikes back; every
+  // nation nuking the leader at once left world games without a winner.)
+  if (
+    enemy < 0 &&
+    runaway > 0 &&
+    runaway !== p.id &&
+    !p.allies.has(runaway) &&
+    tac.crownNukes &&
+    (tac.bombs >= 2 || (m.grudge.get(runaway) ?? 0) > 0)
+  )
     enemy = runaway;
   if (enemy < 0) {
     let g = 8 / ctx.nukes;

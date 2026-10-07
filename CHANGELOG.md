@@ -2,6 +2,14 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.25.0] — Défenses à organiser, percées qui s'arrêtent, nations nucléaires
+### Modifié
+- **Organiser une défense** : la ligne défensive agit dès sa pose ; « Organiser la défense » (fenêtre Front ou clic droit) lance 10 s de travail, après quoi elle ralentit l'ennemi deux fois plus. Les barbelés apparaissent avec l'organisation.
+- **La percée s'arrête à la pointe de la flèche** : arrivé au bout, l'assaut s'arrête et ses troupes rentrent. La longueur de la flèche règle la profondeur de l'attaque.
+- **Les nations vont au nucléaire dès Normal** face au pays qui s'envole : programme nucléaire, silo, bombes A sur le meneur — comme le ferait un joueur.
+### Corrigé
+- **On voit quand on survole la flèche** : elle s'éclaire en laiton et le curseur devient une main, au lieu de l'épée du pays ennemi en dessous.
+
 ## [1.24.0] — Barbelés, flèche d'acier, assaut au clic
 ### Modifié
 - **La flèche d'attaque se tire depuis la ligne** : une poignée est posée sur chaque ligne offensive ; tirez-la jusqu'à l'objectif. Clic droit pendant le geste : annulé. Seul vous voyez la flèche.
