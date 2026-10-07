@@ -114,6 +114,8 @@
     // the card would hide the border and the arrow.
     const tl = hud.tool;
     if (tl.k === 'assault' || (tl.k === 'line' && tl.kind === 1)) return null;
+    // (Over an arrow or a grip, or dragging one: its note says what to do.)
+    if (hud.lineTip && tl.k === 'none') return null;
     const s = currentSession()?.state;
     if (!s) return null;
     // Fog of war: other players' details only where the viewer can see.

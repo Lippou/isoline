@@ -1,7 +1,7 @@
 // Mouse / trackpad / keyboard → camera moves and game commands.
 import type { GameRenderer } from '../../render/renderer';
 import type { Session } from '../../engine/session';
-import { hud } from '../stores/game.svelte';
+import { hud, openPanel } from '../stores/game.svelte';
 import { confirmModal } from '../stores/app.svelte';
 import { i18n, t } from '../i18n/i18n.svelte';
 import { settings } from '../stores/settings.svelte';
@@ -69,6 +69,10 @@ export class InputController {
   private lastHoverTile = -1;
   /** The pointer on the map (screen px), null when it is off the map or over the interface. */
   private pointer: { x: number; y: number } | null = null;
+  /** An offensive line's grip being dragged (1.24: the arrow drawn from it), -1 none. */
+  private gripDrag = -1;
+  /** What the pointer is over, among my arrows and grips (its cursor and note). */
+  private aimHover: '' | 'grip' | 'arrow' = '';
   /** The last click of a line being drawn (a second one there, soon after: the double click). */
   private lineClick = { t: 0, x: -99, y: -99 };
 
@@ -124,7 +128,11 @@ export class InputController {
       this.borderOf = null;
       if (tl.k !== 'line') hud.lineTip = null;
     }
-    if (this.r.overlay.aim && (tl.k !== 'assault' || tl.line !== this.r.overlay.aim.line)) {
+    if (
+      this.r.overlay.aim &&
+      this.gripDrag < 0 &&
+      (tl.k !== 'assault' || tl.line !== this.r.overlay.aim.line)
+    ) {
       this.r.overlay.aim = null;
       if (tl.k !== 'line') hud.lineTip = null;
     }
@@ -373,6 +381,47 @@ export class InputController {
     done();
   }
 
+  // ------------------------------------------------- offensive line: grip and arrow (1.24)
+  /** The pointer over a grip (drag it) or an arrow (click it): its cursor and note. */
+  private updateAimHover(sx: number, sy: number): void {
+    const free = hud.tool.k === 'none' && !this.down && !!this.pointer && !hud.photo;
+    const grip = free ? this.r.lineGripAt(sx, sy) : -1;
+    const arrow = free && grip < 0 ? this.r.lineArrowAt(sx, sy) : -1;
+    const k = grip >= 0 ? 'grip' : arrow >= 0 ? 'arrow' : '';
+    if (k !== this.aimHover) {
+      if (!k && this.aimHover) hud.lineTip = null;
+      this.aimHover = k;
+      this.el.style.cursor =
+        k === 'grip' ? 'grab' : k === 'arrow' ? 'pointer' : this.r.overlay.lineHover >= 0 ? 'pointer' : '';
+    }
+    if (k) hud.lineTip = { text: t(k === 'grip' ? 'front.gripTip' : 'front.arrowTip'), sx, sy, ok: true };
+  }
+
+  private endGripDrag(): void {
+    this.gripDrag = -1;
+    this.r.overlay.aim = null;
+    hud.lineTip = null;
+    this.el.style.cursor = '';
+  }
+
+  /** The grip let go: dragged, the arrow points there; a plain click opens the line's sheet. */
+  private gripRelease(moved: boolean, sx: number, sy: number): void {
+    const id = this.gripDrag;
+    this.endGripDrag();
+    if (!moved) {
+      hud.frontSel = id;
+      openPanel('front');
+      return;
+    }
+    const tile = this.r.tileAtScreen(sx, sy);
+    if (tile < 0) return;
+    if (this.session.state.owner[tile] === this.session.viewer) {
+      note(t('front.aimOwn'), 'info');
+      return;
+    }
+    this.session.cmd({ t: 'lineAim', id, aim: tile });
+  }
+
   // ------------------------------------------------- offensive line: the arrow
   /** An offensive line's arrow being aimed (hud.tool 'assault'). */
   private get aim(): AimDraft | null {
@@ -398,7 +447,7 @@ export class InputController {
     hud.lineTip = null;
     if (!line) return;
     if (button === 2) {
-      if (line.aim >= 0 && line.attack < 0) this.session.cmd({ t: 'lineLaunch', id: a.line, aim: -1 });
+      if (line.aim >= 0 && line.attack < 0) this.session.cmd({ t: 'lineAim', id: a.line, aim: -1 });
       return;
     }
     const tile = this.r.tileAtScreen(sx, sy);
@@ -409,7 +458,7 @@ export class InputController {
       note(t('front.aimOwn'), 'info');
       return;
     }
-    this.session.cmd({ t: 'lineLaunch', id: a.line, aim: tile });
+    this.session.cmd({ t: 'lineAim', id: a.line, aim: tile });
   }
 
   /** A press, then a release (a drag or a click) of the left button with the line tool. */
@@ -489,6 +538,22 @@ export class InputController {
   private pointerDown(e: PointerEvent): void {
     const [x, y] = this.local(e);
     this.down = { x, y, button: e.button, shift: e.shiftKey, moved: false, t: performance.now() };
+    // A grip dragged (1.24): the arrow follows the pointer; the right button calls it off.
+    if (this.gripDrag >= 0 && e.button === 2) {
+      this.endGripDrag();
+      this.down = null;
+      return;
+    }
+    if (e.button === 0 && hud.tool.k === 'none' && !hud.photo) {
+      const id = this.r.lineGripAt(x, y);
+      if (id >= 0) {
+        this.gripDrag = id;
+        this.r.overlay.aim = { line: id, to: this.r.camera.screenToWorld(x, y) };
+        this.el.style.cursor = 'grabbing';
+        hud.lineTip = { text: t('front.dragTip'), sx: x, sy: y, ok: true };
+        return;
+      }
+    }
     const d = e.button === 0 ? this.draft : null;
     if (d) this.linePress(d, x, y);
     // Laying an offensive line: the right button held sweeps the stretch of border.
@@ -516,6 +581,14 @@ export class InputController {
       this.updateHover(tile, x, y);
       this.updateLineHover(tile);
     }
+    if (this.gripDrag >= 0) {
+      const am = this.r.overlay.aim;
+      if (am) am.to = this.r.camera.screenToWorld(x, y);
+      if (this.down && Math.hypot(x - this.down.x, y - this.down.y) > 4) this.down.moved = true;
+      hud.lineTip = { text: t('front.dragTip'), sx: x, sy: y, ok: true };
+      return;
+    }
+    this.updateAimHover(x, y);
     const bd = this.pointer ? this.border : null;
     if (bd) {
       if (this.down?.button === 2) {
@@ -559,6 +632,10 @@ export class InputController {
     this.down = null;
     if (!d) return;
     const [x, y] = this.local(e);
+    if (this.gripDrag >= 0 && d.button === 0) {
+      this.gripRelease(d.moved, x, y);
+      return;
+    }
     if (this.r.overlay.dragRect) {
       const [x0, y0, x1, y1] = this.r.overlay.dragRect;
       this.r.overlay.dragRect = null;
@@ -584,6 +661,14 @@ export class InputController {
     if (d.moved) {
       if (d.button === 0 || d.button === 1) this.r.camera.fling(this.velocity.x, this.velocity.y);
       return;
+    }
+    // A click on one of my arrows (1.24): its assault goes now, with the charge it has.
+    if (d.button === 0 && hud.tool.k === 'none' && !hud.photo) {
+      const id = this.r.lineArrowAt(x, y);
+      if (id >= 0) {
+        this.session.cmd({ t: 'lineLaunch', id });
+        return;
+      }
     }
     const tile = this.r.tileAtScreen(x, y);
     if (tile < 0) return;

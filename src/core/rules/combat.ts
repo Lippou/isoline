@@ -20,6 +20,8 @@ import {
   LARGE_DEFENDER_DEPTH,
   LARGE_TERRITORY_MIDPOINT,
   LINE_AIM_PULL,
+  LINE_ARROW_HALF,
+  LINE_FRONT_LOSS,
   LINE_OFFENSE_LOSS,
   LINE_OFFENSE_SPEED,
   LARGE_TERRITORY_STEEPNESS,
@@ -86,6 +88,8 @@ export class Attack {
    * lies that way (aimBias), at the same pace.
    */
   aim = -1;
+  /** Where the arrow starts (1.24): the line's tile nearest its head; -1 none. */
+  aimFrom = -1;
 
   constructor(id: number, attacker: number, target: number, troops: number, tick: number) {
     this.id = id;
@@ -216,10 +220,13 @@ export function attackLogic(game: Game, a: Attack, tile: number, borderSize: num
   let mag = MAG[t]! * game.techMagMult(a.attacker, t);
   // A harsh winter (world event) slows the conquest of cold land.
   let cost = SPEED[t]! * winterCost(game, t);
-  // Troops prepared on an offensive line (rules/lines.ts, 1.20): fewer losses, faster.
+  // Troops prepared on an offensive line (rules/lines.ts, 1.20; split by its arrow, 1.24):
+  // under the arrow, far fewer losses and faster; along the rest of the line, fewer losses.
   if (a.prepared > 0) {
-    mag *= 1 - LINE_OFFENSE_LOSS * a.prepared;
-    cost /= 1 + (LINE_OFFENSE_SPEED - 1) * a.prepared;
+    if (inArrow(game, a, tile)) {
+      mag *= 1 - LINE_OFFENSE_LOSS * a.prepared;
+      cost /= 1 + (LINE_OFFENSE_SPEED - 1) * a.prepared;
+    } else mag *= 1 - LINE_FRONT_LOSS * a.prepared;
   }
   // A defensive line in the way slows the advance.
   if (T) {
@@ -293,6 +300,18 @@ const FRONT_SHAPE = 0.02;
 
 function jitter(game: Game, tile: number, attackId: number): number {
   return 0.65 + (hash2(tile, attackId, game.config.seed) & 1023) / 1460;
+}
+
+/** Whether `tile` lies under the arrow of attack `a`: within LINE_ARROW_HALF of its shaft. */
+export function inArrow(game: Game, a: Attack, tile: number): boolean {
+  if (a.aim < 0 || a.aimFrom < 0) return false;
+  const w = game.map.width;
+  const [ax, ay, bx, by] = [a.aimFrom % w, (a.aimFrom / w) | 0, a.aim % w, (a.aim / w) | 0];
+  const [x, y] = [tile % w, (tile / w) | 0];
+  const [dx, dy] = [bx - ax, by - ay];
+  const len2 = dx * dx + dy * dy;
+  const t = len2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2)) : 0;
+  return (x - ax - t * dx) ** 2 + (y - ay - t * dy) ** 2 <= LINE_ARROW_HALF * LINE_ARROW_HALF;
 }
 
 /** An aimed attack's wait on tile j: LINE_AIM_PULL × its distance to the aim (0 when not aimed). */

@@ -22,7 +22,12 @@
 // size on screen and follow the camera every frame.
 import { BitmapText, Container, Graphics, Sprite, TextStyle, type Texture } from 'pixi.js';
 import type { LineView } from '../engine/protocol';
-import { LINE_OFFENSE_REACH, LINE_OFFENSE_SETUP, LINE_REACH } from '../core/game/constants';
+import {
+  LINE_DEFENSE_PREP,
+  LINE_OFFENSE_REACH,
+  LINE_OFFENSE_SETUP,
+  LINE_REACH,
+} from '../core/game/constants';
 import { borderChains, isClosed, locate, traceTiles } from '../core/rules/lines';
 import type { AimDraft, BorderDraft, LineDraft } from '../ui/game/input';
 
@@ -67,6 +72,8 @@ export interface FrontLineContext {
   /** An offensive line being laid on a border; an offensive line's arrow being aimed. */
   border: BorderDraft | null;
   aim: AimDraft | null;
+  /** The words on an offensive line's arrow (1.24): its charge, or ready — a click launches it. */
+  arrowText: (charge: number) => string;
 }
 
 /** A point along a polyline, with the unit normal pointing to the side faced. */
@@ -179,6 +186,10 @@ interface LineGfx {
   mid: [number, number];
   pions: Pion[];
   runs: Sample[][];
+  /** Ours, offensive (1.24): its arrow (base, tip, half-width; a click launches), its grip, its words. */
+  arrow: { x0: number; y0: number; x1: number; y1: number; w: number } | null;
+  grip: [number, number] | null;
+  label: { x: number; y: number; text: string; ready: boolean } | null;
 }
 
 export class FrontLineLayer {
@@ -190,10 +201,12 @@ export class FrontLineLayer {
   private readonly lit = new Graphics();
   private readonly pions = new Container();
   private readonly pool: PionView[] = [];
+  private readonly labels = new Container();
+  private readonly labelPool: { root: Container; box: Graphics; text: BitmapText; key: string }[] = [];
   private readonly gfx = new Map<number, LineGfx>();
 
   constructor() {
-    this.container.addChild(this.lineLayer, this.lit, this.borderDraft, this.draft, this.pions);
+    this.container.addChild(this.lineLayer, this.lit, this.borderDraft, this.draft, this.pions, this.labels);
   }
 
   /** Map width (tile keys), set by the renderer. */
@@ -231,6 +244,9 @@ export class FrontLineLayer {
           mid: middle(l),
           pions: [],
           runs: [],
+          arrow: null,
+          grip: null,
+          label: null,
         };
         this.gfx.set(l.id, v);
       }
@@ -240,10 +256,17 @@ export class FrontLineLayer {
       if (!v.root.visible) continue;
       const mine = l.owner === ctx.viewer;
       const lod = !mine && z < 1.6 ? 'far' : 'near';
-      const left = Math.max(0, l.readyTick - ctx.tick);
-      const empty = l.troops < 1;
       const launched = l.attack >= 0;
-      const sig = `${step}|${lod}|${ctx.zones && mine}|${l.tiles.length}|${l.tiles[0]}|${l.tiles.at(-1)}|${empty}|${left > 0}|${launched}`;
+      // Time left: an offensive line's charge; a defensive line's digging in (1.24).
+      const left =
+        l.kind === 0
+          ? Math.max(0, l.laidTick + LINE_DEFENSE_PREP - ctx.tick)
+          : launched
+            ? 0
+            : Math.max(0, l.readyTick - ctx.tick);
+      const empty = l.troops < 1;
+      const dig = l.kind === 0 && left > 0 ? Math.ceil((left / LINE_DEFENSE_PREP) * 8) : 0;
+      const sig = `${step}|${lod}|${ctx.zones && mine}|${l.tiles.length}|${l.tiles[0]}|${l.tiles.at(-1)}|${empty}|${left > 0}|${launched}|${dig}`;
       if (sig !== v.sig) {
         v.sig = sig;
         v.arrowSig = '';
@@ -260,8 +283,21 @@ export class FrontLineLayer {
         if (arrowSig !== v.arrowSig) {
           v.arrowSig = arrowSig;
           v.arrows.clear();
+          v.arrow = v.grip = v.label = null;
           if (l.aim >= 0 && !reached && mine && lod === 'near')
-            planArrow(v.arrows, v.runs, to, progress, ctx.zoom);
+            v.arrow = planArrow(v.arrows, v.runs, to, progress, ctx.zoom, undefined, true);
+          // Ours, not launched yet: the grip the arrow is drawn from (1.24), the charge on the arrow.
+          if (mine && !launched && lod === 'near') {
+            v.grip = v.arrow ? [v.arrow.x0, v.arrow.y0] : gripOf(v.runs, ctx.zoom);
+            if (v.grip) drawGrip(v.arrows, v.grip, v.arrow, v.runs, ctx.zoom);
+            if (v.arrow)
+              v.label = {
+                x: v.arrow.x0 + (v.arrow.x1 - v.arrow.x0) * 0.42,
+                y: v.arrow.y0 + (v.arrow.y1 - v.arrow.y0) * 0.42,
+                text: ctx.arrowText(progress),
+                ready: progress >= 1,
+              };
+          }
         }
       }
       for (const pn of v.pions) {
@@ -277,6 +313,7 @@ export class FrontLineLayer {
         this.gfx.delete(id);
       }
     this.placePions(ctx);
+    this.placeLabels(ctx);
     this.drawDraft(draft, ctx);
     this.drawBorderDraft(ctx.border, ctx);
     this.drawLit(ctx);
@@ -389,7 +426,14 @@ export class FrontLineLayer {
         polyline(v.ink, run, CORE, px(4), 0.9);
         continue;
       }
-      if (l.kind === 0) defensiveLine(v.ink, run, px, empty ? 'empty' : left > 0 ? 'laying' : 'held');
+      if (l.kind === 0)
+        barbedWire(
+          v.ink,
+          run,
+          px,
+          empty ? 'empty' : left > 0 ? 'laying' : 'held',
+          1 - left / LINE_DEFENSE_PREP,
+        );
       else if (launched) attackFront(v.ink, run, px);
       else jumpOffLine(v.ink, run, px, empty);
     }
@@ -421,6 +465,68 @@ export class FrontLineLayer {
         });
       }
     }
+  }
+
+  /** My offensive line whose grip is within `reach` tiles of (x, y), -1 none (1.24). */
+  gripAt(x: number, y: number, reach: number): number {
+    let [best, bestD] = [-1, reach * reach];
+    for (const [id, v] of this.gfx) {
+      if (!v.grip || !v.root.visible) continue;
+      const d = (v.grip[0] - x) ** 2 + (v.grip[1] - y) ** 2;
+      if (d <= bestD) [best, bestD] = [id, d];
+    }
+    return best;
+  }
+
+  /** My offensive line whose arrow is under (x, y), -1 none (1.24: a click launches it). */
+  arrowAt(x: number, y: number): number {
+    for (const [id, v] of this.gfx) {
+      const a = v.arrow;
+      if (!a || !v.label || !v.root.visible) continue;
+      const [dx, dy] = [a.x1 - a.x0, a.y1 - a.y0];
+      const len2 = dx * dx + dy * dy || 1;
+      const t = Math.max(0, Math.min(1, ((x - a.x0) * dx + (y - a.y0) * dy) / len2));
+      if (t < 0.08) continue; // (the grip is there)
+      if ((x - a.x0 - t * dx) ** 2 + (y - a.y0 - t * dy) ** 2 <= (a.w * 1.8) ** 2) return id;
+    }
+    return -1;
+  }
+
+  /** The words on my arrows (charge, ready), at a steady size; a dark tab, light once ready. */
+  private placeLabels(ctx: FrontLineContext): void {
+    let used = 0;
+    for (const v of this.gfx.values()) {
+      const lb = v.label;
+      if (!lb || !v.root.visible) continue;
+      let view = this.labelPool[used];
+      if (!view) {
+        const root = new Container();
+        const box = new Graphics();
+        const text = new BitmapText({ text: '', style: PION_STYLE });
+        text.anchor.set(0.5, 0.5);
+        root.addChild(box, text);
+        this.labels.addChild(root);
+        view = this.labelPool[used] = { root, box, text, key: '' };
+      }
+      used++;
+      const key = `${lb.text}|${lb.ready}`;
+      if (key !== view.key) {
+        view.key = key;
+        view.text.text = lb.text;
+        view.text.scale.set(PION_TEXT / 30);
+        view.text.tint = lb.ready ? CORE : RIM;
+        const w = view.text.width + 14;
+        view.box.clear();
+        view.box.roundRect(-w / 2, -10, w, 20, 3).fill({ color: lb.ready ? RIM : 0x1b2734, alpha: 0.95 });
+        view.box
+          .roundRect(-w / 2, -10, w, 20, 3)
+          .stroke({ color: lb.ready ? CORE : RIM, width: 1.2, alpha: 0.9 });
+      }
+      view.root.visible = true;
+      view.root.position.set(lb.x, lb.y);
+      view.root.scale.set(1 / ctx.zoom);
+    }
+    for (let k = used; k < this.labelPool.length; k++) this.labelPool[k]!.root.visible = false;
   }
 
   /** The counters of the lines on screen, at a steady size; hidden far out. */
@@ -585,28 +691,106 @@ function zoneShade(
   dotted(g, edge, px(6), px(1.2), color === SHADE ? RIM : color, 0.55);
 }
 
-/** A defensive stretch: dark core, light rim, a close fringe of teeth towards the enemy. */
-function defensiveLine(
+/**
+ * A defensive stretch (1.24, the player's choice: barbed wire): a thin trench, and in front of
+ * it a belt of concertina coils on pickets. Digging in (its first 10 s), the coils run out
+ * along it as the work goes on (`done`, 0–1), dotted beyond; emptied, a grey dashed trace.
+ */
+function barbedWire(
   g: Graphics,
   run: Sample[],
   px: (v: number) => number,
   state: 'held' | 'laying' | 'empty',
+  done: number,
 ): void {
-  if (state !== 'held') {
-    dashed(g, run, px(9), px(6), CORE, px(6), 0.85);
-    dashed(g, run, px(9), px(6), state === 'empty' ? GREY : RIM, px(2.2), 0.9);
+  if (state === 'empty') {
+    dashed(g, run, px(9), px(6), CORE, px(3.5), 0.7);
+    dashed(g, run, px(9), px(6), GREY, px(1.6), 0.9);
     return;
   }
-  teeth(g, run, px, CORE);
-  polyline(g, run, CORE, px(6.5), 0.95);
-  // The rim on the back side: the line reads as an edge, not a stroke.
-  polyline(
-    g,
-    run.map((p) => ({ ...p, x: p.x - p.nx * px(1.6), y: p.y - p.ny * px(1.6) })),
-    RIM,
-    px(1.6),
-    0.85,
-  );
+  // The trench: a light rim behind a dark line.
+  polyline(g, run, RIM, px(4.6), 0.55);
+  polyline(g, run, CORE, px(2.4), 0.95);
+  const len = run[run.length - 1]!.s - run[0]!.s;
+  const upTo = state === 'laying' ? len * Math.max(0, Math.min(1, done)) : len;
+  const out = px(9);
+  const r = px(3.2);
+  for (let at = 0; at <= upTo; at += px(6)) {
+    const p = pointAt(run, run[0]!.s + at);
+    g.circle(p.x + p.nx * out, p.y + p.ny * out, r);
+  }
+  g.stroke({ color: CORE, width: px(1), alpha: 0.9 });
+  for (let at = px(3); at <= upTo; at += px(18)) {
+    const p = pointAt(run, run[0]!.s + at);
+    g.moveTo(p.x + p.nx * px(4.5), p.y + p.ny * px(4.5)).lineTo(p.x + p.nx * px(13.5), p.y + p.ny * px(13.5));
+  }
+  g.stroke({ color: 0x3a2c1d, width: px(1.6), alpha: 0.95 });
+  if (upTo < len) {
+    const rest = run.filter((p) => p.s - run[0]!.s >= upTo);
+    if (rest.length >= 2)
+      dotted(
+        g,
+        rest.map((p) => ({ ...p, x: p.x + p.nx * out, y: p.y + p.ny * out })),
+        px(6),
+        px(1.2),
+        CORE,
+        0.6,
+      );
+  }
+}
+
+/**
+ * Where an offensive line's grip sits with no arrow yet: the middle of its longest stretch,
+ * just in front of it (its counters stand behind).
+ */
+function gripOf(runsOf: Sample[][], zoom: number): [number, number] | null {
+  let best: Sample[] | null = null;
+  for (const r of runsOf)
+    if (!best || r[r.length - 1]!.s - r[0]!.s > best[best.length - 1]!.s - best[0]!.s) best = r;
+  if (!best) return null;
+  const p = pointAt(best, (best[0]!.s + best[best.length - 1]!.s) / 2);
+  const off = Math.max(0.04, 16 / zoom);
+  return [p.x + p.nx * off, p.y + p.ny * off];
+}
+
+/**
+ * The grip on an offensive line (1.24): a round handle with an arrowhead, pointing where the
+ * arrow goes (or out at the enemy) — dragged, it draws the arrow.
+ */
+function drawGrip(
+  g: Graphics,
+  at: [number, number],
+  arrow: { x0: number; y0: number; x1: number; y1: number } | null,
+  runsOf: Sample[][],
+  zoom: number,
+): void {
+  const px = (n: number) => Math.max(0.04, n / zoom);
+  let [nx, ny] = [0, -1];
+  if (arrow) {
+    const d = Math.hypot(arrow.x1 - arrow.x0, arrow.y1 - arrow.y0) || 1;
+    [nx, ny] = [(arrow.x1 - arrow.x0) / d, (arrow.y1 - arrow.y0) / d];
+  } else {
+    let best = Infinity;
+    for (const r of runsOf)
+      for (const p of r) {
+        const d = (p.x - at[0]) ** 2 + (p.y - at[1]) ** 2;
+        if (d < best) [best, nx, ny] = [d, p.nx, p.ny];
+      }
+  }
+  const [x, y, r] = [at[0], at[1], px(10)];
+  g.circle(x + px(1.5), y + px(2), r).fill({ color: 0x000000, alpha: 0.35 });
+  g.circle(x, y, r)
+    .fill({ color: RIM })
+    .stroke({ color: CORE, width: px(2.2) });
+  const [tx, ty] = [-ny, nx];
+  g.poly([
+    x + nx * px(6),
+    y + ny * px(6),
+    x - nx * px(3) + tx * px(4.5),
+    y - ny * px(3) + ty * px(4.5),
+    x - nx * px(3) - tx * px(4.5),
+    y - ny * px(3) - ty * px(4.5),
+  ]).fill({ color: CORE });
 }
 
 /** A close fringe of small teeth on the front side. */
@@ -681,7 +865,8 @@ function planArrow(
   progress: number,
   zoom: number,
   tint?: number,
-): void {
+  steel = false,
+): { x0: number; y0: number; x1: number; y1: number; w: number } | null {
   let from: Sample | null = null;
   let best = Infinity;
   for (const run of runsOf)
@@ -689,12 +874,14 @@ function planArrow(
       const d = (p.x - to[0]) ** 2 + (p.y - to[1]) ** 2;
       if (d < best) [from, best] = [p, d];
     }
-  if (!from) return;
+  if (!from) return null;
   const d = Math.sqrt(best);
-  if (d < 2) return;
+  if (d < 2) return null;
   const px = (n: number) => Math.max(0.04, n / zoom);
   const base = { x: from.x, y: from.y, nx: (to[0] - from.x) / d, ny: (to[1] - from.y) / d, s: 0 };
-  battleArrow(g, base, Math.max(1.2, px(9)), d / 0.95, 0.06, progress, px, tint);
+  const w = Math.max(1.2, px(9));
+  battleArrow(g, base, w, d / 0.95, 0.06, progress, px, tint, steel);
+  return { x0: from.x, y0: from.y, x1: to[0], y1: to[1], w };
 }
 
 /** An offensive stretch: a dark jump-off line with a dashed light rail along it. */
@@ -718,6 +905,7 @@ function battleArrow(
   progress: number,
   px: (v: number) => number,
   tint?: number,
+  steel = false,
 ): void {
   const [tx, ty] = [-base.ny, base.nx];
   const L = reach * 0.95;
@@ -774,6 +962,18 @@ function battleArrow(
     }
     return [...leftSide, ...head, ...rightSide, ...tail];
   };
+  if (steel) {
+    // 1.24, the player's choice: brushed steel lifted off the map by its shadow; its charge
+    // fills it from the tail (lighter), whole when the troops are ready.
+    const off = shape(1).map((v, i) => v + (i % 2 ? px(4) : px(3)));
+    g.poly(off).fill({ color: 0x000000, alpha: 0.38 });
+    g.poly(shape(1)).fill({ color: 0x1c242e, alpha: 0.96 });
+    g.poly(shape(1, 0.55)).fill({ color: 0x5a6672, alpha: 0.35 });
+    if (progress > 0) g.poly(shape(progress)).fill({ color: 0xc9ced4, alpha: progress >= 1 ? 0.55 : 0.4 });
+    g.poly(shape(1)).stroke({ color: 0x0b0f14, width: px(1.4), alpha: 1, join: 'round' });
+    g.poly(shape(1, 0.8)).stroke({ color: 0xc9ced4, width: px(1), alpha: 0.55, join: 'round' });
+    return;
+  }
   const color = tint ?? (progress >= 1 ? READY : PREPARING);
   g.poly(shape(1)).fill({ color, alpha: 0.2 });
   if (progress > 0) g.poly(shape(progress)).fill({ color, alpha: 0.5 });

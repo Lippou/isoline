@@ -14,7 +14,15 @@ import {
   MAX_ATTACKS_PER_PLAYER,
   N,
 } from './constants';
-import { LineKind, orderLine, placeLine, placeOffensive, removeLine, setLineTroops } from '../rules/lines';
+import {
+  LineKind,
+  aimLine,
+  launchLine,
+  placeLine,
+  placeOffensive,
+  removeLine,
+  setLineTroops,
+} from '../rules/lines';
 import type { Refusal } from './state';
 import {
   cancelDemolition,
@@ -144,11 +152,19 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       return;
     }
 
-    case 'lineLaunch': {
-      // The arrow of an offensive line (1.22): where its assault heads; ready, it goes.
+    case 'lineAim': {
+      // The arrow of an offensive line (1.22, drawn from its grip in 1.24): where its assault heads.
       const l = game.lines.find((x) => x.id === c.id && x.owner === p.id && x.kind === LineKind.Offensive);
       if (!l || game.phase !== 'playing' || (c.aim >= 0 && !inMap(c.aim))) return;
-      orderLine(game, l, c.aim);
+      aimLine(game, l, c.aim);
+      return;
+    }
+
+    case 'lineLaunch': {
+      // A click on the arrow (1.24): over the top now, with the charge the line has.
+      const l = game.lines.find((x) => x.id === c.id && x.owner === p.id && x.kind === LineKind.Offensive);
+      if (!l || game.phase !== 'playing') return;
+      launchLine(game, l);
       return;
     }
 

@@ -2,6 +2,15 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.24.0] — Barbelés, flèche d'acier, assaut au clic
+### Modifié
+- **La flèche d'attaque se tire depuis la ligne** : une poignée est posée sur chaque ligne offensive ; tirez-la jusqu'à l'objectif. Clic droit pendant le geste : annulé. Seul vous voyez la flèche.
+- **Un clic sur la flèche lance l'assaut.** Elle se charge en 30 s (« CHARGE 63 % » puis « ATTAQUE PRÊTE ») ; lancé avant, l'assaut garde la part de bonus de sa charge.
+- **Bonus selon la flèche** : sous la flèche, pertes −50 % et vitesse +50 % ; sur le reste du front, pertes −20 %.
+- **Les lignes défensives se retranchent** : en place aussitôt, elles ralentissent l'ennemi deux fois plus après 10 s (jusqu'à ×6).
+- **Nouveau rendu** : défense en barbelés (tranchée et spirales sur piquets, déroulées pendant le retranchement) ; offensive en flèche d'acier avec ombre et charge.
+- Campagne (mission 6, voix comprise), aide et fenêtre Front mises à jour.
+
 ## [1.23.0] — Journal de bug, missiles détruits en vol, positions refermées, sans généraux
 ### Corrigé
 - **Le jeu se figeait après un ordre aux navires sélectionnés** (Maj + glisser, puis clic sur la mer) : la caméra bougeait encore mais tout était arrêté. L'ordre emportait un objet de l'interface que le moteur ne pouvait pas recevoir, et il bloquait tous les tours suivants. Toute commande part désormais en données simples ; les navires sélectionnés vont où l'on clique.

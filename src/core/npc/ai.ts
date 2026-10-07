@@ -525,17 +525,15 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
   // Offensive lines whose troops have waited long enough go over the top (1.20), their
   // arrow on the enemy's capital (1.22), else straight across the border.
   for (const l of linesOf(game, p.id))
-    if (
-      l.kind === LineKind.Offensive &&
-      l.attack < 0 &&
-      l.aim < 0 &&
-      l.readyTick <= game.tick &&
-      l.troops >= 1
-    ) {
-      const q = game.players[l.target];
-      const aim =
-        q && q.capital >= 0 && game.owner[q.capital] === q.id ? q.capital : l.tiles[l.tiles.length >> 1];
-      if (aim !== undefined) applyCommand(game, p.id, { t: 'lineLaunch', id: l.id, aim });
+    if (l.kind === LineKind.Offensive && l.attack < 0 && l.troops >= 1) {
+      // The arrow at once (on the capital, else straight across), the assault fully charged.
+      if (l.aim < 0) {
+        const q = game.players[l.target];
+        const aim =
+          q && q.capital >= 0 && game.owner[q.capital] === q.id ? q.capital : l.tiles[l.tiles.length >> 1];
+        if (aim !== undefined) applyCommand(game, p.id, { t: 'lineAim', id: l.id, aim });
+      }
+      if (l.aim >= 0 && l.readyTick <= game.tick) applyCommand(game, p.id, { t: 'lineLaunch', id: l.id });
     }
   if (tac.counter) cost += answerSpentWaves(game, p, m, nb, incoming, cap);
 

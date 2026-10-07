@@ -1411,7 +1411,7 @@
     "raidHitShip": "Raid sur {player} — {ship} touché.",
     "raidHitShipSunk": "Raid sur {player} — {ship} coulé.",
     "revolutionSpread": "La révolte s'étend : {tiles} cases de plus rejoignent {tribe}.",
-    "lineReady": "Votre ligne offensive est prête : cliquez dessus, puis sur la carte pour donner la direction de l’assaut.",
+    "lineReady": "Votre ligne offensive est prête : cliquez sur sa flèche pour lancer l'assaut.",
     "lineEmpty": "Une de vos lignes défensives a perdu tous ses hommes : elle ne tient plus. Renforcez-la ou démontez-la.",
     "lineShattered": "Une de vos lignes a été prise à revers : elle éclate, {n} hommes perdus.",
     "nukeAborted": "Missile détruit en vol, sur votre ordre."
@@ -2231,7 +2231,7 @@
       "economy": "Construisez trois villes pour soutenir l'effort de guerre.",
       "weather": "Surveillez le ciel : les orages ralentissent navires et avions, et les bancs de brouillard réduisent de moitié la portée des radars.",
       "clock": "L'horloge avance : le cadran en haut annonce le prochain palier. Une paix, un vote du Conseil la font reculer ; les bombes la précipitent.",
-      "offensive": "Avant une grande poussée, posez une ligne offensive (touche A) : cliquez sur le pays visé, elle se pose sur votre frontière avec lui. Ses troupes se préparent trente secondes. Cliquez ensuite sur la ligne, puis sur sa capitale : l’assaut partira dans cette direction.",
+      "offensive": "Avant une grande poussée, posez une ligne offensive (touche A) : cliquez sur le pays visé, elle se pose sur votre frontière. Tirez sa poignée jusqu'à sa capitale pour dessiner la flèche. Elle se charge en trente secondes ; cliquez sur la flèche pour lancer l'assaut.",
       "push": "Poussez vers quarante pour cent. Une nation vulnérable est signalée sur la carte."
     },
     "hint": {
@@ -2511,14 +2511,20 @@
       "holding": "Tient le front",
       "ready": "Prête : donnez la direction",
       "ordered": "Direction donnée : part dans {clock}",
-      "attacking": "À l’assaut"
+      "attacking": "À l’assaut",
+      "digging": "Se retranche : {clock}"
     },
     "aiming": "Cliquez sur la carte : l’assaut part vers ce point. Clic droit : retirer la flèche.",
     "aimTip": "Clic : l’assaut part vers ce point · clic droit : retirer la flèche",
     "rules": "Comment ça marche",
-    "rulesDraw": "Défensive : de face, l’assaillant perd 3 hommes pour 1 et ne perce qu’au-delà de 3 contre 1 ; prise à revers, elle éclate. Clic sur une ligne pour la gérer, clic droit pour la démonter.",
-    "rulesAssault": "Offensive : cliquez sur un pays voisin pour la poser sur toute votre frontière avec lui, ou maintenez le clic droit le long d’un tronçon. Ses troupes se préparent 30 s. Cliquez sur la ligne, puis sur la carte : la flèche donne la direction de l’assaut (une capitale, une ville). Prête, elle part ; la ligne avance avec le front et son compteur descend avec les hommes. Ces soldats perdent deux fois moins et avancent 1,5 fois plus vite.",
-    "aimOwn": "Pointez la flèche vers les terres ennemies."
+    "rulesDraw": "Défensive : de face, l’assaillant perd 3 hommes pour 1 et ne perce qu’au-delà de 3 contre 1 ; retranchée (10 s après sa pose), elle ralentit deux fois plus ; prise à revers, elle éclate. Clic sur une ligne pour la gérer, clic droit pour la démonter.",
+    "rulesAssault": "Offensive : cliquez sur un pays voisin pour la poser sur votre frontière (clic droit maintenu : un tronçon). Tirez sa poignée jusqu'à l'objectif : c'est la flèche, que vous seul voyez. Elle se charge en 30 s ; un clic dessus lance l'assaut, même avant la fin, avec les bonus de la charge. Sous la flèche, pertes −50 % et vitesse +50 % ; sur le reste du front, pertes −20 %.",
+    "aimOwn": "Pointez la flèche vers les terres ennemies.",
+    "dragTip": "Relâchez sur l'objectif (capitale, ville…) · clic droit : annuler",
+    "gripTip": "Tirez la poignée vers l'objectif pour dessiner la flèche",
+    "arrowTip": "Clic sur la flèche : lancer l'assaut (bonus selon la charge)",
+    "arrowReady": "ATTAQUE PRÊTE · CLIC",
+    "arrowCharge": "CHARGE {pct} % · CLIC"
   },
   "news": {
     "masthead": "Le Courrier des Isolignes",
@@ -3038,12 +3044,12 @@
     "defensive": {
       "name": "Ligne défensive",
       "short": "Ligne déf.",
-      "desc": "Tracez-la sur vos terres, puis cliquez du côté de l'ennemi : elle est en place aussitôt. Sa longueur dépend des troupes posées. Chaque case tient avec sa garnison : de face, l'assaillant perd 3 hommes pour 1 à forces égales, et ne perce qu'à plus de 3 contre 1. Devant elle (12 cases), l'ennemi avance jusqu'à 3 fois moins vite. Prise à revers sur un quart de sa longueur, elle éclate et ses troupes sont perdues."
+      "desc": "Tracez-la sur vos terres (un clic sur le premier point la referme), puis cliquez du côté de l'ennemi : elle est en place aussitôt et se retranche en 10 s. Sa longueur dépend des troupes posées. Chaque case tient avec sa garnison : de face, l'assaillant perd 3 hommes pour 1 à forces égales, et ne perce qu'à plus de 3 contre 1. Devant elle (12 cases), l'ennemi avance jusqu'à 3 fois moins vite, 6 fois une fois retranchée. Prise à revers sur un quart de sa longueur, elle éclate et ses troupes sont perdues."
     },
     "offensive": {
       "name": "Ligne offensive",
       "short": "Ligne off.",
-      "desc": "Cliquez sur un pays voisin : elle se pose sur toute votre frontière avec lui (clic droit maintenu le long de la frontière : ce tronçon seulement). Ses troupes s’y massent pendant 30 s. Cliquez ensuite sur la ligne, puis sur la carte : l’assaut part vers ce point, deux fois moins de pertes et 1,5 fois plus vite. La ligne avance avec le front et disparaît avec ses derniers hommes."
+      "desc": "Cliquez sur un pays voisin : elle se pose sur votre frontière avec lui (clic droit maintenu le long de la frontière : ce tronçon). Tirez sa poignée jusqu'à l'objectif pour dessiner la flèche ; elle se charge en 30 s. Un clic sur la flèche lance l'assaut, avec les bonus de sa charge : sous la flèche, pertes −50 % et vitesse +50 % ; sur le reste du front, pertes −20 %. La ligne avance avec le front et disparaît avec ses derniers hommes."
     },
     "costTroops": "{n} troupes ({pct} % de l’armée)",
     "howTo": "Défensive : glisser d’un point à un autre, ou cliquer point par point (double-clic ou Entrée pour finir), puis cliquer du côté de l’ennemi. Offensive : cliquer sur un pays voisin, ou maintenir le clic droit le long de la frontière. Clic sur une de vos lignes : la gérer.",
@@ -3083,7 +3089,9 @@
       "facing": "Face à",
       "arrow": "Direction",
       "arrowSet": "donnée",
-      "arrowNone": "à donner"
+      "arrowNone": "à donner",
+      "give": "Donner la direction",
+      "launchNow": "Lancer l'assaut ({n}, charge {pct} %)"
     }
   },
   "bugs": {

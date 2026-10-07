@@ -1411,7 +1411,7 @@
     "raidHitShip": "Raid on {player} — {ship} hit.",
     "raidHitShipSunk": "Raid on {player} — {ship} sunk.",
     "revolutionSpread": "The revolt spreads: {tiles} more tiles join {tribe}.",
-    "lineReady": "Your offensive line is ready: click it, then the map, to give the assault its direction.",
+    "lineReady": "Your offensive line is ready: click its arrow to launch the assault.",
     "lineEmpty": "One of your defensive lines has lost all its men: it no longer holds. Reinforce it or take it down.",
     "lineShattered": "One of your lines was turned: it shatters, {n} men lost.",
     "nukeAborted": "Missile blown up in flight, on your order."
@@ -2231,7 +2231,7 @@
       "economy": "Build three cities to sustain the war effort.",
       "weather": "Watch the sky: storms slow ships and aircraft down, and fog banks halve the range of radars.",
       "clock": "The clock is ticking: the dial at the top announces the next milestone. A peace summit or a Council vote turns it back; bombs hasten it.",
-      "offensive": "Before a big push, lay an offensive line (key Q): click the country you want, and it is laid along your border with it. Its troops get ready for thirty seconds. Then click the line, then its capital: the assault will head that way.",
+      "offensive": "Before a big push, lay an offensive line (key Q): click the country you want, and it is laid along your border. Drag its grip to its capital to draw the arrow. It charges in thirty seconds; click the arrow to launch the assault.",
       "push": "Push towards forty percent. A vulnerable nation is marked on the map."
     },
     "hint": {
@@ -2511,14 +2511,20 @@
       "holding": "Holding the front",
       "ready": "Ready: give the direction",
       "ordered": "Direction given: goes in {clock}",
-      "attacking": "On the assault"
+      "attacking": "On the assault",
+      "digging": "Digging in: {clock}"
     },
     "aiming": "Click the map: the assault heads for that point. Right click: take the arrow back.",
     "aimTip": "Click: the assault heads here · right click: take the arrow back",
     "rules": "How it works",
-    "rulesDraw": "Defensive: head-on, the attacker loses 3 men for 1 and only breaks through beyond 3 to 1; turned, it shatters. Click a line to manage it, right click to take it down.",
-    "rulesAssault": "Offensive: click a neighbouring country to lay it along your whole border with it, or hold the right button along a stretch. Its troops get ready for 30 s. Click the line, then the map: the arrow gives the assault its direction (a capital, a city). Ready, it goes; the line moves with the front and its counter drops with the men. These soldiers lose half as many and advance 1.5× faster.",
-    "aimOwn": "Point the arrow into enemy land."
+    "rulesDraw": "Defensive: head-on, the attacker loses 3 men for 1 and only breaks through past 3 to 1; dug in (10 s after it is laid), it slows twice as much; turned, it shatters. Click a line to manage it, right click to take it down.",
+    "rulesAssault": "Offensive: click a neighbouring country to lay it on your border (hold right click: a stretch). Drag its grip to the objective: that is the arrow, which only you see. It charges in 30 s; a click on it launches the assault, even before, with the bonuses of its charge. Under the arrow, losses −50 % and speed +50 %; along the rest of the front, losses −20 %.",
+    "aimOwn": "Point the arrow into enemy land.",
+    "dragTip": "Release on the objective (capital, city…) · right click: cancel",
+    "gripTip": "Drag the grip to the objective to draw the arrow",
+    "arrowTip": "Click the arrow: launch the assault (bonuses by its charge)",
+    "arrowReady": "ATTACK READY · CLICK",
+    "arrowCharge": "CHARGE {pct} % · CLICK"
   },
   "news": {
     "masthead": "The Isoline Courier",
@@ -3038,12 +3044,12 @@
     "defensive": {
       "name": "Defensive line",
       "short": "Def. line",
-      "desc": "Draw it on your land, then click on the enemy's side: it is in place at once. Its length depends on the troops put on it. Each tile holds with its garrison: head-on, the attacker loses 3 men for 1 at even forces and only breaks through beyond 3 to 1. In front of it (12 tiles) the enemy advances up to 3 times slower. Turned along a quarter of its length, it shatters and its troops are lost."
+      "desc": "Draw it on your land (a click on the first point closes it), then click the enemy's side: it is in place at once and digs in within 10 s. Its length depends on the troops on it. Each tile holds with its garrison: head-on, the attacker loses 3 men for 1 at even forces and only breaks through past 3 to 1. In front of it (12 tiles), the enemy advances up to 3 times slower, 6 times once it has dug in. Turned on a quarter of its length, it shatters and its troops are lost."
     },
     "offensive": {
       "name": "Offensive line",
       "short": "Off. line",
-      "desc": "Click a neighbouring country: it is laid along your whole border with it (hold the right button along the border: that stretch only). Its troops mass there for 30 s. Then click the line, then the map: the assault heads for that point, half the losses and 1.5× faster. The line moves with the front and is gone with its last men."
+      "desc": "Click a neighbouring country: it is laid along your border with it (hold right click along the border: that stretch). Drag its grip to the objective to draw the arrow; it charges in 30 s. A click on the arrow launches the assault with the bonuses of its charge: under the arrow, losses −50 % and speed +50 %; along the rest of the front, losses −20 %. The line moves with the front and is gone with its last men."
     },
     "costTroops": "{n} troops ({pct}% of the army)",
     "howTo": "Defensive: drag from one point to another, or click point by point (double click or Enter to end), then click the enemy's side. Offensive: click a neighbouring country, or hold the right button along the border. Click one of your lines: manage it.",
@@ -3083,7 +3089,9 @@
       "facing": "Facing",
       "arrow": "Direction",
       "arrowSet": "given",
-      "arrowNone": "to give"
+      "arrowNone": "to give",
+      "give": "Give the direction",
+      "launchNow": "Launch the assault ({n}, charge {pct} %)"
     }
   },
   "bugs": {

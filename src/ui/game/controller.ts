@@ -109,6 +109,9 @@ export class GameController {
       // and badges, in CSS pixels, already follow it.
       uiScale: 1,
     });
+    // The words on an offensive line's arrow (1.24): its charge, or ready — a click launches it.
+    this.renderer.overlay.arrowText = (c) =>
+      c >= 1 ? t('front.arrowReady') : t('front.arrowCharge', { pct: Math.round(c * 100) });
     await this.renderer.init(host);
     this.input = new InputController(this.renderer.app.canvas, this.renderer, this.session, {
       onAction: (tile, ev) => this.action(tile, ev),
@@ -186,6 +189,9 @@ export class GameController {
       (window as unknown as { __iso: unknown }).__iso = {
         cmd: (c: Parameters<Session['cmd']>[0]) => this.session.cmd(c),
         camera: this.renderer.camera,
+        /** QA (1.24): an offensive line's grip on screen, -1 none; the arrow under a point. */
+        lineGripAt: (sx: number, sy: number) => this.renderer.lineGripAt(sx, sy),
+        lineArrowAt: (sx: number, sy: number) => this.renderer.lineArrowAt(sx, sy),
         state: () => {
           const st = this.session.state;
           return {
@@ -429,8 +435,7 @@ export class GameController {
       hud.tool.k === 'none' ? ownLineAt(this.session.state, this.session.viewer, tile, reach) : null;
     if (line) {
       hud.frontSel = line.id;
-      if (line.kind === 1) hud.tool = { k: 'assault', line: line.id };
-      else openPanel('front');
+      openPanel('front');
       audio.ui('click');
       return;
     }

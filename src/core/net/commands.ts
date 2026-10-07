@@ -32,10 +32,12 @@ export type Command =
    */
   | { t: 'lineBorder'; target: number; at: number; tiles?: number[]; ratio: number }
   /**
-   * The arrow of one of your offensive lines: the tile its assault heads for (-1 takes the
-   * order back). Ready, it goes over the top at once; else when ready; launched, it turns.
+   * The arrow of one of your offensive lines: the tile its assault heads for (-1 takes it
+   * back); launched, its attack turns that way.
    */
-  | { t: 'lineLaunch'; id: number; aim: number }
+  | { t: 'lineAim'; id: number; aim: number }
+  /** Launches one of your offensive lines along its arrow, with the charge it has (1.24). */
+  | { t: 'lineLaunch'; id: number }
   | { t: 'shipMove'; ids: number[]; tile: number; patrol: boolean }
   /** `up`: arc towards the top of the map (default) or the bottom (A and H bombs). */
   | { t: 'nuke'; kind: number; tile: number; count: number; up?: boolean }
@@ -101,8 +103,10 @@ export function isWellFormed(c: unknown): c is Command {
     case 'upgrade':
     case 'lineRemove':
       return isInt(o.id);
-    case 'lineLaunch':
+    case 'lineAim':
       return isInt(o.id) && isInt(o.aim) && o.aim >= -1;
+    case 'lineLaunch':
+      return isInt(o.id);
     case 'lineBorder':
       return (
         isInt(o.target) &&

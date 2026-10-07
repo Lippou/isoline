@@ -16,6 +16,9 @@ import {
   LINE_MIN_DENSITY,
   LINE_OFFENSE_SPEED,
   LINE_OFFENSE_LOSS,
+  LINE_FRONT_LOSS,
+  LINE_DEFENSE_PREP,
+  LINE_DEFENSE_PREP_MULT,
   LINE_OFFENSE_SETUP,
   LINE_REACH,
 } from '../../src/core/game/constants';
@@ -25,6 +28,7 @@ import {
   lineClash,
   lineDefense,
   lineDefended,
+  linePrepared,
   isClosed,
   lineFront,
   lineGarrison,
@@ -148,7 +152,7 @@ describe('front lines', () => {
     expect(placeOffensive(g, p, 2, 0, [g.map.idx(190, 30)], 0.1)).toBe('border');
   });
 
-  it('its arrow: once ready, the assault goes from the line only, fewer losses and faster; the line follows the front and goes with its last men', () => {
+  it('its arrow drawn, a click launches it: under the arrow −50 % losses and +50 % speed, −20 % losses along the rest (1.24)', () => {
     const g = arena();
     const p1 = g.players[1]!;
     const w = g.map.width;
@@ -156,33 +160,43 @@ describe('front lines', () => {
     const l = placeOffensive(g, p1, 2, sector[0]!, sector, 0.1) as FrontLine;
     const troops = l.troops;
     const strength = lineStrength(g, l);
-    // The arrow given while its troops get ready: nothing yet, the order kept.
-    const aim = g.map.idx(190, 60);
-    g.step([cmd(1, { t: 'lineLaunch', id: l.id, aim })]);
-    expect(l.aim).toBe(aim);
+    // No arrow yet: a launch does nothing.
+    g.step([cmd(1, { t: 'lineLaunch', id: l.id })]);
     expect(g.attacks.length).toBe(0);
-    // Ready: it goes by itself, its troops off the line and into an attack.
+    // The arrow drawn: still nothing until the click on it, even fully charged.
+    const aim = g.map.idx(175, 30);
+    g.step([cmd(1, { t: 'lineAim', id: l.id, aim })]);
+    expect(l.aim).toBe(aim);
+    l.laidTick = g.tick - LINE_OFFENSE_SETUP;
     l.readyTick = g.tick;
     g.step([]);
+    expect(g.attacks.length).toBe(0);
+    g.step([cmd(1, { t: 'lineLaunch', id: l.id })]);
     const a = g.attacks.find((x) => x.attacker === 1 && x.target === 2)!;
     expect(a).toBeTruthy();
     expect(a.focused).toBe(true);
     expect(a.aim).toBe(aim);
+    expect(a.aimFrom).toBe(g.map.idx(144, 30));
     expect(a.prepared).toBeCloseTo(strength);
     expect(a.troops).toBeGreaterThan(troops * 0.9);
     expect(p1.lineTroops).toBe(0);
     expect(l.attack).toBe(a.id);
     // From the line only.
     for (const t of a.border) expect(Math.abs(Math.floor(t / w) - 30)).toBeLessThanOrEqual(13);
-    // The prepared troops lose LINE_OFFENSE_LOSS fewer and advance LINE_OFFENSE_SPEED faster.
-    const front = [...a.border][0]!;
-    const out = attackLogic(g, a, front, 60);
-    const prepared = a.prepared;
-    a.prepared = 0;
-    const plain = attackLogic(g, a, front, 60);
-    a.prepared = prepared;
-    expect(out.attackerLoss).toBeCloseTo(plain.attackerLoss * (1 - LINE_OFFENSE_LOSS * strength));
-    expect(out.tickFraction).toBeCloseTo(plain.tickFraction / (1 + (LINE_OFFENSE_SPEED - 1) * strength));
+    const bonus = (tile: number) => {
+      const out = attackLogic(g, a, tile, 60);
+      const prepared = a.prepared;
+      a.prepared = 0;
+      const plain = attackLogic(g, a, tile, 60);
+      a.prepared = prepared;
+      return { loss: out.attackerLoss / plain.attackerLoss, speed: plain.tickFraction / out.tickFraction };
+    };
+    const under = bonus(g.map.idx(145, 30));
+    expect(under.loss).toBeCloseTo(1 - LINE_OFFENSE_LOSS * strength);
+    expect(under.speed).toBeCloseTo(1 + (LINE_OFFENSE_SPEED - 1) * strength);
+    const aside = bonus(g.map.idx(145, 40));
+    expect(aside.loss).toBeCloseTo(1 - LINE_FRONT_LOSS * strength);
+    expect(aside.speed).toBeCloseTo(1);
     // The line is the attack's front: our tiles on it, its troops the attack's.
     for (let k = 0; k < 40; k++) g.step([]);
     expect(g.lines).toContain(l);
@@ -198,6 +212,32 @@ describe('front lines', () => {
     expect(p1.lineTroops).toBe(0);
   });
 
+  it('launched before it is charged, it carries that share of its bonuses (1.24)', () => {
+    const g = arena();
+    const l = placeOffensive(g, g.players[1]!, 2, g.map.idx(145, 30), null, 0.1) as FrontLine;
+    const strength = lineStrength(g, l);
+    g.step([cmd(1, { t: 'lineAim', id: l.id, aim: g.map.idx(175, 30) })]);
+    l.laidTick = g.tick - LINE_OFFENSE_SETUP / 2;
+    g.step([cmd(1, { t: 'lineLaunch', id: l.id })]);
+    const a = g.attacks.find((x) => x.attacker === 1 && x.target === 2)!;
+    expect(a.prepared).toBeCloseTo(strength * 0.5, 2);
+  });
+
+  it('a defensive line digs in: LINE_DEFENSE_PREP after it is laid, it slows twice as much (1.24)', () => {
+    const g = arena();
+    const l = wall(g, 2, LineKind.Defensive, 150, true);
+    for (let x = 0; x < 145; x++) g.setOwner(g.map.idx(x, 30), 1);
+    const tile = g.map.idx(145, 30);
+    const s = lineStrength(g, l);
+    expect(linePrepared(g, l)).toBe(false);
+    expect(lineDefense(g, tile, 2, 1)!.speed).toBeCloseTo(1 + (LINE_DEFENSE_SPEED - 1) * s);
+    l.laidTick = g.tick - LINE_DEFENSE_PREP;
+    expect(linePrepared(g, l)).toBe(true);
+    expect(lineDefense(g, tile, 2, 1)!.speed).toBeCloseTo(
+      1 + (LINE_DEFENSE_SPEED * LINE_DEFENSE_PREP_MULT - 1) * s,
+    );
+  });
+
   it('the front heads for the arrow, at the same pace; a new arrow turns it', () => {
     const conquest = (aimY: number, turnY = -1) => {
       const g = arena();
@@ -205,9 +245,10 @@ describe('front lines', () => {
       const w = g.map.width;
       const l = placeOffensive(g, g.players[1]!, 2, g.map.idx(145, 35), null, 0.3) as FrontLine;
       l.readyTick = g.tick;
-      g.step([cmd(1, { t: 'lineLaunch', id: l.id, aim: g.map.idx(190, aimY) })]);
+      g.step([cmd(1, { t: 'lineAim', id: l.id, aim: g.map.idx(190, aimY) })]);
+      g.step([cmd(1, { t: 'lineLaunch', id: l.id })]);
       for (let k = 0; k < 30; k++) g.step([]);
-      if (turnY >= 0) g.step([cmd(1, { t: 'lineLaunch', id: l.id, aim: g.map.idx(190, turnY) })]);
+      if (turnY >= 0) g.step([cmd(1, { t: 'lineAim', id: l.id, aim: g.map.idx(190, turnY) })]);
       for (let k = 0; k < 30; k++) g.step([]);
       let [n, sy] = [0, 0];
       for (let y = 0; y < 70; y++)

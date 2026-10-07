@@ -17,7 +17,7 @@
   import { audio } from '../../audio/audio';
   import type { GameController } from '../game/controller';
   import type { LineView } from '../../engine/protocol';
-  import { LINE_BREAK_RATIO } from '../../core/game/constants';
+  import { LINE_BREAK_RATIO, LINE_DEFENSE_PREP, LINE_OFFENSE_SETUP } from '../../core/game/constants';
 
   let { ctl }: { ctl: GameController } = $props();
   const s = ctl.session;
@@ -29,7 +29,15 @@
   const sel = $derived(lines.find((l) => l.id === hud.frontSel) ?? null);
   const locked = $derived(hud.local?.lineTroops ?? 0);
 
-  const leftOf = (l: LineView) => (l.attack >= 0 ? 0 : Math.max(0, l.readyTick - hud.tick));
+  /** Time left: an offensive line's charge, a defensive line's digging in (1.24). */
+  const leftOf = (l: LineView) =>
+    l.attack >= 0
+      ? 0
+      : l.kind === 0
+        ? Math.max(0, l.laidTick + LINE_DEFENSE_PREP - hud.tick)
+        : Math.max(0, l.readyTick - hud.tick);
+  /** An offensive line's charge, 0–1: its bonuses if launched now. */
+  const chargeOf = (l: LineView) => Math.max(0, Math.min(1, (hud.tick - l.laidTick) / LINE_OFFENSE_SETUP));
   const nameOfPlayer = (id: number): string => {
     const p = s.state.players.get(id);
     return p ? p.name[i18n.lang] || p.name.en : '—';
@@ -39,7 +47,8 @@
     if (l.attack >= 0) return { key: 'front.state.attacking', icon: 'lineOffense' };
     if (l.troops < 1) return { key: 'front.state.empty', icon: 'warning' };
     if (l.kind === 1 && leftOf(l) > 0 && l.aim >= 0) return { key: 'front.state.ordered', icon: 'hourglass' };
-    if (leftOf(l) > 0) return { key: 'front.state.preparing', icon: 'hourglass' };
+    if (leftOf(l) > 0)
+      return { key: l.kind === 0 ? 'front.state.digging' : 'front.state.preparing', icon: 'hourglass' };
     return l.kind === 0
       ? { key: 'front.state.holding', icon: 'check' }
       : { key: 'front.state.ready', icon: 'lineOffense' };
@@ -81,10 +90,14 @@
     s.cmd({ t: 'lineRemove', id: sel.id });
     hud.frontSel = -1;
   }
-  /** An offensive line's arrow, on the map: a click points its assault there. */
+  /**
+   * An offensive line: with its arrow, over the top now (its charge); without, the arrow to
+   * give on the map (a click points it; or drag the line's grip).
+   */
   function aim(): void {
     if (!sel) return;
-    hud.tool = { k: 'assault', line: sel.id };
+    if (sel.aim >= 0 && sel.attack < 0) s.cmd({ t: 'lineLaunch', id: sel.id });
+    else hud.tool = { k: 'assault', line: sel.id };
     audio.ui('click');
   }
   function onKey(e: KeyboardEvent): void {
@@ -187,9 +200,12 @@
           <button class="np-btn ink launch" onclick={aim} disabled={sel.troops < 1} data-testid="front-launch"
             ><Icon name="lineOffense" size={14} />{sel.attack >= 0
               ? t('line.card.turn')
-              : leftOf(sel) > 0
-                ? t('line.card.launchIn', { clock: clock(leftOf(sel)) })
-                : t('line.card.launch', { n: short(sel.troops) })}</button
+              : sel.aim < 0
+                ? t('line.card.give')
+                : t('line.card.launchNow', {
+                    n: short(sel.troops),
+                    pct: Math.round(chargeOf(sel) * 100),
+                  })}</button
           >
           {#if hud.tool.k === 'assault' && hud.tool.line === sel.id}
             <p class="aiming" data-testid="front-aiming"><Icon name="info" size={12} />{t('front.aiming')}</p>

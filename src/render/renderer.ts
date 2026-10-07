@@ -99,6 +99,8 @@ export interface Overlay {
   /** An offensive line being laid on a border, and one's arrow being aimed (input.ts). */
   border: BorderDraft | null;
   aim: AimDraft | null;
+  /** The words on an offensive line's arrow for its charge (set by the interface, i18n). */
+  arrowText: (charge: number) => string;
   /** Build-bar filter: these building types light up, the others fade (null: no filter). */
   buildingFilter: number[] | null;
   /**
@@ -342,6 +344,7 @@ export class GameRenderer {
     lineHover: -1,
     border: null,
     aim: null,
+    arrowText: (c: number) => `${Math.round(c * 100)} %`,
     buildingFilter: null,
     aimTargets: false,
     selection: new Set(),
@@ -1309,6 +1312,7 @@ export class GameRenderer {
         owner: (x, y) => s.owner[Math.floor(y) * s.width + Math.floor(x)] ?? 0,
         border: ov.border,
         aim: ov.aim,
+        arrowText: ov.arrowText,
       },
       ov.lineDraft,
     );
@@ -2553,6 +2557,18 @@ export class GameRenderer {
       }
     }
     return best;
+  }
+
+  /** My offensive line whose grip is under the pointer (screen px), -1 none (1.24). */
+  lineGripAt(sx: number, sy: number): number {
+    const [x, y] = this.camera.screenToWorld(sx, sy);
+    return this.frontLines.gripAt(x, y, 16 / this.camera.zoom);
+  }
+
+  /** My offensive line whose arrow is under the pointer (screen px), -1 none (1.24). */
+  lineArrowAt(sx: number, sy: number): number {
+    const [x, y] = this.camera.screenToWorld(sx, sy);
+    return this.frontLines.arrowAt(x, y);
   }
 
   unitsInRect(x0: number, y0: number, x1: number, y1: number, owner: number, type: U): number[] {

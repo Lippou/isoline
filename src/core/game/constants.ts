@@ -149,8 +149,20 @@ export const ATTACK_RELATION = { easy: -60, normal: -70, hard: -80, impossible: 
 export const LINE_REACH = 12;
 export const LINE_OFFENSE_REACH = 16;
 export const LINE_DEFENSE_SPEED = 3;
+/**
+ * 1.24 (the player's design): the assault's bonuses split by its arrow — within
+ * LINE_ARROW_HALF tiles of the arrow (from the line to its head), losses ×(1 −
+ * LINE_OFFENSE_LOSS) and speed ×LINE_OFFENSE_SPEED; along the rest of the line's front, losses
+ * ×(1 − LINE_FRONT_LOSS) only. All of it × the charge: launched before its LINE_OFFENSE_SETUP
+ * are up, the line carries the share of them it has waited. A defensive line digs in for
+ * LINE_DEFENSE_PREP after it is laid; prepared, it slows what comes at it ×LINE_DEFENSE_PREP_MULT.
+ */
 export const LINE_OFFENSE_LOSS = 0.5;
 export const LINE_OFFENSE_SPEED = 1.5;
+export const LINE_FRONT_LOSS = 0.2;
+export const LINE_ARROW_HALF = 5;
+export const LINE_DEFENSE_PREP = 100;
+export const LINE_DEFENSE_PREP_MULT = 2;
 export const LINE_OFFENSE_SETUP = 300;
 export const LINE_AIM_PULL = 0.6;
 export const LINE_DEFENSE_SETUP = 0;
