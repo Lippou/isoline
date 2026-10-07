@@ -2,6 +2,16 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.23.0] — Journal de bug, missiles détruits en vol, positions refermées, sans généraux
+### Corrigé
+- **Le jeu se figeait après un ordre aux navires sélectionnés** (Maj + glisser, puis clic sur la mer) : la caméra bougeait encore mais tout était arrêté. L'ordre emportait un objet de l'interface que le moteur ne pouvait pas recevoir, et il bloquait tous les tours suivants. Toute commande part désormais en données simples ; les navires sélectionnés vont où l'on clique.
+### Ajouté
+- **Journal de bug** (bêta fermée) : bouton « Bugs » du dock ou **F9**. L'écran est capturé, vous décrivez le problème, et le rapport est enregistré dans le dossier des données (`bugs/`) avec la capture, la partie (sauvegarde et replay pour rejouer le bug) et les dernières erreurs. Chaque erreur attrapée en partie est signalée par un message.
+- **Faire exploser un missile en vol** : le panneau des ressources liste vos missiles en vol (type, temps avant l'impact) ; la croix le détruit là où il est. Aucun dégât, rien de remboursé.
+- **Positions refermées** : en traçant une ligne défensive, trois points posés, un clic sur le premier point referme la ligne sur elle-même — plus d'angle non défendu autour d'une capitale.
+### Retiré
+- **Les généraux** (Blitz, Rempart, Sabotage, Propagande) et leur choix au lobby, leur bouton et la touche E, pour vous comme pour les nations.
+
 ## [1.22.0] — Ligne offensive sur la frontière, direction d'attaque
 ### Modifié
 - **La ligne offensive se pose sur la frontière** (elle ne se trace plus) : outil en main, **clic gauche sur un pays voisin** = toute votre frontière avec lui ; **clic droit maintenu le long de la frontière** = ce tronçon seulement. Aperçu en laiton au survol ; trop longue pour ses troupes, elle garde les cases les plus proches du clic.
