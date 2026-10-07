@@ -235,7 +235,7 @@
       mapId: m.meta.id,
       nations: Math.min(20, m.meta.nations.length),
       tribes: Math.min(20, Math.floor(m.meta.spawnPoints.length / 2)),
-      players: [{ slot: 0, name: playerName(), kind: 'human' as const, team: 1, general: 'blitz' as const }],
+      players: [{ slot: 0, name: playerName(), kind: 'human' as const, team: 1 }],
     };
     startSolo(cfg, text);
     // Leaving the game comes back here, to the same map, tool and view.

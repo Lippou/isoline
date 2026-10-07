@@ -952,7 +952,6 @@
     "features": "Features",
     "players": "Players",
     "name": "Name",
-    "general": "General",
     "spectator": "spectator",
     "ready": "Ready",
     "notReady": "Not ready",
@@ -1035,10 +1034,6 @@
       "name": "World events",
       "desc": "Crises, pandemics, trade booms, solar storms, peace summits."
     },
-    "generals": {
-      "name": "Generals",
-      "desc": "One active ability per player (5-minute cooldown)."
-    },
     "air": {
       "name": "Air power",
       "desc": "Airfields and interceptors, bombers (strikes on buildings), fighters, reconnaissance."
@@ -1054,24 +1049,6 @@
     "revolution": {
       "name": "Revolutions",
       "desc": "On by default. A country far ahead now and then sees a distant region rise up: rebels without gold, dug in (guerrilla, barricades), costly to retake or left to run out of steam."
-    }
-  },
-  "general": {
-    "blitz": {
-      "name": "Blitz",
-      "desc": "+30% attack speed for 30 s."
-    },
-    "rampart": {
-      "name": "Rampart",
-      "desc": "Defensive lines twice as effective for 30 s."
-    },
-    "sabotage": {
-      "name": "Sabotage",
-      "desc": "Destroys the enemy train or merchant ship nearest the target point."
-    },
-    "propaganda": {
-      "name": "Propaganda",
-      "desc": "Your occupied buildings rally at once; with loyalty on, +50% loyalty for 60 s and no secession."
     }
   },
   "personality": {
@@ -1289,7 +1266,7 @@
     "pandemic.desc": "Troop growth is halved for 2 minutes. Every army lost 3% of its troops when the outbreak began.",
     "boom.desc": "Merchant ships and trains pay double for 2 minutes: a good time to trade.",
     "solarStorm.desc": "Radars are blind for 90 seconds: no early warning, no interceptor guidance, and the fog falls back over what they revealed.",
-    "peaceSummit.desc": "A forced 60-second truce: no country can attack another (no troops, boats, planes or sabotage) and nobody launches a nuclear weapon. Tribes can still be attacked on the ground.",
+    "peaceSummit.desc": "A forced 60-second truce: no country can attack another (no troops, boats or planes) and nobody launches a nuclear weapon. Tribes can still be attacked on the ground.",
     "crisis.fx": "Income −25%",
     "pandemic.fx": "Troop growth −50%",
     "boom.fx": "Trade and trains ×2",
@@ -1394,7 +1371,6 @@
     "nukeIntercepted": "Your missile was intercepted.",
     "bombed": "Bombing by {by}: {troops} troops lost.",
     "planeLost": "{by} shot down one of your aircraft ({plane}).",
-    "sabotaged": "Sabotage ordered by {by}!",
     "researchDone": "Research complete: {tech}.",
     "secession": "Secession: {tiles} tiles revolted!",
     "youDied": "You have been eliminated. You can keep watching as a spectator.",
@@ -1451,7 +1427,6 @@
       "peaceSummit": "Peace summit: no nuclear launch for another {left} (a truce between all countries)."
     },
     "air": "No free airfield in range, invalid target or not enough gold.",
-    "general": "Ability unavailable.",
     "simulation": "Simulation error — see the log.",
     "boat": {
       "max": "Too many transports at sea (3 max).",
@@ -1517,11 +1492,6 @@
       "noTarget": "No enemy target here (a building, a ship or another country's land).",
       "gold": "Not enough gold for this plane."
     },
-    "generalWhy": {
-      "disabled": "Generals are disabled in this match.",
-      "cooldown": "Your general is resting: ready again in {s} s.",
-      "noTarget": "No enemy train or trade ship within 40 tiles."
-    },
     "line": {
       "phase": "Lines can be laid once the game has started.",
       "max": "{n} lines at most: take one down (right click on it).",
@@ -1562,7 +1532,6 @@
     "chat": "Messages",
     "pause": "Pause (solo)",
     "pauseAlt": "Pause, second key (solo)",
-    "general": "General's ability",
     "screenshot": "Screenshot",
     "fps": "FPS and tick time",
     "panUp": "Camera up",
@@ -3052,8 +3021,7 @@
     "boat": "no landings",
     "bomber": "no bombing",
     "plane": "no hostile flights",
-    "fighter": "your fighters will hold their fire",
-    "sabotage": "no sabotage"
+    "fighter": "your fighters will hold their fire"
   },
   "truce": {
     "summit": "Peace summit: {act} for another {clock}",

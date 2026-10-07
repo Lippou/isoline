@@ -6,8 +6,6 @@ import type { PlayerFlag } from '../data/flagSpec';
 export type GameMode =
   'ffa' | 'teams' | 'humansVsNations' | 'tribes' | 'doomsday' | 'battleRoyale' | 'campaign';
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'impossible';
-export type GeneralType = 'blitz' | 'rampart' | 'sabotage' | 'propaganda';
-export const GENERALS: readonly GeneralType[] = ['blitz', 'rampart', 'sabotage', 'propaganda'];
 
 export interface PlayerSlot {
   /** Stable slot id (also the network client id for humans). */
@@ -15,7 +13,6 @@ export interface PlayerSlot {
   name: string;
   kind: 'human' | 'nation';
   team: number;
-  general: GeneralType;
   color?: number;
   spectator?: boolean;
   /** Chosen flag (cosmetic: shown by the interface, never read by the rules). */
@@ -34,7 +31,6 @@ export interface FeatureToggles {
    */
   revolution: boolean;
   events: boolean;
-  generals: boolean;
   air: boolean;
   radar: boolean;
   council: boolean;
@@ -84,7 +80,6 @@ export function defaultFeatures(): FeatureToggles {
     loyalty: false,
     revolution: true,
     events: true,
-    generals: true,
     air: true,
     radar: true,
     council: true,
@@ -101,7 +96,7 @@ export function defaultConfig(seed: number): GameConfig {
     difficulty: 'normal',
     nations: 30,
     tribes: 60,
-    players: [{ slot: 0, name: 'Player', kind: 'human', team: 0, general: 'blitz' }],
+    players: [{ slot: 0, name: 'Player', kind: 'human', team: 0 }],
     victoryThreshold: 80,
     spawnSeconds: 30,
     goldMultiplier: 1,

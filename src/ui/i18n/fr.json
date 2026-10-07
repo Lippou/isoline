@@ -952,7 +952,6 @@
     "features": "Fonctionnalités",
     "players": "Joueurs",
     "name": "Nom",
-    "general": "Général",
     "spectator": "spectateur",
     "ready": "Prêt",
     "notReady": "Pas prêt",
@@ -1035,10 +1034,6 @@
       "name": "Événements mondiaux",
       "desc": "Crises, pandémies, booms commerciaux, tempêtes solaires, sommets de paix."
     },
-    "generals": {
-      "name": "Généraux",
-      "desc": "Une capacité active par joueur (recharge 5 min)."
-    },
     "air": {
       "name": "Aviation",
       "desc": "Aérodromes et intercepteurs, bombardiers (frappes sur les bâtiments), chasseurs, reconnaissance."
@@ -1054,24 +1049,6 @@
     "revolution": {
       "name": "Révolutions",
       "desc": "Activé par défaut. Un pays très en avance voit parfois une région lointaine se soulever : des rebelles sans or, retranchés (guérilla, barricades), à reprendre à grand prix ou à laisser s'essouffler."
-    }
-  },
-  "general": {
-    "blitz": {
-      "name": "Blitz",
-      "desc": "+30 % de vitesse d'attaque pendant 30 s."
-    },
-    "rampart": {
-      "name": "Rempart",
-      "desc": "Lignes défensives deux fois plus efficaces pendant 30 s."
-    },
-    "sabotage": {
-      "name": "Sabotage",
-      "desc": "Détruit le train ou le navire marchand ennemi le plus proche du point visé."
-    },
-    "propaganda": {
-      "name": "Propagande",
-      "desc": "Vos bâtiments occupés se rallient aussitôt ; avec la loyauté, +50 % de loyauté pendant 60 s et aucune sécession."
     }
   },
   "personality": {
@@ -1289,7 +1266,7 @@
     "pandemic.desc": "La croissance des troupes est divisée par deux pendant 2 minutes. Toutes les armées ont perdu 3 % de leurs effectifs au début de l'épidémie.",
     "boom.desc": "Navires marchands et trains rapportent le double pendant 2 minutes : c'est le moment de commercer.",
     "solarStorm.desc": "Les radars sont aveugles pendant 90 secondes : plus d'alerte avancée ni de guidage des intercepteurs, et le brouillard retombe sur ce qu'ils révélaient.",
-    "peaceSummit.desc": "Trêve forcée de 60 secondes : aucun pays ne peut en attaquer un autre (ni troupes, ni bateaux, ni avions, ni sabotage) et personne ne lance d'arme nucléaire. Les tribus restent attaquables sur le terrain.",
+    "peaceSummit.desc": "Trêve forcée de 60 secondes : aucun pays ne peut en attaquer un autre (ni troupes, ni bateaux, ni avions) et personne ne lance d'arme nucléaire. Les tribus restent attaquables sur le terrain.",
     "crisis.fx": "Revenus −25 %",
     "pandemic.fx": "Croissance des troupes −50 %",
     "boom.fx": "Commerce et trains ×2",
@@ -1394,7 +1371,6 @@
     "nukeIntercepted": "Votre missile a été intercepté.",
     "bombed": "Bombardement de {by} : {troops} troupes perdues.",
     "planeLost": "{by} a abattu un de vos appareils ({plane}).",
-    "sabotaged": "Sabotage ordonné par {by} !",
     "researchDone": "Recherche terminée : {tech}.",
     "secession": "Sécession : {tiles} tuiles se sont révoltées !",
     "youDied": "Vous avez été éliminé. Vous pouvez continuer en spectateur.",
@@ -1451,7 +1427,6 @@
       "peaceSummit": "Sommet de la paix : aucun lancement nucléaire pendant encore {left} (trêve forcée entre tous les pays)."
     },
     "air": "Aucun aérodrome libre à portée, cible invalide ou or insuffisant.",
-    "general": "Capacité indisponible.",
     "simulation": "Erreur de simulation — consultez le journal.",
     "boat": {
       "max": "Trop de transports en mer (3 maximum).",
@@ -1517,11 +1492,6 @@
       "noTarget": "Aucune cible ennemie ici (bâtiment, navire ou terre d'un autre pays).",
       "gold": "Or insuffisant pour cet avion."
     },
-    "generalWhy": {
-      "disabled": "Les généraux sont désactivés dans cette partie.",
-      "cooldown": "Votre général se repose : de nouveau prêt dans {s} s.",
-      "noTarget": "Aucun train ni navire marchand ennemi à moins de 40 tuiles."
-    },
     "line": {
       "phase": "Les lignes se posent une fois la partie lancée.",
       "max": "{n} lignes au plus : démontez-en une (clic droit dessus).",
@@ -1562,7 +1532,6 @@
     "chat": "Messages",
     "pause": "Pause (solo)",
     "pauseAlt": "Pause, seconde touche (solo)",
-    "general": "Capacité du général",
     "screenshot": "Capture d'écran",
     "fps": "FPS et temps de tick",
     "panUp": "Caméra haut",
@@ -3052,8 +3021,7 @@
     "boat": "aucun débarquement",
     "bomber": "aucun bombardement",
     "plane": "aucun vol hostile",
-    "fighter": "vos chasseurs n'ouvriront pas le feu",
-    "sabotage": "aucun sabotage"
+    "fighter": "vos chasseurs n'ouvriront pas le feu"
   },
   "truce": {
     "summit": "Sommet de la paix : {act} pendant encore {clock}",

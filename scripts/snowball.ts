@@ -140,7 +140,7 @@ function main(): void {
         mapId: id,
         nations: Math.min(30, map.meta.nations.length),
         tribes: 40,
-        players: [{ slot: 0, name: 'Bot', kind: 'human', team: 0, general: 'blitz' }],
+        players: [{ slot: 0, name: 'Bot', kind: 'human', team: 0 }],
         spawnSeconds: 1,
         difficulty,
         features: loyalty === undefined ? cfg.features : { ...cfg.features, loyalty: loyalty === '1' },

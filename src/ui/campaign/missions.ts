@@ -183,7 +183,7 @@ function base(seed: number, name: string, mapId: string, patch: Partial<GameConf
   return {
     ...cfg,
     mapId,
-    players: [{ slot: 0, name, kind: 'human', team: 0, general: 'blitz' }],
+    players: [{ slot: 0, name, kind: 'human', team: 0 }],
     spawnSeconds: 90,
     ...patch,
     features: { ...cfg.features, loyalty: false },

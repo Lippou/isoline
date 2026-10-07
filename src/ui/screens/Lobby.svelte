@@ -4,7 +4,7 @@
   import { t, i18n } from '../i18n/i18n.svelte';
   import ModePicker from '../components/ModePicker.svelte';
   import { mapsBase, bridge, readText } from '../bridge';
-  import { GENERALS, type GameConfig, type GameMode, type Difficulty } from '../../core/game/config';
+  import type { GameConfig, GameMode, Difficulty } from '../../core/game/config';
   import { defaultGenParams } from '../../core/map/generator';
   import { parseIsoMap } from '../../core/map/format';
   import type { MapCategory } from '../../core/map/gamemap';
@@ -48,10 +48,7 @@
   let hostAddresses = $state<string[]>([]);
   if (client?.host) void bridge.lan.localAddresses().then((a) => (hostAddresses = a));
   let cfg: GameConfig = $state(lobby?.config ?? structuredClone($state.snapshot(app.lobby.config)));
-  if (!lan)
-    cfg.players = [
-      { slot: 0, name: playerName(), kind: 'human', team: 1, general: cfg.players[0]?.general ?? 'blitz' },
-    ];
+  if (!lan) cfg.players = [{ slot: 0, name: playerName(), kind: 'human', team: 1 }];
   let maps: MapEntry[] = $state([]);
   let loadingMaps = $state(true);
   let category = $state<MapCategory>('continents');
@@ -83,7 +80,6 @@
     'revolution',
     'loyalty',
     'events',
-    'generals',
     'air',
     'radar',
     'council',
@@ -292,7 +288,7 @@
     return hashString(p.name + Math.max(0, k));
   }
   function flagPicked(flag: PlayerFlag | undefined): void {
-    if (client && me) client.send({ t: 'profile', team: me.team, general: me.general, flag: flag ?? null });
+    if (client && me) client.send({ t: 'profile', team: me.team, flag: flag ?? null });
   }
 </script>
 
@@ -825,41 +821,32 @@
 
         <div class="who">
           {#if !lan}
-            <div class="pair">
-              <div class="field">
-                <span>{t('lobby.name')}</span>
-                <div class="namerow">
-                  <button
-                    class="flagpick"
-                    title={t('flag.change')}
-                    aria-label={t('flag.change')}
-                    data-testid="lobby-flag"
-                    onclick={() => (pickingFlag = true)}
-                    ><img
-                      src={flagUrl({ flagSeed: hashString(cfg.players[0]!.name + 0), flag: myFlag() })}
-                      alt=""
-                    /></button
-                  >
-                  <input
-                    type="text"
-                    aria-label={t('lobby.name')}
-                    bind:value={cfg.players[0]!.name}
-                    maxlength="24"
-                    onchange={() => {
-                      settings.playerName = cfg.players[0]!.name;
-                      push();
-                    }}
-                  />
-                </div>
+            <div class="field">
+              <span>{t('lobby.name')}</span>
+              <div class="namerow">
+                <button
+                  class="flagpick"
+                  title={t('flag.change')}
+                  aria-label={t('flag.change')}
+                  data-testid="lobby-flag"
+                  onclick={() => (pickingFlag = true)}
+                  ><img
+                    src={flagUrl({ flagSeed: hashString(cfg.players[0]!.name + 0), flag: myFlag() })}
+                    alt=""
+                  /></button
+                >
+                <input
+                  type="text"
+                  aria-label={t('lobby.name')}
+                  bind:value={cfg.players[0]!.name}
+                  maxlength="24"
+                  onchange={() => {
+                    settings.playerName = cfg.players[0]!.name;
+                    push();
+                  }}
+                />
               </div>
-              <label class="field"
-                ><span>{t('lobby.general')}</span>
-                <select bind:value={cfg.players[0]!.general} onchange={push}>
-                  {#each GENERALS as g (g)}<option value={g}>{t(`general.${g}.name`)}</option>{/each}
-                </select>
-              </label>
             </div>
-            <small class="gdesc">{t(`general.${cfg.players[0]!.general}.desc`)}</small>
             {#if cfg.mode === 'teams'}
               <label class="field"
                 ><span>{t('lobby.team')}</span>
@@ -914,20 +901,6 @@
                   )}</button
                 >
               {/if}
-              <label class="field"
-                ><span>{t('lobby.general')}</span>
-                <select
-                  value={me.general}
-                  onchange={(e) =>
-                    client?.send({
-                      t: 'profile',
-                      team: me.team,
-                      general: (e.target as HTMLSelectElement).value as never,
-                    })}
-                >
-                  {#each GENERALS as g (g)}<option value={g}>{t(`general.${g}.name`)}</option>{/each}
-                </select>
-              </label>
               {#if cfg.mode === 'teams'}
                 <label class="field"
                   ><span>{t('lobby.team')}</span>
@@ -940,7 +913,6 @@
                       client?.send({
                         t: 'profile',
                         team: Number((e.target as HTMLInputElement).value),
-                        general: me.general,
                       })}
                   /></label
                 >
@@ -1291,8 +1263,7 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
-  .field small,
-  .gdesc {
+  .field small {
     font-family: var(--np-serif);
     color: var(--np-ink-2);
     font-size: 0.82em;
@@ -1501,11 +1472,6 @@
     gap: 10px;
     align-content: start;
   }
-  .pair {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
   .namerow {
     display: flex;
     gap: 8px;
@@ -1549,9 +1515,6 @@
   }
   .flagbtn {
     justify-self: start;
-  }
-  .gdesc {
-    margin-top: -4px;
   }
   .launch {
     padding: 12px 0 0;

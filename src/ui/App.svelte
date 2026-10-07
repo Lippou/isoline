@@ -114,9 +114,7 @@
     if (q.get('threshold')) cfg.victoryThreshold = Number(q.get('threshold'));
     if (q.get('difficulty')) cfg.difficulty = q.get('difficulty') as typeof cfg.difficulty;
     const spectate = q.has('spectate');
-    cfg.players = spectate
-      ? []
-      : [{ slot: 0, name: q.get('name') ?? 'Ilse', kind: 'human', team: 1, general: 'blitz' }];
+    cfg.players = spectate ? [] : [{ slot: 0, name: q.get('name') ?? 'Ilse', kind: 'human', team: 1 }];
     app.launch = { kind: 'solo', config: withMyFlag(cfg), viewer: spectate ? -1 : 1 };
     app.screen = 'game';
   }

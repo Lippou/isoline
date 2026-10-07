@@ -25,7 +25,6 @@ export type Tool =
   | { k: 'nuke'; kind: number; count: number }
   | { k: 'warship' }
   | { k: 'air'; kind: number }
-  | { k: 'general' }
   | { k: 'ping' }
   | { k: 'shipMove' }
   /** Choosing the tile of a new capital (rules/capital.ts). */

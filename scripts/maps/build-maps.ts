@@ -386,7 +386,7 @@ const NOT_NATIONS = [
 
 /**
  * Display names replacing Natural Earth's map abbreviations (« Dem. Rep. Congo ») and formal
- * names (« République populaire de Chine »), by ISO code. The flag seed (personality, general)
+ * names (« République populaire de Chine »), by ISO code. The flag seed (personality)
  * still hashes Natural Earth's NAME, so these nations keep their character.
  */
 const NAME_FIX: Record<string, Partial<LocalizedName>> = {

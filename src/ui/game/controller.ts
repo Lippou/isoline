@@ -440,7 +440,6 @@ export class GameController {
       hud.tool.k === 'nuke' ||
       hud.tool.k === 'air' ||
       hud.tool.k === 'warship' ||
-      hud.tool.k === 'general' ||
       hud.tool.k === 'ping' ||
       hud.tool.k === 'capital'
     ) {
@@ -575,9 +574,6 @@ export class GameController {
       case 'speedUp':
       case 'speedDown':
         if (this.session.kind === 'solo') this.stepSpeed(action === 'speedUp' ? 1 : -1);
-        break;
-      case 'general':
-        hud.tool = { k: 'general' };
         break;
       case 'screenshot':
         void this.screenshot();

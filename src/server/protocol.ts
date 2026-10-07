@@ -1,5 +1,5 @@
 // LAN protocol (JSON over WebSocket) shared by the embedded server and clients.
-import type { GameConfig, GeneralType } from '../core/game/config';
+import type { GameConfig } from '../core/game/config';
 import type { Command, Turn } from '../core/net/commands';
 import type { Snapshot } from '../core/net/snapshot';
 import type { PlayerFlag } from '../core/data/flagSpec';
@@ -13,7 +13,6 @@ export interface LobbyPlayer {
   connected: boolean;
   spectator: boolean;
   team: number;
-  general: GeneralType;
   host: boolean;
   playerId: number; // assigned at start (-1 before / spectators)
   ping: number;
@@ -41,7 +40,7 @@ export type ClientMsg =
       flag?: PlayerFlag;
     }
   | { t: 'ready'; ready: boolean }
-  | { t: 'profile'; team: number; general: GeneralType; flag?: PlayerFlag | null }
+  | { t: 'profile'; team: number; flag?: PlayerFlag | null }
   | { t: 'cmd'; c: Command }
   | { t: 'hash'; tick: number; hash: number }
   | { t: 'chat'; channel: 'all' | 'team' | 'allies'; text: string }

@@ -810,9 +810,6 @@ export class InputController {
         if (tool.kind === 1) guardBetrayal(session, tile, () => session.cmd({ t: 'air', kind: 1, tile }));
         else session.cmd({ t: 'air', kind: tool.kind, tile });
         return;
-      case 'general':
-        session.cmd({ t: 'general', tile });
-        return;
       case 'ping':
         session.cmd({ t: 'ping', tile, kind: 0 });
         return;

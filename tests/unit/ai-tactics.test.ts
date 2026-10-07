@@ -209,7 +209,7 @@ describe('nations against a snowballing human', () => {
       tribes: 20,
       difficulty: 'impossible',
       spawnSeconds: 30,
-      players: [{ slot: 0, name: 'Bot', kind: 'human', team: 0, general: 'blitz' }],
+      players: [{ slot: 0, name: 'Bot', kind: 'human', team: 0 }],
     });
     const bot = createBot('aggressive', 5);
     bot.id = g.players.find((p) => p && p.kind === 'human')!.id;
@@ -271,7 +271,7 @@ describe('nations against a snowballing human', () => {
         tribes: 40,
         difficulty: 'hard',
         spawnSeconds: 30,
-        players: [{ slot: 0, name: 'Bot', kind: 'human', team: 0, general: 'blitz' }],
+        players: [{ slot: 0, name: 'Bot', kind: 'human', team: 0 }],
       });
       const bot = createBot('aggressive', seed);
       bot.id = g.players.find((p) => p && p.kind === 'human')!.id;

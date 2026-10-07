@@ -243,7 +243,7 @@ describe('flags in games and over LAN', () => {
       },
     });
     // Changing one's flag in the lobby; null clears it.
-    c.send(JSON.stringify({ t: 'profile', team: 1, general: 'blitz', flag: null }));
+    c.send(JSON.stringify({ t: 'profile', team: 1, flag: null }));
     for (let k = 0; k < 200 && server.lobby().players[2]!.flag; k++)
       await new Promise((r) => setTimeout(r, 10));
     expect(server.lobby().players[2]!.flag).toBeUndefined();

@@ -511,21 +511,6 @@ export function lootBuilding(game: Game, b: Building): number {
   return lost;
 }
 
-/** General "Propaganda": p's occupied buildings rally to it at once (rules/features.ts). */
-export function endOccupations(game: Game, owner: number): number {
-  let n = 0;
-  for (const b of game.buildings.values()) {
-    if (b.owner !== owner || b.occupiedLeft === 0) continue;
-    b.occupiedLeft = 0;
-    n++;
-  }
-  if (n > 0) {
-    game.buildingsDirty = true;
-    game.buildingsVersion++;
-  }
-  return n;
-}
-
 export function removeBuilding(game: Game, b: Building, _voluntary: boolean): void {
   if (!b.alive) return;
   b.alive = false;

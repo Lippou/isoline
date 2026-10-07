@@ -179,11 +179,11 @@ function tileCost(game: Game, tile: number, target: number, attacker: number): n
 }
 
 /**
- * Speed of the attacker (general Blitz, technologies, disorganisation after losing its
- * capital): divides the cost of every tile.
+ * Speed of the attacker (technologies, disorganisation after losing its capital): divides
+ * the cost of every tile.
  */
 function attackSpeedMult(game: Game, p: Player): number {
-  return (p.blitzUntil > game.tick ? 1.3 : 1) * game.techSpeedMult(p.id) * capitalSpeedMult(game, p);
+  return game.techSpeedMult(p.id) * capitalSpeedMult(game, p);
 }
 
 export interface TileOutcome {

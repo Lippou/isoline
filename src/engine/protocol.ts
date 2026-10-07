@@ -107,7 +107,6 @@ export interface PlayerView {
   immune: boolean;
   allies: number[];
   personality: Personality;
-  general: string;
   label: [number, number, number]; // x, y, size (tiles)
   bigMalus: number;
   /** Extra reach of this player's SAMs from research (tiles), added to samRange(level). */
@@ -157,8 +156,6 @@ export interface LocalView {
   research: { base: number; labs: number; labLevels: number; mult: number };
   /** Goals queued after the current one. */
   researchQueue: number[];
-  generalReadyIn: number;
-  general: string;
   immuneFor: number;
   traitorFor: number;
   debuffFor: number;
@@ -216,9 +213,6 @@ export interface LocalView {
    */
   buildingLevels: number[];
   stats: PlayerStats;
-  blitzFor: number;
-  rampartFor: number;
-  propagandaFor: number;
   /** My capital tile (-1: none — lost, a new one is to be chosen). */
   capital: number;
   /** Who took my last capital (0: razed, or none lost). */

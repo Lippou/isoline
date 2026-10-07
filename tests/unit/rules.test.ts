@@ -20,7 +20,6 @@ import {
   ROYALE_FIRST,
   ROYALE_SWEEP,
   ROYALE_WAIT,
-  GENERAL_COOLDOWN,
   COUNCIL_PERIOD,
   COUNCIL_VOTE_TICKS,
   LOYALTY_SECESSION_THRESHOLD,
@@ -592,16 +591,6 @@ describe('original features', () => {
     expect(bonus.gold).toBeGreaterThan(0);
     expect(bonus.buildDiscount).toBeGreaterThan(0);
     expect(buildCost(g, p, B.Silo)).toBeLessThan(1_000_000);
-  });
-
-  it('generals: ability then cooldown', () => {
-    const g = testGame(asciiMap(FIELD, 6), 1, { victoryThreshold: 101 });
-    startWith(g, [[30, 20]]);
-    const p = g.players[1]!;
-    p.generalReadyTick = 0;
-    g.step([cmd(1, { t: 'general', tile: 0 })]);
-    expect(p.blitzUntil).toBeGreaterThan(g.tick);
-    expect(p.generalReadyTick).toBe(g.tick - 1 + GENERAL_COOLDOWN);
   });
 
   it('world council opens, counts weighted votes and applies the result', () => {

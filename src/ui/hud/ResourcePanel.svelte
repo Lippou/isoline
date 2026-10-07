@@ -67,7 +67,6 @@
   const trainsPs = $derived(L ? L.incomeBreakdown.trains / 25 : 0);
   const incomePs = $derived(L ? L.income * 10 + tradePs + trainsPs : 0);
   let showIncome = $state(false);
-  const generalReady = $derived(L ? L.generalReadyIn === 0 : false);
   // Short windows: the lists of our attacks and boats fold into badges that open them, so
   // the panel does not climb into the dock and the column of cards (incoming attacks stay
   // listed: they call for an answer).
@@ -231,21 +230,11 @@
       {/if}
     </div>
 
-    <div class="actions">
-      <button
-        class="btn small general"
-        class:ready={generalReady}
-        disabled={!generalReady}
-        onclick={() => (hud.tool = { k: 'general' })}
-        data-tip={t(`general.${L.general}.desc`)}
-      >
-        <Icon name="general" size={14} />{t(`general.${L.general}.name`)}
-        {#if !generalReady}<span class="mono">{Math.ceil(L.generalReadyIn / 10)} s</span>{/if}
-      </button>
-      {#if L.boats > 0}<span class="chip" data-tip={t('hud.boatsTip')}
-          ><Icon name="transport" size={13} />{L.boats}</span
-        >{/if}
-    </div>
+    {#if L.boats > 0}
+      <div class="actions">
+        <span class="chip" data-tip={t('hud.boatsTip')}><Icon name="transport" size={13} />{L.boats}</span>
+      </div>
+    {/if}
 
     {#if folded.current && (L.attacks.length || L.transports.length)}
       <div class="badges" data-testid="res-badges">
@@ -644,12 +633,6 @@
     .attacks {
       max-height: 76px;
     }
-  }
-  /* The general's order, ready: brass, the main action of the moment. */
-  .general.ready {
-    border-color: var(--np-brass-fill);
-    color: var(--np-brass);
-    font-weight: 600;
   }
   .attacks {
     list-style: none;

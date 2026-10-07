@@ -688,7 +688,6 @@ export const DOOM_RATION = 0.6;
 /** Survival of the strongest: share of the useful land (%) under which troops melt; [from 11:56, last minute]. */
 export const DOOM_SURVIVAL_FFA = [3, 5] as const;
 export const DOOM_SURVIVAL_TEAMS = [10, 15] as const;
-export const GENERAL_COOLDOWN = min(5);
 export const COUNCIL_PERIOD = min(10);
 export const COUNCIL_VOTE_TICKS = sec(30);
 export const EVENT_MIN = min(4);

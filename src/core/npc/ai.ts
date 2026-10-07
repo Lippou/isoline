@@ -42,7 +42,6 @@ import {
 import { thinkNavy } from './navy';
 import { AI_RAID_MEMORY, raider, thinkAir } from './airpower';
 import { skyThreat, tryNuke, warWish, type ArsenalMem, type WarState, type Wish } from './arsenal';
-import { thinkGeneral } from './generals';
 import { barricadesUp, guerrilla, nextSpread } from '../rules/revolution';
 import { LineKind, lineAcross, linesOf, locate } from '../rules/lines';
 
@@ -485,7 +484,7 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
     runaway > 0 && runaway !== p.id && !game.sameTeam(p.id, runaway) && joinsCoalition(game, p.id, runaway);
   const front = member && nb.has(runaway) && !p.allies.has(runaway);
 
-  // What the war looks like (the war chest, the air force, the generals read it).
+  // What the war looks like (the war chest and the air force read it).
   const enemies = enemiesOf(game, p, incoming, runaway, member);
   const war: WarState = {
     atWar: underAttack || front || game.tick - m.lastWar < 3000 || raider(game, p, AI_RAID_MEMORY) > 0,
@@ -608,20 +607,6 @@ function thinkNation(game: Game, p: Player, m: Mem): number {
   } else if (!joined && nb.size === 0 && p.troops > cap * 0.5) {
     cost += tryBoat(game, p, m, t, idle);
   }
-
-  // 4b. The general (generals.ts): Blitz with a new offensive; from hard Rampart, Sabotage, Propaganda.
-  let pressing = 0;
-  let worst = -1;
-  for (const [att, troops] of incoming) {
-    pressing += troops;
-    if (worst < 0 || troops > incoming.get(worst)!) worst = att;
-  }
-  cost += thinkGeneral(game, p, {
-    offensive: m.lastWar === game.tick ? (p.capital >= 0 ? p.capital : p.spawnTile) : -1,
-    incoming: pressing,
-    contact: worst >= 0 ? (nb.get(worst)?.tile ?? -1) : -1,
-    enemies,
-  });
 
   // 5. Economy: build things (from normal, defensive lines on the border with the runaway), the
   // war chest first: what the war needs is saved for (arsenal.ts).

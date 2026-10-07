@@ -20,7 +20,6 @@ import {
   makeCode,
   type Beacon,
   type ClientMsg,
-  type LobbyPlayer,
   type LobbyState,
   type ServerMsg,
 } from './protocol';
@@ -46,7 +45,6 @@ interface Client {
   spectator: boolean;
   ready: boolean;
   team: number;
-  general: LobbyPlayer['general'];
   host: boolean;
   playerId: number;
   ping: number;
@@ -180,7 +178,6 @@ export class LanServer {
         connected: !!c.ws,
         spectator: c.spectator,
         team: c.team,
-        general: c.general,
         host: c.host,
         playerId: c.playerId,
         ping: c.ping,
@@ -274,7 +271,6 @@ export class LanServer {
       spectator,
       ready: false,
       team: 1 + (this.clients.length % Math.max(2, this.config.teamCount)),
-      general: 'blitz',
       host: this.clients.length === 0,
       playerId: -1,
       ping: 0,
@@ -306,7 +302,6 @@ export class LanServer {
         break;
       case 'profile':
         c.team = Math.max(1, Math.min(8, m.team | 0));
-        c.general = m.general;
         if ('flag' in m && !this.started) c.flag = sanitizeFlag(m.flag);
         this.pushLobby();
         break;
@@ -387,7 +382,6 @@ export class LanServer {
         name: c.name,
         kind: 'human',
         team: c.team,
-        general: c.general,
         ...(c.flag ? { flag: c.flag } : {}),
       })),
     };
@@ -476,7 +470,6 @@ export function validateOnServer(g: Game, pid: number, c: Command): boolean {
     case 'boat':
     case 'warship':
     case 'air':
-    case 'general':
     case 'ping':
       return inMap(c.tile) && p.alive;
     case 'donate':

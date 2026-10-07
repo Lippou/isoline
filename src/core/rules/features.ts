@@ -1,6 +1,6 @@
 // Original features driven by the simulation: weather & day/night, world events,
-// loyalty & secession, generals, world council, research ticking, resources.
-import type { Game, Refusal } from '../game/state';
+// loyalty & secession, world council, research ticking, resources.
+import type { Game } from '../game/state';
 import type { Player } from '../game/player';
 import {
   B,
@@ -9,7 +9,6 @@ import {
   DAY_LENGTH,
   EVENT_MAX,
   EVENT_MIN,
-  GENERAL_COOLDOWN,
   LOYALTY_CHECK_TICKS,
   LOYALTY_MAX,
   LOYALTY_SECESSION_THRESHOLD,
@@ -19,9 +18,7 @@ import {
 } from '../game/constants';
 import { recountResources, type ResourceBonus } from './resources';
 import { NODES, repeatCount, techKey, updateResearch } from './tech';
-import { sabotageNear, sabotageTarget } from '../units/trains';
 import { inService } from '../buildings/building';
-import { endOccupations } from '../buildings/buildings';
 import { inventTribeName } from '../names';
 import { IS_LAND } from '../map/terrain';
 import { shipSpeedAt, updateWeather, type WeatherCell } from './weather';
@@ -188,7 +185,6 @@ function updateLoyalty(game: Game): void {
     const c = ((((i / w) | 0) / cell) | 0) * cw + (((i % w) / cell) | 0);
     let gain = 4;
     if (stable.get(c) === o) gain += 12;
-    if (p.propagandaUntil > game.tick) gain *= 1.5;
     loy[i] = Math.min(LOYALTY_MAX, l + gain);
     if (l < LOYALTY_SECESSION_THRESHOLD && p.kind !== 'tribe') {
       let list = f.secessionCandidates.get(o);
@@ -234,7 +230,7 @@ function checkSecessions(game: Game): void {
     const p = game.players[o]!;
     if (!p.alive || p.tiles < 400 || cands.length < 8) continue;
     const density = p.troops / Math.max(1, p.tiles);
-    if (density >= 6 || p.propagandaUntil > game.tick) continue;
+    if (density >= 6) continue;
     const seed = cands[game.rng.int(0, cands.length - 1)]!;
     if (game.owner[seed] !== o || game.loyalty[seed]! >= LOYALTY_SECESSION_THRESHOLD) continue;
     secede(game, p, seed);
@@ -280,53 +276,6 @@ function secede(game: Game, p: Player, seed: number): void {
   game.emit({ k: 'secession', from: p.id, tribe: rebel.id, tile: seed });
   // The dispatch and the journal say where (the seed tile) and who the rebels are.
   game.notify(p.id, 'notify.secessionRegion', 'danger', { tribe: rebel.id, tiles: region.length }, seed);
-}
-
-// --------------------------------------------------------------- generals
-/**
- * Why p's general cannot act at `tile` now ('ok' when it can; 1.16: the real reason):
- * generals off, still recovering, or Sabotage with no hostile train or trade ship within
- * reach — or only ones covered by a truce (its Refusal, worded with the time left).
- */
-export function generalError(
-  game: Game,
-  p: Player,
-  tile: number,
-): 'ok' | 'disabled' | 'cooldown' | 'noTarget' | Refusal {
-  if (!game.config.features.generals) return 'disabled';
-  if (game.phase !== 'playing') return 'phase';
-  if (game.tick < p.generalReadyTick) return 'cooldown';
-  if (p.general !== 'sabotage') return 'ok';
-  const near = sabotageTarget(game, p.id, tile, true);
-  if (!near) return 'noTarget';
-  if (!sabotageTarget(game, p.id, tile, false))
-    return game.attackRefusal(p.id, near.owner, true) ?? 'noTarget';
-  return 'ok';
-}
-
-export function useGeneral(game: Game, p: Player, tile: number): boolean {
-  if (!game.config.features.generals || game.phase !== 'playing') return false;
-  if (game.tick < p.generalReadyTick) return false;
-  switch (p.general) {
-    case 'blitz':
-      p.blitzUntil = game.tick + sec(30);
-      break;
-    case 'rampart':
-      p.rampartUntil = game.tick + sec(30);
-      break;
-    case 'sabotage':
-      if (!sabotageNear(game, p.id, tile)) return false;
-      break;
-    case 'propaganda':
-      // The occupied buildings rally at once (GAME_DESIGN.md §6.4); with loyalty on, the
-      // land also settles faster and cannot secede for a minute.
-      endOccupations(game, p.id);
-      p.propagandaUntil = game.tick + sec(60);
-      break;
-  }
-  p.generalReadyTick = game.tick + GENERAL_COOLDOWN;
-  game.emit({ k: 'general', player: p.id, ability: p.general, tile });
-  return true;
 }
 
 // ---------------------------------------------------------------- council

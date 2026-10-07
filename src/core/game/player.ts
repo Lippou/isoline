@@ -1,5 +1,4 @@
 // Player state. Plain data + small helpers; systems live in their own modules.
-import type { GeneralType } from './config';
 import type { LocalizedName } from '../map/gamemap';
 import { BUILDING_COUNT } from './constants';
 
@@ -56,7 +55,6 @@ export class Player {
   iso = '';
   slot = -1;
   personality: Personality = 'expansionist';
-  general: GeneralType = 'blitz';
 
   alive = true;
   spawned = false;
@@ -148,14 +146,8 @@ export class Player {
   /** Levels of completed research centres (refreshed every tick when the tree is on). */
   labLevels = 0;
 
-  // Generals.
-  generalReadyTick = 0;
-  blitzUntil = -1;
-  rampartUntil = -1;
-
   /** Troops standing on front lines (rules/lines.ts): off the army and off its ceiling. */
   lineTroops = 0;
-  propagandaUntil = -1;
 
   // Capital (rules/capital.ts): the seat of government, set on the spawn tile at the start.
   /** Capital tile, -1 when there is none (lost and not re-established yet, or a tribe). */

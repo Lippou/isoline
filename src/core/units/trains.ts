@@ -441,35 +441,3 @@ export function updateRails(game: Game): void {
     startOnRail(t, next, stationId);
   }
 }
-
-/** General ability "Sabotage": destroy the enemy train or merchant closest to a tile. */
-/**
- * The hostile train or trade ship nearest `tile` (within 40 tiles) that a saboteur of `by`
- * would blow up; `anyTruce` also counts those a truce (peace summit, Council) protects.
- */
-export function sabotageTarget(game: Game, by: number, tile: number, anyTruce = false): Unit | null {
-  const w = game.map.width;
-  const x = tile % w;
-  const y = (tile / w) | 0;
-  let best: Unit | null = null;
-  let bestD = 40 * 40;
-  for (const u of game.units) {
-    if (!u.alive || (u.type !== U.Train && u.type !== U.Merchant) || game.friendly(u.owner, by)) continue;
-    if (!anyTruce && game.inTruce(u.owner, by)) continue; // a peace summit or the Council's ceasefire
-    const d = (u.x - x) ** 2 + (u.y - y) ** 2;
-    if (d < bestD) {
-      bestD = d;
-      best = u;
-    }
-  }
-  return best;
-}
-
-export function sabotageNear(game: Game, by: number, tile: number): boolean {
-  const best = sabotageTarget(game, by, tile);
-  if (!best) return false;
-  best.alive = false;
-  game.emit({ k: 'explosion', x: best.x, y: best.y, kind: 10, radius: 3, owner: by });
-  game.notify(best.owner, 'notify.sabotaged', 'danger', { by });
-  return true;
-}
