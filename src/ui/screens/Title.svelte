@@ -344,7 +344,8 @@
       <b>{profile.name || settings.playerName || t('profile.anonymous')}</b>
       <span>{t(`title.${profile.title}`)}</span>
     </button>
-    <span class="mono ver">v{app.version}</span>
+    <!-- OpenFront's AGPL section 7 terms: its notice stays visible on the main menu. -->
+    <span class="ver"><span class="mono">v{app.version}</span> · {t('title.openfront')}</span>
   </footer>
 </div>
 

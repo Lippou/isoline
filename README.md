@@ -13,7 +13,7 @@
 <p align="center">
   <a href="https://github.com/Lippou/isoline/releases/latest"><img alt="Télécharger" src="https://img.shields.io/badge/t%C3%A9l%C3%A9charger-macOS%20%C2%B7%20Windows-b8862a?style=flat-square" /></a>
   <a href="https://lippou.github.io/isoline/"><img alt="Bande-annonce" src="https://img.shields.io/badge/bande--annonce-0%3A45-172a3c?style=flat-square" /></a>
-  <a href="LICENSE"><img alt="Licence MIT" src="https://img.shields.io/badge/licence-MIT-46535f?style=flat-square" /></a>
+  <a href="LICENSE"><img alt="Licence AGPL v3" src="https://img.shields.io/badge/licence-AGPL%20v3-46535f?style=flat-square" /></a>
 </p>
 
 <p align="center">
@@ -23,6 +23,8 @@
 </p>
 
 Vous partez d'un point sur la carte. Face à vous, des dizaines de nations jouées par l'ordinateur, chacune avec son drapeau, ses alliances et ses ambitions. Étendez vos frontières, bâtissez une économie, tenez vos fronts et frappez au bon moment : une partie se joue en 30 à 60 minutes, et la diplomatie compte autant que la guerre.
+
+> **À propos du projet.** Isoline est un projet personnel, sans aucun but commercial. Il est ouvertement inspiré d'[OpenFront](https://github.com/openfrontio/OpenFrontIO), lui-même inspiré de [Territorial.io](https://territorial.io) : même genre, mêmes règles, et une partie du code de simulation traduite d'OpenFront. Isoline y ajoute sa propre direction artistique et ses propres mécaniques. Je ne l'ai pas codé moi-même : il a été entièrement **vibe-codé avec Claude Opus 5.5**, à partir de mes idées, de mes tests et de mes retours.
 
 <table>
   <tr>
@@ -76,4 +78,4 @@ Tout le reste : [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md). Les règles et leu
 
 ## Licence
 
-Code sous licence [MIT](LICENSE). Polices, musiques (Kevin MacLeod, CC BY 4.0), bruitages, drapeaux et données géographiques sont sous licences libres : voir [`CREDITS.md`](CREDITS.md).
+Code sous licence [GNU AGPL v3](LICENSE), comme OpenFront dont une partie est traduite : © OpenFront and Contributors, voir [`NOTICE.md`](NOTICE.md). Isoline est un projet indépendant, sans lien officiel avec OpenFront. Polices, musiques (Kevin MacLeod, CC BY 4.0), bruitages, drapeaux et données géographiques sont sous licences libres : voir [`CREDITS.md`](CREDITS.md).

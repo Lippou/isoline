@@ -124,7 +124,8 @@
     "peekLan": "Sans serveur externe : tous les joueurs doivent être sur le même réseau.",
     "peekSaves": "{n} sauvegardes disponibles.",
     "peekSavesOne": "Une sauvegarde disponible.",
-    "peekSavesNone": "Aucune sauvegarde pour l'instant. Sauvegardez depuis le menu de pause d'une partie."
+    "peekSavesNone": "Aucune sauvegarde pour l'instant. Sauvegardez depuis le menu de pause d'une partie.",
+    "openfront": "Inspiré d'OpenFront · © OpenFront and Contributors"
   },
   "menu": {
     "main": "Menu principal",
@@ -2148,10 +2149,10 @@
     "motifs": "Motifs de terrain (lecture sans les couleurs)"
   },
   "about": {
-    "text": "Isoline est un jeu de conquête territoriale en temps réel sur un atlas vivant. Code, cartes, sons et images sont originaux ou sous licence libre.",
+    "text": "Isoline est un jeu de conquête territoriale en temps réel, ouvertement inspiré d'OpenFront (lui-même inspiré de Territorial.io), avec sa propre direction artistique. Projet personnel sans but commercial, entièrement vibe-codé avec Claude Opus 5.5.",
     "credits": "Crédits",
     "naturalEarth": "données géographiques du domaine public (naturalearthdata.com)",
-    "license": "Code sous licence MIT, polices sous SIL Open Font License.",
+    "license": "Code sous licence GNU AGPL v3 : une partie de la simulation est traduite d'OpenFront (© OpenFront and Contributors). Projet indépendant, sans lien officiel avec OpenFront. Polices sous SIL Open Font License.",
     "version": "Version",
     "platform": "Plateforme",
     "licenses": "Licences"

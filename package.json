@@ -1,10 +1,10 @@
 {
   "name": "isoline",
   "productName": "Isoline",
-  "version": "1.26.0",
+  "version": "1.26.1",
   "description": "Isoline — real-time territorial conquest on a living night atlas.",
-  "author": "Isoline Team",
-  "license": "MIT",
+  "author": "Lippou",
+  "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
   "main": "dist-electron/main.cjs",

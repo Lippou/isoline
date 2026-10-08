@@ -1,6 +1,19 @@
 # Crédits et licences
 
-Isoline est un projet original. Le code est sous licence MIT (voir `LICENSE`). Le logo, les cartes, les sprites d'unités et les textures sont créés par le projet. Les icônes, drapeaux, polices, bruitages, musiques, photos de presse et la voix de synthèse proviennent des sources libres listées ci-dessous.
+Isoline est un projet personnel, sans but commercial, ouvertement inspiré d'OpenFront. Le code est sous licence [GNU AGPL v3](LICENSE) ; l'origine du projet et les conditions reprises d'OpenFront sont détaillées dans [`NOTICE.md`](NOTICE.md). Les icônes, drapeaux, polices, bruitages, musiques, photos de presse et la voix de synthèse proviennent des sources libres listées ci-dessous.
+
+## Origine du projet
+
+| Élément | Rôle | Licence | Lien |
+|---|---|---|---|
+| OpenFront | Inspiration principale : le genre, les règles et leurs valeurs ; une partie du code de simulation en est traduite (© OpenFront and Contributors) | AGPL v3 | https://github.com/openfrontio/OpenFrontIO |
+| Territorial.io | Inspiration d'origine du genre, qui a inspiré OpenFront ; rien n'en est repris | — | https://territorial.io |
+| Claude Opus 5.5 (Anthropic) | Tout le code, la marque et les cartes, en vibe coding | — | https://www.anthropic.com |
+| Lippou | Idée, direction du projet, tests et retours (sans écrire de code) | — | https://github.com/Lippou |
+
+**Cartes.** Aucun fichier de carte d'OpenFront n'est utilisé : les cartes réelles sont rastérisées depuis Natural Earth (domaine public), les autres dessinées en code. Mais une bonne partie du catalogue reprend volontairement celui d'OpenFront (Monde, Monde géant et ses grandes régions, Europe, Mer Noire, les continents, Pangée, Mars…), sur les mêmes régions : ces cartes lui ressemblent donc beaucoup.
+
+**Ce qui est propre à Isoline** : la direction artistique (carte réaliste, interface façon journal, logo, voir `BRAND.md`), et ce qui n'existe pas dans OpenFront, dont les lignes de front, la campagne narrée, la météo, la nuit, les technologies, les révolutions, l'aviation et le conseil mondial (`GAME_DESIGN.md`).
 
 ## Polices (embarquées)
 
@@ -127,8 +140,4 @@ Chaque événement mondial est illustré dans les articles du Courrier (Flash in
 
 ## Outils de build (non distribués)
 
-electron-builder (MIT), Vite (MIT), esbuild (MIT), TypeScript (Apache-2.0), Vitest (MIT), Playwright (Apache-2.0), ESLint (MIT), Prettier (MIT), lefthook (MIT), opentype.js (MIT), @resvg/resvg-js (MPL-2.0), pngjs (MIT), resedit (MIT), tsx (MIT), gifenc (MIT), ffmpeg-static (binaire FFmpeg, GPL ; utilisé seulement pour assembler la vidéo de présentation et imprimer les photos de presse, non distribué), svelte-check (MIT), typescript-eslint (MIT), NSIS 3.12 (zlib/libpng, via electron-builder).
-
-## Inspirations
-
-Le genre (conquête de territoires sur grille) est inspiré de jeux comme OpenFront.io et Territorial.io. **Aucun code, carte, sprite, texte ni son** de ces jeux n'a été repris : Isoline a été écrit de zéro, avec ses propres règles chiffrées (`GAME_DESIGN.md`), sa propre direction artistique (`BRAND.md`) et ses fonctionnalités originales.
+electron-builder (MIT), Vite (MIT), esbuild (MIT), TypeScript (Apache-2.0), Vitest (MIT), Playwright (Apache-2.0), ESLint (MIT), Prettier (MIT), lefthook (MIT), opentype.js (MIT), @resvg/resvg-js (MPL-2.0), pngjs (MIT), resedit (MIT), tsx (MIT), ffmpeg-static (binaire FFmpeg, GPL ; utilisé seulement pour monter la bande-annonce et imprimer les photos de presse, non distribué), svelte-check (MIT), typescript-eslint (MIT), NSIS 3.12 (zlib/libpng, via electron-builder).

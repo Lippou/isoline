@@ -2,6 +2,11 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.26.1] — Origine du projet et licence
+### Modifié
+- **Licence GNU AGPL v3** (au lieu de MIT) : une partie de la simulation est traduite du code d'OpenFront, publié sous cette licence. La mention « © OpenFront and Contributors » apparaît sur l'écran titre et dans « À propos », comme le demandent les conditions d'OpenFront.
+- **Crédits et « À propos » honnêtes** : Isoline est ouvertement inspiré d'OpenFront (lui-même inspiré de Territorial.io), plusieurs cartes en reprennent les régions, et tout le code a été vibe-codé avec Claude Opus 5.5. Projet personnel, sans but commercial (`NOTICE.md`).
+
 ## [1.26.0] — Une campagne pour débuter, le jeu à deux
 ### Modifié
 - **La campagne explique toutes les bases**, pour qui n'a jamais joué à OpenFront :

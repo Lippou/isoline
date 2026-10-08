@@ -9,7 +9,7 @@ Sommaire : 1. Vision · 2. Boucle de jeu · 3. Carte et terrain · 4. Apparition
 
 ## 1. Vision
 
-Isoline reprend la profondeur du genre « conquête de territoires sur carte en grille » (expansion, économie, marine, rail, nucléaire, diplomatie, nations automatisées) et y ajoute une couche stratégique originale : météo, brouillard de guerre, technologies, ressources, loyauté, conseil mondial, aviation, campagne.
+Isoline est ouvertement inspiré d'OpenFront (lui-même inspiré de Territorial.io) : il en reprend le genre, les règles et leurs valeurs (voir `NOTICE.md`). Il reprend la profondeur du genre « conquête de territoires sur carte en grille » (expansion, économie, marine, rail, nucléaire, diplomatie, nations automatisées) et y ajoute une couche stratégique originale : météo, brouillard de guerre, technologies, ressources, loyauté, conseil mondial, aviation, campagne.
 
 La direction artistique est **réaliste et sobre** : carte en relief façon vue satellite (ombrage, neiges, forêts, fonds marins), territoires en aplat translucide avec frontières nettes comme sur une carte politique, vrais drapeaux pour les pays réels, interface d'état-major sans fioritures. Le relief reste lisible sous les territoires, donc le coût d'attaque aussi. Voir `BRAND.md`.
 
