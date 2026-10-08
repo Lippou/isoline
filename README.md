@@ -11,15 +11,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Lippou/isoline/releases/latest"><img alt="Télécharger" src="https://img.shields.io/github/v/release/Lippou/isoline?label=t%C3%A9l%C3%A9charger&color=b8862a&style=flat-square" /></a>
-  <img alt="macOS et Windows" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows-172a3c?style=flat-square" />
+  <a href="https://github.com/Lippou/isoline/releases/latest"><img alt="Télécharger" src="https://img.shields.io/badge/t%C3%A9l%C3%A9charger-macOS%20%C2%B7%20Windows-b8862a?style=flat-square" /></a>
+  <a href="https://lippou.github.io/isoline/"><img alt="Bande-annonce" src="https://img.shields.io/badge/bande--annonce-0%3A45-172a3c?style=flat-square" /></a>
   <a href="LICENSE"><img alt="Licence MIT" src="https://img.shields.io/badge/licence-MIT-46535f?style=flat-square" /></a>
 </p>
 
 <p align="center">
-  <a href="docs/media/trailer.mp4"><img src="docs/media/monde.webp" alt="Isoline — le monde se partage entre les nations" width="100%" /></a>
+  <a href="https://lippou.github.io/isoline/"><img src="docs/media/monde.webp" alt="Isoline — le monde se partage entre les nations" width="100%" /></a>
   <br />
-  <a href="docs/media/trailer.mp4"><b>▶ Bande-annonce (0:45)</b></a>
+  <a href="https://lippou.github.io/isoline/"><b>▶ Bande-annonce (0:45)</b></a>
 </p>
 
 Vous partez d'un point sur la carte. Face à vous, des dizaines de nations jouées par l'ordinateur, chacune avec son drapeau, ses alliances et ses ambitions. Étendez vos frontières, bâtissez une économie, tenez vos fronts et frappez au bon moment : une partie se joue en 30 à 60 minutes, et la diplomatie compte autant que la guerre.

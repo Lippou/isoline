@@ -203,6 +203,20 @@ async function publish(master) {
     '48000',
     path.join(media, 'trailer.mp4'),
   ]);
+  // The poster of the film on the project page (docs/index.html).
+  await run([
+    '-ss',
+    '8.4',
+    '-i',
+    master,
+    '-frames:v',
+    '1',
+    '-vf',
+    'scale=1280:-1:flags=lanczos',
+    '-q:v',
+    '3',
+    path.join(media, 'trailer-poster.jpg'),
+  ]);
   // The README's excerpts: one per chapter, its caption included.
   for (const [name, from, secs] of CLIPS)
     await run([

@@ -266,6 +266,9 @@ Générés par `npm run media` (jeu réel filmé sans interface, puis montage en
 | `monde.webp`, `etendre.webp`, `batir.webp`, `percer.webp`, `dissuader.webp` | Extraits du film pour le README (960 px, 20 i/s, WebP animé) |
 | `logo-light.svg`, `logo-dark.svg` | Logo du README : encre et losange laiton, pour les thèmes clair et sombre |
 | `social-preview.jpg` | Aperçu de partage du dépôt (1280×640), à déposer dans les réglages GitHub |
+| `trailer-poster.jpg` | Image d'attente du film sur la page du projet |
+
+La page du projet, `docs/index.html`, est publiée par GitHub Pages (https://lippou.github.io/isoline/) : elle lit la bande-annonce, que GitHub ne lit pas depuis le dépôt.
 
 Le montage suit la marque : papier `#f1ece2`, encre `#172a3c`, laiton `#b8862a` ; titres en
 Fraunces, surtitres en IBM Plex Mono espacé ; courbes de niveau en fond.

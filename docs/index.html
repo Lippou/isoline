@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Isoline</title>
+    <meta
+      name="description"
+      content="Stratégie territoriale en temps réel sur une carte du monde vivante. macOS et Windows."
+    />
+    <meta property="og:title" content="Isoline" />
+    <meta property="og:description" content="Trace ta ligne. Tiens le monde." />
+    <meta property="og:image" content="https://lippou.github.io/isoline/media/social-preview.jpg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,400&family=IBM+Plex+Sans:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper: #f1ece2;
+        --ink: #172a3c;
+        --ink-2: #46535f;
+        --rule: #bdb4a2;
+        --brass: #b8862a;
+        --on-brass: #fffaf0;
+      }
+      .logo-dark {
+        display: none;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #0e1824;
+          --ink: #f1ece2;
+          --ink-2: #b9c0c6;
+          --rule: #33414f;
+          --brass: #d1a64a;
+          --on-brass: #172a3c;
+        }
+        .logo-light {
+          display: none;
+        }
+        .logo-dark {
+          display: inline;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font:
+          400 17px/1.55 'IBM Plex Sans',
+          system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 56px 16px 40px;
+        text-align: center;
+      }
+      header img {
+        width: min(360px, 80vw);
+        height: auto;
+      }
+      .slogan {
+        margin: 14px 0 36px;
+        font:
+          italic 400 22px/1.3 Fraunces,
+          Georgia,
+          serif;
+        color: var(--ink-2);
+      }
+      video {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background: #0d1824;
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        margin: 32px 0 12px;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 22px;
+        border: 1px solid var(--ink);
+        border-radius: 4px;
+        color: var(--ink);
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .btn.primary {
+        background: var(--brass);
+        border-color: var(--brass);
+        color: var(--on-brass);
+      }
+      .note {
+        color: var(--ink-2);
+        font-size: 15px;
+      }
+      footer {
+        margin-top: 48px;
+        padding-top: 18px;
+        border-top: 1px solid var(--rule);
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+      footer a {
+        color: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img class="logo-light" src="media/logo-light.svg" alt="Isoline" />
+        <img class="logo-dark" src="media/logo-dark.svg" alt="Isoline" />
+        <p class="slogan">Trace ta ligne. Tiens le monde.</p>
+      </header>
+      <video controls playsinline preload="metadata" poster="media/trailer-poster.jpg">
+        <source src="media/trailer.mp4" type="video/mp4" />
+      </video>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/Lippou/isoline/releases/latest">Télécharger le jeu</a>
+        <a class="btn" href="https://github.com/Lippou/isoline">Voir sur GitHub</a>
+      </div>
+      <p class="note">Gratuit · macOS et Windows · Solo, campagne et réseau local</p>
+      <footer>
+        Musique : « Heroic Age », Kevin MacLeod (<a href="https://incompetech.com">incompetech.com</a>),
+        licence CC BY 4.0.
+      </footer>
+    </main>
+  </body>
+</html>
