@@ -255,26 +255,17 @@ par Vite : aucun chargement réseau.
   floutée et assombrie. La carte est vivante.
 - **À propos** : version, plateforme, crédits (contenu de `CREDITS.md`) et licences.
 
-## 8. Captures
+## 8. Bande-annonce et médias
 
-Générées par `npm run media` (1920×1080, jeu réel, aucune retouche), dans `docs/media/` :
+Générés par `npm run media` (jeu réel filmé sans interface, puis montage en code, voir
+`docs/DEVELOPMENT.md`), dans `docs/media/` :
 
 | Fichier | Contenu |
 |---|---|
-| `01-title.png` | Écran titre : menu commenté, partie de démonstration en fond |
-| `02-lobby.png` | Lobby solo : cartes, modes, options, fonctionnalités inédites |
-| `03-gameplay.png` | Partie en Europe : relief réaliste, vrais drapeaux, HUD complet |
-| `04-nukes-flight.png` | Bombe H : flash, onde de choc, cercles d'impact, sous-titre |
-| `05-nuclear-impact.png` | Cratère : retombées calcinées et fissures lumineuses |
-| `06-naval-rail.png` | Méditerranée à 9 min : ports, réseau ferré, navires |
-| `07-night.png` | Méditerranée de nuit : carte désaturée, villes éclairées |
-| `08-tech-panel.png` | Arbre technologique |
-| `09-diplomacy.png` | Panneau de diplomatie, demande d'alliance |
-| `10-fog-of-war.png` | Brouillard de guerre sur l'Afrique |
-| `11-campaign.png` | Campagne |
-| `12-editor.png` | Éditeur de cartes (Archipel) |
-| `13-end-screen.png` | Écran de fin : classement, courbes, statistiques |
-| `14-briefing.png` | Campagne : briefing de mission (la partie attend le joueur) |
-| `15-guide.png` | Campagne : guide pas à pas, objectifs avec jauges |
-| `gameplay.gif` | 10 s de partie en Méditerranée (640×360, 10 i/s) |
-| `trailer.mp4` | Vidéo de 58 s (1080p, H.264) : menus, puis partie bac à sable en Europe jusqu'à la frappe nucléaire |
+| `trailer.mp4` | Bande-annonce de 45 s (1080p, H.264, musique « Heroic Age » de Kevin MacLeod) : symbole tracé, le monde, puis quatre chapitres (s'étendre, bâtir, tenir et percer, dissuader) |
+| `monde.webp`, `etendre.webp`, `batir.webp`, `percer.webp`, `dissuader.webp` | Extraits du film pour le README (960 px, 20 i/s, WebP animé) |
+| `logo-light.svg`, `logo-dark.svg` | Logo du README : encre et losange laiton, pour les thèmes clair et sombre |
+| `social-preview.jpg` | Aperçu de partage du dépôt (1280×640), à déposer dans les réglages GitHub |
+
+Le montage suit la marque : papier `#f1ece2`, encre `#172a3c`, laiton `#b8862a` ; titres en
+Fraunces, surtitres en IBM Plex Mono espacé ; courbes de niveau en fond.
