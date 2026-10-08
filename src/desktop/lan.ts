@@ -46,6 +46,7 @@ export function registerLanIpc(): void {
       server = new LanServer({
         name: String(opts.name).slice(0, 40),
         config: opts.config,
+        gameVersion: app.getVersion(),
         loadMap: loadMapFor,
         log: (m) => appendErrorLog(m),
       });
@@ -69,6 +70,8 @@ export function registerLanIpc(): void {
       players: b.players,
       map: b.map,
       started: b.started,
+      isoline: b.isoline,
+      game: b.game,
     })),
   );
   ipcMain.handle('lan:addresses', () => localAddresses());

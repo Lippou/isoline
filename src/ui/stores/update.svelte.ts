@@ -18,7 +18,8 @@ export function startUpdates(): void {
   bridge.update.onStatus((s) => (update.s = s));
   void bridge.update.status().then((s) => {
     update.s = s;
-    if (settings.game.autoUpdate && s.access !== 'none') void bridge.update.check();
+    // The repository is public (1.26): no token needed to check.
+    if (settings.game.autoUpdate) void bridge.update.check();
   });
 }
 

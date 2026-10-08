@@ -88,6 +88,8 @@ const built = (c: MissionCtx, type: number) =>
   c.local?.buildingLevels?.[type] ?? c.local?.buildingCount[type] ?? 0;
 /** My defensive front lines standing (core/rules/lines.ts). */
 const defLines = (c: MissionCtx) => c.local?.lineCount?.[0] ?? 0;
+/** My lines given their order: defensive ones organised (k 0), offensive ones launched (k 1). */
+const ordered = (c: MissionCtx, k: 0 | 1) => c.local?.lineOrders?.[k] ?? 0;
 const buildCost = (type: number) => (c: MissionCtx) => c.local?.buildCosts[type] ?? 0;
 const mem = (c: MissionCtx, k: string) => c.memory[k] ?? 0;
 /** Ticks the current guide step has been on screen. */
@@ -132,7 +134,8 @@ const READ = 150;
 /**
  * Remembers what the objectives count across ticks, from this tick's events and views:
  * countries (nations, humans) and tribes eliminated by me, loot, bombs launched,
- * transports launched and landed, troops added to a standing line. Mutates c.memory.
+ * transports launched and landed, troops added to a standing line, a land attack on a
+ * country (not a tribe). Mutates c.memory.
  */
 export function observe(c: MissionCtx): void {
   const m = c.memory;
@@ -154,6 +157,8 @@ export function observe(c: MissionCtx): void {
     m.linesSeen = lines;
     m.lineTroopsSeen = L.lineTroops;
   }
+  // A land attack on a nation (or a human): the first war, the guide's step in mission 1.
+  if (L?.attacks?.some((a) => isCountry(c, a.target))) m.nationAttacked = 1;
   // Transports: one that leaves the sea without turning back nor being sunk has landed.
   const now = c.local?.transports ?? [];
   const seen = new Set<number>();
@@ -218,18 +223,24 @@ export const MISSIONS: Mission[] = [
       SPAWN,
       // A few camera moves since the step appeared (the director counts them).
       { key: 'guide.m1.camera', done: (c) => mem(c, 'camMoves') - mem(c, 'stepCam') >= 5 },
+      // Troops and gold, the two resources (a reader of OpenFront knows them; a newcomer does not).
+      { key: 'guide.m1.resources', done: read(READ) },
       { key: 'guide.m1.expand', done: (c) => share(c) >= 0.03 },
       { key: 'guide.m1.ratio', done: (c) => mem(c, 'ratioChanged') > 0 },
       { key: 'guide.m1.city', done: (c) => built(c, B.City) >= 1, cost: buildCost(B.City) },
       { key: 'guide.m1.tribes', done: (c) => mem(c, 'loot') > 0 || mem(c, 'tribes') > 0 },
+      // The first war: a shared border, the attacks list and its cancel button.
+      { key: 'guide.m1.nation', done: (c) => mem(c, 'nationAttacked') > 0, marker: weakest },
       { key: 'guide.m1.capital', done: read(READ) },
+      { key: 'guide.m1.victory', done: read(READ) },
       { key: 'guide.m1.goal', done: () => false },
     ],
     parTicks: 9000,
     outro: 'campaign.m1.outro',
   },
   {
-    // Defence: posts, threatened borders, alliances (offers at the bottom right), troops.
+    // Defence: defensive lines (laid, organised, closed into rings), threatened borders,
+    // alliances (offers at the bottom right), troops.
     id: 'm2',
     mapId: 'europe',
     config: (s, n) =>
@@ -250,7 +261,9 @@ export const MISSIONS: Mission[] = [
       { key: 'guide.m2.spawn', done: placed },
       { key: 'guide.m2.expand', done: (c) => share(c) >= 0.015 },
       { key: 'guide.m2.line', done: (c) => defLines(c) >= 1 },
+      { key: 'guide.m2.organize', done: (c) => ordered(c, 0) >= 1 || read(READ * 3)(c) },
       { key: 'guide.m2.reinforce', done: (c) => mem(c, 'lineTroops') > 0 || read(READ * 2)(c) },
+      { key: 'guide.m2.ring', done: read(READ) },
       { key: 'guide.m2.threats', done: read(READ * 1.5) },
       { key: 'guide.m2.alliance', done: (c) => (c.local?.allies.length ?? 0) >= 1 },
       { key: 'guide.m2.troops', done: (c) => !!c.local && c.local.troops >= c.local.popCap * 0.5 },
@@ -405,7 +418,9 @@ export const MISSIONS: Mission[] = [
       { key: 'guide.m6.economy', done: (c) => built(c, B.City) >= 3, cost: buildCost(B.City) },
       { key: 'guide.m6.weather', done: read(READ) },
       { key: 'guide.m6.clock', done: (c) => c.tick >= 6000 },
-      { key: 'guide.m6.offensive', done: (c) => (c.local?.lineCount?.[1] ?? 0) >= 1 },
+      { key: 'guide.m6.offensive', done: (c) => (c.local?.lineCount?.[1] ?? 0) >= 1 || ordered(c, 1) >= 1 },
+      // The arrow sets the breakthrough's depth and where its bonuses apply.
+      { key: 'guide.m6.arrow', done: (c) => ordered(c, 1) >= 1 || read(READ * 3)(c) },
       { key: 'guide.m6.push', done: () => false, marker: weakest },
     ],
     parTicks: 27000,
@@ -430,6 +445,13 @@ export const HINTS: Hint[] = [
           (w) => w.kind === 0 && (w.x - b.x) ** 2 + (w.y - b.y) ** 2 <= (w.r + 12) ** 2,
         ),
       ),
+  },
+  // A missile of mine in the air: it can still be blown up (no refund).
+  { key: 'guide.hint.missile', when: (c) => (c.local?.missiles?.length ?? 0) > 0 },
+  // A region of mine rising up (revolutions are on in the campaign, as in any game).
+  {
+    key: 'guide.hint.revolution',
+    when: (c) => c.events.some((e) => e.k === 'revolution' && e.phase === 'start' && e.from === c.me),
   },
   // Research centres working for nothing (the Technologies button pulses too).
   { key: 'guide.hint.research', when: (c) => researchIdle(c.local, true) && !!c.local?.research.labLevels },

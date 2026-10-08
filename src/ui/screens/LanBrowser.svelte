@@ -4,6 +4,7 @@
   import { t } from '../i18n/i18n.svelte';
   import { bridge, isDesktop } from '../bridge';
   import { LanClient, setCurrentLan } from '../../engine/lanClient';
+  import { NET_VERSION } from '../../server/protocol';
   import { playerName } from './launch';
   import { myFlag } from '../stores/profile.svelte';
   import PageHeader from '../PageHeader.svelte';
@@ -30,16 +31,20 @@
   });
   onDestroy(() => timer && clearInterval(timer));
 
+  /** Only a host running this very build can be joined (lockstep). */
+  const sameVersion = (g: (typeof games)[number]) => g.isoline === NET_VERSION && g.game === app.version;
+
   function join(url: string, invite: string): void {
     status = t('lan.connecting');
     const c = new LanClient(url);
-    c.onReject = (r) => (status = t(`lan.reject.${r}`));
+    c.onReject = (r, hostVersion) =>
+      (status = t(`lan.reject.${r}`, { host: hostVersion ?? '?', mine: app.version }));
     c.onLobby = () => {
       setCurrentLan(c);
       app.lobby.lan = true;
       go('lobby');
     };
-    c.connect(playerName(), invite.trim().toUpperCase(), spectator, myFlag());
+    c.connect(playerName(), invite.trim().toUpperCase(), spectator, myFlag(), app.version);
   }
 
   async function host(): Promise<void> {
@@ -83,6 +88,7 @@
           <li><span class="n">2</span>{t('lan.hostStep2')}</li>
           <li><span class="n">3</span>{t('lan.hostStep3')}</li>
         </ol>
+        <p class="remote"><Icon name="globe" size={14} /><span>{t('lan.remoteHelp')}</span></p>
         <button class="btn primary big" onclick={host} disabled={busy} data-testid="lan-host"
           ><Icon name="play" size={16} />{t('lan.hostButton')}</button
         >
@@ -109,8 +115,17 @@
                     >{g.map}, <Icon name="users" size={12} />
                     {g.players}{g.started ? `, ${t('lan.inProgress')}` : ''}</small
                   >
+                  {#if !sameVersion(g)}<small class="other" data-testid="lan-other-version"
+                      ><Icon name="warning" size={12} />{t('lan.otherVersion', {
+                        host: g.game ?? '?',
+                        mine: app.version,
+                      })}</small
+                    >{/if}
                 </div>
-                <button class="btn small" onclick={() => join(`ws://${g.host}:${g.port}`, g.code)}
+                <button
+                  class="btn small"
+                  disabled={!sameVersion(g)}
+                  onclick={() => join(`ws://${g.host}:${g.port}`, g.code)}
                   >{g.started ? t('lan.spectate') : t('lan.join')}</button
                 >
               </li>
@@ -277,6 +292,25 @@
   }
   .games small {
     color: var(--np-ink-2);
+  }
+  .remote {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 0.88em;
+    color: var(--np-ink-2);
+  }
+  .remote :global(svg) {
+    flex: none;
+    margin-top: 2px;
+  }
+  /* Another build: shape and words, not only colour (the warning triangle). */
+  .games small.other {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    font-weight: 600;
+    color: var(--np-ink);
   }
   /* Nothing found yet: a line in italics beside a sounding. */
   .scan {

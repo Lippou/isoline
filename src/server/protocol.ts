@@ -4,7 +4,11 @@ import type { Command, Turn } from '../core/net/commands';
 import type { Snapshot } from '../core/net/snapshot';
 import type { PlayerFlag } from '../core/data/flagSpec';
 
-export const NET_VERSION = 1;
+/**
+ * Protocol version. 2 (1.26): the hello also carries the game version, and a host only
+ * takes players running the very same build (the lockstep simulation must match exactly).
+ */
+export const NET_VERSION = 2;
 
 export interface LobbyPlayer {
   slot: number;
@@ -38,6 +42,8 @@ export type ClientMsg =
       code: string;
       token?: string;
       flag?: PlayerFlag;
+      /** The client's game version (1.26): it must equal the host's. */
+      game?: string;
     }
   | { t: 'ready'; ready: boolean }
   | { t: 'profile'; team: number; flag?: PlayerFlag | null }
@@ -52,7 +58,7 @@ export type ClientMsg =
 
 export type ServerMsg =
   | { t: 'welcome'; slot: number; token: string; host: boolean; lobby: LobbyState }
-  | { t: 'reject'; reason: 'version' | 'code' | 'full' | 'started' }
+  | { t: 'reject'; reason: RejectReason; /** The host's game version ('game'). */ host?: string }
   | { t: 'lobby'; lobby: LobbyState }
   | { t: 'start'; config: GameConfig; playerId: number; tick: number; snapshot?: Snapshot }
   | { t: 'turn'; turn: Turn }
@@ -62,6 +68,8 @@ export type ServerMsg =
   | { t: 'pause'; on: boolean }
   | { t: 'pong'; ts: number }
   | { t: 'desync'; tick: number };
+
+export type RejectReason = 'version' | 'game' | 'code' | 'full' | 'started';
 
 export const DISCOVERY_PORTS = [47777, 47778, 47779, 47780, 47781, 47782, 47783, 47784, 47785, 47786];
 
@@ -73,6 +81,8 @@ export interface Beacon {
   players: number;
   map: string;
   started: boolean;
+  /** The host's game version (1.26; absent from older hosts). */
+  game?: string;
 }
 
 /** Short invitation codes (no ambiguous characters). */

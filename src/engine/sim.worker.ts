@@ -620,6 +620,10 @@ function localView(g: Game): LocalView | undefined {
       g.lines.filter((l) => l.owner === p.id && l.kind === 1 && l.attack < 0 && l.troops >= 1).length,
     ],
     lineTroops: p.lineTroops,
+    lineOrders: [
+      g.lines.filter((l) => l.owner === p.id && l.kind === 0 && l.organizeTick >= 0).length,
+      g.lines.filter((l) => l.owner === p.id && l.kind === 1 && l.attack >= 0).length,
+    ],
     growth: p.lastGrowth,
     income: p.income,
     incomeBreakdown: { ...p.incomeBreakdown },

@@ -47,6 +47,11 @@
   const port = client ? (client.url.match(/:(\d+)\/?$/)?.[1] ?? '') : '';
   let hostAddresses = $state<string[]>([]);
   if (client?.host) void bridge.lan.localAddresses().then((a) => (hostAddresses = a));
+  /** A Tailscale-style address (100.64.0.0/10): for a friend playing from home, not on this network. */
+  const remote = (a: string) => {
+    const [x, y] = a.split('.').map(Number);
+    return x === 100 && y! >= 64 && y! < 128;
+  };
   let cfg: GameConfig = $state(lobby?.config ?? structuredClone($state.snapshot(app.lobby.config)));
   if (!lan) cfg.players = [{ slot: 0, name: playerName(), kind: 'human', team: 1 }];
   let maps: MapEntry[] = $state([]);
@@ -312,12 +317,18 @@
           {#if lobby}<span class="chip big" data-testid="lobby-code"
               ><Icon name="key" size={14} />{t('lobby.code')} <b class="mono">{lobby.code}</b></span
             >{/if}
-          {#if client?.host && port}<span
-              class="chip big mono"
-              data-testid="lobby-address"
-              data-tip={t('lobby.addressTip')}
-              ><Icon name="network" size={14} />{(hostAddresses[0] ?? '127.0.0.1') + ':' + port}</span
-            >{/if}
+          {#if client?.host && port}
+            <!-- Every address of this computer: the local network's, and a VPN's (Tailscale) for a
+                 friend joining from elsewhere. -->
+            {#each hostAddresses.length ? hostAddresses : ['127.0.0.1'] as a, i (a)}<span
+                class="chip big mono"
+                data-testid={i === 0 ? 'lobby-address' : undefined}
+                data-tip={t(remote(a) ? 'lobby.addressRemoteTip' : 'lobby.addressTip')}
+                ><Icon name={remote(a) ? 'globe' : 'network'} size={14} />{#if remote(a)}<small
+                    >{t('lobby.addressRemote')}</small
+                  >{/if}{a + ':' + port}</span
+              >{/each}
+          {/if}
         </div>
       {/if}
     {/snippet}
@@ -959,7 +970,13 @@
   }
   .invite {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
+  }
+  .invite small {
+    font-family: var(--text);
+    font-weight: 600;
+    margin-right: 0.4em;
   }
   .chip.big {
     font-size: 0.92em;

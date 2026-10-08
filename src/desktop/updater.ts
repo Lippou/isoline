@@ -1,8 +1,10 @@
-// In-app updates from the releases of the private GitHub repository.
+// In-app updates from the releases of the game's GitHub repository.
 //
-// - Access: a read-only GitHub token, saved encrypted (Keychain / DPAPI through
-//   safeStorage) in userData, or else the GitHub CLI's login (`gh auth token`) or the
-//   GH_TOKEN / GITHUB_TOKEN environment variables. The token only ever goes to GitHub.
+// - Access: the repository is public since 1.26, so no token is needed. A read-only GitHub
+//   token is still used when there is one (saved encrypted — Keychain / DPAPI through
+//   safeStorage — in userData, or the GitHub CLI's login `gh auth token`, or GH_TOKEN /
+//   GITHUB_TOKEN): it lifts GitHub's anonymous rate limit and reaches a private repository.
+//   The token only ever goes to GitHub.
 // - Check: the latest release's tag against the running version.
 // - Download: the release asset for this platform (macOS: the universal .zip; Windows:
 //   the NSIS installer), with progress pushed to the renderer.
@@ -154,6 +156,9 @@ function get(
   });
 }
 
+/** The Authorization header when there is a token (none needed for a public repository). */
+const auth = (tk: string): Record<string, string> => (tk ? { Authorization: `Bearer ${tk}` } : {});
+
 function newer(a: string, b: string): boolean {
   const pa = a.split(/[.-]/).map((x) => parseInt(x, 10) || 0);
   const pb = b.split(/[.-]/).map((x) => parseInt(x, 10) || 0);
@@ -174,13 +179,16 @@ async function check(): Promise<UpdateStatus> {
   // A download may have started while the token was being read.
   if (busy) return status;
   publish({ state: 'checking', error: undefined, detail: undefined, access, installable: installable() });
-  if (!tk) return publish({ state: 'error', error: 'no-token' });
   try {
     const res = await get(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`, {
-      Authorization: `Bearer ${tk}`,
+      ...auth(tk),
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
     });
+    // Without a token: 404 means the repository is private again, 403 the anonymous rate limit.
+    if (!tk && res.status === 404) return publish({ state: 'error', error: 'no-token' });
+    if (!tk && res.status === 403)
+      return publish({ state: 'error', error: 'network', detail: 'GitHub rate limit, try again in an hour' });
     if (res.status === 401 || res.status === 403) return publish({ state: 'error', error: 'unauthorized' });
     if (res.status === 404) return publish({ state: 'error', error: 'not-found' });
     if (res.status !== 200)
@@ -209,7 +217,6 @@ async function download(): Promise<UpdateStatus> {
   if (status.state !== 'available' || !asset) return status;
   if (!installable()) return publish({ state: 'error', error: 'dev' });
   const { token: tk } = await token();
-  if (!tk) return publish({ state: 'error', error: 'no-token' });
   // Leftovers of earlier downloads go first.
   for (const f of fs.readdirSync(os.tmpdir()))
     if (f.startsWith('isoline-update-'))
@@ -224,20 +231,16 @@ async function download(): Promise<UpdateStatus> {
   let last = 0;
   publish({ state: 'downloading', progress: 0 });
   try {
-    const res = await get(
-      asset.url,
-      { Authorization: `Bearer ${tk}`, Accept: 'application/octet-stream' },
-      (chunk, total) => {
-        out.write(chunk);
-        hash.update(chunk);
-        got += chunk.length;
-        const p = (total || asset!.size || 1) > 0 ? got / (total || asset!.size) : 0;
-        if (p - last > 0.01) {
-          last = p;
-          publish({ progress: Math.min(1, p) });
-        }
-      },
-    );
+    const res = await get(asset.url, { ...auth(tk), Accept: 'application/octet-stream' }, (chunk, total) => {
+      out.write(chunk);
+      hash.update(chunk);
+      got += chunk.length;
+      const p = (total || asset!.size || 1) > 0 ? got / (total || asset!.size) : 0;
+      if (p - last > 0.01) {
+        last = p;
+        publish({ progress: Math.min(1, p) });
+      }
+    });
     await new Promise<void>((r) => out.end(r));
     const fail = (error: string, detail?: string) => {
       fs.rmSync(dir, { recursive: true, force: true });

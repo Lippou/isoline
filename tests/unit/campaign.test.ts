@@ -204,6 +204,16 @@ describe('campaign: what the director remembers', () => {
     expect(c.memory.hbomb).toBeUndefined();
     expect(c.memory.loot).toBe(900);
   });
+
+  it('remembers a land attack on a nation, not on a tribe (mission 1, the first war)', () => {
+    const attack = (target: number) => ({ id: 1, target, troops: 100, retreating: false });
+    const tribe = ctx({}, { attacks: [attack(3)] });
+    observe(tribe);
+    expect(tribe.memory.nationAttacked).toBeUndefined();
+    const nation = ctx({}, { attacks: [attack(3), attack(2)] });
+    observe(nation);
+    expect(nation.memory.nationAttacked).toBe(1);
+  });
 });
 
 describe('campaign: objectives', () => {
@@ -392,6 +402,28 @@ describe('campaign: guide', () => {
     expect(cam.done(ctx({ memory: { camMoves: 15, stepCam: 10 } }))).toBe(true);
   });
 
+  it('line steps: an organised defence (m2), a launched arrow (m6), or time to read', () => {
+    const organize = mission('m2').guide.find((s) => s.key === 'guide.m2.organize')!;
+    expect(organize.done(ctx({ memory: { stepAt: 600 } }, { lineOrders: [0, 0] }))).toBe(false);
+    expect(organize.done(ctx({ memory: { stepAt: 600 } }, { lineOrders: [1, 0] }))).toBe(true);
+    expect(organize.done(ctx({ tick: 1100, memory: { stepAt: 600 } }))).toBe(true);
+    const arrow = mission('m6').guide.find((s) => s.key === 'guide.m6.arrow')!;
+    expect(arrow.done(ctx({ memory: { stepAt: 600 } }, { lineOrders: [0, 0] }))).toBe(false);
+    expect(arrow.done(ctx({ memory: { stepAt: 600 } }, { lineOrders: [0, 1] }))).toBe(true);
+    // A line launched at once (no longer counted as standing) still passes the laying step.
+    const lay = mission('m6').guide.find((s) => s.key === 'guide.m6.offensive')!;
+    expect(lay.done(ctx({}, { lineCount: [0, 0], lineOrders: [0, 1] }))).toBe(true);
+  });
+
+  it('mission 1 teaches the first war, then how a game is won', () => {
+    const keys = mission('m1').guide.map((s) => s.key);
+    expect(keys.indexOf('guide.m1.nation')).toBeGreaterThan(keys.indexOf('guide.m1.tribes'));
+    expect(keys.indexOf('guide.m1.victory')).toBe(keys.length - 2);
+    const nation = mission('m1').guide.find((s) => s.key === 'guide.m1.nation')!;
+    expect(nation.done(ctx())).toBe(false);
+    expect(nation.done(ctx({ memory: { nationAttacked: 1 } }))).toBe(true);
+  });
+
   it('research steps accept a queued, studied or researched technology', () => {
     const step = mission('m5').guide.find((s) => s.key === 'guide.m5.research')!;
     const programme = techId('nuclear.2');
@@ -417,6 +449,22 @@ describe('campaign: hints', () => {
     const labs = { base: 0.5, labs: 1, labLevels: 1, mult: 1 };
     expect(hint('guide.hint.research').when(ctx({}, { research: labs }))).toBe(true);
     expect(hint('guide.hint.research').when(ctx({}, { research: labs, researching: 0 }))).toBe(false);
+  });
+  it('a missile of mine in the air, and a revolution in my land (not in another country)', () => {
+    const missile = { id: 1, kind: N.Atom, x: 0, y: 0, tx: 5, ty: 5, left: 40 };
+    expect(hint('guide.hint.missile').when(ctx({}, { missiles: [] }))).toBe(false);
+    expect(hint('guide.hint.missile').when(ctx({}, { missiles: [missile] }))).toBe(true);
+    const rising = (from: number): GameEvent => ({
+      k: 'revolution',
+      phase: 'start',
+      from,
+      tribe: 9,
+      tile: 0,
+      tiles: 200,
+      by: 0,
+    });
+    expect(hint('guide.hint.revolution').when(ctx({ events: [rising(2)] }))).toBe(false);
+    expect(hint('guide.hint.revolution').when(ctx({ events: [rising(ME)] }))).toBe(true);
   });
 });
 

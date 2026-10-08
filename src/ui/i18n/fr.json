@@ -1000,7 +1000,9 @@
     "summaryRoyale": "{mode}, difficulté {diff}. Vous affronterez {nations} nations et {tribes} tribus. La zone se referme : le dernier debout l'emporte, sinon le plus grand dans la dernière zone.",
     "summaryDoomsday": "{mode}, difficulté {diff}. Vous affronterez {nations} nations et {tribes} tribus. À minuit, le plus grand pays l'emporte (ou le premier à {pct} % des terres).",
     "summaryHvn": "{mode}, difficulté {diff}. Tous les humains ensemble contre une coalition de {nations} nations (elles ne s'attaquent pas entre elles) ; {tribes} tribus occupent aussi la carte. Le premier camp à contrôler {pct} % des terres l'emporte.",
-    "summaryHvnSolo": "{mode}, difficulté {diff}. Vous seul contre une coalition de {nations} nations (elles ne s'attaquent pas entre elles) ; {tribes} tribus occupent aussi la carte. Le premier camp à contrôler {pct} % des terres l'emporte."
+    "summaryHvnSolo": "{mode}, difficulté {diff}. Vous seul contre une coalition de {nations} nations (elles ne s'attaquent pas entre elles) ; {tribes} tribus occupent aussi la carte. Le premier camp à contrôler {pct} % des terres l'emporte.",
+    "addressRemote": "à distance",
+    "addressRemoteTip": "Adresse Tailscale : à donner à un ami qui joue depuis chez lui, avec le code."
   },
   "rule": {
     "allowPorts": "Ports et marine",
@@ -1654,10 +1656,11 @@
     "starting": "Démarrage du serveur…",
     "desktopOnly": "Le jeu en réseau nécessite l'application de bureau.",
     "reject": {
-      "version": "Version incompatible.",
+      "version": "Version incompatible : l'hôte a une autre version du jeu. Installez la même version (vous avez la {mine}).",
       "code": "Code d'invitation incorrect.",
       "full": "Salon complet.",
-      "started": "La partie a déjà commencé."
+      "started": "La partie a déjà commencé.",
+      "game": "Versions différentes : l'hôte a la {host}, vous avez la {mine}. Installez la même version pour jouer ensemble."
     },
     "connectionLost": "Connexion à l'hôte perdue — reconnexion…",
     "subtitle": "Jouez à plusieurs sur le même réseau local, sans serveur externe.",
@@ -1667,7 +1670,9 @@
     "manualHelp": "Si la partie n'apparaît pas, saisissez l'adresse affichée dans le salon de l'hôte.",
     "address": "Adresse (IP:port)",
     "asSpectator": "Rejoindre en spectateur",
-    "foundDesc": "Les salons ouverts sur votre réseau apparaissent ici d'eux-mêmes."
+    "foundDesc": "Les salons ouverts sur votre réseau apparaissent ici d'eux-mêmes.",
+    "otherVersion": "Version {host} (vous : {mine}), impossible de la rejoindre",
+    "remoteHelp": "À distance, chacun chez soi : installez tous les deux Tailscale (gratuit, Mac et Windows) et rejoignez le même réseau Tailscale. L'hôte donne alors son adresse « à distance » (100.x.x.x:port) et le code. Il faut la même version du jeu des deux côtés."
   },
   "campaign": {
     "title": "Campagne : Les Cartographes",
@@ -1684,7 +1689,7 @@
       "bonus": "Posséder 2 villes",
       "outro": "Belles premières lignes. Les nations ont remarqué votre encre.",
       "brief": "Deux grands lacs partagent cette région. Trois petites nations s'y installent, entourées de tribus qui gardent leur or. Vous partez d'une capitale et de quelques milliers d'hommes. Je vous guiderai pas à pas : étendez-vous, bâtissez une ville, soumettez les tribus, et imposez-vous en contrôlant quinze pour cent des terres.",
-      "tip1": "Un clic sur une terre libre y envoie une part de vos troupes, fixée par le ratio d'attaque en bas à gauche. Plusieurs petits clics valent mieux qu'un seul gros.",
+      "tip1": "Un clic sur une terre libre y envoie une part de vos troupes, fixée par le ratio d'attaque en bas à gauche. Recliquer sur la même cible renforce l'attaque en cours au lieu d'en lancer une autre.",
       "tip2": "Les villes relèvent votre plafond de troupes. Votre trésor de départ paie la première ; chaque nouvelle ville coûte deux fois plus cher que la précédente.",
       "bonusLevels": "Posséder 2 villes (une ville de niveau 2 compte pour deux)"
     },
@@ -1734,7 +1739,7 @@
       "outro": "Vous avez arrêté l'horloge. L'atlas porte désormais votre nom.",
       "brief": "Le monde entier, et l'horloge de l'apocalypse qui tourne : chaque bombe, chaque pays qui tombe, chaque trahison la rapproche de minuit. Quatre paliers changent les règles en chemin, et à minuit tout s'arrête. Atteignez quarante pour cent du monde avant.",
       "tip1": "Le cadran sous la barre du haut donne l'heure, le prochain palier et son effet. À la « Loi du plus fort », sous le seuil de terres, vos troupes fondent.",
-      "tip2": "Les tribus et les terres libres sont vos premières cibles ; gardez les grandes guerres pour plus tard."
+      "tip2": "Les tribus et les terres libres sont vos premières cibles. Loin devant les autres, au-delà de vingt pour cent des terres, une de vos régions peut se révolter."
     },
     "step": "Étape {n} sur {total}",
     "bonusLabel": "Bonus",
@@ -2181,25 +2186,30 @@
     "peace": "Paix ?"
   },
   "guide": {
-    "spawn": "Choisissez l'emplacement de votre capitale : cliquez sur une terre libre, de préférence loin des autres nations. La partie démarre dès que vous l'avez posée.",
+    "spawn": "Choisissez l'emplacement de votre capitale : cliquez sur une terre libre, de préférence une plaine avec de la place autour, loin des autres nations. La partie démarre dès que vous l'avez posée, et personne ne peut vous attaquer pendant la première minute.",
     "m1": {
       "camera": "Faites glisser la carte pour la déplacer, et zoomez avec la molette ou en pinçant le pavé tactile. La touche H vous ramène sur votre territoire.",
-      "expand": "Étendez-vous : cliquez sur les terres libres le long de votre frontière. Vos troupes avancent d'elles-mêmes tant qu'elles en ont la force.",
-      "ratio": "En bas à gauche, le ratio d'attaque fixe la part de vos troupes engagée à chaque clic. Changez-le avec T et Y, ou avec Maj et la molette : un ratio bas garde des troupes pour défendre.",
+      "expand": "Étendez-vous : cliquez sur une terre libre le long de votre frontière. L'assaut part de toute la frontière commune et avance tant qu'il a des troupes ; à la fin, les survivants rentrent. Les plaines se prennent vite, les forêts et les montagnes coûtent plus cher : la touche Tab affiche ces coûts.",
+      "ratio": "En bas à gauche, le ratio d'attaque fixe la part de vos troupes engagée à chaque clic, vingt pour cent au départ. Changez-le avec T et Y, ou avec Maj et la molette. Plus vous engagez de troupes, plus l'assaut avance vite, mais moins il en reste pour défendre.",
       "city": "Votre population atteint vite son plafond. Construisez une ville : touche 1 puis clic sur votre territoire, ou clic droit, Construire, Ville.",
       "tribes": "Les tribus, en gris, gardent un trésor. Attaquez-en une : chaque terre conquise vous rapporte une part de son or.",
       "capital": "L'étoile sur votre territoire marque votre capitale. Si elle tombe, votre pays est désorganisé pendant une minute et vous devrez en désigner une autre : gardez-la loin du front.",
-      "goal": "Continuez jusqu'à quinze pour cent des terres. Une deuxième ville vous vaudra l'étoile bonus."
+      "goal": "Continuez jusqu'à quinze pour cent des terres. Une deuxième ville vous vaudra l'étoile bonus.",
+      "resources": "Deux ressources comptent, en haut de l'écran. Les troupes conquièrent et défendent : elles se reconstituent seules, le plus vite vers quarante pour cent de leur plafond, et plus du tout une fois au plafond. L'or arrive à raison de mille par seconde, plus le pillage, et paie les bâtiments.",
+      "nation": "Attaquez maintenant une nation voisine : cliquez sur son territoire. Il faut une frontière commune ; sinon, il faudra passer par la mer. Vos attaques en cours sont listées en bas à gauche : la croix en annule une, au prix d'un quart de ses troupes. Recliquer sur la même cible renforce l'attaque.",
+      "victory": "Une partie se gagne en tenant quatre-vingts pour cent des terres ; passé trente minutes, ce seuil baisse peu à peu. Mais un pays qui écrase les autres voit parfois une de ses régions se révolter."
     },
     "m2": {
       "spawn": "Placez votre capitale. Un relief accidenté, comme les Alpes ou les Carpates, sera plus facile à défendre.",
       "expand": "Prenez vite des terres libres avant que les nations voisines ne vous encerclent.",
-      "line": "Tracez une ligne défensive (touche 4) face à votre frontière la plus exposée, puis cliquez du côté de l’ennemi. De face, l’assaillant y perd trois hommes pour un.",
-      "reinforce": "Cliquez sur votre ligne : sa fiche règle les troupes qu’elle porte. Plus elle en a, plus elle tient longtemps ; elles sont retirées de votre plafond.",
+      "line": "Tracez une ligne défensive (touche 4) face à votre frontière la plus exposée, puis cliquez du côté de l'ennemi. Elle agit dès qu'elle est posée : de face, l'assaillant y perd trois hommes pour un.",
+      "reinforce": "Cliquez sur votre ligne pour ouvrir la fenêtre Front : elle règle les troupes que porte la ligne. Plus elle en a, plus elle tient longtemps ; elles sont retirées de votre plafond.",
       "threats": "Quand un voisin masse une armée bien plus forte que la vôtre à votre frontière, une alerte « frontière menacée » s'affiche et le journal la consigne. Renforcez ce front, ou faites de ce voisin un allié.",
       "alliance": "Proposez une alliance à un voisin : clic droit sur son territoire, ou fenêtre Diplomatie dans le rail de gauche. Les offres que vous recevez s'affichent en bas à droite : K pour accepter, L pour refuser.",
       "troops": "Laissez votre armée se reconstituer avant de repartir à l'attaque : atteignez la moitié de votre plafond de troupes.",
-      "hold": "Tenez jusqu'à la fin du compte à rebours. Renforcez les fronts qui cèdent et renouvelez vos alliances."
+      "hold": "Tenez jusqu'à la fin du compte à rebours. Renforcez les fronts qui cèdent et renouvelez vos alliances.",
+      "organize": "Organisez-la : clic droit sur la ligne, puis « Organiser la défense ». Dix secondes de travaux, les barbelés se déroulent, et la ligne ralentit ensuite l'ennemi deux fois plus.",
+      "ring": "Une ligne prise à revers éclate. Pour couvrir une ville ou votre capitale de tous côtés, refermez la ligne : terminez le tracé en cliquant sur son premier point."
     },
     "m3": {
       "island": "Commencez par prendre toute votre île.",
@@ -2207,7 +2217,7 @@
       "landing": "La nation la plus faible est signalée sur la carte. Visez sa côte et appuyez sur B, ou clic droit puis Débarquer : un transport part de votre rivage le plus proche avec la part de troupes du ratio.",
       "boats": "Trois transports au plus peuvent naviguer à la fois. Ils sont listés dans le panneau en bas à gauche : la flèche de retour rappelle un transport, au prix d'un quart de ses troupes. Les orages ralentissent tous les navires.",
       "warship": "Les navires de guerre ennemis coulent les transports. Armez le vôtre : touche 7, puis clic sur la mer près de votre port. Il escorte vos débarquements et attaque les navires adverses.",
-      "finish": "Poursuivez jusqu'à son élimination. Envoyez des renforts par la mer si l'attaque s'essouffle."
+      "finish": "Poursuivez jusqu'à son élimination. Une nation réduite à moins de cent cases est annexée d'un coup. Les bâtiments que vous prenez sont pillés et restent hors service une minute."
     },
     "m4": {
       "expand": "Étendez-vous pour disposer de place : le rail a besoin de distance entre les gares.",
@@ -2235,15 +2245,18 @@
       "weather": "Surveillez le ciel : les orages ralentissent navires et avions, et les bancs de brouillard réduisent de moitié la portée des radars.",
       "clock": "L'horloge avance : le cadran en haut annonce le prochain palier. Une paix, un vote du Conseil la font reculer ; les bombes la précipitent.",
       "offensive": "Avant une grande poussée, posez une ligne offensive (touche A) : cliquez sur le pays visé, elle se pose sur votre frontière. Tirez sa poignée jusqu'à sa capitale pour dessiner la flèche. Elle se charge en trente secondes ; cliquez sur la flèche pour lancer l'assaut.",
-      "push": "Poussez vers quarante pour cent. Une nation vulnérable est signalée sur la carte."
+      "push": "Poussez vers quarante pour cent. Une nation vulnérable est signalée sur la carte.",
+      "arrow": "La longueur de la flèche fixe la profondeur de la percée : elle s'arrête à sa pointe, et les survivants rentrent. Sous la flèche, sur une dizaine de cases de large, l'assaut perd moitié moins d'hommes et avance plus vite ; sur le reste du front, il en perd vingt pour cent de moins. Un clic droit maintenu, glissé le long de la frontière, ne pose la ligne que sur ce tronçon."
     },
     "hint": {
       "capital": "Notre capitale est tombée ! Le pays est désorganisé pendant une minute. Désignez-en une nouvelle depuis la dépêche, à gauche : « Choisir sur la carte », ou « Au plus sûr ».",
-      "threat": "Frontière menacée : un voisin masse ses troupes contre nous. Tracez une ligne défensive face à lui (touche 4), ou proposez-lui une alliance.",
+      "threat": "Frontière menacée : un voisin masse ses troupes contre nous. Tracez une ligne défensive face à lui (touche 4) et organisez-la, ou proposez-lui une alliance.",
       "allyOffer": "Une nation nous propose une alliance : sa carte est en bas à droite. K pour accepter, L pour refuser. Un allié ne peut pas nous attaquer.",
       "boats": "Trois transports sont en mer : c'est le maximum. Attendez qu'un débarque, ou rappelez-en un depuis le panneau en bas à gauche.",
       "storm": "Un orage sur la route de nos transports : les navires y avancent moins vite. Mieux vaut le contourner, ou attendre qu'il passe.",
-      "research": "Nos centres de recherche tournent à vide : rien n'est à l'étude. Ouvrez Technologies et choisissez une recherche, ou mettez-en plusieurs en file."
+      "research": "Nos centres de recherche tournent à vide : rien n'est à l'étude. Ouvrez Technologies et choisissez une recherche, ou mettez-en plusieurs en file.",
+      "missile": "Notre missile est en vol : le panneau en bas à gauche le liste avec son temps avant l'impact. Si vous changez d'avis, la croix le fait exploser en vol ; la bombe est perdue.",
+      "revolution": "Une région de notre pays se soulève ! Les rebelles ne rapportent aucun or et se défendent âprement, surtout derrière leurs barricades des premières secondes. Reprenez-la ensuite, ou attendez : au bout de quatre minutes, la révolte s'essouffle et la région nous revient."
     }
   },
   "hover": {
@@ -2718,11 +2731,11 @@
   },
   "update": {
     "title": "Mises à jour",
-    "desc": "Version installée : {version}. Les nouvelles versions viennent du dépôt GitHub privé du jeu",
+    "desc": "Version installée : {version}. Les nouvelles versions viennent du dépôt GitHub public du jeu",
     "auto": "Vérifier au lancement",
     "d": {
-      "auto": "Une seule requête à GitHub au démarrage, et seulement si l'accès au dépôt est configuré.",
-      "token": "Jeton à accès fin, en lecture seule (Contents : read) sur le dépôt isoline. Gardé chiffré dans le trousseau, envoyé uniquement à GitHub."
+      "auto": "Une seule requête à GitHub au démarrage.",
+      "token": "Facultatif. Un jeton à accès fin en lecture seule évite la limite de requêtes de GitHub. Gardé chiffré dans le trousseau, envoyé uniquement à GitHub."
     },
     "token": "Jeton d'accès GitHub",
     "save": "Enregistrer",
@@ -2737,10 +2750,10 @@
       "saved": "accès : jeton enregistré",
       "gh": "accès : connexion GitHub CLI",
       "env": "accès : variable d'environnement",
-      "none": "aucun accès au dépôt"
+      "none": "accès public"
     },
     "err": {
-      "no-token": "Aucun accès au dépôt : enregistrez un jeton ou connectez GitHub CLI (gh auth login).",
+      "no-token": "Le dépôt n'est pas accessible publiquement : enregistrez un jeton ou connectez GitHub CLI (gh auth login).",
       "unauthorized": "Jeton refusé par GitHub (expiré ou sans accès au dépôt).",
       "not-found": "Aucune version publiée trouvée.",
       "no-asset": "Pas de fichier pour cette plateforme dans cette version.",

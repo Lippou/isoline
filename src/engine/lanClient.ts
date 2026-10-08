@@ -22,7 +22,8 @@ export class LanClient {
   onStart: (config: GameConfig, playerId: number, tick: number, snapshot?: Snapshot) => void = () => {};
   onSnapshot: (s: Snapshot, reason: string) => void = () => {};
   onChat: (m: Extract<ServerMsg, { t: 'chat' }>) => void = () => {};
-  onReject: (reason: string) => void = () => {};
+  /** Turned away; `host` is the host's game version (a 'game' mismatch). */
+  onReject: (reason: string, host?: string) => void = () => {};
   onKicked: () => void = () => {};
   onDesync: (tick: number) => void = () => {};
   onPause: (on: boolean) => void = () => {};
@@ -32,8 +33,16 @@ export class LanClient {
 
   constructor(readonly url: string) {}
 
-  connect(name: string, code: string, spectator = false, flag?: PlayerFlag): void {
-    this.hello = { t: 'hello', name, version: NET_VERSION, spectator, code, ...(flag ? { flag } : {}) };
+  connect(name: string, code: string, spectator = false, flag?: PlayerFlag, game?: string): void {
+    this.hello = {
+      t: 'hello',
+      name,
+      version: NET_VERSION,
+      spectator,
+      code,
+      ...(flag ? { flag } : {}),
+      ...(game ? { game } : {}),
+    };
     this.open();
   }
 
@@ -74,7 +83,7 @@ export class LanClient {
         break;
       case 'reject':
         this.closed = true;
-        this.onReject(m.reason);
+        this.onReject(m.reason, m.host);
         break;
       case 'start':
         this.onStart(m.config, m.playerId, m.tick, m.snapshot);

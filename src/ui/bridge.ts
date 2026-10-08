@@ -64,6 +64,9 @@ export interface Bridge {
         players: number;
         map: string;
         started: boolean;
+        /** Protocol and game versions of the host (the game's is absent before 1.26). */
+        isoline: number;
+        game?: string;
       }[]
     >;
     localAddresses(): Promise<string[]>;

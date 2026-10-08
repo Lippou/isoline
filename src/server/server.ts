@@ -21,6 +21,7 @@ import {
   type Beacon,
   type ClientMsg,
   type LobbyState,
+  type RejectReason,
   type ServerMsg,
 } from './protocol';
 
@@ -35,6 +36,8 @@ export interface ServerOptions {
   discovery?: boolean;
   maxPlayers?: number;
   log?: (msg: string) => void;
+  /** This build's version: players running another one are turned away (unset in tests). */
+  gameVersion?: string;
 }
 
 interface Client {
@@ -158,6 +161,7 @@ export class LanServer {
       players: this.clients.filter((c) => c.ws).length,
       map: this.config.mapId,
       started: this.started,
+      ...(this.opts.gameVersion ? { game: this.opts.gameVersion } : {}),
     };
     const msg = Buffer.from(JSON.stringify(b));
     for (const addr of broadcastAddresses()) for (const p of DISCOVERY_PORTS) this.udp?.send(msg, p, addr);
@@ -221,12 +225,14 @@ export class LanServer {
   }
 
   private hello(ws: WebSocket, m: Extract<ClientMsg, { t: 'hello' }>): Client | null {
-    const reject = (reason: 'version' | 'code' | 'full' | 'started') => {
-      ws.send(JSON.stringify({ t: 'reject', reason } satisfies ServerMsg));
+    const reject = (reason: RejectReason) => {
+      const host = this.opts.gameVersion;
+      ws.send(JSON.stringify({ t: 'reject', reason, ...(host ? { host } : {}) } satisfies ServerMsg));
       ws.close();
       return null;
     };
     if (m.version !== NET_VERSION) return reject('version');
+    if (this.opts.gameVersion && m.game !== this.opts.gameVersion) return reject('game');
     if (m.code !== this.code) return reject('code');
     // Reconnection.
     if (m.token) {
@@ -495,7 +501,9 @@ function broadcastAddresses(): string[] {
 export function localAddresses(): string[] {
   const out: string[] = [];
   for (const list of Object.values(os.networkInterfaces()))
-    for (const ni of list ?? []) if (ni.family === 'IPv4' && !ni.internal) out.push(ni.address);
+    for (const ni of list ?? [])
+      // Self-assigned link-local addresses (169.254.x.x, a cable with no network) reach no one.
+      if (ni.family === 'IPv4' && !ni.internal && !ni.address.startsWith('169.254.')) out.push(ni.address);
   return out;
 }
 
@@ -513,7 +521,9 @@ export function discover(ms = 1500): Promise<(Beacon & { host: string })[]> {
     sock.on('message', (msg, rinfo) => {
       try {
         const b = JSON.parse(String(msg)) as Beacon;
-        if (b.isoline === NET_VERSION) found.set(`${rinfo.address}:${b.port}`, { ...b, host: rinfo.address });
+        // Every Isoline host is listed, other versions too: the browser greys them out.
+        if (typeof b.isoline === 'number')
+          found.set(`${rinfo.address}:${b.port}`, { ...b, host: rinfo.address });
       } catch {
         /* ignore */
       }

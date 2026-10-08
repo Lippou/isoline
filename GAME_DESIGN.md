@@ -686,7 +686,7 @@ Chacune est implémentée, testée (`tests/unit/rules.test.ts`, `units.test.ts`)
 9. **Replays et mode spectateur** : seed, configuration et commandes de chaque tour non vide, au format `.rpl` (JSON). Lecture ×0,5 à ×8, frise temporelle (le retour arrière re-simule depuis le début), caméra libre ou vue d'un joueur (avec son brouillard), import et export de fichiers.
    - **Reprendre d'ici** (bouton de la barre de lecture, après la phase de placement et avant la fin) : le replay se met en pause et propose les pays encore en vie (le joueur d'origine présélectionné). « Jouer ce pays » prend l'instantané exact du simulateur à ce tick (`src/core/net/takeover.ts`) : le pays choisi devient humain, les autres sièges humains passent à l'IA (nation), et une **partie solo normale** démarre de là (sauvegardable, sauvegarde automatique, journal de fin). Si le pays choisi est le seul humain d'origine, les commandes enregistrées jusque-là sont reprises : le replay de la nouvelle partie part toujours du tick 0. Sinon, le replay part de l'instantané : le champ `start` du `.rpl` (et `replayStart` des sauvegardes) contient l'état de départ, la lecture et le retour arrière repartent de lui et la frise commence à son tick. Testé : même état, sièges changés, IA aux commandes de l'ancien humain, déterminisme (`tests/unit/takeover.test.ts`).
 10. **Éditeur de cartes** : pinceaux de terrain (13 types), d'altitude (élever, abaisser, lisser), import d'un PNG quelconque (couleur la plus proche et luminance comme altitude) ou d'un `.isomap`. Placement des spawns, nations et gisements, génération automatique, validation, **test immédiat**, enregistrement dans les cartes personnalisées, export pour partage.
-11. **Campagne** (`src/ui/campaign/`), qui est aussi **le didacticiel du jeu** (il n'y en a plus d'autre) : 6 missions, des **objectifs obligatoires** (tous doivent être atteints ; un objectif atteint le reste), un bonus et un temps de référence (1 étoile pour la réussite, +1 sous le temps, +1 pour le bonus). Une mission se débloque quand la précédente est réussie ; elle est perdue si votre pays tombe.
+11. **Campagne** (`src/ui/campaign/`), qui est aussi **le didacticiel du jeu** (il n'y en a plus d'autre ; 1.26 : elle explique aussi troupes et or, la frontière commune, l'attaque d'une nation et son annulation, la condition de victoire, l'organisation et la fermeture des lignes défensives, la profondeur de la flèche, les révolutions et le missile détruit en vol, pour un joueur qui ne connaît pas OpenFront) : 6 missions, des **objectifs obligatoires** (tous doivent être atteints ; un objectif atteint le reste), un bonus et un temps de référence (1 étoile pour la réussite, +1 sous le temps, +1 pour le bonus). Une mission se débloque quand la précédente est réussie ; elle est perdue si votre pays tombe.
 
    | Mission | Carte | Objectifs | Bonus | Ce qu'elle enseigne |
    |---|---|---|---|---|
@@ -749,7 +749,8 @@ Chacune est implémentée, testée (`tests/unit/rules.test.ts`, `units.test.ts`)
 |---|---|
 | Attaque / débarquement sur la cible survolée | G / B |
 | Ratio − / + | T / Y, Maj + molette |
-| Ville, port, usine, poste, silo, SAM | 1 à 6 |
+| Ville, port, usine, ligne défensive, silo, SAM | 1 à 6 |
+| Ligne offensive | A (Q en QWERTY) |
 | Radar / aérodrome | O / I |
 | Inverser la trajectoire des missiles (arc haut / bas) | U |
 | Navire de guerre | 7 |
@@ -776,6 +777,8 @@ Chacune est implémentée, testée (`tests/unit/rules.test.ts`, `units.test.ts`)
 - **Hash d'état** toutes les 50 ticks. En cas d'écart, le serveur envoie un **snapshot complet** et le client redémarre son Worker dessus. Un snapshot restauré reproduit exactement le futur (testé).
 - **Reconnexion** automatique pendant 60 s (jeton), joueur marqué « Zzz » entre-temps. **Spectateurs** : ils rejoignent par snapshot.
 - **Découverte** : balises UDP broadcast sur les ports 47777 à 47786 (le premier port libre est vérifié par bind), saisie manuelle IP:port et code d'invitation à 6 caractères. Le port de jeu est tiré au hasard entre 40000 et 49999, avec vérification par `listen`.
+- **Même version obligatoire (1.26)** : le protocole passe en version 2 et le `hello` porte la version du jeu ; l'hôte refuse toute autre version (« l'hôte a la 1.26.0, vous avez la 1.25.0 »), car la simulation en lockstep doit être identique au bit près. La liste des parties affiche les hôtes d'une autre version, grisés.
+- **À distance** : pas de serveur ni de relais. Les joueurs installent un réseau privé virtuel (Tailscale) ; le salon affiche toutes les adresses de l'hôte, celle de Tailscale (100.64.0.0/10) marquée « à distance », à saisir avec le code.
 
 ## 18. Données
 

@@ -1000,7 +1000,9 @@
     "summaryRoyale": "{mode}, {diff} difficulty. You will face {nations} nations and {tribes} tribes. The zone closes in: the last one standing wins, otherwise the largest in the last zone.",
     "summaryDoomsday": "{mode}, {diff} difficulty. You will face {nations} nations and {tribes} tribes. At midnight the largest country wins (or the first to hold {pct}% of the land).",
     "summaryHvn": "{mode}, {diff} difficulty. All humans together against a coalition of {nations} nations (they don't attack each other); {tribes} tribes also hold land. The first side to control {pct}% of the land wins.",
-    "summaryHvnSolo": "{mode}, {diff} difficulty. You alone against a coalition of {nations} nations (they don't attack each other); {tribes} tribes also hold land. The first side to control {pct}% of the land wins."
+    "summaryHvnSolo": "{mode}, {diff} difficulty. You alone against a coalition of {nations} nations (they don't attack each other); {tribes} tribes also hold land. The first side to control {pct}% of the land wins.",
+    "addressRemote": "remote",
+    "addressRemoteTip": "Tailscale address: give it, with the code, to a friend playing from home."
   },
   "rule": {
     "allowPorts": "Ports and navy",
@@ -1654,10 +1656,11 @@
     "starting": "Starting server…",
     "desktopOnly": "Network play requires the desktop app.",
     "reject": {
-      "version": "Incompatible version.",
+      "version": "Incompatible version: the host runs another version of the game. Install the same one (you have {mine}).",
       "code": "Wrong invitation code.",
       "full": "Lobby full.",
-      "started": "The game has already started."
+      "started": "The game has already started.",
+      "game": "Different versions: the host has {host}, you have {mine}. Install the same version to play together."
     },
     "connectionLost": "Connection to the host lost — reconnecting…",
     "subtitle": "Play together on the same local network, with no external server.",
@@ -1667,7 +1670,9 @@
     "manualHelp": "If the game does not show up, type the address shown in the host's lobby.",
     "address": "Address (IP:port)",
     "asSpectator": "Join as a spectator",
-    "foundDesc": "Lobbies open on your network appear here on their own."
+    "foundDesc": "Lobbies open on your network appear here on their own.",
+    "otherVersion": "Version {host} (you: {mine}), cannot be joined",
+    "remoteHelp": "From different homes: both install Tailscale (free, Mac and Windows) and join the same Tailscale network. The host then gives their “remote” address (100.x.x.x:port) and the code. Both sides need the same game version."
   },
   "campaign": {
     "title": "Campaign: The Cartographers",
@@ -1684,7 +1689,7 @@
       "bonus": "Own 2 cities",
       "outro": "Fine first lines. The nations have noticed your ink.",
       "brief": "Two great lakes divide this region. Three small nations are settling here, surrounded by tribes that guard their gold. You start with a capital and a few thousand men. I will guide you step by step: expand, build a city, subdue the tribes, and become a regional power by controlling fifteen percent of the land.",
-      "tip1": "A click on unclaimed land sends part of your troops there, as set by the attack ratio at the bottom left. Several small clicks beat a single large one.",
+      "tip1": "A click on free land sends a share of your troops there, set by the attack ratio at the bottom left. Clicking the same target again reinforces the attack under way instead of starting another.",
       "tip2": "Cities raise your troop ceiling. Your starting treasury pays for the first one; each new city costs twice as much as the previous one.",
       "bonusLevels": "Own 2 cities (a level-2 city counts as two)"
     },
@@ -1734,7 +1739,7 @@
       "outro": "You stopped the clock. The atlas now bears your name.",
       "brief": "The whole world, and the doomsday clock ticking: every bomb, every fallen country, every betrayal brings it closer to midnight. Four milestones change the rules on the way, and at midnight everything stops. Reach forty percent of the world before then.",
       "tip1": "The dial under the top bar shows the time, the next milestone and its effect. From \"Survival of the strongest\", below the land threshold your troops melt away.",
-      "tip2": "Tribes and unclaimed land are your first targets; keep the big wars for later."
+      "tip2": "Tribes and free land are your first targets. Far ahead of the others, beyond twenty percent of the land, one of your regions may rise up."
     },
     "step": "Step {n} of {total}",
     "bonusLabel": "Bonus",
@@ -2181,25 +2186,30 @@
     "peace": "Peace?"
   },
   "guide": {
-    "spawn": "Choose where to place your capital: click on unclaimed land, ideally away from other nations. The match starts as soon as you have placed it.",
+    "spawn": "Choose where your capital goes: click on free land, ideally open plains with room around them, far from other nations. The game starts as soon as you place it, and no one can attack you during the first minute.",
     "m1": {
       "camera": "Drag the map to move around, and zoom with the mouse wheel or a trackpad pinch. Press H to come back to your territory.",
-      "expand": "Expand: click on unclaimed land along your border. Your troops advance on their own while they have the strength.",
-      "ratio": "At the bottom left, the attack ratio sets the share of your troops sent with each click. Change it with T and Y, or Shift and the mouse wheel: a low ratio keeps troops back for defence.",
+      "expand": "Expand: click on free land along your border. The push leaves from the whole shared border and goes on while it has troops; when it ends, the survivors come home. Plains are quick to take, forests and mountains cost more: the Tab key shows those costs.",
+      "ratio": "At the bottom left, the attack ratio sets the share of your troops each click commits, twenty percent at first. Change it with T and Y, or Shift and the wheel. The more troops you commit, the faster the push, but the fewer are left to defend.",
       "city": "Your population soon reaches its ceiling. Build a city: press 1 then click your territory, or right click, Build, City.",
       "tribes": "Tribes, in grey, guard a treasury. Attack one: each piece of land you take yields a share of its gold.",
       "capital": "The star on your territory marks your capital. If it falls, your country is disorganised for a minute and you will have to choose a new one: keep it away from the front.",
-      "goal": "Keep going until you hold fifteen percent of the land. A second city earns the bonus star."
+      "goal": "Keep going until you hold fifteen percent of the land. A second city earns the bonus star.",
+      "resources": "Two resources matter, at the top of the screen. Troops conquer and defend: they grow back on their own, fastest around forty percent of their ceiling, and not at all once at the ceiling. Gold comes in at a thousand a second, plus loot, and pays for buildings.",
+      "nation": "Now attack a neighbouring nation: click on its territory. You need a shared border; otherwise you will have to cross the sea. Your attacks under way are listed at the bottom left: the cross cancels one, at the cost of a quarter of its troops. Clicking the same target again reinforces the attack.",
+      "victory": "A game is won by holding eighty percent of the land; after thirty minutes that threshold slowly drops. But a country that crushes the others sometimes sees one of its regions rise up."
     },
     "m2": {
       "spawn": "Place your capital. Rugged terrain, such as the Alps or the Carpathians, will be easier to defend.",
       "expand": "Take unclaimed land quickly, before neighbouring nations surround you.",
-      "line": "Draw a defensive line (key 4) facing your most exposed border, then click on the enemy’s side. Head-on, the attacker loses three men for one against it.",
-      "reinforce": "Click your line: its card sets the troops it holds. The more it has, the longer it holds; they are taken off your ceiling.",
+      "line": "Draw a defensive line (key 4) facing your most exposed border, then click on the enemy's side. It acts as soon as it is laid: head-on, the attacker loses three men for one.",
+      "reinforce": "Click your line to open the Front window: it sets the troops the line carries. The more it has, the longer it holds; they are taken off your ceiling.",
       "threats": "When a neighbour masses a much bigger army on your border, a “threatened border” alert appears and the journal records it. Reinforce that front, or make that neighbour an ally.",
       "alliance": "Propose an alliance to a neighbour: right click its territory, or use the Diplomacy window in the left rail. Offers you receive appear at the bottom right: K to accept, L to refuse.",
       "troops": "Let your army regrow before attacking again: reach half of your troop ceiling.",
-      "hold": "Hold out until the countdown ends. Reinforce the fronts that give way and renew your alliances."
+      "hold": "Hold out until the countdown ends. Reinforce the fronts that give way and renew your alliances.",
+      "organize": "Organise it: right-click the line, then “Organise the defence”. Ten seconds of work, the barbed wire rolls out, and the line then slows the enemy twice as much.",
+      "ring": "A line taken from behind shatters. To cover a city or your capital on every side, close the line: finish drawing by clicking on its first point."
     },
     "m3": {
       "island": "Start by taking your whole island.",
@@ -2207,7 +2217,7 @@
       "landing": "The weakest nation is marked on the map. Aim at its coast and press B, or right click then Land troops: a transport sails from your nearest shore with the ratio's share of your troops.",
       "boats": "At most three transports can be at sea at once. They are listed in the panel at the bottom left: the return arrow recalls one, at the cost of a quarter of its troops. Storms slow every ship down.",
       "warship": "Enemy warships sink transports. Fit out your own: press 7, then click the sea near your port. It escorts your landings and attacks enemy ships.",
-      "finish": "Keep going until it is eliminated. Send reinforcements by sea if the attack runs out of steam."
+      "finish": "Keep going until it is eliminated. A nation cut down below a hundred tiles is annexed at once. Buildings you take are looted and stay out of service for a minute."
     },
     "m4": {
       "expand": "Expand to make room: railways need distance between stations.",
@@ -2235,15 +2245,18 @@
       "weather": "Watch the sky: storms slow ships and aircraft down, and fog banks halve the range of radars.",
       "clock": "The clock is ticking: the dial at the top announces the next milestone. A peace summit or a Council vote turns it back; bombs hasten it.",
       "offensive": "Before a big push, lay an offensive line (key Q): click the country you want, and it is laid along your border. Drag its grip to its capital to draw the arrow. It charges in thirty seconds; click the arrow to launch the assault.",
-      "push": "Push towards forty percent. A vulnerable nation is marked on the map."
+      "push": "Push towards forty percent. A vulnerable nation is marked on the map.",
+      "arrow": "The arrow's length sets how deep the breakthrough goes: it stops at the head, and the survivors come home. Under the arrow, about ten tiles wide, the assault loses half as many men and moves faster; along the rest of the front it loses twenty percent fewer. Holding the right button and sweeping along the border lays the line on that stretch only."
     },
     "hint": {
       "capital": "Our capital has fallen! The country is disorganised for a minute. Choose a new one from the dispatch on the left: “Pick on the map”, or “Safest spot”.",
-      "threat": "Threatened border: a neighbour is massing troops against us. Draw a defensive line facing it (key 4), or offer it an alliance.",
+      "threat": "Threatened border: a neighbour is massing troops against us. Draw a defensive line facing it (key 4) and organise it, or offer it an alliance.",
       "allyOffer": "A nation is offering us an alliance: its card is at the bottom right. K to accept, L to refuse. An ally cannot attack us.",
       "boats": "Three transports are at sea: that is the limit. Wait for one to land, or recall one from the panel at the bottom left.",
       "storm": "A storm lies on our transports' route: ships sail slower inside it. Better to go around it, or wait for it to pass.",
-      "research": "Our research centres are idling: nothing is being studied. Open Technologies and pick a research, or queue several."
+      "research": "Our research centres are idling: nothing is being studied. Open Technologies and pick a research, or queue several.",
+      "missile": "Our missile is in the air: the panel at the bottom left lists it with its time to impact. If you change your mind, the cross blows it up in flight; the bomb is lost.",
+      "revolution": "A region of our country is rising up! The rebels bring no gold and fight hard, above all behind their barricades in the first seconds. Take it back afterwards, or wait: after four minutes the revolt runs out of steam and the region comes back to us."
     }
   },
   "hover": {
@@ -2718,11 +2731,11 @@
   },
   "update": {
     "title": "Updates",
-    "desc": "Installed version: {version}. New versions come from the game's private GitHub repository",
+    "desc": "Installed version: {version}. New versions come from the game's public GitHub repository",
     "auto": "Check at launch",
     "d": {
-      "auto": "A single request to GitHub at start-up, and only once access to the repository is set up.",
-      "token": "Fine-grained, read-only token (Contents: read) on the isoline repository. Kept encrypted in the system keychain, only ever sent to GitHub."
+      "auto": "A single request to GitHub at launch.",
+      "token": "Optional. A fine-grained read-only token avoids GitHub's request limit. Kept encrypted in the keychain, sent only to GitHub."
     },
     "token": "GitHub access token",
     "save": "Save",
@@ -2737,10 +2750,10 @@
       "saved": "access: saved token",
       "gh": "access: GitHub CLI login",
       "env": "access: environment variable",
-      "none": "no access to the repository"
+      "none": "public access"
     },
     "err": {
-      "no-token": "No access to the repository: save a token or sign in to GitHub CLI (gh auth login).",
+      "no-token": "The repository is not publicly reachable: save a token or sign in to GitHub CLI (gh auth login).",
       "unauthorized": "GitHub refused the token (expired or without access to the repository).",
       "not-found": "No published version found.",
       "no-asset": "No file for this platform in this version.",

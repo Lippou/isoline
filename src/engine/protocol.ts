@@ -138,6 +138,8 @@ export interface LocalView {
   /** My front lines holding troops: [defensive, offensive], and the troops on all my lines. */
   lineCount: [number, number];
   lineTroops: number;
+  /** My lines given their order (1.26, the campaign guide): [defensive organised or organising, offensive launched]. */
+  lineOrders?: [number, number];
   /** Troops gained per tick (negative above the ceiling). */
   growth: number;
   /** Passive gold per tick. */

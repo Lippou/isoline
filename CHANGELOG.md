@@ -2,6 +2,20 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [1.26.0] — Une campagne pour débuter, le jeu à deux
+### Modifié
+- **La campagne explique toutes les bases**, pour qui n'a jamais joué à OpenFront :
+  - mission 1 : troupes et or, terrain (Tab), attaque d'une nation (frontière commune, liste des attaques, annulation à −25 %, renfort en recliquant), condition de victoire ;
+  - mission 2 : organiser la défense, refermer une ligne ;
+  - mission 3 : annexion sous 100 cases et bâtiments pillés ;
+  - mission 6 : profondeur de la flèche, ses bonus, pose sur un tronçon de frontière ;
+  - nouveaux conseils pour un missile en vol (le faire exploser) et une révolution chez vous. Voix de la conseillère comprise.
+- **Mise à jour sans jeton** : le dépôt est public, la mise à jour intégrée fonctionne chez tout le monde.
+- **Salon réseau** : toutes les adresses de l'hôte sont affichées, celle de Tailscale marquée « à distance » ; l'écran Réseau explique comment jouer à deux depuis chez soi.
+### Corrigé
+- **Deux versions différentes ne peuvent plus jouer ensemble** : l'hôte refuse un joueur d'une autre version (« l'hôte a la 1.26.0, vous avez la 1.25.0 ») au lieu d'une partie qui se désynchronise. Les hôtes d'une autre version sont grisés dans la liste.
+- Textes de la campagne périmés : « plusieurs petits clics valent mieux qu'un gros » (faux : recliquer renforce l'attaque en cours), réglage des troupes d'une ligne (fenêtre Front).
+
 ## [1.25.0] — Défenses à organiser, percées qui s'arrêtent, nations nucléaires
 ### Modifié
 - **Organiser une défense** : la ligne défensive agit dès sa pose ; « Organiser la défense » (fenêtre Front ou clic droit) lance 10 s de travail, après quoi elle ralentit l'ennemi deux fois plus. Les barbelés apparaissent avec l'organisation.
