@@ -1,6 +1,7 @@
 // Access to the Electron preload bridge, with a localStorage fallback so the UI
 // also runs in a plain browser (dev server, tests).
 import type { UpdateStatus } from '../desktop/updater';
+import { tactile, touchZoom } from './tactile';
 export type { UpdateStatus };
 
 const WEB_UPDATE: UpdateStatus = { state: 'idle', current: '', access: 'none', installable: false };
@@ -109,6 +110,8 @@ const fallback: Bridge = {
     else void document.exitFullscreen?.();
   },
   screenshot: async () => null,
+  // Touch web version only (tactile.ts): the interface scale zooms the page there too.
+  zoom: tactile ? touchZoom : undefined,
   storage: {
     read: async (c, n) => {
       const v = localStorage.getItem(`${LS}${c}/${n}`);

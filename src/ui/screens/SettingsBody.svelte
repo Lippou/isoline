@@ -743,6 +743,18 @@
   }
 
   /* Narrow (the in-game menu): sections fold into a row of words over a rule. */
+  /* Touch web version (tactile.ts) on a phone: the section tabs slide sideways instead of overlapping. */
+  @container (max-width: 560px) {
+    :global(html.tactile) nav {
+      grid-auto-columns: max-content;
+      overflow-x: auto;
+      scrollbar-width: none;
+      gap: 4px;
+    }
+    :global(html.tactile) .tab {
+      padding-inline: 10px;
+    }
+  }
   @container (max-width: 820px) {
     .layout {
       grid-template-columns: 1fr;

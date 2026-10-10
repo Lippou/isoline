@@ -806,3 +806,57 @@ html :is(button, .btn, input, select):disabled {
 html :is(input[type='text'], input[type='url'], input[type='number'], textarea) {
   cursor: text;
 }
+
+/* ——— Touch web version (phones, tablets without a mouse): html.tactile, set by tactile.ts.
+   Never present on a computer nor in the desktop app: the PC game is unchanged. ——— */
+.touch-rotate {
+  display: none;
+}
+html.tactile,
+html.tactile body {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+html.tactile body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+html.tactile input,
+html.tactile textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+html.tactile canvas {
+  touch-action: none;
+}
+html.tactile button,
+html.tactile a,
+html.tactile [role='button'] {
+  touch-action: manipulation;
+}
+/* A phone held upright during a game: asked to turn it (iPads keep both orientations). */
+@media (orientation: portrait) and (max-aspect-ratio: 2/3) {
+  html.tactile .touch-rotate {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 10px;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    padding: 24px;
+    text-align: center;
+    background: var(--np-paper, #f1ece2);
+    color: var(--np-ink, #172a3c);
+    font-family: var(--text, serif);
+  }
+  html.tactile .touch-rotate b {
+    font-family: var(--display, serif);
+    font-size: 26px;
+  }
+  html.tactile .touch-rotate span {
+    font-size: 17px;
+    color: var(--np-ink-2, #46535f);
+  }
+}

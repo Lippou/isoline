@@ -117,6 +117,36 @@
     padding: 0.35em 0.8em;
     font-size: 0.9em;
   }
+  /* Touch web version (tactile.ts) on a phone: the title on its own line under « Back », smaller;
+     on a short screen (a phone in landscape) the header tightens to leave room to the page. */
+  @media (max-width: 599px) {
+    :global(html.tactile) .head {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: 'back acts' 'title title';
+      row-gap: 6px;
+    }
+    :global(html.tactile) .back {
+      grid-area: back;
+    }
+    :global(html.tactile) .acts {
+      grid-area: acts;
+    }
+    :global(html.tactile) h1 {
+      grid-area: title;
+      font-size: 1.9em;
+    }
+  }
+  @media (max-height: 500px) {
+    :global(html.tactile) h1 {
+      font-size: 1.6em;
+    }
+    :global(html.tactile) .head {
+      padding-bottom: 4px;
+    }
+    :global(html.tactile) .dateline {
+      padding: 2px 0;
+    }
+  }
   /* The dateline: a fine rule under the heavy one, as a newspaper's. */
   .dateline {
     display: flex;

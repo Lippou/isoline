@@ -79,6 +79,18 @@
     display: grid;
     grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.4fr);
   }
+  /* Touch web version (tactile.ts) on a phone held upright: one column, the page scrolls. */
+  @media (max-width: 699px) {
+    :global(html.tactile) .cols {
+      grid-template-columns: minmax(0, 1fr);
+      grid-auto-rows: max-content;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    :global(html.tactile) .brand {
+      padding-right: 0;
+    }
+  }
   .brand {
     align-self: start;
     display: grid;

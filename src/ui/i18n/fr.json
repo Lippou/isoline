@@ -3126,5 +3126,9 @@
     "noErrors": "Aucune erreur notée.",
     "reports": "{n} rapport(s) enregistré(s) dans le dossier bugs.",
     "caught": "Une erreur vient d'être notée — {key} : journal de bug"
+  },
+  "touch": {
+    "rotateTitle": "Tournez votre appareil",
+    "rotateBody": "La partie se joue à l’horizontale."
   }
 }

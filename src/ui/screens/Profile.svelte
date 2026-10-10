@@ -203,6 +203,25 @@
     display: grid;
     grid-template-columns: minmax(340px, 1fr) minmax(0, 1.45fr);
   }
+  /* Touch web version (tactile.ts) on a phone held upright: one column, the page scrolls. */
+  @media (max-width: 699px) {
+    :global(html.tactile) .cols {
+      grid-template-columns: minmax(0, 1fr);
+      grid-auto-rows: max-content;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    :global(html.tactile) .card,
+    :global(html.tactile) .card + .card {
+      overflow: visible;
+      padding: 2px 0 16px;
+      border-left: 0;
+    }
+    :global(html.tactile) .card + .card {
+      padding-top: 18px;
+      border-top: 1px solid var(--np-rule);
+    }
+  }
   .card {
     min-height: 0;
     overflow-y: auto;

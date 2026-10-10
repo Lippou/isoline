@@ -3126,5 +3126,9 @@
     "noErrors": "No error logged.",
     "reports": "{n} report(s) saved in the bugs folder.",
     "caught": "An error was just logged — {key}: bug journal"
+  },
+  "touch": {
+    "rotateTitle": "Turn your device",
+    "rotateBody": "The game is played in landscape."
   }
 }

@@ -5,6 +5,7 @@
 import { bridge } from '../bridge';
 import { settings } from './settings.svelte';
 import { effectiveUiScale, autoUiScale, zoomFor } from './uiScale';
+import { deviceSize, tactile, touchUiScale } from '../tactile';
 
 export const view = $state({
   /** The automatic scale for this window (shown next to the setting). */
@@ -38,8 +39,10 @@ export function emulateScreen(w = 0, h = 0, dpr = 1): void {
 /** Reads the window's size at zoom 1 (a pixel or two of rounding is ignored). */
 function measure(): void {
   const z = currentZoom();
-  const w = Math.round(window.innerWidth * z);
-  const h = Math.round(window.innerHeight * z);
+  // Touch web version: the screen itself (the page is zoomed through the viewport there).
+  const d = tactile ? deviceSize() : null;
+  const w = d ? d.w : Math.round(window.innerWidth * z);
+  const h = d ? d.h : Math.round(window.innerHeight * z);
   if (Math.abs(w - view.w) > 2 || Math.abs(h - view.h) > 2) {
     view.w = w;
     view.h = h;
@@ -53,10 +56,13 @@ export function applyUiScale(): void {
   const w = emulated?.w ?? view.w;
   const h = emulated?.h ?? view.h;
   const dpr = emulated?.dpr ?? baseDpr;
-  view.auto = autoUiScale(w, h, dpr);
-  view.scale = effectiveUiScale(settings.graphics.uiScale, w, h, dpr);
+  view.auto = tactile ? touchUiScale(w, h) : autoUiScale(w, h, dpr);
+  view.scale = tactile ? view.auto : effectiveUiScale(settings.graphics.uiScale, w, h, dpr);
   // (An emulated screen is shown in the window as it is: scaled by the window's share of it.)
-  const zoom = zoomFor(view.scale, inGame) * (emulated && view.w > 0 ? view.w / emulated.w : 1);
+  // Touch web version: the game takes its touch scale (tactile.ts); the menus stay at 100 %
+  // (they reflow: Lobby stacks its steps on a narrow screen). A computer keeps zoomFor's rule.
+  const base = tactile ? (inGame ? view.scale : 1) : zoomFor(view.scale, inGame);
+  const zoom = base * (emulated && view.w > 0 ? view.w / emulated.w : 1);
   view.zoom = zoom;
   if (bridge.zoom && Math.abs(currentZoom() - zoom) > 0.001) bridge.zoom.set(zoom);
 }

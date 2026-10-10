@@ -257,6 +257,20 @@
     min-height: 0;
   }
 
+  /* Touch web version (tactile.ts) on a phone held upright: one column, the page scrolls. */
+  @media (max-width: 699px) {
+    :global(html.tactile) .body {
+      grid-template-columns: minmax(0, 1fr);
+      grid-auto-rows: max-content;
+      gap: 18px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    :global(html.tactile) .route {
+      height: clamp(260px, 48svh, 420px);
+      margin-right: 0;
+    }
+  }
   /* The route chart: a plate of the atlas, square-cut in an ink frame. */
   .route {
     position: relative;

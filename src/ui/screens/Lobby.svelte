@@ -995,6 +995,27 @@
     grid-template-columns: minmax(300px, 1fr) minmax(360px, 1.1fr) minmax(320px, 0.95fr);
     min-height: 0;
   }
+  /* Touch web version on a narrow screen (a phone): the three steps one under the other. */
+  @media (max-width: 979px) {
+    :global(html.tactile) .steps {
+      grid-template-columns: minmax(0, 1fr);
+      grid-auto-rows: max-content;
+      align-content: start;
+      gap: 26px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    /* Each step keeps a screen's worth of height (its own list scrolls inside), the last one its own. */
+    :global(html.tactile) .step {
+      padding: 0;
+      height: clamp(340px, 82svh, 720px);
+    }
+    :global(html.tactile) .step:last-child {
+      height: auto;
+      overflow: visible;
+    }
+  }
   .step {
     min-height: 0;
     display: grid;

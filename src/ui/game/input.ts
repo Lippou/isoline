@@ -75,6 +75,19 @@ export class InputController {
   private aimHover: '' | 'grip' | 'arrow' = '';
   /** The last click of a line being drawn (a second one there, soon after: the double click). */
   private lineClick = { t: 0, x: -99, y: -99 };
+  // Touch (web version on a phone or a tablet; a mouse never comes here): the fingers on the
+  // map, the one that acts as the mouse, a pinch under way, and the long press (= right click).
+  private touches = new Map<number, { x: number; y: number }>();
+  private primaryTouch = -1;
+  private pinch: { d: number; mx: number; my: number } | null = null;
+  private press: {
+    timer: ReturnType<typeof setTimeout>;
+    x: number;
+    y: number;
+    cx: number;
+    cy: number;
+  } | null = null;
+  private pressFired = false;
 
   constructor(
     private readonly el: HTMLElement,
@@ -91,10 +104,17 @@ export class InputController {
       t.addEventListener(type, fn as EventListener, opts);
       this.disposers.push(() => t.removeEventListener(type, fn as EventListener, opts));
     };
-    on(el, 'pointerdown', (e: PointerEvent) => this.pointerDown(e));
-    on(window, 'pointermove', (e: PointerEvent) => this.pointerMove(e));
+    on(el, 'pointerdown', (e: PointerEvent) =>
+      e.pointerType === 'touch' ? this.touchDown(e) : this.pointerDown(e),
+    );
+    on(window, 'pointermove', (e: PointerEvent) =>
+      e.pointerType === 'touch' ? this.touchMove(e) : this.pointerMove(e),
+    );
     on(el, 'pointerleave', () => (this.pointer = null));
-    on(window, 'pointerup', (e: PointerEvent) => this.pointerUp(e));
+    on(window, 'pointerup', (e: PointerEvent) =>
+      e.pointerType === 'touch' ? this.touchUp(e) : this.pointerUp(e),
+    );
+    on(window, 'pointercancel', (e: PointerEvent) => e.pointerType === 'touch' && this.touchCancel(e));
     on(el, 'wheel', (e: WheelEvent) => this.wheel(e), { passive: false });
     on(el, 'contextmenu', (e: MouseEvent) => e.preventDefault());
     on(window, 'keydown', (e: KeyboardEvent) => this.keyDown(e));
@@ -105,6 +125,103 @@ export class InputController {
 
   dispose(): void {
     for (const d of this.disposers) d();
+    this.cancelPress();
+  }
+
+  // ------------------------------------------------------------ touch
+  // One finger is the mouse's left button (tap = click, drag = pan or trace); a long press
+  // without moving is the right click (the radial menu, taking a point back, dropping a tool);
+  // two fingers pinch to zoom and drag to pan. Only `pointerType === 'touch'` events come here.
+
+  private touchDown(e: PointerEvent): void {
+    const [x, y] = this.local(e);
+    this.touches.set(e.pointerId, { x, y });
+    if (this.touches.size === 1) {
+      this.primaryTouch = e.pointerId;
+      this.pressFired = false;
+      this.pointerMove(e); // what is under the finger (hover, line preview), as a mouse would have it
+      this.pointerDown(e);
+      this.startPress(x, y, e.clientX, e.clientY);
+      return;
+    }
+    // A second finger: the first one's tap or drag is called off, the pinch begins.
+    this.cancelPress();
+    if (this.gripDrag >= 0) this.endGripDrag();
+    this.down = null;
+    this.r.overlay.dragRect = null;
+    this.primaryTouch = -1;
+    this.pinch = this.pinchOf();
+  }
+
+  private pinchOf(): { d: number; mx: number; my: number } | null {
+    const [a, b] = [...this.touches.values()];
+    if (!a || !b) return null;
+    return { d: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+  }
+
+  private touchMove(e: PointerEvent): void {
+    if (!this.touches.has(e.pointerId)) return;
+    const [x, y] = this.local(e);
+    this.touches.set(e.pointerId, { x, y });
+    if (this.pinch) {
+      const p = this.pinchOf();
+      if (!p) return;
+      this.r.camera.zoomAt(p.d / this.pinch.d, p.mx, p.my);
+      this.r.camera.panScreen(p.mx - this.pinch.mx, p.my - this.pinch.my);
+      this.pinch = p;
+      return;
+    }
+    if (e.pointerId !== this.primaryTouch) return;
+    if (this.press && Math.hypot(x - this.press.x, y - this.press.y) > 10) this.cancelPress();
+    this.pointerMove(e);
+  }
+
+  private touchUp(e: PointerEvent): void {
+    if (!this.touches.delete(e.pointerId)) return;
+    if (this.pinch) {
+      // The pinch ends with its fingers; a finger left on the screen does nothing until lifted.
+      if (this.touches.size < 2) this.pinch = null;
+      return;
+    }
+    if (e.pointerId !== this.primaryTouch) return;
+    this.primaryTouch = -1;
+    this.cancelPress();
+    if (this.pressFired) {
+      this.pressFired = false;
+      this.down = null;
+      return;
+    }
+    this.pointerUp(e);
+  }
+
+  private touchCancel(e: PointerEvent): void {
+    this.touches.delete(e.pointerId);
+    if (this.touches.size < 2) this.pinch = null;
+    if (e.pointerId === this.primaryTouch) {
+      this.primaryTouch = -1;
+      this.cancelPress();
+      this.down = null;
+      if (this.gripDrag >= 0) this.endGripDrag();
+    }
+  }
+
+  private startPress(x: number, y: number, cx: number, cy: number): void {
+    this.cancelPress();
+    const timer = setTimeout(() => {
+      this.press = null;
+      if (!this.down || this.down.moved || this.touches.size !== 1) return;
+      this.pressFired = true;
+      navigator.vibrate?.(12);
+      // The long press is the right click, released where the finger is.
+      this.down = { x, y, button: 2, shift: false, moved: false, t: performance.now() };
+      this.pointerUp({ clientX: cx, clientY: cy, altKey: false, button: 2 } as PointerEvent);
+    }, 480);
+    this.press = { timer, x, y, cx, cy };
+  }
+
+  private cancelPress(): void {
+    if (this.press) clearTimeout(this.press.timer);
+    this.press = null;
   }
 
   /** Called every frame: keyboard panning. */

@@ -115,6 +115,30 @@
   data-testid="game-screen"
 >
   <div class="canvas-host" bind:this={host}></div>
+  <!-- Touch web version, phone held upright: the HUD needs the landscape (tactile.ts, global.css). -->
+  <div class="touch-rotate" aria-live="polite">
+    <svg viewBox="0 0 48 48" width="56" height="56" aria-hidden="true"
+      ><rect
+        x="15"
+        y="6"
+        width="18"
+        height="30"
+        rx="3"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.4"
+      /><path
+        d="M8 40c6 4 26 4 32 0M36 36l4 4-4 4"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.4"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      /></svg
+    >
+    <b>{t('touch.rotateTitle')}</b>
+    <span>{t('touch.rotateBody')}</span>
+  </div>
   {#if hud.loading}
     <div class="loading fade-in">
       <div class="ripple" aria-hidden="true">
