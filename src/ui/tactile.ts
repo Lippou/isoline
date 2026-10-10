@@ -30,30 +30,24 @@ export function touchUiScale(w: number, h: number): number {
 
 let zoomNow = 1;
 
-/** The page's width at zoom 1 in each orientation, as measured there (the visible width). */
-const ideal: { landscape?: number; portrait?: number } = {};
-const orientation = (): 'landscape' | 'portrait' =>
-  window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
-
-/** The visible width at zoom 1 is known for the way the device is held now. */
-export function idealKnown(): boolean {
-  return ideal[orientation()] !== undefined;
-}
-
 /**
- * The visible screen in CSS pixels at zoom 1, whatever the zoom and orientation: the width the
- * page had at zoom 1 held this way (the screen's own may be wider: Android's buttons take a
- * side in landscape), else the screen's; the height from the layout viewport scaled by the factor
- * the browser actually applied (it fits the layout width to that width).
+ * The visible screen in CSS pixels at zoom 1, whatever the zoom and orientation: the visual
+ * viewport times its scale (the page zoom actually applied). Nothing to reset to measure it,
+ * and Android's buttons or Safari's bars are left out.
  */
 export function deviceSize(): { w: number; h: number } {
-  const o = orientation();
-  if (zoomNow >= 0.999 && window.innerWidth > 0) ideal[o] = window.innerWidth;
-  const short = Math.min(screen.width, screen.height);
-  const long = Math.max(screen.width, screen.height);
-  const w = ideal[o] ?? (o === 'landscape' ? long : short);
+  const vv = window.visualViewport;
+  if (vv && vv.width > 0 && vv.scale > 0)
+    return { w: Math.round(vv.width * vv.scale), h: Math.round(vv.height * vv.scale) };
+  const landscape = window.innerWidth > window.innerHeight;
+  const w = landscape ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
   const applied = window.innerWidth > 0 ? w / window.innerWidth : 1;
   return { w, h: Math.round(window.innerHeight * applied) };
+}
+
+/** The page zoom the browser actually applies (it may refuse a new one for a moment: iOS). */
+export function appliedZoom(): number {
+  return window.visualViewport?.scale ?? zoomNow;
 }
 
 function viewportMeta(): HTMLMetaElement {
@@ -71,16 +65,38 @@ function viewportMeta(): HTMLMetaElement {
  * is widened by 1 / factor and the browser fits it to the screen, so every CSS pixel shrinks
  * together and the HUD's media queries see the room actually left — exactly like the app's zoom.
  */
+const metaFor = (f: number, w: number) =>
+  f >= 0.999
+    ? 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover'
+    : `width=${Math.round(w / f)}, initial-scale=${f}, minimum-scale=${f}, maximum-scale=${f}, viewport-fit=cover`;
+
+let checks: ReturnType<typeof setTimeout>[] = [];
+/** Tags given again, by content: twice at most each (a browser that never takes it is left be). */
+const retried = new Map<string, number>();
+
 export const touchZoom = {
   get: (): number => zoomNow,
   set: (factor: number): void => {
     const f = Math.min(1, Math.max(TOUCH_SCALE_MIN, factor));
     const { w } = deviceSize();
     zoomNow = f;
-    viewportMeta().content =
-      f >= 0.999
-        ? 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover'
-        : `width=${Math.round(w / f)}, initial-scale=${f}, maximum-scale=${f}, viewport-fit=cover`;
+    const content = metaFor(f, w);
+    const meta = viewportMeta();
+    if (meta.content !== content) meta.content = content;
+    // iOS may keep its old zoom (after a turn of the phone): checked a few times, and if the
+    // zoom has not taken, the tag is given again (through device-width, which it re-reads).
+    for (const c of checks) clearTimeout(c);
+    checks = [250, 700, 1600].map((ms) =>
+      setTimeout(() => {
+        if (zoomNow !== f || Math.abs(appliedZoom() - f) < 0.02) return;
+        const n = retried.get(content) ?? 0;
+        if (n >= 2) return;
+        retried.set(content, n + 1);
+        const m = viewportMeta();
+        m.content = metaFor(1, w);
+        requestAnimationFrame(() => (m.content = metaFor(f, deviceSize().w)));
+      }, ms),
+    );
   },
 };
 
@@ -129,7 +145,7 @@ export function safeInsets(): SafeInsets {
       l: parseFloat(cs.paddingLeft) || 0,
     };
   }
-  const f = zoomNow > 0 ? zoomNow : 1;
+  const f = appliedZoom() > 0 ? appliedZoom() : 1;
   let { l, r } = raw;
   if (l > 0 && Math.abs(l - r) < 1) {
     // Landscape: 90° turned the top of the device (the island) to the left, 270° to the right.

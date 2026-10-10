@@ -5,7 +5,7 @@
 import { bridge } from '../bridge';
 import { settings } from './settings.svelte';
 import { effectiveUiScale, autoUiScale, zoomFor } from './uiScale';
-import { deviceSize, idealKnown, safeInsets, tactile, touchUiScale } from '../tactile';
+import { deviceSize, safeInsets, tactile, touchUiScale } from '../tactile';
 
 export const view = $state({
   /** The automatic scale for this window (shown next to the setting). */
@@ -93,15 +93,16 @@ export function startViewport(): void {
   if (started) return;
   started = true;
   window.addEventListener('resize', applyUiScale);
-  // A phone turned round: the island moves to the other side (same size, no resize sometimes).
-  // In a game held a new way for the first time: back to zoom 1 a moment, to measure the
-  // visible width (tactile.ts deviceSize); the resize that follows zooms in again.
-  if (tactile)
-    screen.orientation?.addEventListener('change', () =>
-      setTimeout(() => {
-        if (inGame && !idealKnown()) bridge.zoom?.set(1);
-        else applyUiScale();
-      }, 120),
-    );
+  // Touch web version: a turn of the phone, Safari's bars, a zoom that took late — the visual
+  // viewport says so (no window resize sometimes on iOS).
+  if (tactile) {
+    let wait: ReturnType<typeof setTimeout> | undefined;
+    const later = () => {
+      clearTimeout(wait);
+      wait = setTimeout(applyUiScale, 120);
+    };
+    window.visualViewport?.addEventListener('resize', later);
+    screen.orientation?.addEventListener('change', later);
+  }
   applyUiScale();
 }
