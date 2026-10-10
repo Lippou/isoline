@@ -70,6 +70,8 @@ export interface RenderSettings {
   uiScale: number;
   /** Share of the screen's pixel density the map is drawn at (1: all of it, up to 2). */
   resolutionScale?: number;
+  /** The map's changes sent run by run in small buffers (MapLayer `packed`: Safari on iOS). */
+  packedUploads?: boolean;
 }
 
 export interface Overlay {
@@ -385,7 +387,7 @@ export class GameRenderer {
     parent.appendChild(this.app.canvas);
     this.app.canvas.style.display = 'block';
     this.icons = await buildIcons(this.app.renderer);
-    this.map = new MapLayer(this.state, this.app.renderer);
+    this.map = new MapLayer(this.state, this.app.renderer, !!this.settings.packedUploads);
     this.particles = new ParticleSystem(this.icons, 2600);
     this.nukeFx = new NukeFx();
     await this.missileFx.init();
@@ -457,7 +459,7 @@ export class GameRenderer {
   /** Recreate the map surface after the client state was re-initialised (replay rewind, resync). */
   rebuildMap(): void {
     const old = this.map;
-    this.map = new MapLayer(this.state, this.app.renderer);
+    this.map = new MapLayer(this.state, this.app.renderer, !!this.settings.packedUploads);
     this.world.addChildAt(this.map.mesh, 0);
     this.world.removeChild(old.mesh);
     old.destroy();

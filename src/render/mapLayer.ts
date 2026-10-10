@@ -101,9 +101,18 @@ export class MapLayer {
   private loggedError = false;
   private errorChecks = 8;
 
+  /** Packed uploads: each dirty run copied into `staging` first (see upload). */
+  private staging = new Uint8Array(0);
+
   constructor(
     private readonly state: ClientState,
     private readonly renderer: Renderer,
+    /**
+     * Each dirty run sent alone, copied into a small buffer, instead of read out of the whole
+     * map array with skips: Safari (iOS) ships the array from its start to the run's end to its
+     * GPU process at every call — megabytes per run when the whole map changes (a game's start).
+     */
+    private readonly packed = false,
   ) {
     const { width: w, height: h } = state;
     this.w = w;
@@ -259,6 +268,34 @@ export class MapLayer {
     this.dirty[Math.floor(t / w / BLOCK_H) * this.cols + Math.floor((t % w) / BLOCK_W)] = 1;
   }
 
+  /** The dirty runs of one texture (bound), each copied out on its own (`packed`). */
+  private uploadPacked(gl: WebGLRenderingContext | WebGL2RenderingContext, data: Uint8Array): void {
+    const w = this.w;
+    for (let row = 0; row < this.rows; row++) {
+      const y0 = row * BLOCK_H;
+      const y1 = Math.min(this.h, y0 + BLOCK_H);
+      let c = 0;
+      while (c < this.cols) {
+        if (!this.dirty[row * this.cols + c]) {
+          c++;
+          continue;
+        }
+        let e = c;
+        while (e + 1 < this.cols && this.dirty[row * this.cols + e + 1]) e++;
+        const x0 = c * BLOCK_W;
+        const x1 = Math.min(w, (e + 1) * BLOCK_W);
+        const rw = x1 - x0;
+        const n = rw * (y1 - y0) * 4;
+        if (this.staging.length < n) this.staging = new Uint8Array(n);
+        const buf = this.staging.subarray(0, n);
+        for (let y = y0; y < y1; y++)
+          buf.set(data.subarray((y * w + x0) * 4, (y * w + x1) * 4), (y - y0) * rw * 4);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, x0, y0, rw, y1 - y0, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+        c = e + 1;
+      }
+    }
+  }
+
   /** Upload the dirty blocks of the owner/state textures. */
   upload(): void {
     if (!this.dirtyAny) return;
@@ -289,6 +326,10 @@ export class MapLayer {
         // WebGL 2 reads a rectangle straight out of the full array (row length, skips);
         // WebGL 1 cannot: whole rows of blocks then.
         const gl2 = 'UNPACK_ROW_LENGTH' in gl;
+        if (this.packed) {
+          this.uploadPacked(gl, data);
+          continue;
+        }
         if (gl2) gl.pixelStorei(gl.UNPACK_ROW_LENGTH, this.w);
         for (let row = 0; row < this.rows; row++) {
           const y0 = row * BLOCK_H;

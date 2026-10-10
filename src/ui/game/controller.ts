@@ -106,6 +106,7 @@ export class GameController {
       showFps: false,
       maxFps: settings.graphics.maxFps || touchRender.maxFps,
       resolutionScale: touchRender.resolutionScale,
+      packedUploads: tactile,
       lang: i18n.lang,
       // The interface scale is the page zoom (stores/viewport.svelte.ts): the map's labels
       // and badges, in CSS pixels, already follow it.
