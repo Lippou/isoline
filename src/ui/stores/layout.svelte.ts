@@ -5,6 +5,7 @@
 import { untrack } from 'svelte';
 import { innerWidth, innerHeight } from 'svelte/reactivity/window';
 import { hudBox } from './hudBox.svelte';
+import { view } from './viewport.svelte';
 import { wm, isReading } from './windows.svelte';
 import { folds } from './folds.svelte';
 import {
@@ -64,8 +65,9 @@ class Layout {
 
   /** What the zones are computed from. */
   input = $derived.by((): Omit<ZoneInput, 'reading'> => ({
-    w: innerWidth.current ?? 1600,
-    h: innerHeight.current ?? 900,
+    // (Touch web version: less the notch's, the island's and the home bar's edges; 0 on a computer.)
+    w: (innerWidth.current ?? 1600) - view.safe.l - view.safe.r,
+    h: (innerHeight.current ?? 900) - view.safe.t - view.safe.b,
     railW: hudBox.railW,
     topH: hudBox.top ? 10 + hudBox.top : 0,
     resH: hudBox.res,

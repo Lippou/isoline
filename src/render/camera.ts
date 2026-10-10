@@ -17,6 +17,13 @@ export class Camera {
   follow: (() => [number, number] | null) | null = null;
   private glide: { x: number; y: number; zoom: number } | null = null;
   reducedMotion = false;
+  /**
+   * How far the view centre stays inside the map, in half-screens (soft limits). Touch web
+   * version: less, so a map edge can be brought out from under the panels round the screen.
+   */
+  slack = 0.6;
+  /** A finger on the map (touch web version): no spring back under it. */
+  held = false;
 
   setMap(w: number, h: number): void {
     this.mapW = w;
@@ -52,6 +59,20 @@ export class Camera {
     const [wx, wy] = this.screenToWorld(sx, sy);
     this.targetZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.targetZoom * factor));
     this.anchor = { sx, sy, wx, wy };
+    this.glide = null;
+    this.follow = null;
+  }
+
+  /**
+   * Zoom at once by `factor` keeping the world point under (sx, sy) fixed: a pinch, the map
+   * held under the fingers (zoomAt eases towards its target, for a wheel or a key).
+   */
+  zoomNow(factor: number, sx: number, sy: number): void {
+    const [wx, wy] = this.screenToWorld(sx, sy);
+    this.zoom = this.targetZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom * factor));
+    this.cx = wx - (sx - this.viewW / 2) / this.zoom;
+    this.cy = wy - (sy - this.viewH / 2) / this.zoom;
+    this.anchor = null;
     this.glide = null;
     this.follow = null;
   }
@@ -124,10 +145,11 @@ export class Camera {
     // Soft limits: spring back when the view centre leaves the map (+ margin).
     const mx = this.viewW / this.zoom / 2;
     const my = this.viewH / this.zoom / 2;
-    const minX = Math.min(this.mapW / 2, mx * 0.6);
-    const maxX = Math.max(this.mapW / 2, this.mapW - mx * 0.6);
-    const minY = Math.min(this.mapH / 2, my * 0.6);
-    const maxY = Math.max(this.mapH / 2, this.mapH - my * 0.6);
+    if (this.held) return;
+    const minX = Math.min(this.mapW / 2, mx * this.slack);
+    const maxX = Math.max(this.mapW / 2, this.mapW - mx * this.slack);
+    const minY = Math.min(this.mapH / 2, my * this.slack);
+    const maxY = Math.max(this.mapH / 2, this.mapH - my * this.slack);
     const spring = 1 - Math.exp(-dt * 8);
     if (this.cx < minX) this.cx += (minX - this.cx) * spring;
     if (this.cx > maxX) this.cx += (maxX - this.cx) * spring;

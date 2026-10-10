@@ -546,6 +546,11 @@
 {/if}
 
 <style>
+  /* Touch web version: no pointer hovers there — a tap attacks, it opens no card (the long
+     press's menu says what the place is). */
+  :global(html.tactile) .card {
+    display: none;
+  }
   /* What is under the pointer: a small card of paper that follows it (it never takes the pointer). */
   .card {
     position: absolute;

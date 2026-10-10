@@ -817,7 +817,13 @@ html.tactile body {
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
 }
-html.tactile body {
+/* iOS enlarges text by itself in landscape: the interface keeps the sizes it was laid out with. */
+html.tactile {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+html.tactile body,
+html.tactile body *:not(input, textarea, [contenteditable]) {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;

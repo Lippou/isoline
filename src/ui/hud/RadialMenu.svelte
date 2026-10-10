@@ -2,6 +2,7 @@
   // Context menu (right click): what is under the cursor, then grouped actions
   // with their cost; sub-menus open in a side column.
   import { hud, openPanel } from '../stores/game.svelte';
+  import { view } from '../stores/viewport.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
   import { settings } from '../stores/settings.svelte';
   import Icon from '../icons/Icon.svelte';
@@ -580,11 +581,13 @@
     if (!r) return { x: 0, y: 0, subLeft: false };
     const w = 260;
     const h = 64 + items.length * 34;
-    const x = Math.max(8, Math.min(r.x + 6, window.innerWidth - w - 12));
+    // (Touch web version: clear of the notch and the island too; 0 on a computer.)
+    const sf = view.safe;
+    const x = Math.max(8 + sf.l, Math.min(r.x + 6, window.innerWidth - sf.r - w - 12));
     return {
       x,
-      y: Math.max(8, Math.min(r.y + 6, window.innerHeight - h - 12)),
-      subLeft: x + w + 4 + 280 > window.innerWidth - 12,
+      y: Math.max(8 + sf.t, Math.min(r.y + 6, window.innerHeight - sf.b - h - 12)),
+      subLeft: x + w + 4 + 280 > window.innerWidth - sf.r - 12,
     };
   });
 </script>
@@ -692,6 +695,10 @@
     position: absolute;
     inset: 0;
     z-index: 40;
+  }
+  /* Touch web version: placed in the map's pixels, which start at the screen's edge (GameScreen). */
+  :global(html.tactile) .ctx {
+    translate: calc(-1 * var(--safe-l, 0px)) calc(-1 * var(--safe-t, 0px));
   }
   .ctx {
     position: absolute;

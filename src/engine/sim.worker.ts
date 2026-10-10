@@ -339,6 +339,7 @@ function sendUpdate(
       strength: lineStrength(g, l),
       target: l.target,
       aim: l.owner === viewer ? l.aim : -1,
+      aimFrom: l.owner === viewer ? l.aimFrom : -1,
       attack: l.attack,
       laidTick: l.laidTick,
       organizeTick: l.organizeTick,

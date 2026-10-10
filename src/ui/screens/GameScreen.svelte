@@ -316,6 +316,16 @@
     position: absolute;
     inset: 0;
   }
+  /* Touch web version: the panels and buttons keep off the notch, the island and the home bar
+     (tactile.ts safeInsets, 0 elsewhere); the map still runs to the screen's edges under them. */
+  :global(html.tactile) .game {
+    inset: var(--safe-t, 0px) var(--safe-r, 0px) var(--safe-b, 0px) var(--safe-l, 0px);
+    overflow: visible;
+  }
+  :global(html.tactile) .canvas-host {
+    inset: calc(-1 * var(--safe-t, 0px)) calc(-1 * var(--safe-r, 0px)) calc(-1 * var(--safe-b, 0px))
+      calc(-1 * var(--safe-l, 0px));
+  }
   /* Photo mode: only the map and the photo bar (the HUD keeps its state, just hidden). */
   .game.photo > :global(:not(.canvas-host):not(.photo-bar)) {
     display: none !important;

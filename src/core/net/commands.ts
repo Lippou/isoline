@@ -35,7 +35,7 @@ export type Command =
    * The arrow of one of your offensive lines: the tile its assault heads for (-1 takes it
    * back); launched, its attack turns that way.
    */
-  | { t: 'lineAim'; id: number; aim: number }
+  | { t: 'lineAim'; id: number; aim: number; from?: number }
   /** Launches one of your offensive lines along its arrow, with the charge it has (1.24). */
   | { t: 'lineLaunch'; id: number }
   /** Organises one of your defensive lines: its bonus once LINE_DEFENSE_PREP is done (1.24.1). */
@@ -106,7 +106,9 @@ export function isWellFormed(c: unknown): c is Command {
     case 'lineRemove':
       return isInt(o.id);
     case 'lineAim':
-      return isInt(o.id) && isInt(o.aim) && o.aim >= -1;
+      return (
+        isInt(o.id) && isInt(o.aim) && o.aim >= -1 && (o.from === undefined || (isInt(o.from) && o.from >= 0))
+      );
     case 'lineLaunch':
     case 'lineOrganize':
       return isInt(o.id);

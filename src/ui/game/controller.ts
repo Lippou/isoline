@@ -12,6 +12,7 @@ import { settings, saveSettings, keyLabel } from '../stores/settings.svelte';
 import { WeatherNews } from './weatherNews';
 import { t, i18n, clock, short } from '../i18n/i18n.svelte';
 import { mapsBase, bridge, writeJson } from '../bridge';
+import { tactile } from '../tactile';
 import { app, setSession, go, confirmModal, type LaunchRequest } from '../stores/app.svelte';
 import type { GameEvent } from '../../core/game/events';
 import { portRange, A, B, N, RAIL_CONNECT_RANGE, FIGHTER_RANGE, radarRange } from '../../core/game/constants';
@@ -113,6 +114,8 @@ export class GameController {
     this.renderer.overlay.arrowText = (c) =>
       c >= 1 ? t('front.arrowReady') : t('front.arrowCharge', { pct: Math.round(c * 100) });
     await this.renderer.init(host);
+    // Touch web version: a map edge can be brought out from under the panels (camera.ts).
+    if (tactile) this.renderer.camera.slack = 0.12;
     this.input = new InputController(this.renderer.app.canvas, this.renderer, this.session, {
       onAction: (tile, ev) => this.action(tile, ev),
       // (Photo mode: the map only moves, nothing opens.)
@@ -222,10 +225,13 @@ export class GameController {
               strength: l.strength,
               target: l.target,
               aim: l.aim,
+              aimFrom: l.aimFrom,
               attack: l.attack,
             })),
           };
         },
+        /** QA: who holds a tile. */
+        ownerAt: (tile: number) => this.session.state.owner[tile] ?? -1,
         ownTiles: (n: number) => {
           const st = this.session.state;
           const out: number[] = [];

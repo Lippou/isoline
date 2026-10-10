@@ -248,6 +248,11 @@
 {/if}
 
 <style>
+  /* Touch web version: placed in the map's pixels, which start at the screen's edge (GameScreen). */
+  :global(html.tactile) .glow,
+  :global(html.tactile) .sender {
+    translate: calc(-1 * var(--safe-l, 0px)) calc(-1 * var(--safe-t, 0px));
+  }
   /* Magenta light on the edge facing the silo (the chart's danger colour). */
   .glow {
     position: absolute;

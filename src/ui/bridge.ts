@@ -94,7 +94,14 @@ const fallback: Bridge = {
     userData: 'localStorage',
   }),
   smokeReady: () => {},
-  quit: () => window.close(),
+  // Hosted under a portal (isoline.binotech.be → binotech.be): back to its home page; a page
+  // the browser opened by itself can only be closed.
+  quit: () => {
+    const host = location.hostname.split('.');
+    if (location.protocol === 'https:' && host.length > 2)
+      location.assign(`https://${host.slice(1).join('.')}/`);
+    else window.close();
+  },
   update: {
     status: async () => WEB_UPDATE,
     check: async () => WEB_UPDATE,

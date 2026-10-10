@@ -713,4 +713,85 @@
     border-radius: 2px;
     background: color-mix(in srgb, var(--np-paper) 88%, transparent);
   }
+  /* Touch web version on a phone (tactile.ts; never on a computer). Upright: the cartouche,
+     the menu and the foot one under the other, the page scrolls; turned: the cartouche on
+     the left, the menu on the right in its own scroll — nothing laid over anything, clear of
+     the notch, the island and the home bar (--safe-*). */
+  @media (max-width: 699px) and (orientation: portrait) {
+    :global(html.tactile) .title {
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      padding: calc(var(--safe-t, 0px) + 22px) 16px calc(var(--safe-b, 0px) + 16px);
+    }
+    :global(html.tactile) .cartouche {
+      position: relative;
+      left: auto;
+      top: auto;
+      transform: none;
+      flex: none;
+      zoom: 0.68;
+      animation: none;
+    }
+    :global(html.tactile) .legend {
+      position: relative;
+      right: auto;
+      top: auto;
+      transform: none;
+      flex: none;
+      width: min(440px, 100%);
+      animation: none;
+    }
+    :global(html.tactile) footer {
+      position: relative;
+      flex: none;
+      width: min(440px, 100%);
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0;
+    }
+  }
+  @media (max-height: 520px) and (orientation: landscape) {
+    /* (Its offset is zoomed with it: given at 1 / 0.6, it lines up with the foot.) */
+    :global(html.tactile) .cartouche {
+      left: calc((var(--safe-l, 0px) + 20px) / 0.6);
+      top: 38%;
+      zoom: 0.6;
+    }
+    :global(html.tactile) .mast h2 {
+      padding-inline: 34px;
+      font-size: 1.25em;
+    }
+    :global(html.tactile) .entry {
+      padding-block: 6px;
+    }
+    :global(html.tactile) .legend {
+      right: calc(var(--safe-r, 0px) + 16px);
+      top: 10px;
+      bottom: 10px;
+      transform: none;
+      width: min(380px, 46vw);
+      grid-template-rows: auto minmax(0, 1fr);
+      animation: none;
+    }
+    :global(html.tactile) .legend ul {
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    :global(html.tactile) .note {
+      display: none;
+    }
+    /* The foot under the cartouche, up to the menu's edge. */
+    :global(html.tactile) footer {
+      right: calc(var(--safe-r, 0px) + 32px + min(380px, 46vw));
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 0 0 calc(var(--safe-b, 0px) + 10px) calc(var(--safe-l, 0px) + 20px);
+      font-size: 0.8em;
+    }
+  }
 </style>

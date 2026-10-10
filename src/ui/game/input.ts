@@ -16,6 +16,7 @@ import { short } from '../i18n/i18n.svelte';
 import { LINE_MAX_POINTS } from '../../core/game/constants';
 import { lineMaxTiles, sideOf, traceTiles } from '../../core/rules/lines';
 import { ownLineAt } from './lines';
+import { tactile } from '../tactile';
 
 /**
  * A front line being drawn (core/rules/lines.ts): its points (tile centres, flat x, y…),
@@ -50,6 +51,8 @@ export interface BorderDraft {
 export interface AimDraft {
   line: number;
   to: [number, number] | null;
+  /** Drawn from its grip (1.26.2: where it was taken, tiles); none: the point nearest the pointer. */
+  from?: [number, number] | null;
 }
 
 export interface InputHooks {
@@ -71,6 +74,8 @@ export class InputController {
   private pointer: { x: number; y: number } | null = null;
   /** An offensive line's grip being dragged (1.24: the arrow drawn from it), -1 none. */
   private gripDrag = -1;
+  /** Where that grip stood when taken (tiles): the arrow starts there, not where the pointer is. */
+  private gripFrom: [number, number] | null = null;
   /** What the pointer is over, among my arrows and grips (its cursor and note). */
   private aimHover: '' | 'grip' | 'arrow' = '';
   /** The last click of a line being drawn (a second one there, soon after: the double click). */
@@ -88,6 +93,8 @@ export class InputController {
     cy: number;
   } | null = null;
   private pressFired = false;
+  /** The long press began a sweep of the border (the offensive line's tool): the finger sweeps on. */
+  private pressSweep = false;
 
   constructor(
     private readonly el: HTMLElement,
@@ -121,6 +128,9 @@ export class InputController {
     on(window, 'keyup', (e: KeyboardEvent) => this.keysHeld.delete(e.code));
     on(window, 'blur', () => this.keysHeld.clear());
     // Safari-style gesture events (pinch) are not fired in Chromium; pinch arrives as ctrl+wheel.
+    // Touch web version: iOS's own long press (text selection, magnifier, callout) never starts
+    // on the map; the pointer events still come.
+    if (tactile) on(el, 'touchstart', (e: TouchEvent) => e.preventDefault(), { passive: false });
   }
 
   dispose(): void {
@@ -136,9 +146,11 @@ export class InputController {
   private touchDown(e: PointerEvent): void {
     const [x, y] = this.local(e);
     this.touches.set(e.pointerId, { x, y });
+    this.r.camera.held = true;
     if (this.touches.size === 1) {
       this.primaryTouch = e.pointerId;
       this.pressFired = false;
+      this.pressSweep = false;
       this.pointerMove(e); // what is under the finger (hover, line preview), as a mouse would have it
       this.pointerDown(e);
       this.startPress(x, y, e.clientX, e.clientY);
@@ -166,7 +178,7 @@ export class InputController {
     if (this.pinch) {
       const p = this.pinchOf();
       if (!p) return;
-      this.r.camera.zoomAt(p.d / this.pinch.d, p.mx, p.my);
+      this.r.camera.zoomNow(p.d / this.pinch.d, p.mx, p.my);
       this.r.camera.panScreen(p.mx - this.pinch.mx, p.my - this.pinch.my);
       this.pinch = p;
       return;
@@ -178,6 +190,7 @@ export class InputController {
 
   private touchUp(e: PointerEvent): void {
     if (!this.touches.delete(e.pointerId)) return;
+    if (this.touches.size === 0) this.r.camera.held = false;
     if (this.pinch) {
       // The pinch ends with its fingers; a finger left on the screen does nothing until lifted.
       if (this.touches.size < 2) this.pinch = null;
@@ -186,22 +199,38 @@ export class InputController {
     if (e.pointerId !== this.primaryTouch) return;
     this.primaryTouch = -1;
     this.cancelPress();
-    if (this.pressFired) {
+    if (this.pressSweep) {
+      // The sweep ends with the finger: the right button released.
+      this.pressSweep = this.pressFired = false;
+      this.pointerUp({ clientX: e.clientX, clientY: e.clientY, altKey: false, button: 2 } as PointerEvent);
+    } else if (this.pressFired) {
       this.pressFired = false;
       this.down = null;
-      return;
-    }
-    this.pointerUp(e);
+    } else this.pointerUp(e);
+    this.leaveHover();
+  }
+
+  /** The finger lifted: nothing is under the pointer any more (no card left on the map). */
+  private leaveHover(): void {
+    this.pointer = null;
+    this.lastHoverTile = -1;
+    this.r.overlay.hoverTile = -1;
+    hud.hover = null;
+    this.updateLineHover(-1);
   }
 
   private touchCancel(e: PointerEvent): void {
     this.touches.delete(e.pointerId);
+    if (this.touches.size === 0) this.r.camera.held = false;
     if (this.touches.size < 2) this.pinch = null;
     if (e.pointerId === this.primaryTouch) {
       this.primaryTouch = -1;
       this.cancelPress();
       this.down = null;
+      this.pressSweep = false;
+      if (this.r.overlay.border) this.r.overlay.border.brush = null;
       if (this.gripDrag >= 0) this.endGripDrag();
+      this.leaveHover();
     }
   }
 
@@ -212,6 +241,17 @@ export class InputController {
       if (!this.down || this.down.moved || this.touches.size !== 1) return;
       this.pressFired = true;
       navigator.vibrate?.(12);
+      const bd = this.border;
+      if (bd) {
+        // Laying an offensive line: the long press holds the right button, the finger sweeps
+        // the stretch of border, lifted it lays the line there.
+        this.pressSweep = true;
+        this.down = { x, y, button: 2, shift: false, moved: false, t: performance.now() };
+        bd.tiles.clear();
+        this.sweep(bd, x, y);
+        this.borderPreview(bd, this.r.tileAtScreen(x, y), x, y);
+        return;
+      }
       // The long press is the right click, released where the finger is.
       this.down = { x, y, button: 2, shift: false, moved: false, t: performance.now() };
       this.pointerUp({ clientX: cx, clientY: cy, altKey: false, button: 2 } as PointerEvent);
@@ -517,6 +557,7 @@ export class InputController {
 
   private endGripDrag(): void {
     this.gripDrag = -1;
+    this.gripFrom = null;
     this.r.overlay.aimHover = null;
     this.aimHover = '';
     this.r.overlay.aim = null;
@@ -527,6 +568,7 @@ export class InputController {
   /** The grip let go: dragged, the arrow points there; a plain click opens the line's sheet. */
   private gripRelease(moved: boolean, sx: number, sy: number): void {
     const id = this.gripDrag;
+    const grip = this.gripFrom;
     this.endGripDrag();
     if (!moved) {
       hud.frontSel = id;
@@ -539,7 +581,12 @@ export class InputController {
       note(t('front.aimOwn'), 'info');
       return;
     }
-    this.session.cmd({ t: 'lineAim', id, aim: tile });
+    const s = this.session.state;
+    const from = grip
+      ? Math.min(s.height - 1, Math.max(0, Math.floor(grip[1]))) * s.width +
+        Math.min(s.width - 1, Math.max(0, Math.floor(grip[0])))
+      : -1;
+    this.session.cmd(from >= 0 ? { t: 'lineAim', id, aim: tile, from } : { t: 'lineAim', id, aim: tile });
   }
 
   // ------------------------------------------------- offensive line: the arrow
@@ -668,7 +715,8 @@ export class InputController {
       const id = this.r.lineGripAt(x, y);
       if (id >= 0) {
         this.gripDrag = id;
-        this.r.overlay.aim = { line: id, to: this.r.camera.screenToWorld(x, y) };
+        this.gripFrom = this.r.lineGrip(id);
+        this.r.overlay.aim = { line: id, to: this.r.camera.screenToWorld(x, y), from: this.gripFrom };
         this.el.style.cursor = 'grabbing';
         this.r.overlay.aimHover = { line: id, kind: 'drag' };
         hud.lineTip = { text: t('front.dragTip'), sx: x, sy: y, ok: true };

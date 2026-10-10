@@ -5,16 +5,28 @@
 // unfolded by default. The zones read them (layout.svelte.ts, zones.ts): a folded piece's
 // room goes to the others, and to the map's stage.
 import { FOLD_IDS, parseFolds, toggleAll, type FoldId, type Folds } from './zones';
+import { tactile } from '../tactile';
 
 export { FOLD_IDS, type FoldId } from './zones';
 
 const LS_KEY = 'isoline.folds.v1';
 
+/**
+ * Nothing chosen yet: everything unfolded — but on a phone (touch web version, tactile.ts) the
+ * resources panel starts folded to its strip: the dock and the map need the screen's height.
+ */
+function defaults(): Folds {
+  const f = parseFolds(null);
+  if (tactile && Math.min(screen.width, screen.height) < 500) f.res = true;
+  return f;
+}
+
 function load(): Folds {
   try {
-    return parseFolds(JSON.parse(localStorage.getItem(LS_KEY) ?? '{}'));
+    const saved = localStorage.getItem(LS_KEY);
+    return saved === null ? defaults() : parseFolds(JSON.parse(saved));
   } catch {
-    return parseFolds(null);
+    return defaults();
   }
 }
 

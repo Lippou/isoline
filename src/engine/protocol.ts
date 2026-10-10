@@ -331,6 +331,8 @@ export interface LineView {
   target: number;
   /** Offensive: the tile its arrow points at (-1 none) — its owner's eyes only. */
   aim: number;
+  /** Offensive: the tile of the line its arrow is drawn from (-1: nearest the aim), likewise. */
+  aimFrom: number;
   /** Offensive, launched: its attack's id (the line is that attack's front), -1 before. */
   attack: number;
   /** Tick it was laid (1.24): an offensive line's charge. */

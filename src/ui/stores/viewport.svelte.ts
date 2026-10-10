@@ -5,7 +5,7 @@
 import { bridge } from '../bridge';
 import { settings } from './settings.svelte';
 import { effectiveUiScale, autoUiScale, zoomFor } from './uiScale';
-import { deviceSize, tactile, touchUiScale } from '../tactile';
+import { deviceSize, idealKnown, safeInsets, tactile, touchUiScale } from '../tactile';
 
 export const view = $state({
   /** The automatic scale for this window (shown next to the setting). */
@@ -17,7 +17,19 @@ export const view = $state({
   /** The window, in CSS pixels at zoom 1. */
   w: 0,
   h: 0,
+  /** Touch web version: the edges the interface keeps off (notch, island, home bar), CSS px. */
+  safe: { t: 0, r: 0, b: 0, l: 0 },
 });
+
+/** Touch web version: the safe edges, as `--safe-t/r/b/l` on the page (0 on a computer). */
+function applySafe(): void {
+  if (!tactile) return;
+  const s = safeInsets();
+  const v = view.safe;
+  if (s.t !== v.t || s.r !== v.r || s.b !== v.b || s.l !== v.l) view.safe = s;
+  const st = document.documentElement.style;
+  for (const k of ['t', 'r', 'b', 'l'] as const) st.setProperty(`--safe-${k}`, `${s[k]}px`);
+}
 
 let inGame = false;
 /** Device pixel ratio of the screen itself (at zoom 1). */
@@ -65,6 +77,7 @@ export function applyUiScale(): void {
   const zoom = base * (emulated && view.w > 0 ? view.w / emulated.w : 1);
   view.zoom = zoom;
   if (bridge.zoom && Math.abs(currentZoom() - zoom) > 0.001) bridge.zoom.set(zoom);
+  applySafe();
 }
 
 /** The game screen takes the full scale; the menus only grow with it. */
@@ -80,5 +93,15 @@ export function startViewport(): void {
   if (started) return;
   started = true;
   window.addEventListener('resize', applyUiScale);
+  // A phone turned round: the island moves to the other side (same size, no resize sometimes).
+  // In a game held a new way for the first time: back to zoom 1 a moment, to measure the
+  // visible width (tactile.ts deviceSize); the resize that follows zooms in again.
+  if (tactile)
+    screen.orientation?.addEventListener('change', () =>
+      setTimeout(() => {
+        if (inGame && !idealKnown()) bridge.zoom?.set(1);
+        else applyUiScale();
+      }, 120),
+    );
   applyUiScale();
 }

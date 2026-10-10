@@ -36,6 +36,10 @@
 {/if}
 
 <style>
+  /* Touch web version: placed in the map's pixels, which start at the screen's edge (GameScreen). */
+  :global(html.tactile) .tip {
+    translate: calc(-1 * var(--safe-l, 0px)) calc(-1 * var(--safe-t, 0px));
+  }
   .tip {
     position: absolute;
     z-index: 26;
