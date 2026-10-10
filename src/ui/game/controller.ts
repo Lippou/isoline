@@ -12,7 +12,7 @@ import { settings, saveSettings, keyLabel } from '../stores/settings.svelte';
 import { WeatherNews } from './weatherNews';
 import { t, i18n, clock, short } from '../i18n/i18n.svelte';
 import { mapsBase, bridge, writeJson } from '../bridge';
-import { tactile } from '../tactile';
+import { tactile, touchRender } from '../tactile';
 import { app, setSession, go, confirmModal, type LaunchRequest } from '../stores/app.svelte';
 import type { GameEvent } from '../../core/game/events';
 import { portRange, A, B, N, RAIL_CONNECT_RANGE, FIGHTER_RANGE, radarRange } from '../../core/game/constants';
@@ -104,7 +104,8 @@ export class GameController {
       highContrast: settings.access.highContrast,
       reducedMotion: settings.access.reducedMotion,
       showFps: false,
-      maxFps: settings.graphics.maxFps,
+      maxFps: settings.graphics.maxFps || touchRender.maxFps,
+      resolutionScale: touchRender.resolutionScale,
       lang: i18n.lang,
       // The interface scale is the page zoom (stores/viewport.svelte.ts): the map's labels
       // and badges, in CSS pixels, already follow it.
@@ -230,6 +231,9 @@ export class GameController {
             })),
           };
         },
+        /** QA (performance): the map's layers, one shown or hidden at a time. */
+        layers: () => this.renderer.layerCount(),
+        showLayer: (i: number, on: boolean) => this.renderer.showLayer(i, on),
         /** QA: who holds a tile. */
         ownerAt: (tile: number) => this.session.state.owner[tile] ?? -1,
         ownTiles: (n: number) => {

@@ -13,6 +13,17 @@ export const tactile =
   matchMedia('(pointer: coarse)').matches &&
   !matchMedia('(any-pointer: fine)').matches;
 
+/**
+ * How the map is drawn on a touch screen (the graphics card's work; a computer keeps 0 / 1):
+ * at most 60 frames a second (a 120 Hz phone would draw twice as many for the same game), and
+ * on a phone at 80 % of the screen's density (a third fewer pixels to paint, hardly seen there).
+ */
+export const touchRender = {
+  maxFps: tactile ? 60 : 0,
+  resolutionScale:
+    tactile && typeof screen !== 'undefined' && Math.min(screen.width, screen.height) < 600 ? 0.8 : 1,
+};
+
 /** The HUD needs at least this much room (CSS px) to lay out; a phone gets a smaller scale. */
 const TOUCH_MIN_W = 1100;
 const TOUCH_MIN_H = 560;

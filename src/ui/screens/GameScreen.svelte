@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { touchRender } from '../tactile';
   import { onMount, onDestroy } from 'svelte';
   import { app, go } from '../stores/app.svelte';
   import { hud, openPaper } from '../stores/game.svelte';
@@ -63,7 +64,7 @@
       vision: settings.access.vision,
       highContrast: settings.access.highContrast,
       reducedMotion: settings.access.reducedMotion,
-      maxFps: settings.graphics.maxFps,
+      maxFps: settings.graphics.maxFps || touchRender.maxFps,
     };
     const r = ctl && hud.ready ? ctl.renderer : null;
     if (!r) return;
@@ -96,9 +97,10 @@
   // The interface scale is the page zoom: when it changes (the window was resized), the
   // map's canvas follows the new device pixel ratio to stay sharp.
   function syncResolution(): void {
-    const r = ctl?.renderer?.app?.renderer;
-    if (!r) return;
-    const res = Math.min(2, window.devicePixelRatio || 1);
+    const g = ctl?.renderer;
+    const r = g?.app?.renderer;
+    if (!g || !r) return;
+    const res = g.resolution();
     if (Math.abs(r.resolution - res) > 0.01) r.resize(r.screen.width, r.screen.height, res);
   }
 </script>

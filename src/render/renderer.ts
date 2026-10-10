@@ -68,6 +68,8 @@ export interface RenderSettings {
   maxFps: number;
   lang: 'fr' | 'en';
   uiScale: number;
+  /** Share of the screen's pixel density the map is drawn at (1: all of it, up to 2). */
+  resolutionScale?: number;
 }
 
 export interface Overlay {
@@ -377,7 +379,7 @@ export class GameRenderer {
       antialias: true,
       preference: 'webgl',
       autoDensity: true,
-      resolution: Math.min(2, window.devicePixelRatio || 1),
+      resolution: this.resolution(),
       powerPreference: 'high-performance',
     });
     parent.appendChild(this.app.canvas);
@@ -465,6 +467,11 @@ export class GameRenderer {
     this.railLayer.reset();
     this.buildingsVersion = -1;
     this.routes.invalidate();
+  }
+
+  /** The canvas's resolution: the screen's density (2 at most), times resolutionScale. */
+  resolution(): number {
+    return Math.min(2, window.devicePixelRatio || 1) * (this.settings.resolutionScale ?? 1);
   }
 
   applySettings(): void {
@@ -2567,6 +2574,17 @@ export class GameRenderer {
   lineGripAt(sx: number, sy: number): number {
     const [x, y] = this.camera.screenToWorld(sx, sy);
     return this.frontLines.gripAt(x, y, 16 / this.camera.zoom);
+  }
+
+  /** QA (performance): how many layers the world has. */
+  layerCount(): number {
+    return this.world.children.length;
+  }
+
+  /** QA (performance): one layer of the world shown or hidden. */
+  showLayer(i: number, on: boolean): void {
+    const c = this.world.children[i];
+    if (c) c.renderable = on;
   }
 
   /** Where my offensive line's grip stands (tiles), null: none drawn. */
