@@ -222,10 +222,13 @@ export class GameController {
               strength: l.strength,
               target: l.target,
               aim: l.aim,
+              aimFrom: l.aimFrom,
               attack: l.attack,
             })),
           };
         },
+        /** QA: who holds a tile. */
+        ownerAt: (tile: number) => this.session.state.owner[tile] ?? -1,
         ownTiles: (n: number) => {
           const st = this.session.state;
           const out: number[] = [];

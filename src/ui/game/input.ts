@@ -50,6 +50,8 @@ export interface BorderDraft {
 export interface AimDraft {
   line: number;
   to: [number, number] | null;
+  /** Drawn from its grip (1.26.2: where it was taken, tiles); none: the point nearest the pointer. */
+  from?: [number, number] | null;
 }
 
 export interface InputHooks {
@@ -71,6 +73,8 @@ export class InputController {
   private pointer: { x: number; y: number } | null = null;
   /** An offensive line's grip being dragged (1.24: the arrow drawn from it), -1 none. */
   private gripDrag = -1;
+  /** Where that grip stood when taken (tiles): the arrow starts there, not where the pointer is. */
+  private gripFrom: [number, number] | null = null;
   /** What the pointer is over, among my arrows and grips (its cursor and note). */
   private aimHover: '' | 'grip' | 'arrow' = '';
   /** The last click of a line being drawn (a second one there, soon after: the double click). */
@@ -400,6 +404,7 @@ export class InputController {
 
   private endGripDrag(): void {
     this.gripDrag = -1;
+    this.gripFrom = null;
     this.r.overlay.aimHover = null;
     this.aimHover = '';
     this.r.overlay.aim = null;
@@ -410,6 +415,7 @@ export class InputController {
   /** The grip let go: dragged, the arrow points there; a plain click opens the line's sheet. */
   private gripRelease(moved: boolean, sx: number, sy: number): void {
     const id = this.gripDrag;
+    const grip = this.gripFrom;
     this.endGripDrag();
     if (!moved) {
       hud.frontSel = id;
@@ -422,7 +428,12 @@ export class InputController {
       note(t('front.aimOwn'), 'info');
       return;
     }
-    this.session.cmd({ t: 'lineAim', id, aim: tile });
+    const s = this.session.state;
+    const from = grip
+      ? Math.min(s.height - 1, Math.max(0, Math.floor(grip[1]))) * s.width +
+        Math.min(s.width - 1, Math.max(0, Math.floor(grip[0])))
+      : -1;
+    this.session.cmd(from >= 0 ? { t: 'lineAim', id, aim: tile, from } : { t: 'lineAim', id, aim: tile });
   }
 
   // ------------------------------------------------- offensive line: the arrow
@@ -551,7 +562,8 @@ export class InputController {
       const id = this.r.lineGripAt(x, y);
       if (id >= 0) {
         this.gripDrag = id;
-        this.r.overlay.aim = { line: id, to: this.r.camera.screenToWorld(x, y) };
+        this.gripFrom = this.r.lineGrip(id);
+        this.r.overlay.aim = { line: id, to: this.r.camera.screenToWorld(x, y), from: this.gripFrom };
         this.el.style.cursor = 'grabbing';
         this.r.overlay.aimHover = { line: id, kind: 'drag' };
         hud.lineTip = { text: t('front.dragTip'), sx: x, sy: y, ok: true };

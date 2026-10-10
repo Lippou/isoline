@@ -282,13 +282,17 @@ export class FrontLineLayer {
         const w = this.width;
         const to: [number, number] = [(l.aim % w) + 0.5, Math.floor(l.aim / w) + 0.5];
         const reached = l.aim >= 0 && ctx.owner(to[0], to[1]) === l.owner;
-        const arrowSig = `${v.sig}|${l.aim}|${reached}|${Math.floor(progress * 40)}`;
+        // (Drawn from where its grip was taken, 1.26.2; else from the point nearest its aim.)
+        const af = l.aimFrom ?? -1;
+        const from: [number, number] | undefined =
+          af >= 0 ? [(af % w) + 0.5, Math.floor(af / w) + 0.5] : undefined;
+        const arrowSig = `${v.sig}|${l.aim}|${af}|${reached}|${Math.floor(progress * 40)}`;
         if (arrowSig !== v.arrowSig) {
           v.arrowSig = arrowSig;
           v.arrows.clear();
           v.arrow = v.grip = v.label = null;
           if (l.aim >= 0 && !reached && mine && lod === 'near')
-            v.arrow = planArrow(v.arrows, v.runs, to, progress, ctx.zoom, undefined, true);
+            v.arrow = planArrow(v.arrows, v.runs, to, progress, ctx.zoom, undefined, true, from);
           // Ours, not launched yet: the grip the arrow is drawn from (1.24), the charge on the arrow.
           if (mine && !launched && lod === 'near') {
             v.grip = v.arrow ? [v.arrow.x0, v.arrow.y0] : gripOf(v.runs, ctx.zoom);
@@ -361,7 +365,7 @@ export class FrontLineLayer {
     if (!a) return;
     glow(a.line);
     const v = this.gfx.get(a.line);
-    if (v && a.to) planArrow(g, v.runs, a.to, 1, ctx.zoom, BRASS);
+    if (v && a.to) planArrow(g, v.runs, a.to, 1, ctx.zoom, BRASS, false, a.from ?? undefined);
   }
 
   /**
@@ -480,6 +484,11 @@ export class FrontLineLayer {
         });
       }
     }
+  }
+
+  /** Where my offensive line's grip stands (tiles), null: none drawn. */
+  gripOf(id: number): [number, number] | null {
+    return this.gfx.get(id)?.grip ?? null;
   }
 
   /** My offensive line whose grip is within `reach` tiles of (x, y), -1 none (1.24). */
@@ -869,10 +878,14 @@ function chainRuns(
   return out;
 }
 
+/** The sideways sweep of an offensive line's arrow (battleArrow's bend). */
+const PLAN_BEND = 0.06;
+
 /**
- * An offensive line's arrow: from the point of the line nearest `to` to it, a battle-plan
- * arrow (amber filling to `progress`, green when ready; `tint` while being aimed), its width
- * steady on screen.
+ * An offensive line's arrow: from the point of the line nearest `start` (where its grip was
+ * taken, 1.26.2; else nearest `to`) to `to`, a battle-plan arrow (amber filling to `progress`,
+ * green when ready; `tint` while being aimed), its width steady on screen. Its head lands on
+ * `to` itself: the curve's sideways sweep is taken off its heading.
  */
 function planArrow(
   g: Graphics,
@@ -882,21 +895,28 @@ function planArrow(
   zoom: number,
   tint?: number,
   steel = false,
+  start?: [number, number],
 ): { x0: number; y0: number; x1: number; y1: number; w: number } | null {
+  const [ox, oy] = start ?? to;
   let from: Sample | null = null;
   let best = Infinity;
   for (const run of runsOf)
     for (const p of run) {
-      const d = (p.x - to[0]) ** 2 + (p.y - to[1]) ** 2;
+      const d = (p.x - ox) ** 2 + (p.y - oy) ** 2;
       if (d < best) [from, best] = [p, d];
     }
   if (!from) return null;
-  const d = Math.sqrt(best);
+  const d = Math.hypot(to[0] - from.x, to[1] - from.y);
   if (d < 2) return null;
   const px = (n: number) => Math.max(0.04, n / zoom);
-  const base = { x: from.x, y: from.y, nx: (to[0] - from.x) / d, ny: (to[1] - from.y) / d, s: 0 };
+  // battleArrow ends its centreline at base + L·(n + k·t), k = 0.6 × bend: heading turned back
+  // by atan(k), length shortened by √(1 + k²), the tip falls on `to`.
+  const k = PLAN_BEND * 0.6;
+  const [ux, uy] = [(to[0] - from.x) / d, (to[1] - from.y) / d];
+  const [c, s] = [1 / Math.hypot(1, k), k / Math.hypot(1, k)];
+  const base = { x: from.x, y: from.y, nx: ux * c + uy * s, ny: uy * c - ux * s, s: 0 };
   const w = Math.max(1.2, px(9));
-  battleArrow(g, base, w, d / 0.95, 0.06, progress, px, tint, steel);
+  battleArrow(g, base, w, d / Math.hypot(1, k) / 0.95, PLAN_BEND, progress, px, tint, steel);
   return { x0: from.x, y0: from.y, x1: to[0], y1: to[1], w };
 }
 

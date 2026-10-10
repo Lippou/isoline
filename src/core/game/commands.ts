@@ -157,7 +157,7 @@ export function applyCommand(game: Game, pid: number, c: Command): void {
       // The arrow of an offensive line (1.22, drawn from its grip in 1.24): where its assault heads.
       const l = game.lines.find((x) => x.id === c.id && x.owner === p.id && x.kind === LineKind.Offensive);
       if (!l || game.phase !== 'playing' || (c.aim >= 0 && !inMap(c.aim))) return;
-      aimLine(game, l, c.aim);
+      aimLine(game, l, c.aim, c.from !== undefined && inMap(c.from) ? c.from : -1);
       return;
     }
 

@@ -77,6 +77,11 @@ export interface FrontLine {
   target: number;
   /** Offensive: the tile its assault heads for (the arrow), -1 while none is given. */
   aim: number;
+  /**
+   * Offensive (1.26.2): the tile of the line its arrow is drawn from — where its grip was taken;
+   * -1: the tile nearest the aim (before 1.26.2, and an arrow given from the line's sheet).
+   */
+  aimFrom: number;
   /** Offensive, launched: the attack it became (the line follows its front), -1 before. */
   attack: number;
   /** Tick it was laid (1.24): an offensive line's charge. */
@@ -530,6 +535,7 @@ function lay(
     readyTick: game.tick + setup,
     target,
     aim: -1,
+    aimFrom: -1,
     attack: -1,
     laidTick: game.tick,
     organizeTick: -1,
@@ -653,21 +659,24 @@ function chainPts(w: number, tiles: readonly number[]): number[] {
 
 /**
  * The arrow of an offensive line (the command 'lineAim', 1.22; drawn from its grip, 1.24): the
- * tile its assault heads for (-1 takes it back). Launched, its attack turns that way.
+ * tile its assault heads for (-1 takes it back), drawn from the tile of the line nearest
+ * `from` (where its grip was taken; -1: nearest the aim). Launched, its attack turns that way.
  */
-export function aimLine(game: Game, l: FrontLine, aim: number): void {
+export function aimLine(game: Game, l: FrontLine, aim: number, from = -1): void {
   if (l.kind !== LineKind.Offensive) return;
+  const src = from >= 0 ? nearestTile(game, l.tiles, from) : -1;
   if (l.attack >= 0) {
     const a = game.attacks.find((x) => x.id === l.attack && !x.done);
     if (a && aim >= 0) {
       aimAttack(game, a, aim);
-      a.aimFrom = nearestTile(game, l.tiles, aim);
+      a.aimFrom = src >= 0 ? src : nearestTile(game, l.tiles, aim);
     }
-    if (aim >= 0) l.aim = aim;
+    if (aim >= 0) [l.aim, l.aimFrom] = [aim, src];
     game.linesVersion++;
     return;
   }
   l.aim = aim;
+  l.aimFrom = aim >= 0 ? src : -1;
   game.linesVersion++;
 }
 
@@ -727,7 +736,8 @@ export function launchLine(game: Game, l: FrontLine): void {
   if (focus.size === 0) return drop('error.line.noTarget');
   const troops = l.troops;
   const prepared = lineStrength(game, l) * lineCharge(game, l);
-  const from = nearestTile(game, l.tiles, l.aim);
+  // From where its grip was taken (the nearest tile of the line still: it may have moved).
+  const from = nearestTile(game, l.tiles, l.aimFrom >= 0 ? l.aimFrom : l.aim);
   openHostilities(game, p, q);
   // Off the line, into the attack: the ceiling is freed, the line becomes the attack's front.
   p.lineTroops = Math.max(0, p.lineTroops - troops);
@@ -836,6 +846,8 @@ export function rebuildLineIndex(game: Game): void {
     // Saves from before 1.22: no border, no arrow, not launched.
     l.target ??= 0;
     l.aim ??= -1;
+    // (Before 1.26.2: the arrow was drawn from the tile nearest its aim.)
+    l.aimFrom ??= -1;
     l.attack ??= -1;
     // (Before 1.24: a line's charge counted from its ready tick; defensive ones were dug in.)
     l.laidTick ??= l.readyTick - (l.kind === LineKind.Offensive ? LINE_OFFENSE_SETUP : 0);

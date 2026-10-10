@@ -2569,6 +2569,11 @@ export class GameRenderer {
     return this.frontLines.gripAt(x, y, 16 / this.camera.zoom);
   }
 
+  /** Where my offensive line's grip stands (tiles), null: none drawn. */
+  lineGrip(id: number): [number, number] | null {
+    return this.frontLines.gripOf(id);
+  }
+
   /** My offensive line whose arrow is under the pointer (screen px), -1 none (1.24). */
   lineArrowAt(sx: number, sy: number): number {
     const [x, y] = this.camera.screenToWorld(sx, sy);

@@ -212,6 +212,36 @@ describe('front lines', () => {
     expect(p1.lineTroops).toBe(0);
   });
 
+  it('its arrow starts where its grip was taken, not where the line is nearest the aim (1.26.2)', () => {
+    const g = arena();
+    const p1 = g.players[1]!;
+    const sector = Array.from({ length: 21 }, (_, k) => g.map.idx(145, 20 + k));
+    const l = placeOffensive(g, p1, 2, sector[0]!, sector, 0.1) as FrontLine;
+    const aim = g.map.idx(175, 38);
+    // Without a grip (the line's sheet, the AI, a replay from before): nearest the aim.
+    g.step([cmd(1, { t: 'lineAim', id: l.id, aim })]);
+    expect(l.aimFrom).toBe(-1);
+    // Taken from its grip near the top: from there (the tile of the line nearest it).
+    g.step([cmd(1, { t: 'lineAim', id: l.id, aim, from: g.map.idx(146, 22) })]);
+    expect(l.aimFrom).toBe(g.map.idx(144, 22));
+    // It survives a save.
+    const back = restoreSnapshot(g.map, snapshotFromJson(snapshotToJson(takeSnapshot(g))));
+    expect(back.lines.find((x) => x.id === l.id)!.aimFrom).toBe(g.map.idx(144, 22));
+    l.laidTick = g.tick - LINE_OFFENSE_SETUP;
+    l.readyTick = g.tick;
+    g.step([cmd(1, { t: 'lineLaunch', id: l.id })]);
+    const a = g.attacks.find((x) => x.attacker === 1 && x.target === 2)!;
+    expect(a.aim).toBe(aim);
+    expect(a.aimFrom).toBe(g.map.idx(144, 22));
+    // Taken back, the arrow forgets where it came from.
+    const m = placeOffensive(g, p1, 2, sector[0]!, sector, 0.1);
+    if (typeof m === 'object') {
+      g.step([cmd(1, { t: 'lineAim', id: m.id, aim, from: g.map.idx(146, 22) })]);
+      g.step([cmd(1, { t: 'lineAim', id: m.id, aim: -1 })]);
+      expect(m.aimFrom).toBe(-1);
+    }
+  });
+
   it('launched before it is charged, it carries that share of its bonuses (1.24)', () => {
     const g = arena();
     const l = placeOffensive(g, g.players[1]!, 2, g.map.idx(145, 30), null, 0.1) as FrontLine;

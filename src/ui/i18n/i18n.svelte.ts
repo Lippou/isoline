@@ -38,18 +38,25 @@ export function has(key: string): boolean {
   return key in DICTS[i18n.lang] || key in DICTS.en;
 }
 
+/** The number formatters, by language and decimals (made once: the HUD writes figures every frame). */
+const formats = new Map<string, Intl.NumberFormat>();
+function numberFormat(digits: number): Intl.NumberFormat {
+  const locale = i18n.lang === 'fr' ? 'fr-FR' : 'en-US';
+  const key = `${locale}|${digits}`;
+  let nf = formats.get(key);
+  if (!nf) formats.set(key, (nf = new Intl.NumberFormat(locale, { maximumFractionDigits: digits })));
+  return nf;
+}
+
 /** Locale-aware number formatting. */
 export function num(v: number, digits = 0): string {
-  return new Intl.NumberFormat(i18n.lang === 'fr' ? 'fr-FR' : 'en-US', {
-    maximumFractionDigits: digits,
-  }).format(v);
+  return numberFormat(digits).format(v);
 }
 
 /** Abbreviated amounts: 125k, 1,2M (locale decimal separator). */
 export function short(v: number): string {
   const a = Math.abs(v);
-  const f = (x: number, d: number) =>
-    new Intl.NumberFormat(i18n.lang === 'fr' ? 'fr-FR' : 'en-US', { maximumFractionDigits: d }).format(x);
+  const f = (x: number, d: number) => numberFormat(d).format(x);
   if (a >= 1e9) return f(v / 1e9, a >= 1e10 ? 0 : 1) + (i18n.lang === 'fr' ? ' Md' : 'B');
   if (a >= 1e6) return f(v / 1e6, a >= 1e7 ? 0 : 1) + 'M';
   if (a >= 1e3) return f(v / 1e3, a >= 1e4 ? 0 : 1) + 'k';
