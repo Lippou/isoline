@@ -256,4 +256,27 @@
     color: var(--np-sea);
     margin-bottom: 4px;
   }
+
+  /* ——— Téléphone (html.phone) : chaque ligne devient une fiche (nom, détails, actions au
+     pouce) ; les en-têtes de colonnes, inutiles, s'effacent. */
+  :global(html.phone) .thead {
+    display: none;
+  }
+  :global(html.phone) li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+    padding: 12px 2px;
+  }
+  :global(html.phone) li > :global(:first-child) {
+    grid-column: 1 / -1;
+    font-weight: 600;
+  }
+  :global(html.phone) li > .racts {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+    gap: 8px;
+  }
+  :global(html.phone) li > .racts :global(.btn.primary) {
+    flex: 1;
+  }
 </style>

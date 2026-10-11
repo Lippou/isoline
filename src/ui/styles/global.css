@@ -866,3 +866,61 @@ html.tactile [role='button'] {
     color: var(--np-ink-2, #46535f);
   }
 }
+
+/* ——— Téléphone (html.phone, posé par tactile.ts : écran tactile dont le petit côté fait moins
+   de 600 px). Seulement les menus (pages, écran titre, éditeur) : la partie garde son échelle à
+   elle. Des cibles à la taille du doigt (44 px), les bords de l'écran (encoche, barre d'accueil)
+   laissés libres. Jamais sur une tablette, un ordinateur ni dans l'application PC. ——— */
+html.phone .page-shell {
+  gap: 12px;
+  padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+html.phone :is(.page-shell, .title, .editor) .btn {
+  min-height: 44px;
+}
+html.phone :is(.page-shell, .title, .editor) .btn.small {
+  min-height: 40px;
+  padding: 0.45em 0.85em;
+}
+html.phone :is(.page-shell, .title, .editor) .btn.icon-only {
+  min-width: 44px;
+}
+html.phone
+  :is(.page-shell, .editor)
+  :is(input[type='text'], input[type='number'], input[type='url'], input[type='password'], select, textarea) {
+  min-height: 44px;
+  font-size: 16px;
+}
+html.phone .page-shell input[type='range'] {
+  height: 36px;
+}
+html.phone .page-shell .chart input[type='range']::-webkit-slider-thumb,
+html.phone .page-shell input[type='range']::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  margin-top: -8.5px;
+}
+html.phone .page-shell input[type='checkbox'].switch {
+  width: 48px;
+  height: 30px;
+}
+html.phone .page-shell input[type='checkbox'].switch::after {
+  top: 4px;
+  left: 4px;
+  width: 22px;
+  height: 22px;
+}
+html.phone .page-shell input[type='checkbox'].switch:checked::after {
+  transform: translateX(18px);
+}
+html.phone :is(.page-shell, .editor) .np-btn {
+  min-height: 40px;
+}
+html.phone .page-shell .empty-state {
+  padding: 28px 4px;
+}
+html.phone .page-shell .empty-state .acts {
+  flex-wrap: wrap;
+  justify-content: center;
+}

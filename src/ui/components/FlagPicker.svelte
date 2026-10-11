@@ -534,4 +534,213 @@
     border: 1px solid rgba(23, 42, 60, 0.35);
     mix-blend-mode: multiply;
   }
+
+  /* ——— Téléphone (html.phone) : la feuille prend tout l'écran, une colonne qui défile, l'aperçu
+     en tête, les actions au pouce en bas. Rien n'est retiré : l'aperçu « en jeu » suit le choix. */
+  :global(html.phone) .back {
+    display: block;
+  }
+  :global(html.phone) .dlg {
+    position: fixed;
+    inset: 0;
+    width: auto;
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+  :global(html.phone) .top {
+    padding: 10px 16px 0;
+  }
+  :global(html.phone) .top h2 {
+    font-size: 1.35em;
+    padding: 4px 52px 7px;
+  }
+  :global(html.phone) .top p {
+    font-size: 0.8em;
+  }
+  :global(html.phone) .top > .btn {
+    top: 4px;
+    right: 6px;
+    width: 44px;
+    height: 44px;
+  }
+  :global(html.phone) .tabs {
+    margin: 0 16px;
+    gap: 0;
+  }
+  :global(html.phone) .tabs button {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 46px;
+    padding: 6px 4px 7px;
+    font-size: 0.9em;
+    line-height: 1.15;
+    text-align: center;
+  }
+  :global(html.phone) .body {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  /* Dans la colonne qui défile, chaque bloc garde sa hauteur (sinon il s'écrase sous le suivant). */
+  :global(html.phone) .body > *,
+  :global(html.phone) .side > * {
+    flex-shrink: 0;
+  }
+  :global(html.phone) .main {
+    display: block;
+    min-height: auto;
+    padding: 12px 16px 0;
+    order: 1;
+  }
+  :global(html.phone) .main .scroll {
+    overflow: visible;
+  }
+  :global(html.phone) .searchrow {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: 0 -16px 8px;
+    padding: 8px 16px;
+    background: var(--np-paper);
+    border-bottom: 1px solid var(--np-rule);
+  }
+  :global(html.phone) .searchrow input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  :global(html.phone) .grid {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    padding: 2px 0 12px;
+  }
+  :global(html.phone) .cell {
+    min-height: 88px;
+  }
+  :global(html.phone) .auto {
+    padding: 8px 0 12px;
+  }
+  :global(html.phone) .auto img {
+    width: min(240px, 70vw);
+  }
+  /* La colonne d'aperçu se défait : l'aperçu passe en tête, l'exemple « en jeu » à la fin. */
+  :global(html.phone) .side {
+    display: contents;
+  }
+  :global(html.phone) .side h3 {
+    margin: 0 16px;
+  }
+  :global(html.phone) .side h3:first-of-type {
+    order: 0;
+    margin-top: 12px;
+  }
+  :global(html.phone) .big {
+    order: 0;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    justify-items: start;
+    gap: 14px;
+    margin: 8px 16px 0;
+  }
+  :global(html.phone) .big img,
+  :global(html.phone) .big.wide img {
+    width: 120px;
+    aspect-ratio: 3 / 2;
+  }
+  :global(html.phone) figcaption {
+    text-align: left;
+  }
+  :global(html.phone) .side h3:last-of-type {
+    order: 2;
+    margin-top: 6px;
+  }
+  :global(html.phone) .ink {
+    order: 3;
+    margin: 8px 16px 16px;
+  }
+  :global(html.phone) .foot {
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--np-paper);
+  }
+  :global(html.phone) .cur {
+    flex-basis: 100%;
+  }
+  :global(html.phone) .foot :global(.btn) {
+    flex: 1 1 0;
+    min-height: 48px;
+    justify-content: center;
+  }
+  :global(html.phone) .foot :global(.btn.primary) {
+    flex-grow: 2;
+  }
+  /* Téléphone couché : peu de hauteur. Le choix à gauche, l'aperçu à droite, chacun défile. */
+  @media (orientation: landscape) {
+    :global(html.phone) .top p {
+      display: none;
+    }
+    :global(html.phone) .top {
+      padding-top: 4px;
+    }
+    :global(html.phone) .top h2 {
+      font-size: 1.15em;
+      padding-bottom: 5px;
+      border-bottom-width: 2px;
+    }
+    :global(html.phone) .tabs button {
+      min-height: 40px;
+    }
+    :global(html.phone) .body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(200px, 34%);
+      overflow: hidden;
+    }
+    :global(html.phone) .main {
+      overflow-y: auto;
+      min-height: 0;
+      padding-top: 8px;
+    }
+    :global(html.phone) .side {
+      order: 2;
+      border-left: 1px solid var(--np-rule);
+      display: grid;
+      align-content: start;
+      overflow-y: auto;
+      padding: 10px 12px 12px;
+      margin: 0;
+      gap: 8px;
+    }
+    :global(html.phone) .side h3,
+    :global(html.phone) .big,
+    :global(html.phone) .ink {
+      margin: 0;
+    }
+    :global(html.phone) .big {
+      grid-template-columns: 1fr;
+      justify-items: center;
+    }
+    :global(html.phone) .big img,
+    :global(html.phone) .big.wide img {
+      width: 100%;
+      max-width: 180px;
+    }
+    :global(html.phone) .foot {
+      flex-wrap: nowrap;
+      padding-top: 6px;
+      padding-bottom: calc(6px + env(safe-area-inset-bottom));
+    }
+    :global(html.phone) .cur {
+      flex-basis: auto;
+    }
+    :global(html.phone) .foot :global(.btn),
+    :global(html.phone) .foot :global(.btn.primary) {
+      flex: 0 0 auto;
+      min-height: 42px;
+    }
+  }
 </style>

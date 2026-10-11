@@ -284,4 +284,10 @@
   :global(.game[data-layout='compact']) .back span {
     display: none;
   }
+
+  /* ——— Téléphone (html.phone) : les onglets et le retour à la carte à la taille du doigt. */
+  :global(html.phone) .zchip,
+  :global(html.phone) .back {
+    min-height: 36px;
+  }
 </style>

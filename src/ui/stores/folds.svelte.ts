@@ -5,7 +5,7 @@
 // unfolded by default. The zones read them (layout.svelte.ts, zones.ts): a folded piece's
 // room goes to the others, and to the map's stage.
 import { FOLD_IDS, parseFolds, toggleAll, type FoldId, type Folds } from './zones';
-import { tactile } from '../tactile';
+import { phone, tactile } from '../tactile';
 
 export { FOLD_IDS, type FoldId } from './zones';
 
@@ -18,6 +18,9 @@ const LS_KEY = 'isoline.folds.v1';
 function defaults(): Folds {
   const f = parseFolds(null);
   if (tactile && Math.min(screen.width, screen.height) < 500) f.res = true;
+  // A phone (html.phone): every panel starts folded to its tab, as a mobile game keeps the
+  // map whole; one touch on a tab opens it again (and the choice is remembered).
+  if (phone) for (const id of FOLD_IDS) f[id] = true;
   return f;
 }
 

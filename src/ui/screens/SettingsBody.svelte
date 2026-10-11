@@ -818,4 +818,17 @@
   .ustate.err {
     color: var(--np-spot);
   }
+
+  /* ——— Téléphone (html.phone) : toutes les rubriques à l'écran, sur deux rangées de trois. */
+  :global(html.phone) .tab {
+    min-height: 52px;
+  }
+  @container (max-width: 560px) {
+    :global(html.phone) nav {
+      grid-auto-flow: row;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-auto-columns: auto;
+      overflow: visible;
+    }
+  }
 </style>

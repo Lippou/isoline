@@ -108,4 +108,15 @@
     color: var(--np-ink);
     border-bottom-color: var(--np-ink);
   }
+
+  /* ——— Téléphone (html.phone) : « fermer » à la taille du doigt. */
+  :global(html.phone) .x {
+    top: 4px;
+    right: 4px;
+    width: 40px;
+    height: 40px;
+  }
+  :global(html.phone) h2 {
+    padding-inline: 84px;
+  }
 </style>

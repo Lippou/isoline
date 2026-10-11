@@ -9,6 +9,7 @@
 import { hud } from './game.svelte';
 import { layout } from './layout.svelte';
 import { clampInto, placeInStage, readingRect, overlaps, type Rect } from './zones';
+import { phone } from '../tactile';
 
 export type { Rect } from './zones';
 export type WinId = 'diplomacy' | 'trade' | 'tech' | 'stats' | 'log' | 'chat' | 'front' | 'bugs';
@@ -59,8 +60,11 @@ const READ_W: Record<WinId, number> = {
   front: 900,
   bugs: 900,
 };
-/** Windows that open maximised (reading mode) until the player says otherwise. */
-const MAX_BY_DEFAULT: ReadonlySet<WinId> = new Set(['tech', 'log']);
+/**
+ * Windows that open maximised (reading mode) until the player says otherwise. On a phone
+ * (html.phone) every window does: a floating window would cover the map and be too small to read.
+ */
+const MAX_BY_DEFAULT: ReadonlySet<WinId> = new Set(phone ? WIN_IDS : ['tech', 'log']);
 export const MIN_W = 300;
 export const MIN_H = 220;
 const LS_KEY = 'isoline.windows.v1';

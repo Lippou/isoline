@@ -236,4 +236,10 @@
   form .np-btn {
     padding: 5px 10px;
   }
+
+  /* ——— Téléphone (html.phone) : le choix des destinataires à la taille du doigt. */
+  :global(html.phone) .to button {
+    min-height: 36px;
+    padding-inline: 10px;
+  }
 </style>

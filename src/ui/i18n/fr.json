@@ -3130,6 +3130,7 @@
   },
   "touch": {
     "rotateTitle": "Tournez votre appareil",
-    "rotateBody": "La partie se joue à l’horizontale."
+    "rotateBody": "La partie se joue à l’horizontale.",
+    "rotateEditor": "L’éditeur s’utilise à l’horizontale : la carte a besoin de la largeur."
   }
 }

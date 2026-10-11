@@ -484,4 +484,9 @@
     text-align: center;
     text-wrap: balance;
   }
+
+  /* ——— Téléphone (html.phone) : les rubriques du journal à la taille du doigt. */
+  :global(html.phone) .sections button {
+    min-height: 36px;
+  }
 </style>

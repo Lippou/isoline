@@ -374,4 +374,55 @@
     font-size: 0.86em;
     color: var(--np-warn);
   }
+
+  /* ——— Téléphone : des cases à la taille du doigt, rangées sur moins de colonnes. */
+  :global(html.phone) .layouts {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  :global(html.phone) .sh {
+    flex-wrap: wrap;
+  }
+  :global(html.phone) .acts :global(.btn) {
+    min-height: 40px;
+  }
+  :global(html.phone) .slot {
+    min-height: 44px;
+    padding: 6px 12px 6px 8px;
+  }
+  :global(html.phone) .sw {
+    width: 24px;
+    height: 24px;
+  }
+  :global(html.phone) .palette {
+    gap: 8px;
+  }
+  :global(html.phone) .chipc {
+    width: 40px;
+    height: 40px;
+  }
+  :global(html.phone) .custom {
+    margin-left: 0;
+    min-height: 44px;
+  }
+  :global(html.phone) .custom input {
+    width: 44px;
+    height: 40px;
+  }
+  :global(html.phone) .emblems {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+  }
+  :global(html.phone) .pos {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  :global(html.phone) .seg {
+    display: flex;
+    width: 100%;
+  }
+  :global(html.phone) .seg button {
+    flex: 1 1 0;
+    min-height: 44px;
+    padding: 6px 8px;
+  }
 </style>

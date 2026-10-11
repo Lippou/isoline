@@ -484,4 +484,10 @@
       columns: 1;
     }
   }
+
+  /* ——— Téléphone (html.phone) : un écran couché est bas ; le menu défile au lieu de déborder. */
+  :global(html.phone) .body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 </style>

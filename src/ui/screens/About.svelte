@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { phone } from '../tactile';
   import { app } from '../stores/app.svelte';
   import { t } from '../i18n/i18n.svelte';
   import Logo from '../Logo.svelte';
@@ -41,7 +42,7 @@
   <PageHeader title={t('title.about')} />
   <div class="page-body cols">
     <section class="brand">
-      <Logo tone="light" size={96} row />
+      <Logo tone="light" size={phone ? 72 : 96} row />
       <p class="slogan">{t('brand.slogan')}</p>
       <p class="text">{t('about.text')}</p>
       <dl>

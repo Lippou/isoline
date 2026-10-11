@@ -25,6 +25,7 @@
   import { hashString } from '../../core/rng';
   import { nationsForDifficulty, pickNations } from '../../core/map/nationPick';
   import type { PlayerFlag } from '../../core/data/flagSpec';
+  import { phone } from '../tactile';
 
   interface MapEntry {
     id: string;
@@ -295,6 +296,16 @@
   function flagPicked(flag: PlayerFlag | undefined): void {
     if (client && me) client.send({ t: 'profile', team: me.team, flag: flag ?? null });
   }
+
+  // Téléphone : la barre de lancement flottante disparaît quand le vrai bouton est à l'écran.
+  let launchEl = $state<HTMLElement | undefined>();
+  let launchSeen = $state(false);
+  $effect(() => {
+    if (!phone || !launchEl || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => (launchSeen = !!e?.isIntersecting), { threshold: 0.6 });
+    io.observe(launchEl);
+    return () => io.disconnect();
+  });
 </script>
 
 {#if pickingFlag}
@@ -954,7 +965,7 @@
         </div>
       </div>
 
-      <div class="launch">
+      <div class="launch" bind:this={launchEl}>
         <button class="btn primary start" onclick={start} disabled={!isHost} data-testid="lobby-start"
           ><Icon name="play" size={18} />{t('lobby.start')}</button
         >
@@ -962,6 +973,14 @@
       </div>
     </section>
   </div>
+  {#if phone && !launchSeen}
+    <!-- Téléphone : le bouton de lancement reste sous le pouce tant que celui de la page est hors de vue. -->
+    <div class="launch-bar">
+      <button class="btn primary start" onclick={start} disabled={!isHost}
+        ><Icon name="play" size={18} />{t('lobby.start')}</button
+      >
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -1638,5 +1657,47 @@
   }
   .chat input {
     width: 100%;
+  }
+
+  /* ——— Téléphone (html.phone) : les onglets de cartes défilent d'un geste, le lancement reste
+     sous le pouce. */
+  :global(html.phone) .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 0 18px;
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, #000 88%, transparent);
+  }
+  :global(html.phone) .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  :global(html.phone) .tab {
+    flex: none;
+    min-height: 42px;
+    padding: 8px 2px 8px;
+    white-space: nowrap;
+  }
+  :global(html.phone) .flagpick {
+    min-width: 52px;
+    min-height: 44px;
+  }
+  :global(html.phone) .steps {
+    padding-bottom: 76px;
+  }
+  .launch-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    padding: 10px max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+    background: var(--np-paper);
+    border-top: 2px solid var(--np-ink);
+    box-shadow: 0 -10px 24px -12px rgba(23, 42, 60, 0.35);
+  }
+  .launch-bar .start {
+    min-height: 50px;
   }
 </style>

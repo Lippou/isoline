@@ -417,4 +417,13 @@
     color: var(--brass-text);
     opacity: 1;
   }
+
+  /* ——— Téléphone (html.phone) : le drapeau et son nom en entier, le bouton dessous. */
+  :global(html.phone) .flagrow {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  :global(html.phone) .flagrow > :global(:last-child) {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
 </style>

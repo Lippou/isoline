@@ -239,4 +239,10 @@
   .grip:hover {
     opacity: 1;
   }
+
+  /* ——— Téléphone (html.phone) : « fermer » à la taille du doigt. */
+  :global(html.phone) .x {
+    width: 40px;
+    height: 40px;
+  }
 </style>

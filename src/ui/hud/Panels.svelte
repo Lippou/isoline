@@ -298,4 +298,20 @@
     pointer-events: none;
     z-index: 28;
   }
+
+  /* ——— Téléphone (html.phone) : le rail sur deux colonnes, moitié moins haut, pour tenir dans
+     un écran couché sans rien cacher (le menu compris). */
+  :global(html.phone) .rail {
+    grid-template-columns: repeat(2, 44px);
+  }
+  :global(html.phone) .rail button {
+    width: 44px;
+    padding: 9px 2px;
+  }
+  :global(html.phone) .rail .lbl {
+    display: none;
+  }
+  :global(html.phone) .sep {
+    grid-column: 1 / -1;
+  }
 </style>

@@ -394,4 +394,22 @@
     margin: 0 0 14px;
     display: inline-flex;
   }
+
+  /* ——— Téléphone (html.phone) : héberger puis rejoindre, l'un sous l'autre. */
+  :global(html.phone) .cols {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+  }
+  :global(html.phone) .card,
+  :global(html.phone) .card + .card {
+    padding: 0;
+    border-left: none;
+  }
+  :global(html.phone) .card + .card {
+    padding-top: 18px;
+    border-top: 1px solid var(--np-rule);
+  }
+  :global(html.phone) .manual {
+    grid-template-columns: minmax(0, 1fr);
+  }
 </style>

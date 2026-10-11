@@ -505,3 +505,23 @@
   color: var(--np-ink);
   white-space: nowrap;
 }
+
+/* ——— Téléphone (html.phone, tactile.ts) : en partie, les commandes imprimées sur le papier des
+   fenêtres à la taille du doigt (36 px de page, soit ~30 px à l'écran à l'échelle du téléphone).
+   Jamais sur une tablette, un ordinateur ni dans l'application PC. ——— */
+html.phone .game .newsprint :is(.np-btn, .np-act, button.np-mark, button.np-name, [role='tab'], .tab) {
+  min-height: 36px;
+}
+html.phone .game .newsprint .np-act.icon {
+  min-width: 36px;
+}
+html.phone
+  .game
+  .newsprint
+  :is(input[type='text'], input[type='search'], input:not([type]), textarea, select) {
+  min-height: 38px;
+}
+html.phone .game :is(.more-btn, .fold) {
+  min-width: 36px;
+  min-height: 36px;
+}

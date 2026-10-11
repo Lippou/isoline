@@ -14,14 +14,20 @@ export const tactile =
   !matchMedia('(any-pointer: fine)').matches;
 
 /**
+ * A phone (and only a phone): a touch screen whose short side is under 600 CSS px. Its menus get
+ * their own layout (html.phone): full-screen sheets, one column, finger-sized targets. A tablet
+ * keeps the touch layout of the computer screens; a computer never gets either.
+ */
+export const phone = tactile && typeof screen !== 'undefined' && Math.min(screen.width, screen.height) < 600;
+
+/**
  * How the map is drawn on a touch screen (the graphics card's work; a computer keeps 0 / 1):
  * at most 60 frames a second (a 120 Hz phone would draw twice as many for the same game), and
  * on a phone at 80 % of the screen's density (a third fewer pixels to paint, hardly seen there).
  */
 export const touchRender = {
   maxFps: tactile ? 60 : 0,
-  resolutionScale:
-    tactile && typeof screen !== 'undefined' && Math.min(screen.width, screen.height) < 600 ? 0.8 : 1,
+  resolutionScale: phone ? 0.8 : 1,
 };
 
 /** The HUD needs at least this much room (CSS px) to lay out; a phone gets a smaller scale. */
@@ -33,9 +39,19 @@ const TOUCH_SCALE_MIN = 0.55;
  * The interface scale on a touch screen of `w` × `h` CSS pixels (at zoom 1): the desktop rule
  * stops at 85 % (a laptop), a phone needs less to keep the panels around the map.
  */
+/**
+ * A phone needs less room than that: its panels start folded to their tabs and its windows open
+ * full screen (folds.svelte.ts, windows.svelte.ts), so the interface can stay larger — readable
+ * and big enough for a finger.
+ */
+const PHONE_MIN_W = 900;
+const PHONE_MIN_H = 420;
+
 export function touchUiScale(w: number, h: number): number {
   if (!(w > 0 && h > 0)) return 1;
-  const s = Math.min(1, w / TOUCH_MIN_W, h / TOUCH_MIN_H);
+  const s = phone
+    ? Math.min(1, w / PHONE_MIN_W, h / PHONE_MIN_H)
+    : Math.min(1, w / TOUCH_MIN_W, h / TOUCH_MIN_H);
   return Math.max(TOUCH_SCALE_MIN, Math.round(s * 40) / 40);
 }
 
@@ -173,6 +189,7 @@ export function safeInsets(): SafeInsets {
 export function installTactile(): void {
   if (!tactile) return;
   document.documentElement.classList.add('tactile');
+  if (phone) document.documentElement.classList.add('phone');
   viewportMeta().content = 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover';
   // iOS: a double tap or a pinch outside the map must not zoom the page itself.
   document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });

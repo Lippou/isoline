@@ -180,4 +180,21 @@
   .day:empty {
     display: none;
   }
+
+  /* ——— Téléphone (html.phone) : « Retour » à la taille du doigt ; couché, un en-tête plus bas. */
+  :global(html.phone) .back {
+    min-height: 44px;
+    padding-inline: 4px 12px;
+  }
+  @media (orientation: landscape) {
+    :global(html.phone) .head {
+      align-items: center;
+    }
+    :global(html.phone) h1 {
+      font-size: 1.35em;
+    }
+    :global(html.phone) .dateline {
+      font-size: 0.8em;
+    }
+  }
 </style>

@@ -299,4 +299,12 @@
     text-align: right;
     color: var(--np-ink-2);
   }
+
+  /* ——— Téléphone (html.phone) : chaque ligne (centrer la carte sur le pays) au doigt. */
+  :global(html.phone) li button {
+    min-height: 34px;
+  }
+  :global(html.phone) .title {
+    min-height: 36px;
+  }
 </style>

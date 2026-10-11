@@ -11,6 +11,7 @@
   import { nationsOfMap, type MapNation } from '../components/chartRender';
   import { pickNations } from '../../core/map/nationPick';
   import { contourFamily } from '../components/contours';
+  import { phone } from '../tactile';
 
   const unlocked = (k: number) => k === 0 || (profile.campaign[MISSIONS[k - 1]!.id] ?? 0) > 0;
   const totalStars = $derived(MISSIONS.reduce((s, m) => s + (profile.campaign[m.id] ?? 0), 0));
@@ -22,6 +23,7 @@
     ),
   );
   let sel = $state(-1);
+  let detailEl = $state<HTMLElement | undefined>();
   const at = $derived(sel < 0 ? frontier : sel);
   const m = $derived(MISSIONS[at]!);
   const lastOpen = $derived(MISSIONS.reduce((a, _, k) => (unlocked(k) ? k : a), 0));
@@ -38,7 +40,17 @@
     [0.75, 0.6],
     [0.88, 0.2],
   ];
-  const pts = $derived(STATIONS.map(([x, y]) => [x * W, y * H] as [number, number]));
+  // Téléphone tenu droit : la même route, mais qui monte en lacets sur une planche haute.
+  const STATIONS_TALL: [number, number][] = [
+    [0.26, 0.9],
+    [0.72, 0.75],
+    [0.28, 0.58],
+    [0.72, 0.42],
+    [0.28, 0.25],
+    [0.72, 0.09],
+  ];
+  const stations = $derived(phone && H > W * 1.15 ? STATIONS_TALL : STATIONS);
+  const pts = $derived(stations.map(([x, y]) => [x * W, y * H] as [number, number]));
   function routeTo(n: number): string {
     const p = (i: number) => pts[Math.max(0, Math.min(n, i))]!;
     let d = `M${p(0)[0]},${p(0)[1]}`;
@@ -148,7 +160,7 @@
       <ol class="stations">
         {#each MISSIONS as mi, k (mi.id)}
           {@const stars = profile.campaign[mi.id] ?? 0}
-          <li style="left:{STATIONS[k]![0] * 100}%;top:{STATIONS[k]![1] * 100}%">
+          <li style="left:{stations[k]![0] * 100}%;top:{stations[k]![1] * 100}%">
             <button
               class="st"
               class:on={at === k}
@@ -156,7 +168,14 @@
               class:next={unlocked(k) && !stars}
               class:locked={!unlocked(k)}
               aria-pressed={at === k}
-              onclick={() => (sel = k)}
+              onclick={() => {
+                sel = k;
+                // Téléphone : la mission choisie s'affiche sous la route, on y descend.
+                if (phone)
+                  requestAnimationFrame(() =>
+                    detailEl?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+                  );
+              }}
             >
               <span class="mk" aria-hidden="true"></span>
               <span class="lbl">
@@ -178,7 +197,7 @@
       </ol>
     </section>
 
-    <section class="detail">
+    <section class="detail" bind:this={detailEl}>
       {#key m.id}
         <div class="chartbox">
           {#if sizes[m.mapId]}
@@ -581,5 +600,61 @@
     margin: 0;
     font-family: var(--np-serif);
     font-size: 0.82em;
+  }
+
+  /* ——— Téléphone (html.phone) : une seule colonne qui défile, la route en lacets sur une
+     planche haute (debout) ou basse et large (couché), la mission choisie en dessous. */
+  :global(html.phone) .body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: max-content;
+    gap: 16px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  :global(html.phone) .route {
+    height: clamp(440px, 135vw, 620px);
+    margin-right: 0;
+  }
+  :global(html.phone) .lbl b {
+    white-space: normal;
+    max-width: 40vw;
+    line-height: 1.15;
+  }
+  :global(html.phone) .mk {
+    width: 40px;
+    height: 40px;
+  }
+  :global(html.phone) .st {
+    min-width: 44px;
+  }
+  :global(html.phone) .detail {
+    padding-left: 0;
+    border-left: none;
+    overflow: visible;
+    scroll-margin-top: 8px;
+  }
+  :global(html.phone) .chartbox {
+    height: clamp(150px, 46vw, 240px);
+  }
+  :global(html.phone) .dtxt h2 {
+    font-size: 1.6em;
+  }
+  :global(html.phone) .play {
+    width: 100%;
+    justify-content: center;
+    min-height: 50px;
+  }
+  @media (orientation: landscape) {
+    :global(html.phone) .route {
+      height: max(360px, calc(100svh - 24px));
+    }
+    :global(html.phone) .lbl b {
+      max-width: 15vw;
+      font-size: 1em;
+    }
+    :global(html.phone) .play {
+      width: auto;
+    }
   }
 </style>

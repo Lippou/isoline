@@ -46,4 +46,12 @@
   .max[aria-pressed='true'] {
     color: var(--np-ink);
   }
+
+  /* ——— Téléphone (html.phone) : à côté de « fermer », à la même taille. */
+  :global(html.phone) .max {
+    top: 4px;
+    right: 46px;
+    width: 40px;
+    height: 40px;
+  }
 </style>

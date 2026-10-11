@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { phone } from '../tactile';
   // The map editor, printed as a page of the Courier: the tools down the left margin,
   // their settings and the map's sheets (tool, map, nations, check) beside them, the
   // plate filling the rest. The map can be swapped at any time (« Changer de carte »),
@@ -486,6 +487,14 @@
   {#if !ed.model}
     <MapChooser onopen={open} />
   {:else}
+    {#if phone}
+      <!-- Téléphone tenu droit : l'éditeur demande l'horizontale (la carte a besoin de la largeur). -->
+      <div class="ed-rotate" role="status">
+        <Icon name="refresh" size={30} />
+        <b>{t('touch.rotateTitle')}</b>
+        <span>{t('touch.rotateEditor')}</span>
+      </div>
+    {/if}
     <div class="work">
       <nav class="rail" aria-label={t('editor.tools')}>
         {#each GROUPS as g, gi (gi)}
@@ -877,5 +886,80 @@
   .viewbar .sep {
     height: 18px;
     align-self: center;
+  }
+
+  /* ——— Téléphone (html.phone). Couché : l'en-tête se resserre (le titre s'efface, les actions
+     gardent leur pictogramme et leur bulle), la colonne d'outils s'amincit, la carte prend la
+     place. Debout : l'éditeur demande l'horizontale. */
+  .ed-rotate {
+    display: none;
+  }
+  @media (orientation: landscape) {
+    :global(html.phone) .editor {
+      gap: 6px;
+      padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+        max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    }
+    :global(html.phone) .editor:has(.work) :global(.ph h1) {
+      display: none;
+    }
+    :global(html.phone) .editor:has(.work) :global(.ph .head) {
+      position: absolute;
+      top: max(6px, env(safe-area-inset-top));
+      left: max(10px, env(safe-area-inset-left));
+      border: 0;
+      padding: 0;
+    }
+    :global(html.phone) .editor:has(.work) :global(.ph .dateline) {
+      margin: 0;
+      padding: 0 0 4px 92px;
+      border-top: 0;
+    }
+    :global(html.phone) .acts .np-btn:not(.icon) {
+      font-size: 0;
+      gap: 0;
+      min-width: 40px;
+      min-height: 38px;
+      padding: 6px 9px;
+    }
+    :global(html.phone) .acts .np-btn.icon {
+      min-width: 40px;
+      min-height: 38px;
+    }
+    :global(html.phone) .work {
+      grid-template-columns: 46px minmax(176px, 28vw) minmax(0, 1fr);
+    }
+    :global(html.phone) .side {
+      padding: 0 10px;
+    }
+    :global(html.phone) .viewbar button {
+      min-width: 38px;
+      min-height: 36px;
+    }
+    :global(html.phone) .tabs button {
+      min-height: 38px;
+    }
+  }
+  @media (orientation: portrait) {
+    :global(html.phone) .work {
+      display: none;
+    }
+    :global(html.phone) .ed-rotate {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 10px;
+      padding: 24px;
+      text-align: center;
+      color: var(--np-ink);
+    }
+    :global(html.phone) .ed-rotate b {
+      font-family: var(--title);
+      font-size: 1.5em;
+    }
+    :global(html.phone) .ed-rotate span {
+      color: var(--np-ink-2);
+      max-width: 30ch;
+    }
   }
 </style>

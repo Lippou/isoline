@@ -3130,6 +3130,7 @@
   },
   "touch": {
     "rotateTitle": "Turn your device",
-    "rotateBody": "The game is played in landscape."
+    "rotateBody": "The game is played in landscape.",
+    "rotateEditor": "The editor is used in landscape: the map needs the width."
   }
 }

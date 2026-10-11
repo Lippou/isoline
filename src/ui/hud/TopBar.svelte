@@ -452,4 +452,14 @@
       padding: 5px 9px;
     }
   }
+
+  /* ——— Téléphone (html.phone) : les vitesses à la taille du doigt ; « vous : x % » s'efface,
+     l'onglet du classement le montre déjà à côté (rang et part des terres). */
+  :global(html.phone) .tbtn {
+    min-width: 36px;
+    height: 34px;
+  }
+  :global(html.phone) .mine {
+    display: none;
+  }
 </style>
