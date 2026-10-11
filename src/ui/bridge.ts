@@ -97,9 +97,8 @@ const fallback: Bridge = {
   // Hosted under a portal (isoline.binotech.be → binotech.be): back to its home page; a page
   // the browser opened by itself can only be closed.
   quit: () => {
-    const host = location.hostname.split('.');
-    if (location.protocol === 'https:' && host.length > 2)
-      location.assign(`https://${host.slice(1).join('.')}/`);
+    const home = portalHome();
+    if (home) location.assign(home);
     else window.close();
   },
   update: {
@@ -190,6 +189,16 @@ const fallback: Bridge = {
 
 export const bridge: Bridge = window.isoline ?? fallback;
 export const isDesktop = !!window.isoline;
+
+/**
+ * Page d'accueil du portail qui héberge la version navigateur (isoline.binotech.be → binotech.be),
+ * ou null (application PC, ou page ouverte hors portail).
+ */
+export function portalHome(): string | null {
+  if (isDesktop || typeof location === 'undefined') return null;
+  const host = location.hostname.split('.');
+  return location.protocol === 'https:' && host.length > 2 ? `https://${host.slice(1).join('.')}/` : null;
+}
 
 export async function readText(category: string, name: string): Promise<string | null> {
   const d = await bridge.storage.read(category, name);

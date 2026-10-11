@@ -8,7 +8,7 @@
   import { fly } from 'svelte/transition';
   import { app, go } from '../stores/app.svelte';
   import { t, i18n } from '../i18n/i18n.svelte';
-  import { bridge, mapsBase } from '../bridge';
+  import { bridge, mapsBase, portalHome } from '../bridge';
   import { profile, ACHIEVEMENTS } from '../stores/profile.svelte';
   import { settings } from '../stores/settings.svelte';
   import { update, startUpdates, downloadUpdate, installUpdate } from '../stores/update.svelte';
@@ -304,7 +304,7 @@
           <li class="quit-row">
             <button class="entry quit" onclick={() => bridge.quit()}>
               <span class="key"><Icon name="quit" size={16} /></span>
-              <span class="txt"><b>{t('title.quit')}</b></span>
+              <span class="txt"><b>{portalHome() ? t('title.backHome') : t('title.quit')}</b></span>
             </button>
           </li>
         {/if}
