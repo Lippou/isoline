@@ -252,19 +252,37 @@ class AudioEngine {
     this.applyVolumes();
   }
 
+  /** The piece that was playing when the page was left, and where (setAway). */
+  private awayAt: { deck: MusicDeck; src: string; time: number } | null = null;
+
   private setAway(on: boolean): void {
     if (!this.ctx || on === this.away) return;
     this.away = on;
-    const music = this.decks[this.active];
     if (on) {
-      for (const d of this.decks) d.el.pause();
-      this.voiceEl?.pause();
+      // Paused is not enough: iOS would keep the music in the Dynamic Island and on the lock
+      // screen. The pieces are let go (no media left playing), and taken up again on return.
+      const music = this.decks[this.active];
+      this.awayAt = music?.el.src ? { deck: music, src: music.el.src, time: music.el.currentTime } : null;
+      for (const d of this.decks) {
+        d.el.pause();
+        d.el.removeAttribute('src');
+        d.el.load();
+      }
+      this.stopVoice();
       void this.ctx.suspend();
       return;
     }
     void this.ctx.resume();
-    if (music?.el.src && this.mood) void music.el.play().catch(() => undefined);
-    if (this.voiceEl && !this.voiceEl.ended) void this.voiceEl.play().catch(() => this.duck(false));
+    const at = this.awayAt;
+    this.awayAt = null;
+    const music = this.decks[this.active];
+    if (!music || !this.mood) return;
+    // (A new piece chosen meanwhile starts from its beginning; otherwise the one left.)
+    if (!music.el.getAttribute('src') && at?.deck === music) {
+      music.el.src = at.src;
+      music.el.addEventListener('loadedmetadata', () => (music.el.currentTime = at.time), { once: true });
+    }
+    if (music.el.getAttribute('src')) void music.el.play().catch(() => undefined);
   }
 
   private setFocus(on: boolean): void {
