@@ -10,6 +10,7 @@
   import { inkHex } from '../../render/colors';
   import { flagUrl } from '../../render/flags';
   import Icon from '../icons/Icon.svelte';
+  import RulesBox from './RulesBox.svelte';
   import PaperMast from './PaperMast.svelte';
   import { audio } from '../../audio/audio';
   import type { GameController } from '../game/controller';
@@ -259,10 +260,9 @@
         {/if}
       {/if}
 
-      <aside class="np-box np-rules">
-        <h3>{t('trade.rules')}</h3>
+      <RulesBox title={t('trade.rules')}>
         <p>{t('trade.intro')}</p>
-      </aside>
+      </RulesBox>
     {/if}
   </div>
 </div>

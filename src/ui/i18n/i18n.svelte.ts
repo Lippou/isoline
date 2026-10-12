@@ -1,10 +1,20 @@
 // Reactive i18n: t('key', {param}) with French and English dictionaries.
 import fr from './fr.json';
 import en from './en.json';
+import { phone } from '../tactile';
 
 export type Lang = 'fr' | 'en';
 type Dict = Record<string, string>;
 const DICTS: Record<Lang, Dict> = { fr: flatten(fr), en: flatten(en) };
+
+/**
+ * A phone (tactile.ts) plays with a finger: the texts that speak of clicks, the right button,
+ * the wheel or keys have a touch wording under `phone.` (the same key after it), used instead.
+ * Never on a computer, a tablet or in the desktop app.
+ */
+if (phone)
+  for (const d of Object.values(DICTS))
+    for (const [k, v] of Object.entries(d)) if (k.startsWith('phone.')) d[k.slice(6)] = v;
 
 function flatten(obj: unknown, prefix = '', out: Dict = {}): Dict {
   for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {

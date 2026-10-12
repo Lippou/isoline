@@ -1,7 +1,8 @@
 // Mouse / trackpad / keyboard → camera moves and game commands.
 import type { GameRenderer } from '../../render/renderer';
 import type { Session } from '../../engine/session';
-import { hud, openPanel } from '../stores/game.svelte';
+import { hud } from '../stores/game.svelte';
+import { showLine } from '../hud/phone/lineFocus.svelte';
 import { confirmModal } from '../stores/app.svelte';
 import { i18n, t } from '../i18n/i18n.svelte';
 import { settings } from '../stores/settings.svelte';
@@ -184,6 +185,8 @@ export class InputController {
       return;
     }
     if (e.pointerId !== this.primaryTouch) return;
+    // The long press opened the wheel (phone): the finger now slides on it, not on the map.
+    if (this.pressFired && !this.pressSweep && hud.radial) return;
     if (this.press && Math.hypot(x - this.press.x, y - this.press.y) > 10) this.cancelPress();
     this.pointerMove(e);
   }
@@ -571,8 +574,7 @@ export class InputController {
     const grip = this.gripFrom;
     this.endGripDrag();
     if (!moved) {
-      hud.frontSel = id;
-      openPanel('front');
+      showLine(id);
       return;
     }
     const tile = this.r.tileAtScreen(sx, sy);

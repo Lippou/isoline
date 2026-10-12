@@ -3131,6 +3131,113 @@
   "touch": {
     "rotateTitle": "Tournez votre appareil",
     "rotateBody": "La partie se joue à l’horizontale.",
-    "rotateEditor": "L’éditeur s’utilise à l’horizontale : la carte a besoin de la largeur."
+    "rotateEditor": "L’éditeur s’utilise à l’horizontale : la carte a besoin de la largeur.",
+    "toolCapital": "Capitale",
+    "toolAssault": "Flèche",
+    "toolPing": "Signal",
+    "toolShips": "Navires",
+    "rulesShow": "Comment ça marche ?",
+    "allLines": "Toutes les lignes",
+    "needGold": "Il vous manque {n} d'or.",
+    "unavailable": "Pas possible pour l'instant.",
+    "speed": "Vitesse du temps"
+  },
+  "phone": {
+    "hud": {
+      "teammateClick": "Votre coéquipier : appui long sur son territoire pour lui donner de l'or ou des troupes"
+    },
+    "radial": {
+      "attackDesc": "Envoie la part de vos troupes indiquée (réglable dans le panneau en bas à gauche).",
+      "lineLaunchDesc": "Puis touchez la carte : l’assaut part vers ce point (une capitale, une ville, un port). Appui long : retirer la flèche."
+    },
+    "tech": {
+      "queueEmpty": "Touchez une technologie, puis « Ajouter à la file » pour planifier la suivante."
+    },
+    "launch": {
+      "hint": "Touchez la cible : lancer · ✕ près de Construire : annuler"
+    },
+    "error": {
+      "noFrontier": "Aucune frontière commune : pour l'atteindre, envoyez un bateau (appui long sur la cible, puis Débarquer).",
+      "line": {
+        "max": "{n} lignes au plus : démontez-en une (appui long dessus)."
+      }
+    },
+    "hover": {
+      "demolishTip": "Hors service jusqu'à sa chute ; {pct} % de l'or investi rendu à la fin. Annulable (appui long)."
+    },
+    "front": {
+      "none": "Aucune ligne. Touchez Construire, puis « Ligne déf. » pour en tracer une sur vos terres, ou « Ligne off. » pour en poser une sur la frontière d’un pays.",
+      "aiming": "Touchez la carte : l’assaut part vers ce point. Appui long : retirer la flèche.",
+      "aimTip": "Toucher : l’assaut part vers ce point · appui long : retirer la flèche",
+      "rulesDraw": "Défensive : en place aussitôt ; « Organiser » (10 s) double son ralentissement. De face, l’assaillant perd 3 hommes pour 1 et ne perce qu’au-delà de 3 contre 1 ; prise à revers, elle éclate. Touchez une ligne pour la gérer, appui long pour la démonter.",
+      "rulesAssault": "Offensive : touchez un pays voisin pour la poser sur votre frontière (appui long puis glisser le long de la frontière : un tronçon). Tirez sa poignée jusqu'où la percée doit s'arrêter : c'est la flèche, que vous seul voyez. Elle se charge en 30 s ; touchez-la pour lancer l'assaut, même avant la fin, avec les bonus de la charge. Sous la flèche, pertes −50 % et vitesse +50 % ; sur le reste du front, pertes −20 %. Arrivé à la pointe, l'assaut s'arrête et ses troupes rentrent.",
+      "dragTip": "Levez le doigt où la percée doit s'arrêter (capitale, ville…) · deuxième doigt : annuler",
+      "arrowTip": "Touchez la flèche : lancer l'assaut (bonus selon la charge)"
+    },
+    "capital": {
+      "toolHint": "Touchez vos terres pour y établir la capitale (✕ près de Construire pour annuler)."
+    },
+    "line": {
+      "defensive": {
+        "desc": "Tracez-la sur vos terres (toucher le premier point la referme), puis touchez du côté de l'ennemi : elle est en place aussitôt. Organisez-la ensuite (10 s de travail, appui long sur la ligne) : elle ralentit alors l'ennemi deux fois plus. Sa longueur dépend des troupes posées. De face, l'assaillant perd 3 hommes pour 1 à forces égales, et ne perce qu'à plus de 3 contre 1. Prise à revers sur un quart de sa longueur, elle éclate et ses troupes sont perdues."
+      },
+      "offensive": {
+        "desc": "Touchez un pays voisin : elle se pose sur votre frontière avec lui (appui long puis glisser le long de la frontière : ce tronçon). Tirez sa poignée jusqu'à l'objectif pour dessiner la flèche ; elle se charge en 30 s. Touchez la flèche pour lancer l'assaut : sous la flèche, pertes −50 % et vitesse +50 % ; sur le reste du front, pertes −20 %."
+      },
+      "howTo": "Défensive : glisser d’un point à un autre, ou toucher point par point (deux touchers rapides pour finir), puis toucher du côté de l’ennemi. Offensive : toucher un pays voisin, ou appui long puis glisser le long de la frontière. Touchez une de vos lignes pour la gérer.",
+      "tip": {
+        "start": "Touchez ou glissez pour tracer · {troops} troupes ({pct} %)",
+        "side": "Touchez du côté de l’ennemi pour poser la ligne · {troops} troupes",
+        "next": "Toucher : point suivant · deux touchers : terminer · appui long : retirer le dernier point",
+        "borderStart": "Touchez un pays voisin : la ligne se pose sur toute votre frontière avec lui · appui long puis glisser : un tronçon",
+        "border": "{name} : toute la frontière, {n} cases · {troops} troupes ({pct} %) · appui long : un tronçon",
+        "borderSector": "Tronçon face à {name} : {n} cases · levez le doigt pour poser la ligne",
+        "close": "Toucher : refermer la position sur elle-même (tous les angles défendus)",
+        "nextClose": "Toucher : point suivant · toucher le premier point : refermer · deux touchers : terminer · appui long : retirer le dernier point"
+      }
+    },
+    "guide": {
+      "spawn": "Choisissez l'emplacement de votre capitale : touchez une terre libre, de préférence une plaine avec de la place autour, loin des autres nations. La partie démarre dès que vous l'avez posée, et personne ne peut vous attaquer pendant la première minute.",
+      "m1": {
+        "camera": "Faites glisser la carte d'un doigt pour la déplacer, et pincez à deux doigts pour zoomer.",
+        "expand": "Étendez-vous : touchez une terre libre le long de votre frontière. L'assaut part de toute la frontière commune et avance tant qu'il a des troupes ; à la fin, les survivants rentrent. Les plaines se prennent vite, les forêts et les montagnes coûtent plus cher : la vue Terrain (Construire, puis Vues) affiche ces coûts.",
+        "ratio": "En bas à gauche, le ratio d'attaque fixe la part de vos troupes engagée à chaque ordre, vingt pour cent au départ. Touchez ce panneau pour le déplier et changer le ratio. Plus vous engagez de troupes, plus l'assaut avance vite, mais moins il en reste pour défendre.",
+        "city": "Votre population atteint vite son plafond. Construisez une ville : appui long sur votre territoire, puis Construire, Ville. Ou bien le bouton Construire, Bâtiments, Ville, puis touchez votre territoire.",
+        "nation": "Attaquez maintenant une nation voisine : touchez son territoire. Il faut une frontière commune ; sinon, il faudra passer par la mer. Vos attaques en cours sont listées en bas à gauche : la croix en annule une, au prix d'un quart de ses troupes. Toucher de nouveau la même cible renforce l'attaque."
+      },
+      "m2": {
+        "line": "Tracez une ligne défensive (Construire, puis « Ligne déf. ») face à votre frontière la plus exposée, puis touchez du côté de l'ennemi. Elle agit dès qu'elle est posée : de face, l'assaillant y perd trois hommes pour un.",
+        "reinforce": "Touchez votre ligne pour ouvrir sa fiche : elle règle les troupes que porte la ligne. Plus elle en a, plus elle tient longtemps ; elles sont retirées de votre plafond.",
+        "alliance": "Proposez une alliance à un voisin : appui long sur son territoire, ou fenêtre Diplomatie (bouton Panneaux, à gauche). Les offres que vous recevez s'affichent à droite, avec leurs boutons pour accepter ou refuser.",
+        "organize": "Organisez-la : appui long sur la ligne, puis « Organiser la défense ». Dix secondes de travaux, les barbelés se déroulent, et la ligne ralentit ensuite l'ennemi deux fois plus.",
+        "ring": "Une ligne prise à revers éclate. Pour couvrir une ville ou votre capitale de tous côtés, refermez la ligne : terminez le tracé en touchant son premier point."
+      },
+      "m3": {
+        "port": "Construisez un port (Construire, Bâtiments, Port) sur votre côte : il apporte le commerce maritime et permet d'armer des navires de guerre.",
+        "landing": "La nation la plus faible est signalée sur la carte. Faites un appui long sur sa côte, puis Débarquer : un transport part de votre rivage le plus proche avec la part de troupes du ratio.",
+        "warship": "Les navires de guerre ennemis coulent les transports. Armez le vôtre : Construire, puis le navire, et touchez la mer près de votre port. Il escorte vos débarquements et attaque les navires adverses."
+      },
+      "m4": {
+        "factory": "Construisez une usine (Construire, Bâtiments, Usine) entre vos villes. Les rails se posent tout seuls.",
+        "routes": "Trains et navires marchands paient à chaque arrêt. Construire, puis Vues, affiche ou masque les routes commerciales ; la fenêtre Commerce (bouton Panneaux) détaille vos gains par partenaire.",
+        "lab": "Construisez un centre de recherche (Construire, Bâtiments, Recherche) : il produit des points de recherche, même quand rien n'est à l'étude.",
+        "research": "Ouvrez la fenêtre Technologies (bouton Panneaux) et touchez Chemins de fer : son prérequis se place devant elle dans la file d'attente. Ajoutez d'autres technologies, elles seront étudiées dans l'ordre.",
+        "windows": "Les fenêtres s'ouvrent en plein écran ; la croix en haut à droite les ferme. Le bouton Panneaux, à gauche, les rouvre."
+      },
+      "m5": {
+        "lab": "Construisez un centre de recherche (Construire, Bâtiments, Recherche) : c'est lui qui produit les points de recherche.",
+        "research": "Ouvrez la fenêtre Technologies (bouton Panneaux) et touchez Programme nucléaire : ses prérequis se placent devant lui dans la file d'attente. Un deuxième centre de recherche accélérerait l'étude.",
+        "silo": "Une fois le programme nucléaire acquis, construisez un silo (Construire, Bâtiments, Silo).",
+        "hbomb": "Mettez maintenant la bombe thermonucléaire à l'étude. Pensez aussi aux batteries SAM (une fois les missiles sol-air recherchés) : elles abattent les missiles ennemis.",
+        "launch": "Touchez Construire, puis Nucléaire, choisissez la bombe et touchez une cible ennemie. Une cible possible est signalée sur la carte."
+      },
+      "m6": {
+        "offensive": "Avant une grande poussée, posez une ligne offensive (Construire, puis « Ligne off. ») : touchez le pays visé, elle se pose sur votre frontière. Tirez sa poignée jusqu'à sa capitale pour dessiner la flèche. Elle se charge en trente secondes ; touchez la flèche pour lancer l'assaut.",
+        "arrow": "La longueur de la flèche fixe la profondeur de la percée : elle s'arrête à sa pointe, et les survivants rentrent. Sous la flèche, sur une dizaine de cases de large, l'assaut perd moitié moins d'hommes et avance plus vite ; sur le reste du front, il en perd vingt pour cent de moins. Un appui long, glissé le long de la frontière, ne pose la ligne que sur ce tronçon."
+      },
+      "hint": {
+        "threat": "Frontière menacée : un voisin masse ses troupes contre nous. Tracez une ligne défensive face à lui (Construire, puis « Ligne déf. ») et organisez-la, ou proposez-lui une alliance."
+      }
+    }
   }
 }

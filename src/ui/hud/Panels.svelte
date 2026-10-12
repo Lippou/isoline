@@ -20,6 +20,8 @@
   import { audio } from '../../audio/audio';
   import Icon from '../icons/Icon.svelte';
   import type { IconName } from '../icons/icons';
+  import { phone } from '../tactile';
+  import Wheel, { type WheelItem } from './phone/Wheel.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   const tabs: { id: WinId; icon: IconName; hidden?: boolean }[] = [
@@ -62,6 +64,40 @@
   );
 
   const showRail = $derived(!hud.spectating || !!hud.replay);
+
+  // Phone (html.phone): the dock is one button at the left edge; its sections open on a wheel.
+  let dock = $state<{ x: number; y: number; drag: boolean } | null>(null);
+  let dockBtn: HTMLButtonElement | undefined = $state();
+  function openDock(drag: boolean): void {
+    if (!dockBtn) return;
+    const r = dockBtn.getBoundingClientRect();
+    dock = { x: r.left + r.width / 2, y: r.top + r.height / 2, drag };
+    audio.ui('open');
+  }
+  const dockItems = $derived.by((): WheelItem[] => [
+    ...tabs
+      .filter((tb) => !tb.hidden)
+      .map((tb): WheelItem => ({
+        id: tb.id,
+        label: t(`panel.${tb.id}`),
+        icon: tb.icon,
+        on: hud.panels[tb.id],
+        ...(tb.id === 'log' && unread.n
+          ? { badge: `${unread.danger ? '! ' : ''}${unread.n > 99 ? '99+' : unread.n}` }
+          : tb.id === 'tech' && techIdle
+            ? { badge: '•' }
+            : {}),
+        run: () => toggle(tb.id),
+        testid: `panel-${tb.id}`,
+      })),
+    {
+      id: 'menu',
+      label: t('hud.menu'),
+      icon: 'menu',
+      run: () => (hud.panels.menu = true),
+      testid: 'open-menu',
+    },
+  ]);
   // The stage moved or changed size (the screen, the interface scale, a piece of the HUD):
   // the open windows stay in it (zones.ts).
   const stageKey = $derived.by(() => {
@@ -74,7 +110,42 @@
   });
 </script>
 
-{#if showRail}
+{#if showRail && phone}
+  <div class="strip" class:reading={layout.reading}>
+    <button
+      bind:this={dockBtn}
+      class="dockbtn glass"
+      use:hudSize={'rail'}
+      onpointerdown={(e) => {
+        e.preventDefault();
+        openDock(true);
+      }}
+      onclick={(e) => e.detail === 0 && openDock(false)}
+      aria-haspopup="menu"
+      aria-expanded={!!dock}
+      aria-label={t('hud.panels')}
+      data-testid="dock-button"
+    >
+      <Icon name="menu" size={22} />
+      <span>{t('hud.panels')}</span>
+      {#if unread.n}<i class="count mono" class:danger={unread.danger} data-testid="journal-unread"
+          >{unread.danger ? '! ' : ''}{unread.n > 99 ? '99+' : unread.n}</i
+        >{:else if techIdle}<i class="dot research" data-testid="tech-idle-dot"></i>{/if}
+    </button>
+  </div>
+  {#if dock}
+    <Wheel
+      x={dock.x}
+      y={dock.y}
+      drag={dock.drag}
+      items={dockItems}
+      title={t('hud.panels')}
+      icon="menu"
+      onclose={() => (dock = null)}
+      testid="dock-wheel"
+    />
+  {/if}
+{:else if showRail}
   <!-- The dock: a rail along the left edge, centred in its zone (above the resources panel);
        in reading mode it stays put (zones.ts, railPlacement): opening a window never moves it. -->
   <div class="strip" class:reading={layout.reading}>
@@ -313,5 +384,36 @@
   }
   :global(html.phone) .sep {
     grid-column: 1 / -1;
+  }
+  /* The dock's one button (phone): a tab of paper at the left edge. */
+  .dockbtn {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 3px;
+    padding: 4px;
+    border-top: 3px solid var(--np-ink) !important;
+    color: var(--np-ink);
+    pointer-events: auto;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: pointer;
+  }
+  .dockbtn span {
+    font-family: var(--title);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .dockbtn .count {
+    top: -6px;
+    right: -6px;
+  }
+  .dockbtn .dot {
+    top: 5px;
+    right: 6px;
   }
 </style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { touchRender } from '../tactile';
+  import { phone, touchRender } from '../tactile';
   import { onMount, onDestroy } from 'svelte';
   import { app, go } from '../stores/app.svelte';
   import { hud, openPaper } from '../stores/game.svelte';
@@ -10,6 +10,8 @@
   import TopBar from '../hud/TopBar.svelte';
   import ResourcePanel from '../hud/ResourcePanel.svelte';
   import BuildBar from '../hud/BuildBar.svelte';
+  import BuildWheel from '../hud/phone/BuildWheel.svelte';
+  import LineCard from '../hud/phone/LineCard.svelte';
   import Minimap from '../hud/Minimap.svelte';
   import Leaderboard from '../hud/Leaderboard.svelte';
   import CursorNote from '../hud/CursorNote.svelte';
@@ -158,7 +160,7 @@
       <TopBar {ctl} />
       {#if live}
         <ResourcePanel {ctl} />
-        <BuildBar {ctl} />
+        {#if phone}<BuildWheel {ctl} />{:else}<BuildBar {ctl} />{/if}
       {/if}
       <Minimap {ctl} />
       <Leaderboard {ctl} />
@@ -191,6 +193,7 @@
       </div>
     {/if}
     <Panels {ctl} />
+    {#if phone && live}<LineCard {ctl} />{/if}
     <RadialMenu {ctl} />
     <Dialogue {ctl} />
     {#if hud.replay && !reading}<ReplayBar {ctl} />{/if}

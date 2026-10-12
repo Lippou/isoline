@@ -4,6 +4,7 @@ import { GameRenderer, type RenderSettings } from '../../render/renderer';
 import { InputController, BUILD_KEYS, LINE_KEYS, NUKE_KEYS, guardBetrayal } from './input';
 import { ownLineAt } from './lines';
 import { hud, resetHud, toast, subtitle, reportFall, showPact, openPanel } from '../stores/game.svelte';
+import { showLine } from '../hud/phone/lineFocus.svelte';
 import { note } from '../stores/note.svelte';
 import { isTeammate } from './team';
 import { toggleAllFolds, setFold, FOLD_IDS, type FoldId } from '../stores/folds.svelte';
@@ -445,8 +446,7 @@ export class GameController {
     const line =
       hud.tool.k === 'none' ? ownLineAt(this.session.state, this.session.viewer, tile, reach) : null;
     if (line) {
-      hud.frontSel = line.id;
-      openPanel('front');
+      showLine(line.id);
       audio.ui('click');
       return;
     }
@@ -477,6 +477,12 @@ export class GameController {
   toggleTradeRoutes(): void {
     settings.game.tradeRoutes = !settings.game.tradeRoutes;
     saveSettings();
+  }
+
+  /** Puts down the tool in hand (and the ships selected), as Escape does: the phone's cross. */
+  dropTool(): void {
+    if (hud.tool.k !== 'none' || hud.selection.length)
+      this.key('escape', new KeyboardEvent('keydown', { code: 'Escape' }));
   }
 
   private key(action: string, e: KeyboardEvent): void {

@@ -12,6 +12,7 @@
   import type { GameController } from '../game/controller';
   import { confirmModal } from '../stores/app.svelte';
   import Icon from '../icons/Icon.svelte';
+  import RulesBox from './RulesBox.svelte';
   import { audio } from '../../audio/audio';
   import { ALLIANCE_REQUEST_TTL, ALLIANCE_RENEW_WINDOW, ALLIANCE_TICKS } from '../../core/game/constants';
   import OpinionMeter from './OpinionMeter.svelte';
@@ -333,10 +334,9 @@
       </ul>
     {/if}
 
-    <aside class="np-box np-rules">
-      <h3>{t('diplo.rules')}</h3>
+    <RulesBox title={t('diplo.rules')}>
       <p>{t('diplo.intro')}</p>
-    </aside>
+    </RulesBox>
   </div>
 </div>
 

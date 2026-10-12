@@ -10,6 +10,7 @@
   import { hudSize } from '../stores/hudBox.svelte';
   import ModeBanner from './ModeBanner.svelte';
   import { eventIcon, GOOD_EVENTS } from './worldEvents';
+  import { phone } from '../tactile';
 
   let { ctl }: { ctl: GameController } = $props();
   const solo = ctl.session.kind === 'solo';
@@ -93,21 +94,34 @@
             aria-label={t(hud.paused ? 'hud.resume' : 'hud.pause')}
             onclick={() => ctl.togglePause()}><Icon name={hud.paused ? 'play' : 'pause'} size={14} /></button
           >
-          {#each SPEEDS as v (v)}
+          {#if phone}
+            <!-- Phone: one button runs through the speeds (½, 1, 2, 4), the room left to the map. -->
             <button
-              class="tbtn mono"
-              class:on={!hud.paused && hud.speed === v}
-              aria-pressed={hud.speed === v}
-              data-tip={t('hud.speedTip', {
-                down: keyLabel(settings.keys.speedDown ?? ''),
-                up: keyLabel(settings.keys.speedUp ?? ''),
-              })}
+              class="tbtn mono on"
+              aria-label={t('touch.speed')}
+              data-testid="speed-cycle"
               onclick={() => {
                 if (hud.paused) ctl.togglePause();
-                ctl.setSpeed(v);
-              }}>×{v === 0.5 ? '½' : v}</button
+                ctl.setSpeed(SPEEDS[(SPEEDS.indexOf(hud.speed) + 1) % SPEEDS.length] ?? 1);
+              }}>×{hud.speed === 0.5 ? '½' : hud.speed}</button
             >
-          {/each}
+          {:else}
+            {#each SPEEDS as v (v)}
+              <button
+                class="tbtn mono"
+                class:on={!hud.paused && hud.speed === v}
+                aria-pressed={hud.speed === v}
+                data-tip={t('hud.speedTip', {
+                  down: keyLabel(settings.keys.speedDown ?? ''),
+                  up: keyLabel(settings.keys.speedUp ?? ''),
+                })}
+                onclick={() => {
+                  if (hud.paused) ctl.togglePause();
+                  ctl.setSpeed(v);
+                }}>×{v === 0.5 ? '½' : v}</button
+              >
+            {/each}
+          {/if}
         </span>
       {/if}
       <span class="item mode" data-tip={modeTip || null} data-testid="topbar-mode">{modeName}</span>

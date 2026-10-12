@@ -12,6 +12,7 @@
   import { hud } from '../stores/game.svelte';
   import { i18n, t, short, clock } from '../i18n/i18n.svelte';
   import Icon from '../icons/Icon.svelte';
+  import RulesBox from './RulesBox.svelte';
   import PaperMast from './PaperMast.svelte';
   import { keyLabel, settings } from '../stores/settings.svelte';
   import { audio } from '../../audio/audio';
@@ -261,11 +262,10 @@
       <p class="np-empty">{t('front.pick')}</p>
     {/if}
 
-    <aside class="np-box np-rules">
-      <h3>{t('front.rules')}</h3>
+    <RulesBox title={t('front.rules')}>
       <p>{t('front.rulesDraw')}</p>
       <p>{t('front.rulesAssault')}</p>
-    </aside>
+    </RulesBox>
   </div>
 </div>
 
@@ -380,5 +380,10 @@
     display: flex;
     gap: 8px;
     justify-content: space-between;
+  }
+  /* Téléphone : la ligne choisie a déjà son nom et son état dans la liste, au-dessus. */
+  :global(html.phone) .sheet :global(.np-mark),
+  :global(html.phone) .sheet > .state {
+    display: none;
   }
 </style>

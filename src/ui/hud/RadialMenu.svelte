@@ -1,7 +1,7 @@
 <script lang="ts">
   // Context menu (right click): what is under the cursor, then grouped actions
   // with their cost; sub-menus open in a side column.
-  import { hud, openPanel } from '../stores/game.svelte';
+  import { hud } from '../stores/game.svelte';
   import { view } from '../stores/viewport.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
   import { settings } from '../stores/settings.svelte';
@@ -27,6 +27,9 @@
   import { ownLineAt } from '../game/lines';
   import { haltShort, haltTip, nukeHalt, truceText } from './nukeHalt';
   import { truceCovers, truceOf } from '../game/truce';
+  import { phone } from '../tactile';
+  import { showLine } from './phone/lineFocus.svelte';
+  import Wheel, { type WheelItem } from './phone/Wheel.svelte';
 
   let { ctl }: { ctl: GameController } = $props();
   type Item = {
@@ -486,10 +489,7 @@
         icon: line.kind === 0 ? 'lineDefense' : 'lineOffense',
         hint: line.troops < 1 ? t('line.card.emptyShort') : formatShort(line.troops),
         desc: t('radial.lineTroopsDesc'),
-        run: act(() => {
-          hud.frontSel = line.id;
-          openPanel('front');
-        }),
+        run: act(() => showLine(line.id)),
       });
       out.push({
         id: 'lineRemove',
@@ -573,6 +573,35 @@
   });
   const sub = $derived(items.find((it) => it.id === openSub)?.sub ?? null);
 
+  /** Phone: the menu's entries, in its groups' order, as the wheel's slices. */
+  /** Why a slice is refused, when the menu does not say (a building out of reach: the gold missing). */
+  function refusal(it: Item): string {
+    if (!it.disabled || it.why) return it.why ?? '';
+    const m = /^b(\d+)$/.exec(it.id);
+    const L = hud.local;
+    if (m && L) {
+      const cost = L.buildCosts[Number(m[1])] ?? 0;
+      if (L.gold < cost) return t('touch.needGold', { n: gold(cost - L.gold) });
+    }
+    return t('touch.unavailable');
+  }
+  const toWheel = (it: Item): WheelItem => ({
+    id: it.id,
+    label: it.label,
+    ...(it.icon ? { icon: it.icon } : {}),
+    ...(it.hint ? { hint: it.hint } : {}),
+    ...(it.desc ? { desc: it.desc } : {}),
+    ...(it.disabled || it.why ? { why: refusal(it) } : {}),
+    disabled: !!it.disabled,
+    danger: !!it.danger,
+    banned: !!it.banned,
+    featured: !!it.featured,
+    ...(it.sub ? { sub: it.sub.map(toWheel) } : {}),
+    ...(it.run ? { run: it.run } : {}),
+    testid: `radial-${it.id}`,
+  });
+  const wheelItems = $derived(phone ? groups.flatMap((g) => g.list).map(toWheel) : []);
+
   // Keep the menu on screen. It never moves while open (opening a sub-menu used to push it
   // left under the pointer, which then opened another one: the menu shook); the sub-menu
   // opens on the side that has room.
@@ -592,7 +621,37 @@
   });
 </script>
 
-{#if hud.radial && items.length}
+{#if hud.radial && items.length && phone}
+  <!-- Phone: the same entries on a wheel around the finger, still held from the long press. -->
+  {#key hud.radial}
+    <Wheel
+      x={hud.radial.x}
+      y={hud.radial.y}
+      items={wheelItems}
+      title={signalMode
+        ? t('radial.signalTitle')
+        : ownerView
+          ? ownerView.name[i18n.lang] || ownerView.name.en
+          : t(`terrain.${terrainKey}`)}
+      subtitle={signalMode
+        ? ''
+        : ownerView
+          ? owner === s.viewer
+            ? t('radial.yours')
+            : mate
+              ? t('radial.teammate')
+              : t(`terrain.${terrainKey}`)
+          : IS_LAND[s.state.terrain[tile] ?? 0]
+            ? t('radial.unclaimed')
+            : t('radial.sea')}
+      flag={!signalMode && ownerView ? flagUrl(ownerView, 24) : ''}
+      icon={signalMode ? 'pin' : 'terrain'}
+      drag
+      onclose={close}
+      testid="radial"
+    />
+  {/key}
+{:else if hud.radial && items.length}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div

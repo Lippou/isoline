@@ -3131,6 +3131,113 @@
   "touch": {
     "rotateTitle": "Turn your device",
     "rotateBody": "The game is played in landscape.",
-    "rotateEditor": "The editor is used in landscape: the map needs the width."
+    "rotateEditor": "The editor is used in landscape: the map needs the width.",
+    "toolCapital": "Capital",
+    "toolAssault": "Arrow",
+    "toolPing": "Signal",
+    "toolShips": "Ships",
+    "rulesShow": "How does it work?",
+    "allLines": "All lines",
+    "needGold": "You are {n} gold short.",
+    "unavailable": "Not possible right now.",
+    "speed": "Game speed"
+  },
+  "phone": {
+    "hud": {
+      "teammateClick": "Your teammate: long-press its territory to give it gold or troops"
+    },
+    "radial": {
+      "attackDesc": "Sends the shown share of your troops (set it in the panel at the bottom left).",
+      "lineLaunchDesc": "Then tap the map: the assault heads for that point (a capital, a city, a port). Long press: take the arrow back."
+    },
+    "tech": {
+      "queueEmpty": "Tap a technology, then “Add to queue” to plan the next one."
+    },
+    "launch": {
+      "hint": "Tap the target: launch · ✕ next to Build: cancel"
+    },
+    "error": {
+      "noFrontier": "No shared border: to reach it, send a boat (long-press the target, then Land troops).",
+      "line": {
+        "max": "{n} lines at most: take one down (long-press it)."
+      }
+    },
+    "hover": {
+      "demolishTip": "Out of service until it comes down; {pct}% of the gold invested back at the end. Can be called off (long press)."
+    },
+    "front": {
+      "none": "No line. Tap Build, then “Def. line” to draw one on your land, or “Off. line” to lay one on a country's border.",
+      "aiming": "Tap the map: the assault heads for that point. Long press: take the arrow back.",
+      "aimTip": "Tap: the assault heads here · long press: take the arrow back",
+      "rulesDraw": "Defensive: in place at once; “Organise” (10 s) doubles its slowdown. Head-on, the attacker loses 3 men for 1 and only breaks through past 3 to 1; turned, it shatters. Tap a line to manage it, long-press it to take it down.",
+      "rulesAssault": "Offensive: tap a neighbouring country to lay it on your border (long press then slide along the border: a stretch). Drag its grip to where the breakthrough should stop: that is the arrow, which only you see. It charges in 30 s; tap it to launch the assault, even before, with the bonuses of its charge. Under the arrow, losses −50 % and speed +50 %; along the rest of the front, losses −20 %. At the arrow's head, the assault stops and its troops come home.",
+      "dragTip": "Lift your finger where the breakthrough should stop (capital, city…) · second finger: cancel",
+      "arrowTip": "Tap the arrow: launch the assault (bonuses by its charge)"
+    },
+    "capital": {
+      "toolHint": "Tap your land to establish the capital there (✕ next to Build to cancel)."
+    },
+    "line": {
+      "defensive": {
+        "desc": "Draw it on your land (tapping the first point closes it), then tap the enemy's side: it is in place at once. Then organise it (10 s of work, long-press the line): it slows the enemy twice as much. Its length depends on the troops on it. Head-on, the attacker loses 3 men for 1 at even forces and only breaks through past 3 to 1. Turned on a quarter of its length, it shatters and its troops are lost."
+      },
+      "offensive": {
+        "desc": "Tap a neighbouring country: it is laid along your border with it (long press then slide along the border: that stretch). Drag its grip to the objective to draw the arrow; it charges in 30 s. Tap the arrow to launch the assault: under the arrow, losses −50 % and speed +50 %; along the rest of the front, losses −20 %."
+      },
+      "howTo": "Defensive: drag from one point to another, or tap point by point (two quick taps to finish), then tap the enemy's side. Offensive: tap a neighbouring country, or long press then slide along the border. Tap one of your lines to manage it.",
+      "tip": {
+        "start": "Tap or drag to draw · {troops} troops ({pct}%)",
+        "side": "Tap on the enemy’s side to lay the line · {troops} troops",
+        "next": "Tap: next point · two taps: finish · long press: take the last point back",
+        "borderStart": "Tap a neighbouring country: the line is laid along your whole border with it · long press then slide: a stretch",
+        "border": "{name}: the whole border, {n} tiles · {troops} troops ({pct} %) · long press: a stretch",
+        "borderSector": "Stretch facing {name}: {n} tiles · lift your finger to lay the line",
+        "close": "Tap: close the position on itself (every corner held)",
+        "nextClose": "Tap: next point · tap the first point: close it · two taps: finish · long press: take the last point back"
+      }
+    },
+    "guide": {
+      "spawn": "Choose where your capital goes: tap free land, ideally open plains with room around them, far from other nations. The game starts as soon as you place it, and no one can attack you during the first minute.",
+      "m1": {
+        "camera": "Drag the map with one finger to move around, and pinch with two fingers to zoom.",
+        "expand": "Expand: tap free land along your border. The push leaves from the whole shared border and goes on while it has troops; when it ends, the survivors come home. Plains are quick to take, forests and mountains cost more: the Terrain view (Build, then Views) shows those costs.",
+        "ratio": "At the bottom left, the attack ratio sets the share of your troops each order commits, twenty percent at first. Tap that panel to unfold it and change the ratio. The more troops you commit, the faster the push, but the fewer are left to defend.",
+        "city": "Your population soon reaches its ceiling. Build a city: long-press your territory, then Build, City. Or use the Build button, Buildings, City, then tap your territory.",
+        "nation": "Now attack a neighbouring nation: tap its territory. You need a shared border; otherwise you will have to cross the sea. Your attacks under way are listed at the bottom left: the cross cancels one, at the cost of a quarter of its troops. Tapping the same target again reinforces the attack."
+      },
+      "m2": {
+        "line": "Draw a defensive line (Build, then “Def. line”) facing your most exposed border, then tap the enemy's side. It acts as soon as it is laid: head-on, the attacker loses three men for one.",
+        "reinforce": "Tap your line to open its card: it sets the troops the line carries. The more it has, the longer it holds; they are taken off your ceiling.",
+        "alliance": "Propose an alliance to a neighbour: long-press its territory, or use the Diplomacy window (Panels button, on the left). Offers you receive appear on the right, with their buttons to accept or refuse.",
+        "organize": "Organise it: long-press the line, then “Organise the defence”. Ten seconds of work, the barbed wire rolls out, and the line then slows the enemy twice as much.",
+        "ring": "A line taken from behind shatters. To cover a city or your capital on every side, close the line: finish drawing by tapping its first point."
+      },
+      "m3": {
+        "port": "Build a port (Build, Buildings, Port) on your coast: it brings sea trade and lets you fit out warships.",
+        "landing": "The weakest nation is marked on the map. Long-press its coast, then Land troops: a transport sails from your nearest shore with the ratio's share of your troops.",
+        "warship": "Enemy warships sink transports. Fit out your own: Build, then the warship, and tap the sea near your port. It escorts your landings and attacks enemy ships."
+      },
+      "m4": {
+        "factory": "Build a factory (Build, Buildings, Factory) between your cities. The tracks are laid automatically.",
+        "routes": "Trains and merchant ships pay at every stop. Build, then Views, shows or hides the trade routes; the Trade window (Panels button) details your earnings per partner.",
+        "lab": "Build a research centre (Build, Buildings, Research): it produces research points, even while nothing is being studied.",
+        "research": "Open the Technologies window (Panels button) and tap Railways: its prerequisite is queued ahead of it. Add more technologies: they will be studied in order.",
+        "windows": "Windows open full screen; the cross at the top right closes them. The Panels button, on the left, opens them again."
+      },
+      "m5": {
+        "lab": "Build a research centre (Build, Buildings, Research): it produces the research points.",
+        "research": "Open the Technologies window (Panels button) and tap Nuclear programme: its prerequisites are queued ahead of it. A second research centre would speed up the research.",
+        "silo": "Once the nuclear programme is researched, build a missile silo (Build, Buildings, Silo).",
+        "hbomb": "Now put the thermonuclear bomb under study. Think about SAM batteries too (once surface-to-air missiles are researched): they shoot down enemy missiles.",
+        "launch": "Tap Build, then Nuclear, pick the bomb and tap an enemy target. A possible target is marked on the map."
+      },
+      "m6": {
+        "offensive": "Before a big push, lay an offensive line (Build, then “Off. line”): tap the country you want, and it is laid along your border. Drag its grip to its capital to draw the arrow. It charges in thirty seconds; tap the arrow to launch the assault.",
+        "arrow": "The arrow's length sets how deep the breakthrough goes: it stops at its head, and the survivors come home. Under the arrow, about ten tiles wide, the assault loses half as many men and moves faster; along the rest of the front, it loses twenty percent fewer. A long press slid along the border lays the line on that stretch only."
+      },
+      "hint": {
+        "threat": "Threatened border: a neighbour is massing troops against us. Draw a defensive line facing it (Build, then “Def. line”) and organise it, or offer it an alliance."
+      }
+    }
   }
 }
