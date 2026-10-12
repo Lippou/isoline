@@ -17,13 +17,17 @@ export class Camera {
   follow: (() => [number, number] | null) | null = null;
   private glide: { x: number; y: number; zoom: number } | null = null;
   reducedMotion = false;
-  /**
-   * How far the view centre stays inside the map, in half-screens (soft limits). Touch web
-   * version: less, so a map edge can be brought out from under the panels round the screen.
-   */
+  /** How far the view centre stays inside the map, in half-screens (soft limits). */
   slack = 0.6;
   /** A finger on the map (touch web version): no spring back under it. */
   held = false;
+  /** Touch web version: no soft limits at all, the view goes wherever the finger takes it. */
+  free = false;
+  /**
+   * The whole map kept in view while the screen settles (a phone turned, its browser's bars,
+   * the page zoom taking late), until the player moves the view.
+   */
+  autoFit = false;
 
   setMap(w: number, h: number): void {
     this.mapW = w;
@@ -32,9 +36,11 @@ export class Camera {
   }
 
   resize(w: number, h: number): void {
+    const changed = Math.max(1, w) !== this.viewW || Math.max(1, h) !== this.viewH;
     this.viewW = Math.max(1, w);
     this.viewH = Math.max(1, h);
     this.minZoom = Math.min(this.viewW / this.mapW, this.viewH / this.mapH) * 0.7;
+    if (changed && this.autoFit) this.fit();
   }
 
   fit(): void {
@@ -61,6 +67,7 @@ export class Camera {
     this.anchor = { sx, sy, wx, wy };
     this.glide = null;
     this.follow = null;
+    this.autoFit = false;
   }
 
   /**
@@ -75,6 +82,7 @@ export class Camera {
     this.anchor = null;
     this.glide = null;
     this.follow = null;
+    this.autoFit = false;
   }
 
   panScreen(dx: number, dy: number): void {
@@ -82,6 +90,7 @@ export class Camera {
     this.cy -= dy / this.zoom;
     this.glide = null;
     this.follow = null;
+    if (dx || dy) this.autoFit = false;
   }
 
   fling(vxScreen: number, vyScreen: number): void {
@@ -95,6 +104,7 @@ export class Camera {
     this.glide = { x, y, zoom: zoom ?? Math.max(this.zoom, 3) };
     this.follow = null;
     this.anchor = null;
+    this.autoFit = false;
     if (this.reducedMotion) {
       this.cx = x;
       this.cy = y;
@@ -145,7 +155,7 @@ export class Camera {
     // Soft limits: spring back when the view centre leaves the map (+ margin).
     const mx = this.viewW / this.zoom / 2;
     const my = this.viewH / this.zoom / 2;
-    if (this.held) return;
+    if (this.held || this.free) return;
     const minX = Math.min(this.mapW / 2, mx * this.slack);
     const maxX = Math.max(this.mapW / 2, this.mapW - mx * this.slack);
     const minY = Math.min(this.mapH / 2, my * this.slack);

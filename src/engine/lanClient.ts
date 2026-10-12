@@ -18,6 +18,20 @@ export class LanClient {
   private retries = 0;
   private hello: Extract<ClientMsg, { t: 'hello' }> | null = null;
   private pingTimer: ReturnType<typeof setInterval> | null = null;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  /** When the server was last heard (performance.now()): it speaks every 2 s at least. */
+  private heard = 0;
+  private readonly onVisible = () => {
+    if (document.visibilityState !== 'visible' || this.closed) return;
+    // Back on the page (a phone's screen unlocked): the connection may have died meanwhile
+    // without a word; it gets a few seconds to speak, and is opened again at once if closed.
+    this.heard = performance.now();
+    if (this.ws) return;
+    this.retries = 0;
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+    this.open();
+  };
   onLobby: (l: LobbyState) => void = () => {};
   onStart: (config: GameConfig, playerId: number, tick: number, snapshot?: Snapshot) => void = () => {};
   onSnapshot: (s: Snapshot, reason: string) => void = () => {};
@@ -43,6 +57,7 @@ export class LanClient {
       ...(flag ? { flag } : {}),
       ...(game ? { game } : {}),
     };
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', this.onVisible);
     this.open();
   }
 
@@ -51,21 +66,43 @@ export class LanClient {
     this.ws = ws;
     ws.onopen = () => {
       this.retries = 0;
+      this.heard = performance.now();
       this.onStatus(true);
       if (this.hello) this.send({ ...this.hello, ...(this.token ? { token: this.token } : {}) });
       if (this.pingTimer) clearInterval(this.pingTimer);
-      this.pingTimer = setInterval(() => this.send({ t: 'ping', ts: performance.now() }), 2000);
+      this.pingTimer = setInterval(() => {
+        // Silent for 8 s (a connection gone without closing, which can take long to
+        // say so): let go, and opened again.
+        if (performance.now() - this.heard > 8000) {
+          ws.close();
+          this.lost(ws);
+          return;
+        }
+        this.send({ t: 'ping', ts: performance.now() });
+      }, 2000);
     };
-    ws.onmessage = (ev) => this.handle(JSON.parse(String(ev.data)) as ServerMsg);
-    ws.onclose = () => {
-      this.onStatus(false);
-      if (this.pingTimer) clearInterval(this.pingTimer);
-      // Automatic reconnection for 60 s.
-      if (!this.closed && this.retries < 30) {
-        this.retries++;
-        setTimeout(() => this.open(), 2000);
-      }
+    ws.onmessage = (ev) => {
+      if (this.ws !== ws) return;
+      this.heard = performance.now();
+      this.handle(JSON.parse(String(ev.data)) as ServerMsg);
     };
+    ws.onclose = () => this.lost(ws);
+  }
+
+  private lost(ws: WebSocket): void {
+    if (this.ws !== ws) return;
+    this.ws = null;
+    this.onStatus(false);
+    if (this.pingTimer) clearInterval(this.pingTimer);
+    this.pingTimer = null;
+    // Automatic reconnection for 60 s (and again whenever the page comes back in sight).
+    if (!this.closed && this.retries < 30) {
+      this.retries++;
+      this.retryTimer = setTimeout(() => {
+        this.retryTimer = null;
+        if (!this.closed) this.open();
+      }, 2000);
+    }
   }
 
   private handle(m: ServerMsg): void {
@@ -132,6 +169,8 @@ export class LanClient {
   close(): void {
     this.closed = true;
     if (this.pingTimer) clearInterval(this.pingTimer);
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', this.onVisible);
     this.ws?.close();
   }
 }

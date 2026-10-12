@@ -31,6 +31,7 @@ import { classifyWave, edgesToward } from './invasion';
 import { Chronicle, keepEdition, keptEdition, type Edition } from './chronicle';
 import type { ReplayFile } from '../../engine/replay';
 import type { Snapshot } from '../../core/net/snapshot';
+import type { Turn } from '../../core/net/commands';
 import { takeOverSnapshot } from '../../core/net/takeover';
 import { photo } from '../stores/photo.svelte';
 import { tick as uiTick } from 'svelte';
@@ -117,8 +118,9 @@ export class GameController {
     this.renderer.overlay.arrowText = (c) =>
       c >= 1 ? t('front.arrowReady') : t('front.arrowCharge', { pct: Math.round(c * 100) });
     await this.renderer.init(host);
-    // Touch web version: a map edge can be brought out from under the panels (camera.ts).
-    if (tactile) this.renderer.camera.slack = 0.12;
+    // Touch web version: the view goes wherever the finger takes it, off the map too (no
+    // spring back to the map under the finger: camera.ts).
+    if (tactile) this.renderer.camera.free = true;
     this.input = new InputController(this.renderer.app.canvas, this.renderer, this.session, {
       onAction: (tile, ev) => this.action(tile, ev),
       // (Photo mode: the map only moves, nothing opens.)
@@ -139,6 +141,13 @@ export class GameController {
       const lan = this.lan;
       this.session.onHash((tick, hash) => lan.send({ t: 'hash', tick, hash }));
       lan.onSnapshot = (snap) => void this.resyncFrom(snap);
+      // Back after a cut (a phone put away, its screen locked, the network gone a while): the
+      // server sends the game as it is now, and the world is set again from it (the turns
+      // played meanwhile are not sent again).
+      lan.onStart = (_config, _playerId, _tick, snapshot) => {
+        if (snapshot) void this.resyncFrom(snapshot);
+      };
+      lan.onLobby = (l) => (hud.paused = l.paused);
       lan.onDesync = () => (hud.desync = true);
       lan.onPause = (on) => (hud.paused = on);
       lan.onChat = (m) =>
@@ -150,7 +159,12 @@ export class GameController {
         if (!connected) toast(t('lan.connectionLost'), 'warn');
       };
     }
-    if (this.req.viewer > 0 && ready.phase === 'spawn') this.renderer.camera.fit();
+    if (this.req.viewer > 0 && ready.phase === 'spawn') {
+      this.renderer.camera.fit();
+      // Touch web version: the whole map stays in view while the screen settles (a phone
+      // turned, the page zoom taking late), until the player moves it or places a start.
+      if (tactile) this.renderer.camera.autoFit = true;
+    }
     // A loaded save or a game taken over from a replay: the camera finds our country.
     if (this.req.snapshot && this.req.viewer > 0 && ready.phase !== 'spawn') {
       const off = this.session.onTick(() => {
@@ -826,8 +840,28 @@ export class GameController {
   }
 
   // ---------------------------------------------------------------- ticks
+  /** Touch web version: the start point the view last came down onto (-1: none yet). */
+  private startPoint = -1;
+
   private onTick(tick: number, events: GameEvent[]): void {
     const st = this.session.state;
+    // Touch web version: the start point placed (or placed again before the game begins), the
+    // view comes down onto it.
+    const cap = st.local?.capital ?? -1;
+    if (
+      tactile &&
+      cap >= 0 &&
+      cap !== this.startPoint &&
+      (st.phase === 'spawn' || this.startPoint < 0) &&
+      this.session.viewer > 0 &&
+      !this.req.snapshot
+    ) {
+      const first = this.startPoint < 0;
+      this.startPoint = cap;
+      const cam = this.renderer.camera;
+      if (first || cam.zoom < 2)
+        cam.goTo((cap % st.width) + 0.5, Math.floor(cap / st.width) + 0.5, Math.max(cam.zoom, 2.5));
+    }
     this.renderer.onEvents(events);
     this.chronicle?.tick(st, events);
     for (const e of events) this.event(e);
@@ -1672,13 +1706,36 @@ export class GameController {
   }
 
   /** LAN resync / reconnection: restart the worker from a server snapshot. */
-  async resyncFrom(snapshot: import('../../core/net/snapshot').Snapshot): Promise<void> {
+  /** The latest world sent by the server, waiting to be set (resyncFrom). */
+  private resync: Snapshot | null = null;
+  /** The turns that come meanwhile: they follow the snapshot, and wait for it. */
+  private heldTurns: Turn[] | null = null;
+
+  async resyncFrom(snapshot: Snapshot): Promise<void> {
+    this.resync = snapshot;
+    if (this.heldTurns) return; // a resync is under way: it takes this one up next
     hud.desync = true;
-    const { src } = await loadMapSource(this.session.config, mapsBase(), this.session.customMap);
-    const ready = await this.session.sim.init(this.session.config, src, this.session.viewer, snapshot);
-    this.session.state.init(ready);
-    this.renderer.rebuildMap();
-    hud.desync = false;
+    const source = this.session.source;
+    const deliver = source.onTurn;
+    const held: Turn[] = (this.heldTurns = []);
+    source.onTurn = (turn) => held.push(turn);
+    try {
+      const { src } = await loadMapSource(this.session.config, mapsBase(), this.session.customMap);
+      while (this.resync && !this.disposed) {
+        const snap = this.resync;
+        this.resync = null;
+        const ready = await this.session.sim.init(this.session.config, src, this.session.viewer, snap);
+        if (this.disposed) return;
+        this.session.state.init(ready);
+        this.renderer.rebuildMap();
+      }
+    } finally {
+      source.onTurn = deliver;
+      this.heldTurns = null;
+      // (The worker skips a turn that is not its next one: those before the snapshot.)
+      for (const turn of held) deliver(turn);
+      hud.desync = false;
+    }
   }
 
   async saveGame(slot: number): Promise<boolean> {

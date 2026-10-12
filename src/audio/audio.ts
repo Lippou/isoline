@@ -1,6 +1,7 @@
 // Audio engine: real recorded sound effects (CC0), an adaptive orchestral score
 // (crossfaded between calm, tension and war moods) and the campaign narration.
 // Files live in public/audio (see scripts/audio/*) and are loaded on demand.
+import { tactile } from '../ui/tactile';
 
 export type Sfx =
   | 'coin'
@@ -176,6 +177,8 @@ class AudioEngine {
   private ducked = false;
   private voiceEl: HTMLAudioElement | null = null;
   muteUnfocused = true;
+  /** Touch web version: the page is out of sight (another app, the screen locked). */
+  private away = false;
   /** Language of the campaign narration and whether it plays. */
   voiceLang = 'fr';
   voiceOn = true;
@@ -206,6 +209,14 @@ class AudioEngine {
     this.applyVolumes();
     window.addEventListener('blur', () => this.setFocus(false));
     window.addEventListener('focus', () => this.setFocus(true));
+    // Touch web version: a phone goes on playing a page's sound once it is left (another app,
+    // the screen locked). The game falls silent then and takes up its music again on return.
+    if (tactile) {
+      const look = () => this.setAway(document.visibilityState === 'hidden');
+      document.addEventListener('visibilitychange', look);
+      window.addEventListener('pagehide', () => this.setAway(true));
+      window.addEventListener('pageshow', look);
+    }
     // Preload the short sounds so the first explosion is not late.
     for (const f of new Set(Object.values(FILE))) if (f) void this.buffer(f);
     setInterval(() => this.updateMood(), 1000);
@@ -241,6 +252,21 @@ class AudioEngine {
     this.applyVolumes();
   }
 
+  private setAway(on: boolean): void {
+    if (!this.ctx || on === this.away) return;
+    this.away = on;
+    const music = this.decks[this.active];
+    if (on) {
+      for (const d of this.decks) d.el.pause();
+      this.voiceEl?.pause();
+      void this.ctx.suspend();
+      return;
+    }
+    void this.ctx.resume();
+    if (music?.el.src && this.mood) void music.el.play().catch(() => undefined);
+    if (this.voiceEl && !this.voiceEl.ended) void this.voiceEl.play().catch(() => this.duck(false));
+  }
+
   private setFocus(on: boolean): void {
     this.focusMul = on || !this.muteUnfocused ? 1 : 0.15;
     this.applyVolumes();
@@ -257,7 +283,7 @@ class AudioEngine {
 
   // ------------------------------------------------------------------ effects
   private play(name: Sfx | UiSound, bus: GainNode, vol: number, vary: boolean): void {
-    if (!this.ctx) return;
+    if (!this.ctx || this.away) return;
     const file = FILE[name];
     if (!file) return;
     const now = performance.now();
@@ -288,7 +314,7 @@ class AudioEngine {
   /** The radar's warning: two short, soft sine pings a fifth apart, like a scope's return. */
   private blip(vol: number): void {
     const ctx = this.ctx;
-    if (!ctx) return;
+    if (!ctx || this.away) return;
     const now = performance.now();
     if (now - (this.lastPlay.get('radar') ?? -1e9) < (THROTTLE.radar ?? 0)) return;
     this.lastPlay.set('radar', now);
@@ -322,7 +348,7 @@ class AudioEngine {
    */
   chime(kind: 'tick' | 'bell' | 'toll' | 'ping', vol = 1): void {
     const ctx = this.ctx;
-    if (!ctx) return;
+    if (!ctx || this.away) return;
     const now = performance.now();
     const gap = kind === 'tick' ? 120 : 600;
     if (now - (this.lastPlay.get(`chime-${kind}`) ?? -1e9) < gap) return;
@@ -486,7 +512,8 @@ class AudioEngine {
     into.el.loop = false; // pieces chain by crossfading (native looping leaves a seam)
     into.handedOff = false;
     into.el.currentTime = 0;
-    void into.el.play().catch(() => undefined);
+    // (Out of sight: the piece is ready, and starts when the page is back.)
+    if (!this.away) void into.el.play().catch(() => undefined);
     into.gain.gain.cancelScheduledValues(t);
     into.gain.gain.setValueAtTime(0, t);
     into.gain.gain.linearRampToValueAtTime(1, t + seconds);
@@ -531,7 +558,7 @@ class AudioEngine {
   /** Campaign advisor narration (pre-recorded files; silently skipped if missing). */
   voice(key: string): void {
     this.stopVoice();
-    if (!this.voiceOn || !key) return;
+    if (!this.voiceOn || !key || this.away) return;
     const el = new Audio(`./voice/${this.voiceLang}/${key}.mp3`);
     el.volume = Math.max(0, Math.min(1, this.volumes.master * this.voiceVolume * this.focusMul));
     this.voiceEl = el;

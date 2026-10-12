@@ -463,7 +463,12 @@ export class LanServer {
     if (this.stopped) return;
     const interval = this.tickMs / Math.max(0.25, this.config.gameSpeed || 1);
     this.tickTimer = setTimeout(() => {
-      this.tick();
+      // A turn that throws must not stop the clock for everyone.
+      try {
+        this.tick();
+      } catch (e) {
+        this.log(`turn failed: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`);
+      }
       this.scheduleTick();
     }, interval);
   }

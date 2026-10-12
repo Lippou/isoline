@@ -103,6 +103,13 @@ export function startViewport(): void {
     };
     window.visualViewport?.addEventListener('resize', later);
     screen.orientation?.addEventListener('change', later);
+    // In a game, the page never stays scrolled aside (iOS may leave it so after a turn of the
+    // phone or a new zoom): the map and its panels are the whole screen.
+    const home = () => {
+      if (inGame && (window.scrollX || window.scrollY)) window.scrollTo(0, 0);
+    };
+    window.visualViewport?.addEventListener('scroll', home);
+    window.addEventListener('scroll', home);
   }
   applyUiScale();
 }
