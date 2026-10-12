@@ -16,6 +16,14 @@ if (phone)
   for (const d of Object.values(DICTS))
     for (const [k, v] of Object.entries(d)) if (k.startsWith('phone.')) d[k.slice(6)] = v;
 
+/**
+ * The browser version plays together online, through the Binotech server, not on a local
+ * network: the texts about it are under `web.`. Never in the desktop app.
+ */
+if (typeof window !== 'undefined' && !window.isoline)
+  for (const d of Object.values(DICTS))
+    for (const [k, v] of Object.entries(d)) if (k.startsWith('web.')) d[k.slice(4)] = v;
+
 function flatten(obj: unknown, prefix = '', out: Dict = {}): Dict {
   for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
     const key = prefix ? `${prefix}.${k}` : k;

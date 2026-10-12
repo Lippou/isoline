@@ -9,6 +9,7 @@ export default tseslint.config(
       'dist/**',
       'dist-electron/**',
       'dist-renderer/**',
+      'dist-online/**',
       'coverage/**',
       'node_modules/**',
       '.cache/**',

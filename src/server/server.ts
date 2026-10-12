@@ -38,6 +38,21 @@ export interface ServerOptions {
   log?: (msg: string) => void;
   /** This build's version: players running another one are turned away (unset in tests). */
   gameVersion?: string;
+  /**
+   * Online rooms (web version, online.ts): the account that opened the room becomes its host
+   * when it joins (instead of whoever joins first), and a configuration the host sends is
+   * only taken when it passes this check.
+   */
+  hostUser?: string;
+  checkConfig?: (config: GameConfig) => boolean;
+  /** The room's invitation code (online); otherwise a new one. */
+  code?: string;
+}
+
+/** The player's account on the online server (online.ts): its id and the name it plays under. */
+export interface Account {
+  user: string;
+  name: string;
 }
 
 interface Client {
@@ -54,6 +69,8 @@ interface Client {
   flag?: PlayerFlag;
   disconnectedAt: number;
   cmdWindow: number[];
+  /** Online: the account behind this seat (a reconnection finds it by the account too). */
+  user?: string;
 }
 
 const RECONNECT_GRACE_MS = 60_000;
@@ -79,7 +96,7 @@ export class LanServer {
   stopped = false;
 
   constructor(private readonly opts: ServerOptions) {
-    this.code = makeCode(Math.random);
+    this.code = opts.code ?? makeCode(Math.random);
     this.config = opts.config;
     this.tickMs = opts.tickMs ?? 100;
   }
@@ -95,7 +112,7 @@ export class LanServer {
     });
     this.port = await this.listen(this.http);
     this.wss = new WebSocketServer({ server: this.http, maxPayload: 512 * 1024 });
-    this.wss.on('connection', (ws) => this.onConnection(ws));
+    this.wss.on('connection', (ws) => this.accept(ws));
     if (this.opts.discovery !== false) this.startBeacons();
     this.log(`listening on ${this.port} code ${this.code}`);
     return { port: this.port, code: this.code };
@@ -203,7 +220,8 @@ export class LanServer {
     this.broadcast({ t: 'lobby', lobby: this.lobby() });
   }
 
-  private onConnection(ws: WebSocket): void {
+  /** A player's socket (the online server hands them over, with the account behind them). */
+  accept(ws: WebSocket, account?: Account): void {
     let client: Client | null = null;
     ws.on('message', (raw) => {
       let m: ClientMsg;
@@ -214,7 +232,7 @@ export class LanServer {
       }
       if (!client) {
         if (m.t !== 'hello') return;
-        client = this.hello(ws, m);
+        client = this.hello(ws, m, account);
         return;
       }
       this.handle(client, m);
@@ -224,7 +242,7 @@ export class LanServer {
     });
   }
 
-  private hello(ws: WebSocket, m: Extract<ClientMsg, { t: 'hello' }>): Client | null {
+  private hello(ws: WebSocket, m: Extract<ClientMsg, { t: 'hello' }>, account?: Account): Client | null {
     const reject = (reason: RejectReason) => {
       const host = this.opts.gameVersion;
       ws.send(JSON.stringify({ t: 'reject', reason, ...(host ? { host } : {}) } satisfies ServerMsg));
@@ -234,14 +252,23 @@ export class LanServer {
     if (m.version !== NET_VERSION) return reject('version');
     if (this.opts.gameVersion && m.game !== this.opts.gameVersion) return reject('game');
     if (m.code !== this.code) return reject('code');
-    // Reconnection.
-    if (m.token) {
+    // Reconnection (online: the same account, from another tab or after a reload, too).
+    if (m.token || account) {
       const old = this.clients.find(
         (c) =>
-          c.token === m.token && (!c.disconnectedAt || Date.now() - c.disconnectedAt <= RECONNECT_GRACE_MS),
+          (c.token === m.token &&
+            (!c.disconnectedAt || Date.now() - c.disconnectedAt <= RECONNECT_GRACE_MS)) ||
+          // Online, an account finds its nation again however long it was away.
+          (!!account && c.user === account.user),
       );
       if (old) {
+        const was = old.ws;
         old.ws = ws;
+        // The seat moves to the new socket: the old one (another tab) is let go.
+        if (was && was !== ws) {
+          was.removeAllListeners('close');
+          was.close();
+        }
         old.disconnectedAt = 0;
         this.send(old, {
           t: 'welcome',
@@ -273,16 +300,19 @@ export class LanServer {
       ws,
       slot: this.nextSlot++,
       token: crypto.randomUUID(),
-      name: (m.name || 'Player').slice(0, 24),
+      name: (account?.name || m.name || 'Player').slice(0, 24),
       spectator,
       ready: false,
       team: 1 + (this.clients.length % Math.max(2, this.config.teamCount)),
-      host: this.clients.length === 0,
+      host: this.opts.hostUser
+        ? account?.user === this.opts.hostUser && !this.clients.some((x) => x.host)
+        : this.clients.length === 0,
       playerId: -1,
       ping: 0,
       flag: sanitizeFlag(m.flag),
       disconnectedAt: 0,
       cmdWindow: [],
+      ...(account ? { user: account.user } : {}),
     };
     this.clients.push(c);
     this.send(c, { t: 'welcome', slot: c.slot, token: c.token, host: c.host, lobby: this.lobby() });
@@ -312,7 +342,7 @@ export class LanServer {
         this.pushLobby();
         break;
       case 'config':
-        if (c.host && !this.started) {
+        if (c.host && !this.started && (!this.opts.checkConfig || this.opts.checkConfig(m.config))) {
           this.config = { ...m.config, seed: this.config.seed };
           this.pushLobby();
         }
@@ -365,12 +395,38 @@ export class LanServer {
     }
   }
 
+  /** Online: whether this account has a seat here (its game to take up again). */
+  hasAccount(user: string): boolean {
+    return this.clients.some((c) => c.user === user && !c.spectator);
+  }
+
+  /** Online: a room whose opener has not come (or has gone) gets the first player as host. */
+  ensureHost(): void {
+    if (this.started || this.clients.some((c) => c.host) || !this.clients.length) return;
+    this.clients[0]!.host = true;
+    this.send(this.clients[0]!, {
+      t: 'welcome',
+      slot: this.clients[0]!.slot,
+      token: this.clients[0]!.token,
+      host: true,
+      lobby: this.lobby(),
+    });
+    this.pushLobby();
+  }
+
   private onDisconnect(c: Client): void {
     c.ws = null;
     c.disconnectedAt = Date.now();
     if (!this.started) {
       this.clients = this.clients.filter((x) => x !== c);
-      if (c.host && this.clients.length) this.clients[0]!.host = true;
+      if (c.host && this.clients.length) {
+        this.clients[0]!.host = true;
+        // Online, the room outlives its host: the new one is told (its lobby becomes the host's).
+        if (this.opts.hostUser) {
+          const h = this.clients[0]!;
+          this.send(h, { t: 'welcome', slot: h.slot, token: h.token, host: true, lobby: this.lobby() });
+        }
+      }
     } else if (c.playerId > 0) {
       this.pending.push({ p: c.playerId, c: { t: 'setInactive', inactive: true } });
     }

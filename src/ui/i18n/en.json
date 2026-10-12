@@ -3239,5 +3239,61 @@
         "threat": "Threatened border: a neighbour is massing troops against us. Draw a defensive line facing it (Build, then “Def. line”) and organise it, or offer it an alliance."
       }
     }
+  },
+  "online": {
+    "title": "Online multiplayer",
+    "subtitle": "Play with family and friends, each from home, with your Binotech account.",
+    "you": "Your name in games",
+    "youHelp": "The other players see you under this name. It is kept for next time.",
+    "save": "Save",
+    "saved": "Name saved.",
+    "badPseudo": "Choose a name of 2 to 24 characters.",
+    "open": "Open a room",
+    "openDesc": "You set the map and the options, then start the game when everyone is there.",
+    "openButton": "Open a room",
+    "opening": "Opening the room…",
+    "rooms": "Open rooms",
+    "roomsDesc": "Rooms your friends open appear here by themselves.",
+    "none": "No room open for now.",
+    "roomOf": "{name}’s room",
+    "players": "{n} players",
+    "playersOne": "1 player",
+    "waiting": "waiting",
+    "playing": "game in progress",
+    "join": "Join",
+    "resume": "Resume my game",
+    "watch": "Watch",
+    "closed": "In progress",
+    "byCode": "Join with a code",
+    "byCodeHelp": "The code is shown at the top of the room of whoever opened it.",
+    "generated": "generated map",
+    "error": {
+      "updating": "The server is updating: try again in a minute.",
+      "full": "Too many rooms open right now: try again later.",
+      "mine": "You already have two rooms open.",
+      "config": "This map cannot be played online: pick another one in the room.",
+      "account": "Your Binotech account was not recognised: reload the page.",
+      "network": "The server does not answer: check your connection."
+    }
+  },
+  "web": {
+    "title": {
+      "lan": "Online multiplayer",
+      "playDesc": "Solo game, campaign or online multiplayer.",
+      "lanDesc": "Play with family and friends, each from home.",
+      "peekLan": "With your Binotech account: open a room or join one a friend opened."
+    },
+    "lobby": {
+      "titleLan": "Online room",
+      "subtitleLan": "Your friends find this room under “Online multiplayer”, or join it with its code."
+    },
+    "lan": {
+      "connectionLost": "Connection to the server lost, reconnecting…",
+      "reject": {
+        "version": "The server was updated: reload the page to play.",
+        "game": "The server was updated: reload the page to play (if it has just changed, try again in a minute).",
+        "code": "No room with this code (it may have been closed)."
+      }
+    }
   }
 }

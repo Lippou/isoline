@@ -3239,5 +3239,61 @@
         "threat": "Frontière menacée : un voisin masse ses troupes contre nous. Tracez une ligne défensive face à lui (Construire, puis « Ligne déf. ») et organisez-la, ou proposez-lui une alliance."
       }
     }
+  },
+  "online": {
+    "title": "Multijoueur en ligne",
+    "subtitle": "Jouez avec vos proches, chacun chez soi, avec votre compte Binotech.",
+    "you": "Votre nom dans les parties",
+    "youHelp": "Les autres joueurs vous voient sous ce nom. Il est retenu pour la prochaine fois.",
+    "save": "Enregistrer",
+    "saved": "Nom enregistré.",
+    "badPseudo": "Choisissez un nom de 2 à 24 caractères.",
+    "open": "Ouvrir un salon",
+    "openDesc": "Vous réglez la carte et les options, puis vous lancez la partie quand tout le monde est là.",
+    "openButton": "Ouvrir un salon",
+    "opening": "Ouverture du salon…",
+    "rooms": "Salons ouverts",
+    "roomsDesc": "Les salons de vos proches apparaissent ici d’eux-mêmes.",
+    "none": "Aucun salon ouvert pour l’instant.",
+    "roomOf": "Salon de {name}",
+    "players": "{n} joueurs",
+    "playersOne": "1 joueur",
+    "waiting": "en attente",
+    "playing": "partie en cours",
+    "join": "Rejoindre",
+    "resume": "Reprendre ma partie",
+    "watch": "Regarder",
+    "closed": "En cours",
+    "byCode": "Rejoindre avec un code",
+    "byCodeHelp": "Le code est affiché en haut du salon de celui qui l’a ouvert.",
+    "generated": "carte générée",
+    "error": {
+      "updating": "Le serveur se met à jour : réessayez dans une minute.",
+      "full": "Trop de salons ouverts en ce moment : réessayez plus tard.",
+      "mine": "Vous avez déjà deux salons ouverts.",
+      "config": "Cette carte ne peut pas être jouée en ligne : choisissez-en une autre dans le salon.",
+      "account": "Votre compte Binotech n’a pas été reconnu : rechargez la page.",
+      "network": "Le serveur ne répond pas : vérifiez votre connexion."
+    }
+  },
+  "web": {
+    "title": {
+      "lan": "Multijoueur en ligne",
+      "playDesc": "Partie solo, campagne ou multijoueur en ligne.",
+      "lanDesc": "Jouer avec la famille et les amis, chacun chez soi.",
+      "peekLan": "Avec votre compte Binotech : ouvrez un salon ou rejoignez celui d’un proche."
+    },
+    "lobby": {
+      "titleLan": "Salon en ligne",
+      "subtitleLan": "Vos proches trouvent ce salon dans « Multijoueur en ligne », ou le rejoignent avec son code."
+    },
+    "lan": {
+      "connectionLost": "Connexion au serveur perdue, reconnexion…",
+      "reject": {
+        "version": "Le serveur a été mis à jour : rechargez la page pour jouer.",
+        "game": "Le serveur a été mis à jour : rechargez la page pour jouer (s’il vient de changer, réessayez dans une minute).",
+        "code": "Aucun salon avec ce code (il a peut-être été fermé)."
+      }
+    }
   }
 }

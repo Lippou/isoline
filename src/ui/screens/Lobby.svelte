@@ -3,7 +3,7 @@
   import { app, go } from '../stores/app.svelte';
   import { t, i18n } from '../i18n/i18n.svelte';
   import ModePicker from '../components/ModePicker.svelte';
-  import { mapsBase, bridge, readText } from '../bridge';
+  import { mapsBase, bridge, readText, isDesktop } from '../bridge';
   import type { GameConfig, GameMode, Difficulty } from '../../core/game/config';
   import { defaultGenParams } from '../../core/map/generator';
   import { parseIsoMap } from '../../core/map/format';
@@ -43,7 +43,10 @@
   const lan = app.lobby.lan;
   const client = lan ? currentLan() : null;
   let lobby: LobbyState | null = $state(client?.lobby ?? null);
-  const isHost = !client || client.host;
+  // (A room on the online server outlives its host: the next player becomes it.)
+  let isHost = $state(!client || client.host);
+  /** A room on the Binotech server (web version): its maps are the shipped and generated ones. */
+  const online = lan && !isDesktop;
   // Address other players type in "manual join" (the host's LAN IPs + game port).
   const port = client ? (client.url.match(/:(\d+)\/?$/)?.[1] ?? '') : '';
   let hostAddresses = $state<string[]>([]);
@@ -128,7 +131,7 @@
         /* skip broken files */
       }
     }
-    customs = out;
+    customs = online ? [] : out;
     const current = [...maps, ...customs].find((m) => m.id === cfg.mapId);
     category = cfg.procedural ? 'procedural' : (current?.category ?? 'continents');
     if (isHost && current && !cfg.procedural && app.lobby.nationsAuto) {
@@ -138,10 +141,12 @@
     if (client) {
       client.onLobby = (l) => {
         lobby = l;
+        isHost = client.host;
         if (!isHost) cfg = l.config;
       };
       client.onChat = (m) => (chat = [...chat.slice(-60), { name: m.name, text: m.text }]);
       client.onStart = (config, playerId, _tick, snapshot) => {
+        toGame = true;
         app.launch = { kind: 'lan', config, viewer: playerId, ...(snapshot ? { snapshot } : {}) };
         go('game');
       };
@@ -149,8 +154,11 @@
     }
   });
 
+  // Off to the game: the connection goes with it. (A teardown reads the state as it was
+  // before the change that tears it down, so `app.screen` still says 'lobby' here.)
+  let toGame = false;
   onDestroy(() => {
-    if (client && app.screen !== 'game') {
+    if (client && !toGame && app.screen !== 'game') {
       client.close();
       setCurrentLan(null);
       if (client.host) void bridge.lan.stop();
@@ -356,7 +364,7 @@
         </div>
       </header>
       <nav class="tabs" aria-label={t('lobby.stepMap')}>
-        {#each CATS as c (c)}
+        {#each online ? CATS.filter((c) => c !== 'custom') : CATS as c (c)}
           <button
             class="tab"
             class:on={category === c}

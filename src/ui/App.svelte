@@ -3,7 +3,7 @@
   import { app } from './stores/app.svelte';
   import { keyLabel, loadSettings, settings } from './stores/settings.svelte';
   import { loadProfile } from './stores/profile.svelte';
-  import { bridge } from './bridge';
+  import { bridge, isDesktop } from './bridge';
   import { hud, toast } from './stores/game.svelte';
   import { t } from './i18n/i18n.svelte';
   import { audio } from '../audio/audio';
@@ -11,6 +11,7 @@
   import Title from './screens/Title.svelte';
   import Lobby from './screens/Lobby.svelte';
   import LanBrowser from './screens/LanBrowser.svelte';
+  import OnlineBrowser from './screens/OnlineBrowser.svelte';
   import GameScreen from './screens/GameScreen.svelte';
   import Editor from './screens/Editor.svelte';
   import Replays from './screens/Replays.svelte';
@@ -128,7 +129,7 @@
       {#if app.screen === 'splash'}<Splash />
       {:else if app.screen === 'title' || app.screen === 'play'}<Title />
       {:else if app.screen === 'lobby'}<Lobby />
-      {:else if app.screen === 'lan'}<LanBrowser />
+      {:else if app.screen === 'lan'}{#if isDesktop}<LanBrowser />{:else}<OnlineBrowser />{/if}
       {:else if app.screen === 'game'}<GameScreen />
       {:else if app.screen === 'editor'}<Editor />
       {:else if app.screen === 'replays'}<Replays />
