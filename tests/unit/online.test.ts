@@ -19,7 +19,8 @@ let mod: typeof import('../../src/server/online');
 beforeAll(async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'iso-online-'));
   fs.mkdirSync(path.join(dir, 'site', 'assets'), { recursive: true });
-  fs.symlinkSync(path.resolve('assets/maps'), path.join(dir, 'site', 'assets', 'maps'));
+  // 'junction': Windows refuses plain directory symlinks without admin rights (ignored elsewhere).
+  fs.symlinkSync(path.resolve('assets/maps'), path.join(dir, 'site', 'assets', 'maps'), 'junction');
   fs.writeFileSync(path.join(dir, 'site', 'index.html'), '<!doctype html><title>Isoline</title>');
   Object.assign(process.env, {
     ISO_SITE: path.join(dir, 'site'),
