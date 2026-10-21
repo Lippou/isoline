@@ -3144,6 +3144,22 @@
     "unavailable": "Pas possible pour l'instant.",
     "speed": "Vitesse du temps"
   },
+  "tactile": {
+    "line": {
+      "tip": {
+        "borderStart": "Touchez un pays voisin : la ligne se pose sur toute votre frontière avec lui · glissez le doigt le long de la frontière : un tronçon",
+        "border": "{name} : toute la frontière, {n} cases · {troops} troupes ({pct} %) · glissez le doigt le long de la frontière : un tronçon",
+        "borderSector": "Tronçon face à {name} : {n} cases · levez le doigt pour poser la ligne"
+      },
+      "offensive": {
+        "desc": "Touchez un pays voisin : elle se pose sur votre frontière avec lui (glissez le doigt le long de la frontière : ce tronçon ; deux doigts déplacent la carte). Tirez sa poignée jusqu'à l'objectif pour dessiner la flèche ; elle se charge en 30 s. Touchez la flèche pour lancer l'assaut : sous la flèche, pertes −50 % et vitesse +50 % ; sur le reste du front, pertes −20 %."
+      },
+      "howTo": "Défensive : glisser d’un point à un autre, ou toucher point par point (deux touchers rapides pour finir), puis toucher du côté de l’ennemi. Offensive : toucher un pays voisin, ou glisser le doigt le long de la frontière. Touchez une de vos lignes pour la gérer."
+    },
+    "front": {
+      "rulesAssault": "Offensive : touchez un pays voisin pour la poser sur votre frontière (glissez le doigt le long de la frontière : un tronçon). Tirez sa poignée jusqu'où la percée doit s'arrêter : c'est la flèche, que vous seul voyez. Elle se charge en 30 s ; touchez-la pour lancer l'assaut, même avant la fin, avec les bonus de la charge. Sous la flèche, pertes −50 % et vitesse +50 % ; sur le reste du front, pertes −20 %. Arrivé à la pointe, l'assaut s'arrête et ses troupes rentrent."
+    }
+  },
   "phone": {
     "hud": {
       "teammateClick": "Votre coéquipier : appui long sur son territoire pour lui donner de l'or ou des troupes"
@@ -3172,7 +3188,6 @@
       "aiming": "Touchez la carte : l’assaut part vers ce point. Appui long : retirer la flèche.",
       "aimTip": "Toucher : l’assaut part vers ce point · appui long : retirer la flèche",
       "rulesDraw": "Défensive : en place aussitôt ; « Organiser » (10 s) double son ralentissement. De face, l’assaillant perd 3 hommes pour 1 et ne perce qu’au-delà de 3 contre 1 ; prise à revers, elle éclate. Touchez une ligne pour la gérer, appui long pour la démonter.",
-      "rulesAssault": "Offensive : touchez un pays voisin pour la poser sur votre frontière (appui long puis glisser le long de la frontière : un tronçon). Tirez sa poignée jusqu'où la percée doit s'arrêter : c'est la flèche, que vous seul voyez. Elle se charge en 30 s ; touchez-la pour lancer l'assaut, même avant la fin, avec les bonus de la charge. Sous la flèche, pertes −50 % et vitesse +50 % ; sur le reste du front, pertes −20 %. Arrivé à la pointe, l'assaut s'arrête et ses troupes rentrent.",
       "dragTip": "Levez le doigt où la percée doit s'arrêter (capitale, ville…) · deuxième doigt : annuler",
       "arrowTip": "Touchez la flèche : lancer l'assaut (bonus selon la charge)"
     },
@@ -3183,17 +3198,10 @@
       "defensive": {
         "desc": "Tracez-la sur vos terres (toucher le premier point la referme), puis touchez du côté de l'ennemi : elle est en place aussitôt. Organisez-la ensuite (10 s de travail, appui long sur la ligne) : elle ralentit alors l'ennemi deux fois plus. Sa longueur dépend des troupes posées. De face, l'assaillant perd 3 hommes pour 1 à forces égales, et ne perce qu'à plus de 3 contre 1. Prise à revers sur un quart de sa longueur, elle éclate et ses troupes sont perdues."
       },
-      "offensive": {
-        "desc": "Touchez un pays voisin : elle se pose sur votre frontière avec lui (appui long puis glisser le long de la frontière : ce tronçon). Tirez sa poignée jusqu'à l'objectif pour dessiner la flèche ; elle se charge en 30 s. Touchez la flèche pour lancer l'assaut : sous la flèche, pertes −50 % et vitesse +50 % ; sur le reste du front, pertes −20 %."
-      },
-      "howTo": "Défensive : glisser d’un point à un autre, ou toucher point par point (deux touchers rapides pour finir), puis toucher du côté de l’ennemi. Offensive : toucher un pays voisin, ou appui long puis glisser le long de la frontière. Touchez une de vos lignes pour la gérer.",
       "tip": {
         "start": "Touchez ou glissez pour tracer · {troops} troupes ({pct} %)",
         "side": "Touchez du côté de l’ennemi pour poser la ligne · {troops} troupes",
         "next": "Toucher : point suivant · deux touchers : terminer · appui long : retirer le dernier point",
-        "borderStart": "Touchez un pays voisin : la ligne se pose sur toute votre frontière avec lui · appui long puis glisser : un tronçon",
-        "border": "{name} : toute la frontière, {n} cases · {troops} troupes ({pct} %) · appui long : un tronçon",
-        "borderSector": "Tronçon face à {name} : {n} cases · levez le doigt pour poser la ligne",
         "close": "Toucher : refermer la position sur elle-même (tous les angles défendus)",
         "nextClose": "Toucher : point suivant · toucher le premier point : refermer · deux touchers : terminer · appui long : retirer le dernier point"
       }

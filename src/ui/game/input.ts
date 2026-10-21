@@ -188,6 +188,18 @@ export class InputController {
     // The long press opened the wheel (phone): the finger now slides on it, not on the map.
     if (this.pressFired && !this.pressSweep && hud.radial) return;
     if (this.press && Math.hypot(x - this.press.x, y - this.press.y) > 10) this.cancelPress();
+    // Laying an offensive line (1.26.3): the finger drawn along the border sweeps the stretch
+    // at once, as the mouse's right button held does (no long press first); two fingers pan.
+    const bd = this.border;
+    const d = this.down;
+    if (bd && d && d.button === 0 && !d.moved && !this.pressSweep && Math.hypot(x - d.x, y - d.y) > 6) {
+      this.cancelPress();
+      this.pressSweep = true;
+      this.down = { x: d.x, y: d.y, button: 2, shift: false, moved: true, t: d.t };
+      bd.tiles.clear();
+      bd.brush = null;
+      this.sweep(bd, d.x, d.y);
+    }
     this.pointerMove(e);
   }
 
@@ -241,7 +253,8 @@ export class InputController {
     this.cancelPress();
     const timer = setTimeout(() => {
       this.press = null;
-      if (!this.down || this.down.moved || this.touches.size !== 1) return;
+      // A finger resting on a line's grip before drawing its arrow: no right click.
+      if (!this.down || this.down.moved || this.touches.size !== 1 || this.gripDrag >= 0) return;
       this.pressFired = true;
       navigator.vibrate?.(12);
       const bd = this.border;
@@ -484,9 +497,20 @@ export class InputController {
     return [wx, wy, Math.max(1.5, 16 / this.r.camera.zoom)];
   }
 
-  /** Sweeps the border under the brush: tiles of another country touching our land. */
+  /**
+   * Sweeps the border under the brush: tiles of another country touching our land — all along
+   * the stroke since the last point (a fast finger or mouse skips more than a brush between events).
+   */
   private sweep(bd: BorderDraft, sx: number, sy: number): void {
+    const prev = bd.brush;
     const [wx, wy, r] = (bd.brush = this.brushAt(sx, sy));
+    const steps = prev ? Math.min(64, Math.ceil(Math.hypot(wx - prev[0], wy - prev[1]) / (r / 2))) : 0;
+    for (let k = 1; k < steps; k++)
+      this.stamp(bd, prev![0] + ((wx - prev![0]) * k) / steps, prev![1] + ((wy - prev![1]) * k) / steps, r);
+    this.stamp(bd, wx, wy, r);
+  }
+
+  private stamp(bd: BorderDraft, wx: number, wy: number, r: number): void {
     const s = this.session.state;
     const w = s.width;
     const me = this.session.viewer;
@@ -731,6 +755,7 @@ export class InputController {
     const bd = e.button === 2 ? this.border : null;
     if (bd) {
       bd.tiles.clear();
+      bd.brush = null;
       this.sweep(bd, x, y);
     }
     this.last = { x, y };

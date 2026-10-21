@@ -1,11 +1,19 @@
 // Reactive i18n: t('key', {param}) with French and English dictionaries.
 import fr from './fr.json';
 import en from './en.json';
-import { phone } from '../tactile';
+import { phone, tactile } from '../tactile';
 
 export type Lang = 'fr' | 'en';
 type Dict = Record<string, string>;
 const DICTS: Record<Lang, Dict> = { fr: flatten(fr), en: flatten(en) };
+
+/**
+ * Any touch screen, a tablet too (1.26.3): the gestures a finger has instead of the mouse's
+ * right button (laying an offensive line on a stretch) are worded under `tactile.`.
+ */
+if (tactile)
+  for (const d of Object.values(DICTS))
+    for (const [k, v] of Object.entries(d)) if (k.startsWith('tactile.')) d[k.slice(8)] = v;
 
 /**
  * A phone (tactile.ts) plays with a finger: the texts that speak of clicks, the right button,
