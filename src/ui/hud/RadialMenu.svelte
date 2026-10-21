@@ -2,10 +2,8 @@
   // Context menu (right click): what is under the cursor, then grouped actions
   // with their cost; sub-menus open in a side column.
   import { hud } from '../stores/game.svelte';
-  import { view } from '../stores/viewport.svelte';
   import { t, i18n, clock } from '../i18n/i18n.svelte';
   import { settings } from '../stores/settings.svelte';
-  import Icon from '../icons/Icon.svelte';
   import { BUILDING_ICONS, SIGNALS, type IconName } from '../icons/icons';
   import type { GameController } from '../game/controller';
   import {
@@ -27,7 +25,7 @@
   import { attackLineFor, ownLineAt } from '../game/lines';
   import { haltShort, haltTip, nukeHalt, truceText } from './nukeHalt';
   import { truceCovers, truceOf } from '../game/truce';
-  import { phone } from '../tactile';
+  import { tactile } from '../tactile';
   import { showLine } from './phone/lineFocus.svelte';
   import Wheel, { type WheelItem } from './phone/Wheel.svelte';
 
@@ -51,13 +49,11 @@
     why?: string;
     group?: string;
   };
-  let openSub: string | null = $state(null);
   const s = ctl.session;
   const cfg = s.config;
 
   function close(): void {
     hud.radial = null;
-    openSub = null;
   }
   function act(fn: () => void): () => void {
     return () => {
@@ -578,9 +574,8 @@
       .map((g) => ({ g, list: items.filter((it) => (it.group ?? 'other') === g) }))
       .filter((x) => x.list.length);
   });
-  const sub = $derived(items.find((it) => it.id === openSub)?.sub ?? null);
 
-  /** Phone: the menu's entries, in its groups' order, as the wheel's slices. */
+  /** The menu's entries, in its groups' order, as the wheel's slices. */
   /** Why a slice is refused, when the menu does not say (a building out of reach: the gold missing). */
   function refusal(it: Item): string {
     if (!it.disabled || it.why) return it.why ?? '';
@@ -607,29 +602,12 @@
     ...(it.run ? { run: it.run } : {}),
     testid: `radial-${it.id}`,
   });
-  const wheelItems = $derived(phone ? groups.flatMap((g) => g.list).map(toWheel) : []);
-
-  // Keep the menu on screen. It never moves while open (opening a sub-menu used to push it
-  // left under the pointer, which then opened another one: the menu shook); the sub-menu
-  // opens on the side that has room.
-  const pos = $derived.by(() => {
-    const r = hud.radial;
-    if (!r) return { x: 0, y: 0, subLeft: false };
-    const w = 260;
-    const h = 64 + items.length * 34;
-    // (Touch web version: clear of the notch and the island too; 0 on a computer.)
-    const sf = view.safe;
-    const x = Math.max(8 + sf.l, Math.min(r.x + 6, window.innerWidth - sf.r - w - 12));
-    return {
-      x,
-      y: Math.max(8 + sf.t, Math.min(r.y + 6, window.innerHeight - sf.b - h - 12)),
-      subLeft: x + w + 4 + 280 > window.innerWidth - sf.r - 12,
-    };
-  });
+  const wheelItems = $derived(groups.flatMap((g) => g.list).map(toWheel));
 </script>
 
-{#if hud.radial && items.length && phone}
-  <!-- Phone: the same entries on a wheel around the finger, still held from the long press. -->
+{#if hud.radial && items.length}
+  <!-- The context menu is a wheel everywhere (1.26.3, the player: "la roue est plus simple"):
+       around the pointer, or around the finger still held from the long press. -->
   {#key hud.radial}
     <Wheel
       x={hud.radial.x}
@@ -653,290 +631,9 @@
             : t('radial.sea')}
       flag={!signalMode && ownerView ? flagUrl(ownerView, 24) : ''}
       icon={signalMode ? 'pin' : 'terrain'}
-      drag
+      drag={tactile}
       onclose={close}
       testid="radial"
     />
   {/key}
-{:else if hud.radial && items.length}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="backdrop"
-    onclick={close}
-    oncontextmenu={(e) => {
-      e.preventDefault();
-      close();
-    }}
-  ></div>
-  <div class="ctx" style="left:{pos.x}px; top:{pos.y}px" data-testid="radial" role="menu">
-    <div class="menu panel fade-in">
-      <header>
-        {#if signalMode}
-          <Icon name="pin" size={16} />
-          <span>{t('radial.signalTitle')}</span>
-        {:else if ownerView}
-          <img class="flag" src={flagUrl(ownerView, 24)} alt="" />
-          <div class="who">
-            <b>{ownerView.name[i18n.lang] || ownerView.name.en}</b>
-            <small
-              >{t(`terrain.${terrainKey}`)}{owner === s.viewer
-                ? ` · ${t('radial.yours')}`
-                : mate
-                  ? ` · ${t('radial.teammate')}`
-                  : ''}</small
-            >
-          </div>
-        {:else}
-          <Icon name="terrain" size={16} />
-          <div class="who">
-            <b>{t(`terrain.${terrainKey}`)}</b>
-            <small>{IS_LAND[s.state.terrain[tile] ?? 0] ? t('radial.unclaimed') : t('radial.sea')}</small>
-          </div>
-        {/if}
-        <button class="x" onclick={close} aria-label={t('common.close')}
-          ><Icon name="close" size={15} /></button
-        >
-      </header>
-      {#each groups as gr, gi (gr.g)}
-        {#if gi > 0}<div class="sep"></div>{/if}
-        {#each gr.list as it (it.id)}
-          <button
-            class="item"
-            class:danger={it.danger}
-            class:banned={it.banned}
-            class:featured={it.featured}
-            class:open={openSub === it.id}
-            disabled={it.disabled}
-            role="menuitem"
-            title={it.desc ?? ''}
-            onclick={() => {
-              if (it.sub) {
-                openSub = openSub === it.id ? null : it.id;
-                audio.ui('open');
-              } else it.run?.();
-            }}
-            onmouseenter={() => it.sub && !it.disabled && (openSub = it.id)}
-            data-testid="radial-{it.id}"
-          >
-            {#if it.icon}<Icon name={it.icon} size={17} />{:else}<span class="sp"></span>{/if}
-            <span class="lab"
-              ><span class="name">{it.label}</span>{#if it.featured && it.desc}<small class="sub"
-                  >{it.desc}</small
-                >{:else if it.why}<small class="sub">{it.why}</small>{/if}</span
-            >
-            {#if it.hint}<span class="hint mono">{it.hint}</span>{/if}
-            {#if it.sub}<Icon name="chevronRight" size={15} />{/if}
-          </button>
-        {/each}
-      {/each}
-    </div>
-    {#if sub}
-      <div class="menu panel subm fade-in" class:left={pos.subLeft}>
-        {#each sub as it (it.id)}
-          <button
-            class="item"
-            class:danger={it.danger}
-            class:banned={it.banned}
-            disabled={it.disabled}
-            role="menuitem"
-            title={it.desc ?? ''}
-            onclick={() => it.run?.()}
-            data-testid="radial-{it.id}"
-          >
-            {#if it.icon}<Icon name={it.icon} size={17} />{:else}<span class="sp"></span>{/if}
-            <span class="lab"><span class="name">{it.label}</span></span>
-            {#if it.hint}<span class="hint mono">{it.hint}</span>{/if}
-          </button>
-          {#if it.why}<p class="desc">{it.why}</p>
-          {:else if it.desc && !it.disabled && sub.length <= 8}<p class="desc">{it.desc}</p>{/if}
-        {/each}
-      </div>
-    {/if}
-  </div>
 {/if}
-
-<style>
-  .backdrop {
-    position: absolute;
-    inset: 0;
-    z-index: 40;
-  }
-  /* Touch web version: placed in the map's pixels, which start at the screen's edge (GameScreen). */
-  :global(html.tactile) .ctx {
-    translate: calc(-1 * var(--safe-l, 0px)) calc(-1 * var(--safe-t, 0px));
-  }
-  .ctx {
-    position: absolute;
-    z-index: 41;
-  }
-  /* The context menu: a legend printed on the paper (pictogram, label, figure). */
-  .menu {
-    width: 260px;
-    padding: 4px;
-    display: grid;
-  }
-  /* The sub-menu beside it, on the side with room; the menu itself never moves. */
-  .subm {
-    position: absolute;
-    top: 0;
-    left: calc(100% + 4px);
-    width: 280px;
-    max-height: 70vh;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--np-rule-2) transparent;
-  }
-  .subm.left {
-    left: auto;
-    right: calc(100% + 4px);
-  }
-  header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 4px 4px;
-    padding: 5px 2px 6px;
-    border-bottom: 2px solid var(--np-ink);
-    color: var(--np-ink-2);
-  }
-  header .flag {
-    width: 26px;
-    height: 18px;
-    object-fit: cover;
-    border: 1px solid rgba(23, 42, 60, 0.35);
-    mix-blend-mode: multiply;
-  }
-  .who {
-    display: grid;
-    flex: 1;
-    min-width: 0;
-  }
-  .who b {
-    font-family: var(--title);
-    font-weight: 700;
-    font-size: 1.08em;
-    line-height: 1.15;
-    color: var(--np-ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .who small {
-    font-family: var(--title);
-    font-style: italic;
-    font-size: 0.84em;
-  }
-  .x {
-    display: inline-grid;
-    place-items: center;
-    background: none;
-    border: 0;
-    color: var(--np-ink-3);
-    cursor: var(--cursor-pointer, pointer);
-    padding: 2px;
-  }
-  .x:hover {
-    color: var(--np-ink);
-  }
-  .item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 6px 8px;
-    border: 0;
-    border-radius: 1px;
-    background: none;
-    text-align: left;
-    cursor: var(--cursor-pointer, pointer);
-    color: var(--np-ink);
-  }
-  .item > :global(svg:first-child) {
-    flex: none;
-    color: var(--np-ink-2);
-  }
-  .item:hover:not(:disabled),
-  .item.open {
-    background: var(--np-paper-2);
-  }
-  .item:hover:not(:disabled) > :global(svg:first-child),
-  .item.open > :global(svg:first-child) {
-    color: var(--np-ink);
-  }
-  .item.danger,
-  .item.danger > :global(svg:first-child) {
-    color: var(--np-spot);
-  }
-  .item.danger:hover:not(:disabled),
-  .item.danger.open {
-    background: color-mix(in srgb, var(--np-spot) 8%, transparent);
-  }
-  /* Alliance offers stand out: the alliance's green, ruled, at the top. */
-  .item.featured {
-    margin: 2px 0;
-    padding: 8px 10px;
-    border: 1px solid var(--np-good);
-    background: color-mix(in srgb, var(--np-good) 7%, transparent);
-    color: var(--np-good);
-    font-weight: 600;
-  }
-  .item.featured > :global(svg:first-child) {
-    color: var(--np-good);
-  }
-  .item.featured:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--np-good) 14%, transparent);
-  }
-  .sub {
-    display: block;
-    font-family: var(--np-serif);
-    font-weight: 400;
-    font-size: 0.82em;
-    color: var(--np-ink-2);
-  }
-  .item:disabled {
-    opacity: 0.42;
-    cursor: not-allowed;
-  }
-  /* Nuclear ban: forbidden, printed in magenta (not greyed), the time left as its figure. */
-  .item.banned,
-  .item.banned:disabled {
-    opacity: 1;
-    color: var(--np-spot);
-    background: color-mix(in srgb, var(--np-spot) 7%, transparent);
-  }
-  /* The entry's name is struck through; the reason under it stays plain (1.16: the truce named). */
-  .item.banned:disabled .name {
-    text-decoration: line-through;
-    text-decoration-color: color-mix(in srgb, var(--np-spot) 55%, transparent);
-  }
-  .item.banned .hint {
-    font-weight: 600;
-    color: var(--np-spot);
-  }
-  .lab {
-    flex: 1;
-    min-width: 0;
-  }
-  .hint {
-    font-weight: 600;
-    color: var(--np-brass);
-    font-size: 0.85em;
-  }
-  .sp {
-    width: 17px;
-  }
-  .sep {
-    height: 1px;
-    background: var(--np-rule);
-    margin: 3px 6px;
-  }
-  .desc {
-    margin: -2px 8px 6px 35px;
-    font-family: var(--np-serif);
-    font-size: 0.78em;
-    color: var(--np-ink-2);
-    line-height: 1.35;
-  }
-</style>

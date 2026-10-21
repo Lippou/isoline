@@ -37,11 +37,13 @@
 </script>
 
 <script lang="ts">
-  // Phone only (html.phone): the wheel that stands in for the context menu, the build bar and
-  // the dock. Its cases are slices of a ring around the finger. Two ways to use it, as in a
-  // mobile game: tap a slice (a group opens its own ring, the centre goes back), or keep the
-  // finger down from the press that opened it and slide to the slice — lifted there, it acts;
-  // a group opens when the finger rests on it. Held without moving, a slice tells what it does.
+  // The wheel that stands in for the context menu everywhere (1.26.3), and on a phone
+  // (html.phone) for the build bar and the dock too. Its cases are slices of a ring around the
+  // finger. Two ways to use it, as in a mobile game: tap a slice (a group opens its own ring,
+  // the centre goes back), or keep the finger down from the press that opened it and slide to
+  // the slice — lifted there, it acts; a group opens when the finger rests on it. Held without
+  // moving, a slice tells what it does. With a mouse: the slice under it lights up and tells
+  // what it does, a click chooses, a right click closes.
   import { onDestroy, onMount } from 'svelte';
   import Icon from '../../icons/Icon.svelte';
   import { t } from '../../i18n/i18n.svelte';
@@ -209,6 +211,12 @@
   function down(e: PointerEvent): void {
     e.preventDefault();
     clearTimers();
+    // A mouse's right (or middle) button: put away, as a right click drops a tool.
+    if (e.pointerType === 'mouse' && e.button !== 0) {
+      track = null;
+      onclose();
+      return;
+    }
     track = { id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, opener: false, held: false };
     const h = at(e.clientX, e.clientY, false);
     hot = h.k;
@@ -225,6 +233,16 @@
     }
   }
   function move(e: PointerEvent): void {
+    // A mouse, no button down: the slice under it, and what it does.
+    if (!track && e.pointerType === 'mouse') {
+      const h = at(e.clientX, e.clientY, false);
+      const k = h.zone === 'ring' ? h.k : -1;
+      if (k !== hot) {
+        hot = k;
+        info = k >= 0 ? (level[k] ?? null) : null;
+      }
+      return;
+    }
     if (!track || (track.id >= 0 && e.pointerId !== track.id)) return;
     if (track.id < 0) track.id = e.pointerId;
     if (!track.moved && Math.hypot(e.clientX - track.x0, e.clientY - track.y0) > 12) {
@@ -274,6 +292,8 @@
   function onKey(e: KeyboardEvent): void {
     if (e.key === 'Escape') {
       e.preventDefault();
+      // In a group, Escape goes back to the ring before (the game's own Escape would close it all).
+      if (path.length) e.stopImmediatePropagation();
       back();
     }
   }
@@ -313,7 +333,7 @@
   });
 </script>
 
-<svelte:window onresize={onResize} onkeydown={onKey} />
+<svelte:window onresize={onResize} onkeydowncapture={onKey} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
