@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { phone, touchRender } from '../tactile';
+  import { phone, tactile, touchRender } from '../tactile';
   import { onMount, onDestroy } from 'svelte';
   import { app, go } from '../stores/app.svelte';
   import { hud, openPaper } from '../stores/game.svelte';
@@ -160,7 +160,8 @@
       <TopBar {ctl} />
       {#if live}
         <ResourcePanel {ctl} />
-        {#if phone}<BuildWheel {ctl} />{:else}<BuildBar {ctl} />{/if}
+        <!-- Touch screens, a tablet too (1.26.3): the bar's tools on the build wheel. -->
+        {#if tactile}<BuildWheel {ctl} />{:else}<BuildBar {ctl} />{/if}
       {/if}
       <Minimap {ctl} />
       <Leaderboard {ctl} />

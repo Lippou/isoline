@@ -1,9 +1,9 @@
 <script lang="ts">
-  // Phone only (html.phone): the build bar becomes one button at the thumb, bottom right. A
-  // press opens the build wheel above it: the buildings, the two front lines, the warship,
-  // the bombs, the aircraft and the map's views — every tool of the bar, the same prices,
-  // locks and bans. Slide to a tool and lift, or tap. The tool in hand is printed on the
-  // button; the small cross beside it puts it down.
+  // Touch screens (html.tactile: a phone, and a tablet since 1.26.3): the build bar becomes one
+  // button at the thumb, bottom right. A press opens the build wheel above it: the buildings, the
+  // two front lines, the warship, the bombs, the aircraft and the map's views — every tool of the
+  // bar, the same prices, locks and bans. Slide to a tool and lift, or tap. The tool in hand is
+  // printed on the button; the small cross beside it puts it down.
   import { hud, openPanel } from '../../stores/game.svelte';
   import { t, short, clock } from '../../i18n/i18n.svelte';
   import { settings } from '../../stores/settings.svelte';

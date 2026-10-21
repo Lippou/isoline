@@ -525,8 +525,8 @@ html.phone .game :is(.more-btn, .fold) {
   min-width: 36px;
   min-height: 36px;
 }
-/* Téléphone : aucune touche du clavier à montrer, on joue au doigt. */
-html.phone .game :is(kbd, .np-kbd) {
+/* Écran tactile (téléphone, tablette depuis 1.26.3) : aucune touche du clavier à montrer, on joue au doigt. */
+html.tactile .game :is(kbd, .np-kbd) {
   display: none !important;
 }
 /* Téléphone, écran couché : les chiffres d'une fiche sur deux colonnes (moins haut, rien d'ôté). */

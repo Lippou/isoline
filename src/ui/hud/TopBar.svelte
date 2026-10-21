@@ -467,6 +467,14 @@
     }
   }
 
+  /* Narrower still (a small tablet, 1.26.3: the strip ran under the leaderboard): « vous : x % »
+     goes, the leaderboard shows the same share beside it. */
+  @container (max-width: 520px) {
+    .mine {
+      display: none;
+    }
+  }
+
   /* ——— Téléphone (html.phone) : les vitesses à la taille du doigt ; « vous : x % » s'efface,
      l'onglet du classement le montre déjà à côté (rang et part des terres). */
   :global(html.phone) .tbtn {
