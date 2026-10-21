@@ -21,6 +21,7 @@
   import Campaign from './screens/Campaign.svelte';
   import LoadGame from './screens/LoadGame.svelte';
   import Modal from './Modal.svelte';
+  import GpuWarning from './GpuWarning.svelte';
   import ScreenSweep from './components/ScreenSweep.svelte';
   import { defaultConfig } from '../core/game/config';
   import { withMyFlag, startMission, startFromSave } from './screens/launch';
@@ -143,6 +144,8 @@
     </div>
   {/key}
   <Modal />
+  <!-- Over the menus only (never on a game's HUD): the map drawn without the graphics card. -->
+  {#if app.screen !== 'game' && app.screen !== 'splash'}<GpuWarning />{/if}
 {/if}
 
 <style>

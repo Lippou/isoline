@@ -3144,6 +3144,13 @@
     "unavailable": "Pas possible pour l'instant.",
     "speed": "Vitesse du temps"
   },
+  "gpu": {
+    "title": "Le jeu n’utilise pas votre carte graphique",
+    "browser": "Votre navigateur dessine la carte sans la carte graphique : le jeu sera très lent. Ouvrez {page}, activez « Utiliser l’accélération graphique si disponible », puis relancez le navigateur.",
+    "app": "Le jeu dessine la carte sans la carte graphique : il sera très lent. Mettez à jour le pilote de votre carte graphique, puis relancez le jeu.",
+    "renderer": "Rendu actuel : {name}",
+    "ok": "Compris"
+  },
   "tactile": {
     "line": {
       "tip": {

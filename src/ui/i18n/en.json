@@ -3144,6 +3144,13 @@
     "unavailable": "Not possible right now.",
     "speed": "Game speed"
   },
+  "gpu": {
+    "title": "The game is not using your graphics card",
+    "browser": "Your browser draws the map without the graphics card: the game will be very slow. Open {page}, turn on “Use graphics acceleration when available”, then restart the browser.",
+    "app": "The game draws the map without the graphics card: it will be very slow. Update your graphics card’s driver, then restart the game.",
+    "renderer": "Current renderer: {name}",
+    "ok": "Got it"
+  },
   "tactile": {
     "line": {
       "tip": {
