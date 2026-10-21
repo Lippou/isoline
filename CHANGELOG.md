@@ -2,6 +2,21 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versions selon SemVer.
 
+## [Non publié] — Retours du PC Windows et de la tablette
+### Modifié
+- **La roue partout** : le clic droit (ou l'appui long) ouvre la roue du téléphone sur PC, tablette et dans l'appli, au lieu du menu en liste. À la souris, la case survolée s'éclaire et dit ce qu'elle fait ; un clic droit la referme ; Échap dans un groupe revient en arrière.
+- **« Attaquer » part de la ligne offensive** : sur un pays face auquel vous avez une ligne offensive pas encore lancée (la sélectionnée, sinon la plus proche), « Attaquer » lance cette ligne, de son tronçon seulement, au lieu d'une attaque sur toute la frontière. Une ligne peut aussi partir **sans flèche** (« Attaquer sans flèche », fenêtre Front et fiche de ligne).
+- **Tablette** : bouton « Construire » et sa roue, comme sur téléphone, au lieu de la barre de construction ; plus de touches du clavier affichées sur un écran tactile.
+- **Ligne offensive au doigt** : outil en main, glisser le doigt le long de la frontière pose la ligne sur ce tronçon (plus d'appui long immobile) ; deux doigts déplacent la carte.
+- **Fiche de survol** fixe en haut à droite, au lieu de suivre le curseur.
+- **Curseurs** plus petits (20 px au lieu de 32).
+### Ajouté
+- **Avertissement « Le jeu n'utilise pas votre carte graphique »** dans les menus quand le navigateur dessine sans la carte graphique (accélération désactivée : 10 images/s au lieu de 144 mesurées sur un PC de jeu), avec l'adresse du réglage à activer.
+### Corrigé
+- Barre du haut qui passait sous le classement sur une petite tablette.
+- Sur tablette, un doigt posé sur la poignée de la flèche n'ouvre plus la roue.
+- Test du serveur en ligne sous Windows.
+
 ## [1.26.1] — Origine du projet et licence
 ### Modifié
 - **Licence GNU AGPL v3** (au lieu de MIT) : une partie de la simulation est traduite du code d'OpenFront, publié sous cette licence. La mention « © OpenFront and Contributors » apparaît sur l'écran titre et dans « À propos », comme le demandent les conditions d'OpenFront.
