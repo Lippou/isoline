@@ -9,9 +9,16 @@ const PAPER = '#f7faf9';
 const BRASS = '#c8962b';
 const HAZARD = '#e0456f';
 
+/**
+ * Drawn on a 32 grid, shown at SIZE px (1.26.3: at 32 they filled their box and looked twice
+ * the size of the system's own cursors); hotspots are given on the grid and scaled with it.
+ */
+const SIZE = 20;
+const at = (x: number, y: number) => `${Math.round((x * SIZE) / 32)} ${Math.round((y * SIZE) / 32)}`;
+
 const svg = (body: string) =>
   `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">${body}</svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 32 32">${body}</svg>`,
   )}")`;
 
 /** Arrow (hotspot at the tip, 3 3). */
@@ -71,12 +78,12 @@ function reticle(color: string): string {
 }
 
 export const CURSORS = {
-  default: `${arrow(INK)} 3 3, auto`,
-  pointer: `${hand(BRASS)} 12 2, pointer`,
-  map: `${hand(INK)} 12 2, pointer`,
-  attack: `${sword()} 3 3, crosshair`,
-  build: `${reticle(BRASS)} 16 16, crosshair`,
-  aim: `${reticle(HAZARD)} 16 16, crosshair`,
+  default: `${arrow(INK)} ${at(3, 3)}, auto`,
+  pointer: `${hand(BRASS)} ${at(12, 2)}, pointer`,
+  map: `${hand(INK)} ${at(12, 2)}, pointer`,
+  attack: `${sword()} ${at(3, 3)}, crosshair`,
+  build: `${reticle(BRASS)} ${at(16, 16)}, crosshair`,
+  aim: `${reticle(HAZARD)} ${at(16, 16)}, crosshair`,
 } as const;
 
 /** Publishes the cursors as CSS variables (--cursor-default, --cursor-pointer…). */
