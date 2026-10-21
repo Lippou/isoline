@@ -409,6 +409,7 @@
     "expand": "S'étendre ici",
     "attackPlain": "Attaquer",
     "attackDesc": "Envoie la part de vos troupes indiquée (réglable avec T / Y ou Maj + molette).",
+    "attackLineDesc": "Votre ligne offensive part à l’assaut, de son tronçon seulement et avec ses troupes (pas toute la frontière).",
     "boatDesc": "Embarque des troupes depuis votre côte la plus proche et débarque ici, en remontant les rivières navigables s'il le faut.",
     "upgradeNamed": "Améliorer : {name}",
     "level": "niv.",
@@ -3111,6 +3112,7 @@
       "arrowNone": "à donner",
       "give": "Donner la direction",
       "launchNow": "Lancer l'assaut ({n}, charge {pct} %)",
+      "launchPlain": "Attaquer sans flèche ({n}, charge {pct} %)",
       "organize": "Organiser la défense ({s} s : ralentissement ×2)"
     }
   },

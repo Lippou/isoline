@@ -160,9 +160,6 @@ describe('front lines', () => {
     const l = placeOffensive(g, p1, 2, sector[0]!, sector, 0.1) as FrontLine;
     const troops = l.troops;
     const strength = lineStrength(g, l);
-    // No arrow yet: a launch does nothing.
-    g.step([cmd(1, { t: 'lineLaunch', id: l.id })]);
-    expect(g.attacks.length).toBe(0);
     // The arrow drawn: still nothing until the click on it, even fully charged.
     const aim = g.map.idx(175, 30);
     g.step([cmd(1, { t: 'lineAim', id: l.id, aim })]);
@@ -210,6 +207,35 @@ describe('front lines', () => {
     for (let k = 0; k < 6; k++) g.step([]);
     expect(g.lines).not.toContain(l);
     expect(p1.lineTroops).toBe(0);
+  });
+
+  it('launched without an arrow, it attacks from its own stretch only, not the whole border (1.26.3)', () => {
+    const g = arena();
+    const p1 = g.players[1]!;
+    const w = g.map.width;
+    const sector = Array.from({ length: 21 }, (_, k) => g.map.idx(145, 20 + k));
+    const l = placeOffensive(g, p1, 2, sector[0]!, sector, 0.1) as FrontLine;
+    const troops = l.troops;
+    expect(l.aim).toBe(-1);
+    g.step([cmd(1, { t: 'lineLaunch', id: l.id })]);
+    const a = g.attacks.find((x) => x.attacker === 1 && x.target === 2)!;
+    expect(a).toBeTruthy();
+    expect(a.focused).toBe(true);
+    expect(a.aim).toBe(-1);
+    expect(a.aimFrom).toBe(-1);
+    expect(a.troops).toBeGreaterThan(troops * 0.9);
+    expect(l.attack).toBe(a.id);
+    // The line's stretch (rows 20 to 40), never the rest of the 60-row border.
+    expect(a.border.size).toBeGreaterThan(0);
+    for (const t of a.border) {
+      const y = Math.floor(t / w);
+      expect(y).toBeGreaterThanOrEqual(17);
+      expect(y).toBeLessThanOrEqual(43);
+    }
+    // It moves on like any assault, along its stretch.
+    for (let k = 0; k < 20; k++) g.step([]);
+    expect(g.owner[g.map.idx(146, 30)]).toBe(1);
+    expect(g.owner[g.map.idx(146, 5)]).toBe(2);
   });
 
   it('its arrow starts where its grip was taken, not where the line is nearest the aim (1.26.2)', () => {

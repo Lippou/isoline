@@ -701,7 +701,8 @@ function nearestTile(game: Game, tiles: readonly number[], to: number): number {
 export function launchLine(game: Game, l: FrontLine): void {
   const p = game.players[l.owner];
   const q = game.players[l.target];
-  if (!p || !q || l.troops < 1 || l.kind !== LineKind.Offensive || l.attack >= 0 || l.aim < 0) return;
+  // Without an arrow (1.26.3): the same assault along the line, with no stretch favoured.
+  if (!p || !q || l.troops < 1 || l.kind !== LineKind.Offensive || l.attack >= 0) return;
   const at = l.tiles[l.tiles.length >> 1];
   const drop = (key: string, params: Record<string, number> = {}) => {
     game.notify(p.id, key, 'warn', params, at);
@@ -737,7 +738,7 @@ export function launchLine(game: Game, l: FrontLine): void {
   const troops = l.troops;
   const prepared = lineStrength(game, l) * lineCharge(game, l);
   // From where its grip was taken (the nearest tile of the line still: it may have moved).
-  const from = nearestTile(game, l.tiles, l.aimFrom >= 0 ? l.aimFrom : l.aim);
+  const from = l.aim < 0 ? -1 : nearestTile(game, l.tiles, l.aimFrom >= 0 ? l.aimFrom : l.aim);
   openHostilities(game, p, q);
   // Off the line, into the attack: the ceiling is freed, the line becomes the attack's front.
   p.lineTroops = Math.max(0, p.lineTroops - troops);

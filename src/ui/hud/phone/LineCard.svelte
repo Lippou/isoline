@@ -83,6 +83,13 @@
     else hud.tool = { k: 'assault', line: sel.id };
     audio.ui('click');
   }
+  /** Over the top with no arrow (1.26.3): from the line's stretch, no point favoured. */
+  function launchPlain(): void {
+    if (!sel || sel.attack >= 0) return;
+    s.cmd({ t: 'lineLaunch', id: sel.id });
+    audio.ui('click');
+    close();
+  }
   function all(): void {
     close();
     openPanel('front');
@@ -165,6 +172,18 @@
                   pct: Math.round(chargeOf(sel) * 100),
                 })}</button
         >
+        {#if sel.attack < 0 && sel.aim < 0}
+          <button
+            class="np-btn"
+            onclick={launchPlain}
+            disabled={sel.troops < 1}
+            data-testid="line-card-launch-plain"
+            ><Icon name="war" size={14} />{t('line.card.launchPlain', {
+              n: short(sel.troops),
+              pct: Math.round(chargeOf(sel) * 100),
+            })}</button
+          >
+        {/if}
       {/if}
       {#if sel.attack < 0}
         <button class="np-btn" onclick={remove} data-testid="line-card-remove"

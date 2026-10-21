@@ -24,7 +24,7 @@
   import { formatShort } from '../../render/renderer';
   import { clientSpotError } from '../game/capitalWatch';
   import { isTeammate } from '../game/team';
-  import { ownLineAt } from '../game/lines';
+  import { attackLineFor, ownLineAt } from '../game/lines';
   import { haltShort, haltTip, nukeHalt, truceText } from './nukeHalt';
   import { truceCovers, truceOf } from '../game/truce';
   import { phone } from '../tactile';
@@ -355,14 +355,21 @@
       return out;
     }
     if (land && owner !== s.viewer && !mate) {
+      // An offensive line facing that country (the selected one, or one near): the attack
+      // goes from it only, with its troops — not along the whole border.
+      const from = attackLineFor(s.state, s.viewer, owner, tile, hud.frontSel);
       out.push({
         id: 'attack',
         group: 'main',
         label: owner === 0 ? t('radial.expand') : t('radial.attackPlain'),
-        icon: 'war',
-        hint: `${Math.round(hud.attackRatio * 100)} %`,
-        desc: t('radial.attackDesc'),
-        run: attackGuard(owner, () => s.cmd({ t: 'attack', tile, ratio: hud.attackRatio })),
+        icon: from ? 'lineOffense' : 'war',
+        hint: from ? formatShort(from.troops) : `${Math.round(hud.attackRatio * 100)} %`,
+        desc: from ? t('radial.attackLineDesc') : t('radial.attackDesc'),
+        run: attackGuard(owner, () =>
+          from
+            ? s.cmd({ t: 'lineLaunch', id: from.id })
+            : s.cmd({ t: 'attack', tile, ratio: hud.attackRatio }),
+        ),
         ...truceFor(owner, 'attack'),
       });
       out.push({

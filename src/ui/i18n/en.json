@@ -409,6 +409,7 @@
     "expand": "Expand here",
     "attackPlain": "Attack",
     "attackDesc": "Sends the shown share of your troops (adjust with T / Y or Shift + wheel).",
+    "attackLineDesc": "Your offensive line goes over the top, from its stretch only and with its troops (not the whole border).",
     "boatDesc": "Ships troops from your nearest coast and lands them here, sailing up navigable rivers if need be.",
     "upgradeNamed": "Upgrade: {name}",
     "level": "lvl",
@@ -3111,6 +3112,7 @@
       "arrowNone": "to give",
       "give": "Give the direction",
       "launchNow": "Launch the assault ({n}, charge {pct} %)",
+      "launchPlain": "Attack without an arrow ({n}, charge {pct} %)",
       "organize": "Organise the defence ({s} s: slowdown ×2)"
     }
   },
