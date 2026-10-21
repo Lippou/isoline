@@ -294,11 +294,7 @@
 
 {#if unit}
   {@const d = unit.d}
-  <div
-    class="card panel unit"
-    data-testid="hover-unit"
-    style="left:{unit.u.sx + 18}px; top:{unit.u.sy + 18}px"
-  >
+  <div class="card panel unit" data-testid="hover-unit">
     <div class="who">
       {#if unit.p}<img src={flagUrl(unit.p, 24)} alt="" />{/if}
       <div>
@@ -337,7 +333,7 @@
     {/if}
   </div>
 {:else if info && (info.h.owner > 0 || info.h.building || info.h.resource > 0 || info.h.fallout > 0 || info.terrain?.passable || sky)}
-  <div class="card panel" style="left:{info.h.sx + 18}px; top:{info.h.sy + 18}px">
+  <div class="card panel" data-testid="hover-card">
     {#if info.p}
       <div class="who">
         <img src={flagUrl(info.p, 24)} alt="" />
@@ -551,9 +547,13 @@
   :global(html.tactile) .card {
     display: none;
   }
-  /* What is under the pointer: a small card of paper that follows it (it never takes the pointer). */
+  /* What is under the pointer: a small card of paper (it never takes the pointer), always in the
+     same place (1.26.3, the player: stuck to the cursor it was in the way) — the top right of the
+     stage, beside the leaderboard, under the top bar. */
   .card {
     position: absolute;
+    right: calc(100% - var(--zone-stage-x, 0px) - var(--zone-stage-w, 100%) + 10px);
+    top: calc(var(--zone-stage-y, 0px) + 10px);
     padding: 7px 10px 8px;
     font-size: 0.82em;
     pointer-events: none;
